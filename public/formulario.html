@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuevo Ingreso - Inventario</title>
+    <link type="image/png" href="favicon.png" rel="icon">
+    <style>
+        body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .contenedor-formulario { background-color: #2d2d2d; max-width: 900px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
+        .cabecera { text-align: center; margin-bottom: 20px; }
+        h3 { color: #0078D4; margin-top: 30px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .cuadricula { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { font-size: 14px; font-weight: bold; color: #ccc; display: block; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 6px; color: white; box-sizing: border-box; transition: all 0.2s ease; }
+        select { max-height: 200px; } 
+        
+        .grupo-prefijo { display: flex; align-items: center; }
+        .prefijo-fijo { background-color: #444; color: #fff; padding: 10px 15px; border: 1px solid #555; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold; font-size: 14px; user-select: none; }
+        .input-numero-precinto { border-radius: 0 6px 6px 0 !important; font-weight: bold; background-color: #1a1a1a !important; color: #ffffff !important; }
+
+        .btn-guardar { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .btn-guardar:hover { background-color: #218838; }
+        .btn-guardar:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
+        
+        .caja-lotes { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; background-color: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+        .caja-lotes input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; margin: 0; }
+        .caja-lotes label { margin: 0; cursor: pointer; color: #ffc107; font-size: 15px; }
+
+        /* NUEVO ESTILO: Resaltado gris claro para celdas vacías en modo lote */
+        .resaltado-vacio {
+            border: 1px solid #aaaaaa !important;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor-formulario">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #444; padding-bottom: 20px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <a href="menu.html" style="background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; font-size: 14px; transition: 0.3s;">🔙 Menú</a>
+                <h2 style="margin: 0;">➕ Ingresar Nueva Muestra</h2>
+            </div>
+            <a href="dashboard.html" style="background-color: #0078D4; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px; transition: 0.3s;">📦 Ver Base de Datos (Dashboard)</a>
+        </div>
+
+        <form id="miFormulario">
+            <div class="caja-lotes">
+                <input type="checkbox" id="checkMantenerDatos" checked>
+                <label for="checkMantenerDatos">⚡ MODO LOTE: Mantener la información estructural tras guardar (Registrado por, Fecha, Tipo, Línea, Género, Clasificación, Cantidad)</label>
+            </div>
+
+            <h3 style="margin-top: 10px;">1. Información de Ingreso</h3>
+            <div class="cuadricula">
+                <div>
+                    <label>Registrado por:</label>
+                    <input type="text" id="registradoPor" list="listaRegistrados" placeholder="Tu nombre">
+                    <datalist id="listaRegistrados"></datalist>
+                </div>
+                <div><label>Fecha de Ingreso:</label><input type="date" id="fechaIngreso"></div>
+                
+                <div>
+                    <label>Código Precinto (MANUAL) 🔓:</label>
+                    <div class="grupo-prefijo">
+                        <span class="prefijo-fijo">MSTMUE</span>
+                        <input type="text" id="numeroPrecinto" class="input-numero-precinto" placeholder="Escribe el número aquí">
+                    </div>
+                </div>
+
+                <div><label>Fotografía de la Prenda:</label><input type="file" id="fotoPrenda" accept="image/*" style="padding: 7px; cursor: pointer;"></div>
+            </div>
+
+            <h3>2. Detalles de la Prenda</h3>
+            <div class="cuadricula">
+                <div>
+                    <label>Referencia:</label>
+                    <input type="text" id="referencia" list="listaReferencias" placeholder="Ej: Bolt">
+                    <datalist id="listaReferencias"></datalist>
+                </div>
+                
+                <div>
+                    <label>Colección:</label>
+                    <input type="text" id="coleccion" list="listaColecciones" placeholder="Escribe o selecciona una colección...">
+                    <datalist id="listaColecciones"></datalist>
+                </div>
+
+                <div><label>Tipo:</label><select id="tipo"><option value="">Selecciona...</option><option>Accesorios</option><option>Calzado</option><option>Prendas</option></select></div>
+                <div><label>Línea:</label><select id="linea"><option value="">Selecciona...</option><option>Back pack</option><option>Belt</option><option>Blazer</option><option>Body</option><option>Boxer</option><option>Bra</option><option>Cap</option><option>Card Holder</option><option>Corset</option><option>Crop Top</option><option>Dress</option><option>Duffle Bag</option><option>Fanny pack</option><option>Handle Bag</option><option>Hat</option><option>Heel</option><option>Hoodie</option><option>Jacket</option><option>Jean</option><option>Jogger</option><option>Leggin</option><option>Long Sleeve</option><option>Luggage</option><option>Overshirt</option><option>Pant</option><option>Panty</option><option>Polo</option><option>Sandal</option><option>Set</option><option>Shirt</option><option>Short</option><option>Shoulder Bag</option><option>Skirt</option><option>Sneaker</option><option>Sock</option><option>Sweatshirt</option><option>Swim Short</option><option>SwimSuit</option><option>Top</option><option>T-shirt</option><option>T-shirt Basic</option><option>T-shirt Oversized</option><option>T-shirt Pack</option><option>Vest</option><option>Visor</option><option>Wallet</option></select></div>
+                <div><label>Género:</label><select id="genero"><option value="">Selecciona...</option><option>Men</option><option>Women</option><option>Unisex</option></select></div>
+                <div><label>Talla:</label><select id="talla"><option value="">Selecciona...</option><option>U</option><option>4</option><option>6</option><option>8</option><option>10</option><option>12</option><option>30</option><option>32</option><option>34</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>
+                
+                <div>
+                    <label>Color / Descripción:</label>
+                    <input type="text" id="color" list="listaColores" placeholder="Ej: Black, White">
+                    <datalist id="listaColores"></datalist>
+                </div>
+                <div><label>Cantidad:</label><input type="number" id="cantidad" placeholder="Ej: 1" min="1"></div>
+                <div><label>Clasificación (Tipo de Muestra):</label><select id="clasificacion"><option value="">Selecciona...</option><option>ORIGINAL</option><option>PP SAMPLE</option><option>2DA PP SAMPLE</option><option>3RA PP SAMPLE</option><option>4TA PP SAMPLE</option><option>5TA PP SAMPLE</option><option>PHOTO SAMPLE</option><option>2DA PHOTO SAMPLE</option><option>3RA PHOTO SAMPLE</option><option>4TA PHOTO SAMPLE</option><option>PROTO</option><option>SIZE SET PROTO</option><option>SIZE SET PP SAMPLE</option><option>2DO SIZE SET PP SAMPLE</option><option>SIZE SET PHOTO</option><option>SHIPPING SAMPLE</option></select></div>
+            </div>
+
+            <h3>3. Origen y Costos</h3>
+            <div class="cuadricula">
+                <div>
+                    <label>Proveedor / Marca:</label>
+                    <input type="text" id="proveedor" list="listaProveedores" placeholder="Escribe o selecciona un proveedor...">
+                    <datalist id="listaProveedores"></datalist>
+                </div>
+                
+                <div>
+                    <label>País de Origen:</label>
+                    <input type="text" id="paisOrigen" list="listaPaises" placeholder="Ej: China, Perú, Colombia">
+                    <datalist id="listaPaises"></datalist>
+                </div>
+                <div><label>Precio / Costo:</label><input type="number" id="precio" placeholder="0.00" step="0.01"></div>
+                
+                <div>
+                    <label>Moneda:</label>
+                    <select id="moneda">
+                        <option value="">Selecciona una moneda...</option>
+                        <option value="COP">COP (Pesos Colombianos)</option>
+                        <option value="USD">USD (Dólares)</option>
+                        <option value="EUR">EUR (Euros)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h3>4. Ubicación y Notas</h3>
+            <div class="cuadricula">
+                <div>
+                    <label>Ubicación General:</label>
+                    <input type="text" id="ubicacionGeneral" list="listaUbiGeneral" placeholder="Ej: Bodega Principal">
+                    <datalist id="listaUbiGeneral"></datalist>
+                </div>
+                
+                <div>
+                    <label>Ubicación en Diseño:</label>
+                    <input type="text" id="ubicacionDiseno" list="listaUbiDiseno" placeholder="Ej: Estante 3, Fila B">
+                    <datalist id="listaUbiDiseno"></datalist>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;"><label>Observaciones:</label><textarea id="observaciones" rows="3" placeholder="Anota aquí cualquier detalle sobre el estado de la muestra, empaque, etc..."></textarea></div>
+
+            <button type="button" class="btn-guardar" id="btnGuardarFirebase">💾 Guardar Prenda en Inventario</button>
+        </form>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
+            authDomain: "inventario-monastery.firebaseapp.com",
+            projectId: "inventario-monastery",
+            storageBucket: "inventario-monastery.firebasestorage.app",
+            messagingSenderId: "1035655424934",
+            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
+            measurementId: "G-BD5MYW553K"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const inputNumeroPrecinto = document.getElementById('numeroPrecinto');
+        const btnGuardar = document.getElementById('btnGuardarFirebase');
+        const formulario = document.getElementById('miFormulario');
+        const checkMantenerDatos = document.getElementById('checkMantenerDatos');
+        
+        const datalistRegistrados = document.getElementById('listaRegistrados');
+        const datalistColecciones = document.getElementById('listaColecciones');
+        const datalistReferencias = document.getElementById('listaReferencias');
+        const datalistColores = document.getElementById('listaColores');
+        const datalistProveedores = document.getElementById('listaProveedores');
+        const datalistPaises = document.getElementById('listaPaises');
+        const datalistUbiGeneral = document.getElementById('listaUbiGeneral');
+        const datalistUbiDiseno = document.getElementById('listaUbiDiseno');
+
+        let memoriaProveedorPais = {};
+
+        function establecerFechaActual() {
+            const hoy = new Date();
+            const hoyFormateado = hoy.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            document.getElementById('fechaIngreso').value = hoyFormateado;
+        }
+
+        function cargarTodosLosSugeridos() {
+            db.collection("prendas").get().then((querySnapshot) => {
+                let registrados = new Set();
+                let colecciones = new Set();
+                let referencias = new Set();
+                let colores = new Set();
+                let proveedores = new Set();
+                let paises = new Set();
+                let ubiGeneral = new Set();
+                let ubiDiseno = new Set();
+
+                memoriaProveedorPais = {}; 
+
+                querySnapshot.forEach((doc) => {
+                    let d = doc.data();
+                    if(d.registradoPor) registrados.add(d.registradoPor.trim());
+                    if(d.coleccion) colecciones.add(d.coleccion.trim());
+                    if(d.referencia) referencias.add(d.referencia.trim());
+                    if(d.color) colores.add(d.color.trim());
+                    if(d.proveedor) proveedores.add(d.proveedor.trim());
+                    if(d.paisOrigen) paises.add(d.paisOrigen.trim());
+                    if(d.ubicacionGeneral) ubiGeneral.add(d.ubicacionGeneral.trim());
+                    if(d.ubicacionDiseno) ubiDiseno.add(d.ubicacionDiseno.trim());
+
+                    if(d.proveedor && d.paisOrigen) {
+                        memoriaProveedorPais[d.proveedor.trim().toLowerCase()] = d.paisOrigen.trim();
+                    }
+                });
+
+                inyectarDatosEnDatalist(datalistRegistrados, registrados);
+                inyectarDatosEnDatalist(datalistColecciones, colecciones);
+                inyectarDatosEnDatalist(datalistReferencias, referencias);
+                inyectarDatosEnDatalist(datalistColores, colores);
+                inyectarDatosEnDatalist(datalistProveedores, proveedores);
+                inyectarDatosEnDatalist(datalistPaises, paises);
+                inyectarDatosEnDatalist(datalistUbiGeneral, ubiGeneral);
+                inyectarDatosEnDatalist(datalistUbiDiseno, ubiDiseno);
+            }).catch(error => console.error("Error cargando sugeridos del sistema:", error));
+        }
+
+        function inyectarDatosEnDatalist(elementoHTML, setDatos) {
+            elementoHTML.innerHTML = "";
+            setDatos.forEach((valor) => {
+                let opcion = document.createElement('option');
+                opcion.value = valor;
+                elementoHTML.appendChild(opcion);
+            });
+        }
+
+        // FUNCIÓN NUEVA: Resalta de manera inteligente todas las celdas vacías del formulario
+        function resaltarCamposVacios() {
+            const todosLosCampos = formulario.querySelectorAll('input, select, textarea');
+            todosLosCampos.forEach(campo => {
+                if (campo.type !== 'checkbox' && campo.value.trim() === "") {
+                    campo.classList.add('resaltado-vacio');
+                    
+                    // Evento dinámico: Cuando escriban o interactúen, el borde gris claro se apaga solo
+                    const limpiarAlEscribir = () => {
+                        campo.classList.remove('resaltado-vacio');
+                        campo.removeEventListener('input', limpiarAlEscribir);
+                        campo.removeEventListener('change', limpiarAlEscribir);
+                    };
+                    campo.addEventListener('input', limpiarAlEscribir);
+                    campo.addEventListener('change', limpiarAlEscribir);
+                }
+            });
+        }
+
+        document.getElementById('proveedor').addEventListener('input', function() {
+            const proveedorDigitado = this.value.trim().toLowerCase();
+            if(memoriaProveedorPais[proveedorDigitado]) {
+                document.getElementById('paisOrigen').value = memoriaProveedorPais[proveedorDigitado];
+                // Como se autocompleta el país, le quitamos el resaltado de forma inmediata
+                document.getElementById('paisOrigen').classList.remove('resaltado-vacio');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarTodosLosSugeridos();
+            establecerFechaActual();
+        });
+
+        btnGuardar.addEventListener('click', function() {
+            const numeroDigitado = inputNumeroPrecinto.value.trim();
+            if(numeroDigitado === "") { 
+                alert("Por favor ingresa el número del precinto."); 
+                inputNumeroPrecinto.focus();
+                return; 
+            }
+
+            const monedaVal = document.getElementById('moneda').value;
+            if(monedaVal === "") {
+                alert("Por favor selecciona el tipo de moneda.");
+                document.getElementById('moneda').focus();
+                return;
+            }
+
+            const precintoFinalCompleto = "MSTMUE" + numeroDigitado;
+            const fotoFileInput = document.getElementById('fotoPrenda');
+            const archivoFoto = fotoFileInput.files[0];
+
+            btnGuardar.textContent = "Procesando y guardando... ⏳";
+            btnGuardar.disabled = true;
+
+            if(archivoFoto) {
+                const reader = new FileReader();
+                reader.readAsDataURL(archivoFoto);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; 
+                        const MAX_HEIGHT = 600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else {
+                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                        guardarEnFirestore(fotoBase64);
+                    }
+                }
+            } else {
+                guardarEnFirestore(null);
+            }
+
+            function guardarEnFirestore(fotoData) {
+                const registradoPorVal = document.getElementById('registradoPor').value.trim();
+                const referenciaVal = document.getElementById('referencia').value.trim();
+                const coleccionVal = document.getElementById('coleccion').value.trim();
+                const colorVal = document.getElementById('color').value.trim();
+                const proveedorVal = document.getElementById('proveedor').value.trim();
+                const paisOrigenVal = document.getElementById('paisOrigen').value.trim();
+                const ubicacionGeneralVal = document.getElementById('ubicacionGeneral').value.trim();
+                const ubicacionDisenoVal = document.getElementById('ubicacionDiseno').value.trim();
+
+                const datosPrenda = {
+                    registradoPor: registradoPorVal,
+                    fechaIngreso: document.getElementById('fechaIngreso').value,
+                    precinto: precintoFinalCompleto, 
+                    fotoUrl: fotoData, 
+                    referencia: referenciaVal,
+                    coleccion: coleccionVal,
+                    tipo: document.getElementById('tipo').value,
+                    linea: document.getElementById('linea').value,
+                    genero: document.getElementById('genero').value,
+                    talla: document.getElementById('talla').value,
+                    color: colorVal,
+                    amount: document.getElementById('cantidad').value, 
+                    cantidad: document.getElementById('cantidad').value,
+                    clasificacion: document.getElementById('clasificacion').value,
+                    proveedor: proveedorVal,
+                    paisOrigen: paisOrigenVal,
+                    precio: document.getElementById('precio').value,
+                    moneda: monedaVal,
+                    ubicacionGeneral: ubicacionGeneralVal,
+                    ubicacionDiseno: ubicacionDisenoVal,
+                    observaciones: document.getElementById('observaciones').value,
+                    estado: "Disponible en inventario",
+                    fechaServidor: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                db.collection("prendas").add(datosPrenda)
+                .then((docRef) => {
+                    alert("¡ÉXITO! Prenda guardada.");
+
+                    if (checkMantenerDatos.checked) {
+                        const cacheRegistradoPor = document.getElementById('registradoPor').value;
+                        const cacheFechaIngreso = document.getElementById('fechaIngreso').value;
+                        const cacheTipo = document.getElementById('tipo').value;
+                        const cacheLinea = document.getElementById('linea').value;
+                        const cacheGenero = document.getElementById('genero').value;
+                        const cacheClasificacion = document.getElementById('clasificacion').value;
+                        const cacheCantidad = document.getElementById('cantidad').value;
+
+                        formulario.reset();
+
+                        document.getElementById('registradoPor').value = cacheRegistradoPor;
+                        document.getElementById('fechaIngreso').value = cacheFechaIngreso;
+                        document.getElementById('tipo').value = cacheTipo;
+                        document.getElementById('linea').value = cacheLinea;
+                        document.getElementById('genero').value = cacheGenero;
+                        document.getElementById('clasificacion').value = cacheClasificacion;
+                        document.getElementById('cantidad').value = cacheCantidad;
+
+                        // SE EJECUTA EL NUEVO FILTRO VISUAL PARA RESALTAR LO VACÍO TRAS EL RESETEO
+                        resaltarCamposVacios();
+                    } else {
+                        formulario.reset();
+                        establecerFechaActual(); 
+                    }
+
+                    cargarTodosLosSugeridos(); 
+                    restablecerBoton();
+                    inputNumeroPrecinto.focus();
+                })
+                .catch((error) => {
+                    console.error(error);
+                    alert("Error al intentar guardar en la nube.");
+                    restablecerBoton();
+                });
+            }
+
+            function restablecerBoton() {
+                btnGuardar.textContent = "💾 Guardar Prenda en Inventario";
+                btnGuardar.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

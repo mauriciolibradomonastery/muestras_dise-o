@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Bajas - Inventario</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .contenedor { background-color: #2d2d2d; max-width: 95%; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
+        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .buscador { padding: 10px; width: 350px; border-radius: 6px; border: 1px solid #555; background-color: #1a1a1a; color: white; }
+        .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; margin-right: 15px; font-weight: bold; }
+        .btn-retornar { background-color: #0078D4; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
+        .btn-retornar:hover { background-color: #005a9e; }
+        .contenedor-tabla { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th { color: #fd7e14; text-align: left; padding: 12px; border-bottom: 2px solid #555; white-space: nowrap; }
+        td { padding: 12px; border-bottom: 1px solid #444; vertical-align: middle; }
+        tr:hover { background-color: #3d3d3d; }
+        .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; }
+        .estado-salida { background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <div class="barra-control">
+            <div style="display: flex; align-items: center;">
+                <a href="dashboard.html" class="btn-volver">📦 Volver al Dashboard</a>
+                <h2 style="margin: 0; color: #fd7e14;">📋 Consolidado de Bajas y Salidas</h2>
+            </div>
+            <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar baja por precinto, remisión...">
+        </div>
+
+        <div class="contenedor-tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Fecha Salida</th>
+                        <th>Código Precinto</th>
+                        <th>Referencia</th>
+                        <th>Línea</th>
+                        <th>Cant.</th>
+                        <th>Tipo de Salida / Destino</th>
+                        <th>No. Remisión</th>
+                        <th>Acción Correctiva</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaSalidas"></tbody>
+            </table>
+            <div id="mensajeCarga">Cargando el archivo de bajas... ⏳</div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
+            authDomain: "inventario-monastery.firebaseapp.com",
+            projectId: "inventario-monastery",
+            storageBucket: "inventario-monastery.firebasestorage.app",
+            messagingSenderId: "1035655424934",
+            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
+            measurementId: "G-BD5MYW553K"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const tabla = document.getElementById('cuerpoTablaSalidas');
+        const mensajeCarga = document.getElementById('mensajeCarga');
+
+        // Escucha en tiempo real de la base de datos
+        db.collection("prendas").orderBy("fechaServidor", "desc").onSnapshot((querySnapshot) => {
+            tabla.innerHTML = ""; 
+            mensajeCarga.style.display = "none";
+            let contadorBajas = 0;
+            
+            querySnapshot.forEach((doc) => {
+                const prenda = doc.data();
+                
+                // CONDICIÓN: Solo muestra lo que NO está disponible (es decir, lo que se dio de baja)
+                if (prenda.estado && prenda.estado !== "Disponible en inventario") {
+                    contadorBajas++;
+                    const urlFoto = prenda.fotoUrl || 'logo.png'; 
+                    const fila = document.createElement('tr');
+                    
+                    fila.innerHTML = `
+                        <td><img src="${urlFoto}" class="foto-miniatura"></td>
+                        <td>${prenda.salidaFecha || 'N/A'}</td>
+                        <td style="font-weight: bold; color: #fff;">${prenda.precinto}</td>
+                        <td>${prenda.referencia || '-'}</td>
+                        <td>${prenda.linea || '-'}</td>
+                        <td style="font-weight: bold; color: #fd7e14;">${prenda.cantidad || '1'}</td>
+                        <td><span class="estado-salida">${prenda.estado}</span></td>
+                        <td style="color: #ffc107; font-weight: 500;">${prenda.salidaRemision || '-'}</td>
+                        <td>
+                            <button class="btn-retornar" onclick="retornarAInventario('${doc.id}')">↩️ Retornar a Bodega</button>
+                        </td>
+                    `;
+                    tabla.appendChild(fila);
+                }
+            });
+
+            if (contadorBajas === 0) {
+                tabla.innerHTML = "<tr><td colspan='9' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
+            }
+        });
+
+        // FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo y borra los datos de salida
+        function retornarAInventario(idDocumento) {
+            if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
+                db.collection("prendas").doc(idDocumento).update({
+                    estado: "Disponible en inventario",
+                    salidaRemision: "",
+                    salidaFecha: ""
+                }).then(() => {
+                    alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
+                }).catch((error) => {
+                    alert("Error al intentar retornar: " + error);
+                });
+            }
+        }
+
+        // BUSCADOR
+        document.getElementById('inputBuscador').addEventListener('input', function() {
+            const textoBusqueda = this.value.toLowerCase();
+            const filas = document.querySelectorAll('#cuerpoTablaSalidas tr');
+            filas.forEach(fila => {
+                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Inventario Monastery</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body { 
+            background-color: #131313; 
+            color: #ffffff; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            
+            /* ======================================================== */
+            /* 1. TU IMAGEN DE FONDO .PNG RE ALINEADA AQUÍ              */
+            /* ======================================================== */
+            background-image: url('fondo.png'); /* <-- Cambia 'fondo.png' por el nombre real de tu archivo */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .titulo-principal {
+            text-align: center;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .titulo-principal h1 {
+            margin: 0;
+            font-size: 38px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.7);
+        }
+        .titulo-principal span { color: #c4d8e7; }
+        .linea-decorativa {
+            width: 80px;
+            height: 4px;
+            background-color: #0078D4;
+            margin: 12px auto 0 auto;
+            border-radius: 2px;
+        }
+        
+        .caja-login { 
+            background-color: #2d2d2d; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.9); 
+            width: 100%; 
+            max-width: 380px; 
+            text-align: center;
+            border: 1px solid #444; 
+        }
+
+        .logo-container {
+            width: 90px;
+            height: 90px;
+            background-color: #ffffff; 
+            border-radius: 50%;
+            margin: 0 auto 25px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 3px solid #0078D4; 
+            overflow: hidden; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .logo-img { width: 85%; height: 85%; object-fit: contain; }
+        h2 { margin-top: 0; color: #fff; margin-bottom: 5px; font-size: 24px; font-weight: bold; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 30px; letter-spacing: 0.5px;}
+
+        .grupo-input { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 12px; color: #ccc; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+        
+        .contenedor-password { position: relative; display: flex; align-items: center; }
+        
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            background-color: #1a1a1a; 
+            border: 1px solid #555; 
+            border-radius: 6px; 
+            color: white; 
+            box-sizing: border-box; 
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        input:focus { border-color: #0078D4; outline: none; box-shadow: 0 0 8px rgba(0, 120, 212, 0.6); }
+
+        .btn-ojo {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            user-select: none;
+        }
+
+        .fila-opciones {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            margin-bottom: 25px;
+            color: #ccc;
+        }
+        .chk-recordar { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .chk-recordar input { width: auto; margin: 0; cursor: pointer; }
+        
+        .link-recuperar { color: #0078D4; text-decoration: none; font-weight: 500; }
+        .link-recuperar:hover { text-decoration: underline; }
+
+        .btn-ingresar { 
+            background-color: #0078D4; color: white; border: none; padding: 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .btn-ingresar:hover { background-color: #005a9e; }
+        .btn-ingresar:disabled { background-color: #555; cursor: not-allowed; }
+
+        .alerta-mensaje {
+            padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 25px; display: none; font-weight: 500; text-align: left;
+        }
+        .error { color: #ff4444; background-color: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; }
+        .exito { color: #28a745; background-color: rgba(40, 167, 69, 0.15); border: 1px solid #28a745; }
+
+        .bloque-recuperar { display: none; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <div class="titulo-principal">
+        <h1>Inventario de <span>Muestras</span></h1>
+        <div class="linea-decorativa"></div>
+    </div>
+
+    <div class="caja-login">
+        <div class="logo-container">
+            /* 2. TU LOGO BLANCO ENLAZADO AQUÍ                            */
+            <img src="logo_blanco.png" alt="M" class="logo-img" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'color:#0078D4; font-weight:bold; font-size:24px;\'>M</span>'">
+        </div>
+        
+        <div id="vistaLogin">
+            <h2>Monastery</h2>
+            <p>Acceso Administrativo Especializado</p>
+
+            <div class="alerta-mensaje error" id="mensajeError"></div>
+
+            <div class="grupo-input">
+                <label>Correo Electrónico</label>
+                <input type="email" id="txtCorreo" placeholder="usuario@monastery.com" autocomplete="email">
+            </div>
+            
+            <div class="grupo-input">
+                <label>Contraseña</label>
+                <div class="contenedor-password">
+                    <input type="password" id="txtPassword" placeholder="••••••••" autocomplete="current-password">
+                    <button type="button" class="btn-ojo" id="btnOjo" onclick="alternarPassword()">👁️</button>
+                </div>
+            </div>
+
+            <div class="fila-opciones">
+                <label class="chk-recordar">
+                    <input type="checkbox" id="chkRecordar"> Recordarme
+                </label>
+                <a href="#" class="link-recuperar" onclick="mostrarVistaRecuperar(event)">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <button class="btn-ingresar" id="btnIngresar" onclick="iniciarSesion()">Ingresar al Sistema</button>
+        </div>
+
+        <div id="vistaRecuperar" class="bloque-recuperar">
+            <h2>Restaurar Acceso</h2>
+            <p style="text-align: center;">Ingresa tu correo para enviarte un enlace oficial de restablecimiento.</p>
+
+            <div class="alerta-mensaje" id="mensajeRecuperar"></div>
+
+            <div class="grupo-input">
+                <label>Correo Corporativo</label>
+                <input type="email" id="txtCorreoRecuperar" placeholder="usuario@monastery.com">
+            </div>
+
+            <button class="btn-ingresar" id="btnEnviarEnlace" onclick="enviarCorreoRestaurar()">Enviar Enlace al Correo</button>
+            <button class="btn-ingresar" style="background-color: #444; margin-top: 10px;" onclick="mostrarVistaLogin()">Volver al Login</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
+            authDomain: "inventario-monastery.firebaseapp.com",
+            projectId: "inventario-monastery",
+            storageBucket: "inventario-monastery.firebasestorage.app",
+            messagingSenderId: "1035655424934",
+            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
+            measurementId: "G-BD5MYW553K"
+        };
+
+        let auth;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+        } catch(e) { console.error(e); }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const correoGuardado = localStorage.getItem("monastery_correo");
+            if (correoGuardado) {
+                document.getElementById('txtCorreo').value = correoGuardado;
+                document.getElementById('chkRecordar').checked = true;
+            }
+        });
+
+        function alternarPassword() {
+            const inputPass = document.getElementById('txtPassword');
+            const btnOjo = document.getElementById('btnOjo');
+            if (inputPass.type === "password") {
+                inputPass.type = "text"; btnOjo.textContent = "🔒"; 
+            } else {
+                inputPass.type = "password"; btnOjo.textContent = "👁️";
+            }
+        }
+
+        function mostrarVistaRecuperar(e) {
+            e.preventDefault();
+            document.getElementById('vistaLogin').style.display = 'none';
+            document.getElementById('vistaRecuperar').style.display = 'block';
+            document.getElementById('mensajeRecuperar').style.display = 'none';
+        }
+
+        function mostrarVistaLogin() {
+            document.getElementById('vistaRecuperar').style.display = 'none';
+            document.getElementById('vistaLogin').style.display = 'block';
+            document.getElementById('mensajeError').style.display = 'none';
+        }
+
+        function iniciarSesion() {
+            const msg = document.getElementById('mensajeError');
+            msg.style.display = 'none';
+
+            if (typeof firebase === 'undefined' || !auth) {
+                alert("🚨 CONTROL DE SEGURIDAD:\nEl navegador bloqueó la conexión local.\n\nAbre tu carpeta, dale clic derecho a 'index.html', 'Abrir con' y selecciona Microsoft Edge.");
+                return;
+            }
+
+            const correo = document.getElementById('txtCorreo').value.trim();
+            const password = document.getElementById('txtPassword').value;
+            const recordar = document.getElementById('chkRecordar').checked;
+            const btn = document.getElementById('btnIngresar');
+
+            if (correo === "" || password === "") { mostrarAlert(msg, "error", "Por favor ingresa tu correo y contraseña."); return; }
+
+            btn.textContent = "Verificando... ⏳"; btn.disabled = true;
+
+            auth.signInWithEmailAndPassword(correo, password)
+            .then(() => {
+                if (recordar) { localStorage.setItem("monastery_correo", correo); } 
+                else { localStorage.removeItem("monastery_correo"); }
+                window.location.href = "menu.html"; 
+            })
+            .catch((error) => {
+                btn.textContent = "Ingresar al Sistema"; btn.disabled = false;
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    mostrarAlert(msg, "error", "Correo o contraseña incorrectos.");
+                } else {
+                    mostrarAlert(msg, "error", "Error: " + error.message);
+                }
+            });
+        }
+
+        function enviarCorreoRestaurar() {
+            const correo = document.getElementById('txtCorreoRecuperar').value.trim();
+            const btn = document.getElementById('btnEnviarEnlace');
+            const msg = document.getElementById('mensajeRecuperar');
+
+            if (correo === "") { mostrarAlert(msg, "error", "Por favor ingresa tu correo corporativo."); return; }
+            btn.textContent = "Enviando... ⏳"; btn.disabled = true;
+
+            auth.sendPasswordResetEmail(correo)
+            .then(() => {
+                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
+                mostrarAlert(msg, "exito", "¡Enlace enviado! Revisa tu bandeja de entrada o spam.");
+                document.getElementById('txtCorreoRecuperar').value = '';
+            })
+            .catch((error) => {
+                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
+                mostrarAlert(msg, "error", error.message);
+            });
+        }
+
+        function mostrarAlert(elemento, tipo, texto) {
+            elemento.textContent = texto;
+            elemento.className = "alerta-mensaje " + (tipo === "error" ? "error" : "exito");
+            elemento.style.display = 'block';
+        }
+
+        document.getElementById('txtPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') { iniciarSesion(); } });
+    </script>
+</body>
+</html>

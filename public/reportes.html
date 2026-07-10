@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reportes - Inventario Muestras</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .contenedor { background-color: #2d2d2d; max-width: 1100px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
+        
+        .barra-control { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 30px; }
+        .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; transition: 0.3s; }
+        .btn-volver:hover { background-color: #555; }
+        .btn-accion { background-color: #0078D4; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; transition: 0.3s; }
+        .btn-accion:hover { background-color: #005a9e; }
+
+        .grid-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
+        .tarjeta-kpi { background-color: #1a1a1a; border: 1px solid #444; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .kpi-titulo { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .kpi-valor { font-size: 32px; font-weight: bold; color: #fff; margin: 0; }
+        .kpi-sub { font-size: 11px; color: #777; margin-top: 5px; display: block; }
+        
+        .valor-azul { color: #0078D4; }
+        .valor-verde { color: #28a745; }
+        .valor-naranja { color: #fd7e14; }
+        .valor-purpura { color: #9c27b0; } 
+
+        .grid-graficas { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .tarjeta-grafica { background-color: #1a1a1a; border: 1px solid #444; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .grafica-titulo { text-align: center; font-size: 16px; color: #ccc; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        #mensajeCarga { text-align: center; color: #aaa; font-style: italic; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor">
+        <div class="barra-control">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <a href="menu.html" class="btn-volver">🔙 Menú Principal</a>
+                <h2 style="margin: 0;">📊 Indicadores y Reportes</h2>
+            </div>
+            <a href="dashboard.html" class="btn-accion">📦 Ir al Dashboard</a>
+        </div>
+
+        <div id="mensajeCarga">Obteniendo TRM actual y calculando estadísticas reales... ⏳</div>
+
+        <div id="contenidoReportes" style="display: none;">
+            <div class="grid-kpis">
+                <div class="tarjeta-kpi">
+                    <div class="kpi-titulo">Total Unidades Ingresadas</div>
+                    <div class="kpi-valor valor-azul" id="kpiTotal">0</div>
+                </div>
+                <div class="tarjeta-kpi">
+                    <div class="kpi-titulo">Unidades Disponibles</div>
+                    <div class="kpi-valor valor-verde" id="kpiDisponibles">0</div>
+                </div>
+                <div class="tarjeta-kpi">
+                    <div class="kpi-titulo">Unidades con Salida</div>
+                    <div class="kpi-valor valor-naranja" id="kpiSalidas">0</div>
+                </div>
+                <div class="tarjeta-kpi">
+                    <div class="kpi-titulo">Valor Inv. Disponible (COP)</div>
+                    <div class="kpi-valor valor-purpura" id="kpiValorTotal" style="font-size: 24px;">$0</div>
+                    <span class="kpi-sub" id="infoTRM">TRM actualizada.</span>
+                </div>
+            </div>
+
+            <div class="grid-graficas">
+                <div class="tarjeta-grafica">
+                    <h3 class="grafica-titulo">Distribución de Unidades por Estado</h3>
+                    <canvas id="graficoEstados"></canvas>
+                </div>
+                <div class="tarjeta-grafica">
+                    <h3 class="grafica-titulo">Top 5: Unidades Reales por Línea</h3>
+                    <canvas id="graficoLineas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
+            authDomain: "inventario-monastery.firebaseapp.com",
+            projectId: "inventario-monastery",
+            storageBucket: "inventario-monastery.firebasestorage.app",
+            messagingSenderId: "1035655424934",
+            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
+            measurementId: "G-BD5MYW553K"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let chartEstadosInstancia = null;
+        let chartLineasInstancia = null;
+
+        let trmUSD = 4000; 
+        let trmEUR = 4300; 
+
+        async function obtenerTrmActual() {
+            try {
+                const resUSD = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const dataUSD = await resUSD.json();
+                trmUSD = dataUSD.rates.COP;
+
+                const resEUR = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
+                const dataEUR = await resEUR.json();
+                trmEUR = dataEUR.rates.COP;
+
+                document.getElementById('infoTRM').textContent = `USD: $${trmUSD.toFixed(0)} | EUR: $${trmEUR.toFixed(0)}`;
+            } catch(error) {
+                console.error("Error consultando TRM, usando valores por defecto.", error);
+                document.getElementById('infoTRM').textContent = "TRM aproximada (Sin conexión API)";
+            }
+        }
+
+        async function iniciarReportes() {
+            await obtenerTrmActual();
+
+            db.collection("prendas").onSnapshot((querySnapshot) => {
+                document.getElementById('mensajeCarga').style.display = 'none';
+                document.getElementById('contenidoReportes').style.display = 'block';
+
+                let totalUnidadesFisicas = 0;
+                let totalDisponiblesFisicas = 0;
+                let totalSalidasFisicas = 0;
+                let valorTotalInventarioCOP = 0; 
+                
+                let conteoPorLinea = {};
+
+                querySnapshot.forEach((doc) => {
+                    const prenda = doc.data();
+                    
+                    // VALIDACIÓN ESTRICTA DE UNIDADES: Si no es número o está vacío, se evalúa como 0
+                    let unidadesRegistro = parseInt(prenda.cantidad);
+                    if (isNaN(unidadesRegistro)) {
+                        unidadesRegistro = 0;
+                    }
+                    
+                    // Sumatoria total global de piezas físicas
+                    totalUnidadesFisicas += unidadesRegistro;
+
+                    // CONDICIÓN ESTRICTA: Solo sumará como disponible si el texto coincide exactamente
+                    const esDisponible = prenda.estado === "Disponible en inventario";
+
+                    if (esDisponible) {
+                        totalDisponiblesFisicas += unidadesRegistro;
+                    } else {
+                        totalSalidasFisicas += unidadesRegistro;
+                    }
+
+                    // Acumulador por Línea basándose en el volumen real de piezas
+                    const linea = prenda.linea || "Sin Línea";
+                    if (conteoPorLinea[linea]) {
+                        conteoPorLinea[linea] += unidadesRegistro;
+                    } else {
+                        conteoPorLinea[linea] = unidadesRegistro;
+                    }
+
+                    // MATEMÁTICA FINANCIERA PRECISA (CANTIDAD X COSTO CON TRM)
+                    if (esDisponible && unidadesRegistro > 0) {
+                        let precioBase = parseFloat(prenda.precio) || 0;
+                        let moneda = prenda.moneda || 'COP';
+                        let precioConvertidoUnitario = 0;
+
+                        if (moneda === 'USD') {
+                            precioConvertidoUnitario = precioBase * trmUSD;
+                        } else if (moneda === 'EUR') {
+                            precioConvertidoUnitario = precioBase * trmEUR;
+                        } else {
+                            precioConvertidoUnitario = precioBase; 
+                        }
+
+                        valorTotalInventarioCOP += (precioConvertidoUnitario * unidadesRegistro);
+                    }
+                });
+
+                // Inyección de los KPI reales calculados en pantalla
+                document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
+                document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
+                document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
+                
+                document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
+                    style: 'currency', 
+                    currency: 'COP',
+                    maximumFractionDigits: 0 
+                }).format(valorTotalInventarioCOP);
+
+                // CONFIGURACIÓN DE GRÁFICAS CORREGIDA POR VOLUMEN REAL
+                const datosEstados = {
+                    labels: ['Disponibles', 'En Salida'],
+                    datasets: [{ data: [totalDisponiblesFisicas, totalSalidasFisicas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
+                };
+
+                const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
+                const valoresLineas = lineasOrdenadas.map(item => item[1]);
+
+                const datosLineas = {
+                    labels: etiquetasLineas,
+                    datasets: [{ label: 'Unidades Reales', data: valoresLineas, backgroundColor: '#0078D4', borderRadius: 4 }]
+                };
+
+                renderizarGraficaEstados(datosEstados);
+                renderizarGraficaLineas(datosLineas);
+            });
+        }
+
+        function renderizarGraficaEstados(datos) {
+            const ctx = document.getElementById('graficoEstados').getContext('2d');
+            if (chartEstadosInstancia) { chartEstadosInstancia.destroy(); }
+            chartEstadosInstancia = new Chart(ctx, { type: 'doughnut', data: datos, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#ccc' } } } } });
+        }
+
+        function renderizarGraficaLineas(datos) {
+            const ctx = document.getElementById('graficoLineas').getContext('2d');
+            if (chartLineasInstancia) { chartLineasInstancia.destroy(); }
+            chartLineasInstancia = new Chart(ctx, { type: 'bar', data: datos, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, x: { ticks: { color: '#ccc' }, grid: { display: false } } } } });
+        }
+
+        iniciarReportes();
+    </script>
+</body>
+</html>

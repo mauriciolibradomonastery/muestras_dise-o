@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Inventario Muestras</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .contenedor { background-color: #2d2d2d; max-width: 95%; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
+        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .buscador { padding: 10px; width: 350px; border-radius: 6px; border: 1px solid #555; background-color: #1a1a1a; color: white; }
+        .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; margin-right: 15px; font-weight: bold; }
+        .contenedor-tabla { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th { color: #0078D4; text-align: left; padding: 12px; border-bottom: 2px solid #555; white-space: nowrap; }
+        td { padding: 12px; border-bottom: 1px solid #444; vertical-align: middle; }
+        tr:hover { background-color: #3d3d3d; }
+        
+        .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; transition: 0.2s; cursor: pointer; }
+        .foto-miniatura:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+
+        .estado-disponible { background-color: #198754; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .btn-accion { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 4px; transition: 0.2s; }
+        
+        .btn-ver { background-color: #17a2b8; color: white; }
+        .btn-editar { background-color: #ffc107; color: black; }
+        .btn-salida { background-color: #fd7e14; color: white; } 
+        .btn-borrar { background-color: #dc3545; color: white; }
+        .btn-accion:hover { opacity: 0.8; }
+        
+        /* ESTILOS DEL MENÚ DESPLEGABLE "OPCIONES" */
+        .dropdown { position: relative; display: inline-block; }
+        .btn-opciones { background-color: #0078D4; color: white; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-opciones:hover { background-color: #005a9e; }
+        .dropdown-contenido { display: none; position: absolute; right: 0; background-color: #222222; min-width: 250px; box-shadow: 0px 8px 24px rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 8px; z-index: 100; margin-top: 6px; overflow: hidden; }
+        
+        .dropdown-item { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; text-align: left; background: none; border: none; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; box-sizing: border-box; transition: 0.2s; font-weight: 500; }
+        .dropdown-item:hover { background-color: #333333; }
+        
+        .item-excel { border-left: 4px solid #28a745; }
+        .item-backup { border-left: 4px solid #6f42c1; }
+        .item-restaurar { border-left: 4px solid #e83e8c; }
+        .item-bajas { border-left: 4px solid #fd7e14; }
+        .item-agregar { border-left: 4px solid #0078D4; }
+        
+        .show { display: block; }
+
+        /* MODALES */
+        .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-contenido { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .modal-contenido h3 { color: #fd7e14; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .modal-contenido label { display: block; margin-top: 15px; font-size: 13px; color: #ccc; font-weight: bold; }
+        .modal-contenido input, .modal-contenido select { width: 100%; padding: 10px; margin-top: 5px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 6px; color: white; box-sizing: border-box; }
+        
+        .modal-botones { display: flex; justify-content: space-between; margin-top: 25px; }
+        .btn-cancelar { background-color: #444; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-confirmar { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 48%; font-weight: bold; transition: 0.3s; }
+        .btn-confirmar:hover { background-color: #218838; }
+        #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
+
+        .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
+        .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
+
+        /* MODALES AMPLIOS */
+        .modal-contenido-amplio { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 680px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .det-cabecera { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .det-foto-grande { width: 110px; height: 110px; object-fit: cover; border-radius: 8px; border: 1px solid #555; }
+        .cuadricula-detalles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; margin-bottom: 20px; }
+        .item-detalle { border-bottom: 1px solid #3a3a3a; padding-bottom: 6px; }
+        .lbl-detalle { font-size: 11px; color: #0078D4; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .val-detalle { font-size: 14px; color: #fff; margin-top: 2px; font-weight: 500; }
+        
+        .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
+        .titulo-edicion { color: #ffc107 !important; }
+    </style>
+</head>
+<body>
+    <div class="contenedor">
+        <div class="barra-control">
+            <div style="display: flex; align-items: center;">
+                <a href="menu.html" class="btn-volver">🔙 Menú</a>
+                <h2 style="margin: 0;">📦 Inventario Activo (Bodega)</h2>
+            </div>
+            
+            <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar por Precinto, Referencia, etc...">
+            
+            <div class="dropdown">
+                <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
+                <div id="dropdownOpciones" class="dropdown-content dropdown-contenido">
+                    <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
+                    <button class="dropdown-item item-backup" id="btnBackupJSON">💾 Copia Seguridad (JSON)</button>
+                    
+                    <input type="file" id="inputRestaurarJSON" accept=".json" style="display: none;">
+                    <button class="dropdown-item item-restaurar" onclick="document.getElementById('inputRestaurarJSON').click()">↩️ Restaurar Copia (JSON)</button>
+                    
+                    <a href="salidas.html" class="dropdown-item item-bajas">📋 Ver Bajas / Salidas</a>
+                    <a href="formulario.html" class="dropdown-item item-agregar">➕ Agregar Prenda</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="contenedor-tabla">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Código Precinto</th>
+                        <th>Referencia</th>
+                        <th>Línea</th>
+                        <th>Cant.</th>
+                        <th>Costo</th>
+                        <th>Ubicación</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTabla"></tbody>
+            </table>
+            <div id="mensajeCarga">Conectando con el inventario Monastery... ⏳</div>
+        </div>
+    </div>
+
+    <!-- MODAL REGISTRAR SALIDA -->
+    <div id="modalSalida" class="modal-fondo">
+        <div class="modal-contenido">
+            <h3>📤 Registrar Salida</h3>
+            <label>No. Factura / Remisión:</label><input type="text" id="salidaRemision" placeholder="Ej: REM-5023">
+            <label>Fecha de Salida:</label><input type="date" id="salidaFecha">
+            <label>Tipo de Salida:</label>
+            <select id="salidaTipo">
+                <option value="">Selecciona un tipo...</option><option>SALIDA DEL INVENTARIO</option><option>PARA FOTOS</option><option>PARA MERCADEO</option><option>PARA COMERCIAL</option><option>OBSEQUIO</option><option>BODEGA</option><option>PATRONAJE</option><option>PEDRO CASTELLANOS</option><option>DEVOLUCION A PROVEEDOR</option><option>ENVIO MUESTRA PROVEEDOR</option><option>PRUEBA DE USO</option><option>MUESTRAS DESTRUCCIÓN</option><option>GESTION HUMANA</option><option>DONACION</option>
+            </select>
+            <label>Orden de Traslado (TO):</label><input type="text" id="salidaTo" placeholder="Ej: TO-10254">
+            
+            <div class="modal-botones">
+                <button class="btn-cancelar" onclick="cerrarModalSalida()" style="width:48%">Cancelar</button>
+                <button class="btn-confirmar" id="btnConfirmarSalida" onclick="guardarSalida()" style="width:48%">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLES FICHA TÉCNICA -->
+    <div id="modalDetalles" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <div class="det-cabecera">
+                <img id="detFoto" class="det-foto-grande" src="logo.png">
+                <div>
+                    <h2 style="margin:0; color:#0078D4;">Ficha de la Prenda</h2>
+                    <p style="margin:5px 0 0 0; color:#aaa; font-size:14px;">Precinto No: <span id="detPrecintoTitulo" style="color:#fff; font-weight:bold;">-</span></p>
+                </div>
+            </div>
+            <div class="cuadricula-detalles">
+                <div class="item-detalle"><div class="lbl-detalle">Registrado por</div><div class="val-detalle" id="detRegistradoPor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Ingreso</div><div class="val-detalle" id="detFechaIngreso">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Código Precinto</div><div class="val-detalle" id="detPrecinto">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Referencia</div><div class="val-detalle" id="detReferencia">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Colección</div><div class="val-detalle" id="detColeccion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Tipo</div><div class="val-detalle" id="detTipo">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Línea</div><div class="val-detalle" id="detLinea">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Género</div><div class="val-detalle" id="detGenero">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Talla</div><div class="val-detalle" id="detTalla">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Color / Descripción</div><div class="val-detalle" id="detColor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Cantidad</div><div class="val-detalle" id="detCantidad">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Clasificación</div><div class="val-detalle" id="detClasificacion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Proveedor / Marca</div><div class="val-detalle" id="detProveedor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">País de Origen</div><div class="val-detalle" id="detPais">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Precio / Costo</div><div class="val-detalle" id="detPrecio">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación General</div><div class="val-detalle" id="detUbiGeneral">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación en Diseño</div><div class="val-detalle" id="detUbiDiseno">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Estado actual</div><div class="val-detalle" id="detEstado">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Remisión / Factura</div><div class="val-detalle" id="detRemision">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Salida</div><div class="val-detalle" id="detFechaSalida">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Orden de Traslado (TO)</div><div class="val-detalle" id="detTo">-</div></div>
+            </div>
+            <div style="border-top:1px solid #444; padding-top:10px; margin-bottom:20px;">
+                <div class="lbl-detalle">Observaciones / Notas</div>
+                <div class="val-detalle" id="detObservaciones" style="font-style:italic; color:#ccc;">-</div>
+            </div>
+            <button class="btn-cancelar" onclick="cerrarModalDetalles()">❌ Cerrar Vista</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR INFORMACIÓN -->
+    <div id="modalEditar" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
+            
+            <div class="cuadricula-detalles" style="margin-top:15px;">
+                <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Colección</label><input type="text" id="edColeccion" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Tipo</label><input type="text" id="edTipo" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Línea</label><input type="text" id="edLinea" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Género</label><input type="text" id="edGenero" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Color</label><input type="text" id="edColor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación General</label><input type="text" id="edUbiGeneral" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación Diseño</label><input type="text" id="edUbiDiseno" class="input-edicion"></div>
+                
+                <div><label class="lbl-detalle">Precio / Costo</label><input type="number" id="edPrecio" class="input-edicion" step="0.01"></div>
+                <div>
+                    <label class="lbl-detalle">Moneda</label>
+                    <select id="edMoneda" class="input-edicion" style="background-color: #1a1a1a; height: 33px; margin-top: 4px;">
+                        <option value="COP">COP (Pesos Colombianos)</option>
+                        <option value="USD">USD (Dólares)</option>
+                        <option value="EUR">EUR (Euros)</option>
+                    </select>
+                </div>
+                <div><label class="lbl-detalle">Proveedor / Marca</label><input type="text" id="edProveedor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">País de Origen</label><input type="text" id="edPaisOrigen" class="input-edicion"></div>
+
+                <div style="grid-column: span 2;">
+                    <label class="lbl-detalle" style="color:#ffc107;">Modificar Estado Actual de la Prenda</label>
+                    <select id="edEstado" class="input-edicion" style="background-color: #222; font-weight: bold;">
+                        <option value="Disponible en inventario">🟢 Disponible en inventario (Regresar a bodega)</option>
+                        <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option><option value="PARA FOTOS">PARA FOTOS</option><option value="PARA MERCADEO">PARA MERCADEO</option><option value="PARA COMERCIAL">PARA COMERCIAL</option><option value="OBSEQUIO">OBSEQUIO</option><option value="BODEGA">BODEGA</option><option value="PATRONAJE</option><option value="SALE DE INVENTARIO PARA JENNY">SALE DE INVENTARIO PARA JENNY</option><option value="GERENCIA">GERENCIA</option><option value="PEDRO CASTELLANOS">PEDRO CASTELLANOS</option><option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option><option value="ENVIO MUESTRA PROVEEDOR">ENVIO MUESTRA PROVEEDOR</option><option value="PRUEBA DE USO">PRUEBA DE USO</option><option value="PROVEEDOR">PROVEEDOR</option><option value="PRESENTAR EN EL PROJECT DE LAS VEGAS">PRESENTAR EN EL PROJECT DE LAS VEGAS</option><option value="PROVEEDOR PANAMA">PROVEEDOR PANAMA</option><option value="MUESTRAS SALIENTES">MUESTRAS SALIENTES</option><option value="DOTACION/PEDRO">DOTACION/PEDRO</option><option value="ANTHONY PRODUCCIÓN">ANTHONY PRODUCCIÓN</option><option value="GESTION HUMANA">GESTION HUMANA</option><option value="DONACION">DONACION</option>
+                    </select>
+                </div>
+                <div><label class="lbl-detalle">Remisión / Factura</label><input type="text" id="edRemision" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Fecha de Salida</label><input type="date" id="edFechaSalida" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Orden de Traslado (TO)</label><input type="text" id="edTo" class="input-edicion"></div>
+                
+                <div style="grid-column: span 2;"><label class="lbl-detalle">Observaciones</label><input type="text" id="edObservaciones" class="input-edicion"></div>
+
+                <!-- NUEVO CAMPO: ACTUALIZAR FOTO EN EL MODAL DE EDICIÓN -->
+                <div style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px; margin-top: 5px;">
+                    <label class="lbl-detalle" style="color: #0078D4;">📸 Actualizar Fotografía (Opcional)</label>
+                    <input type="file" id="edFotoNueva" accept="image/*" class="input-edicion" style="cursor: pointer; background-color: #222; padding: 6px;">
+                    <span style="font-size: 11px; color: #888; display: block; margin-top: 5px;">*Si no seleccionas ningún archivo, el sistema mantendrá la foto actual de la prenda.</span>
+                </div>
+            </div>
+
+            <div class="modal-botones">
+                <button class="btn-cancelar" onclick="cerrarModalEditar()" style="width:48%">Cancelar</button>
+                <button class="btn-confirmar" id="btnGuardarEdicion" onclick="guardarEdicion()" style="width:48%; background-color:#ffc107; color:black;">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
+            authDomain: "inventario-monastery.firebaseapp.com",
+            projectId: "inventario-monastery",
+            storageBucket: "inventario-monastery.firebasestorage.app",
+            messagingSenderId: "1035655424934",
+            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
+            measurementId: "G-BD5MYW553K"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const tabla = document.getElementById('cuerpoTabla');
+        const mensajeCarga = document.getElementById('mensajeCarga');
+        let datosParaExcel = [];
+        let baseDatosCompleta = []; 
+
+        function toggleDropdown() {
+            document.getElementById("dropdownOpciones").classList.toggle("show");
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.btn-opciones')) {
+                const dropdowns = document.getElementsByClassName("dropdown-contenido");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    const openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+
+        db.collection("prendas").orderBy("fechaServidor", "desc").onSnapshot((querySnapshot) => {
+            tabla.innerHTML = ""; 
+            mensajeCarga.style.display = "none";
+            datosParaExcel = []; 
+            baseDatosCompleta = []; 
+            let contadorDisponibles = 0;
+            
+            if(querySnapshot.empty) {
+                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const prenda = doc.data();
+
+                baseDatosCompleta.push({
+                    idDocumentoFirestore: doc.id,
+                    ...prenda
+                });
+
+                if (prenda.estado && prenda.estado !== "Disponible en inventario") {
+                    return; 
+                }
+
+                contadorDisponibles++;
+                const urlFotoARenderizar = prenda.fotoUrl || 'logo.png'; 
+                const fila = document.createElement('tr');
+                
+                let estadoHTML = `<span class="estado-disponible">DISPONIBLE</span>`;
+
+                let costoVisual = "-";
+                if(prenda.precio) {
+                    costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`;
+                }
+                
+                fila.innerHTML = `
+                    <td><img src="${urlFotoARenderizar}" class="foto-miniatura" alt="Foto" onclick="abrirVisor('${urlFotoARenderizar}')" title="Clic para ampliar"></td>
+                    <td>${prenda.fechaIngreso || 'N/A'}</td>
+                    <td style="font-weight: bold; color: #fff;">${prenda.precinto}</td>
+                    <td>${prenda.referencia || '-'}</td>
+                    <td>${prenda.linea || '-'}</td>
+                    <td style="font-weight: bold; color: #0078D4;">${prenda.cantidad || '1'}</td> <td style="white-space: nowrap;">${costoVisual}</td> <td>${prenda.ubicacionGeneral || '-'}</td>
+                    <td>${estadoHTML}</td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${doc.id}')">👁️</button>
+                        <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${doc.id}')">✏️</button>
+                        <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${doc.id}')">📤</button>
+                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${doc.id}')">🗑️</button>
+                    </td>
+                `;
+                tabla.appendChild(fila);
+
+                const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
+                const descripcionGenerada = partesDesc.join(" - ");
+
+                datosParaExcel.push({
+                    "Fecha Ingreso": prenda.fechaIngreso || "",
+                    "Registrado Por": prenda.registradoPor || "",
+                    "Precinto": prenda.precinto || "",
+                    "Descripción": descripcionGenerada,
+                    "Referencia": prenda.referencia || "",
+                    "Línea": prenda.linea || "",
+                    "Color": prenda.color || "",
+                    "Talla": prenda.talla || "",
+                    "Género": prenda.genero || "",
+                    "Proveedor": prenda.proveedor || "",
+                    "País Origen": prenda.paisOrigen || "",
+                    "Precio": prenda.precio || "",
+                    "Moneda": prenda.moneda || "",
+                    "Cantidad": prenda.cantidad || "",
+                    "Clasificación": prenda.clasificacion || "",
+                    "Fecha de Salida": prenda.salidaFecha || "",
+                    "Ubicación General": prenda.ubicacionGeneral || "",
+                    "Ubicación Diseño": prenda.ubicacionDiseno || "",
+                    "Tipo": prenda.tipo || "",
+                    "Observaciones": prenda.observations || prenda.observaciones || "",
+                    "Colección": prenda.coleccion || "",
+                    "Remisión de Salida": prenda.salidaRemision || "",
+                    "Orden de Traslado (TO)": prenda.salidaTo || "", 
+                    "Estado Actual": prenda.estado || "Disponible en inventario"
+                });
+            });
+
+            if (contadorDisponibles === 0) {
+                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
+            }
+        });
+
+        // DESCARGAR COPIA DE SEGURIDAD TOTAL
+        document.getElementById('btnBackupJSON').addEventListener('click', function() {
+            if(baseDatosCompleta.length === 0) { alert("No hay datos en el inventario para respaldar."); return; }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(baseDatosCompleta, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            const hoy = new Date().toISOString().split('T')[0];
+            downloadAnchor.setAttribute("download", `Backup_Total_Inventario_${hoy}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            alert("¡ÉXITO! Copia de seguridad completa descargada (incluye fotos Base64).");
+        });
+
+        // RESTAURAR COPIA DESDE ARCHIVO JSON
+        document.getElementById('inputRestaurarJSON').addEventListener('change', function(event) {
+            const archivo = event.target.files[0];
+            if (!archivo) return;
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                try {
+                    const datosRestaurar = JSON.parse(e.target.result);
+                    if (!Array.isArray(datosRestaurar)) {
+                        alert("Error: El archivo seleccionado no tiene el formato correcto de copia de seguridad.");
+                        return;
+                    }
+                    if (confirm(`⚠️ ALERTA DE SEGURIDAD ⚠️\n¿Estás seguro de que deseas inyectar y restaurar las ${datosRestaurar.length} prendas de este backup?`)) {
+                        let subidos = 0;
+                        datosRestaurar.forEach((prendaObjeto) => {
+                            const idOriginalDoc = prendaObjeto.idDocumentoFirestore;
+                            const limpioParaFirebase = { ...prendaObjeto };
+                            delete limpioParaFirebase.idDocumentoFirestore;
+                            limpioParaFirebase.fechaServidor = firebase.firestore.FieldValue.serverTimestamp();
+
+                            let restauracionPromesa;
+                            if (idOriginalDoc) {
+                                restauracionPromesa = db.collection("prendas").doc(idOriginalDoc).set(limpioParaFirebase);
+                            } else {
+                                restauracionPromesa = db.collection("prendas").add(limpioParaFirebase);
+                            }
+
+                            restauracionPromesa.then(() => {
+                                subidos++;
+                                if (subidos === datosRestaurar.length) {
+                                    alert(`🎉 ¡SISTEMA RESTAURADO CON ÉXITO!`);
+                                    event.target.value = '';
+                                }
+                            }).catch(err => console.error("Error restaurando ítem:", err));
+                        });
+                    }
+                } catch (err) {
+                    alert("Error crítico: No se pudo procesar la lectura de la copia de seguridad.");
+                }
+            };
+            lector.readAsText(archivo);
+        });
+
+        // BUSCADOR EN TIEMPO REAL
+        document.getElementById('inputBuscador').addEventListener('input', function() {
+            const textoBusqueda = this.value.toLowerCase();
+            const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
+            filasTabla.forEach(fila => {
+                const contenidoFila = fila.textContent.toLowerCase();
+                if (contenidoFila.includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+            });
+        });
+
+        // EXPORTAR A EXCEL
+        document.getElementById('btnExportarExcel').addEventListener('click', function() {
+            if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
+            const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
+            const libroExcel = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Inventario Monastery");
+            XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
+        });
+
+        // REGISTRAR SALIDAS
+        const modalSalida = document.getElementById('modalSalida');
+        let idPrendaSeleccionada = null; 
+        function abrirModalSalida(idDocumento) {
+            idPrendaSeleccionada = idDocumento; 
+            document.getElementById('salidaRemision').value = '';
+            document.getElementById('salidaFecha').value = '';
+            document.getElementById('salidaTipo').value = '';
+            document.getElementById('salidaTo').value = ''; 
+            modalSalida.style.display = 'flex';
+        }
+        function cerrarModalSalida() { modalSalida.style.display = 'none'; idPrendaSeleccionada = null; }
+        function guardarSalida() {
+            const remision = document.getElementById('salidaRemision').value.trim();
+            const fecha = document.getElementById('salidaFecha').value;
+            const tipo = document.getElementById('salidaTipo').value;
+            const toVal = document.getElementById('salidaTo').value.trim(); 
+            
+            if (tipo === "") { alert("Por favor selecciona un 'Tipo de Salida'."); return; }
+            const btn = document.getElementById('btnConfirmarSalida');
+            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
+
+            db.collection("prendas").doc(idPrendaSeleccionada).update({
+                estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal
+            }).then(() => {
+                cerrarModalSalida();
+                btn.textContent = "Confirmar"; btn.disabled = false;
+            }).catch((error) => { alert("Error: " + error); btn.disabled = false; });
+        }
+
+        // MODAL EDICIÓN COMPLETA 
+        const modalEditar = document.getElementById('modalEditar');
+        function abrirModalEditar(idDocumento) {
+            idPrendaSeleccionada = idDocumento;
+            
+            // LIMPÍAMOS EL CAMPO DE FOTO AL ABRIR
+            document.getElementById('edFotoNueva').value = '';
+
+            db.collection("prendas").doc(idDocumento).get().then((doc) => {
+                if(doc.exists) {
+                    const p = doc.data();
+                    document.getElementById('edPrecinto').value = p.precinto || '';
+                    document.getElementById('edReferencia').value = p.referencia || '';
+                    document.getElementById('edColeccion').value = p.coleccion || '';
+                    document.getElementById('edTipo').value = p.tipo || '';
+                    document.getElementById('edLinea').value = p.linea || '';
+                    document.getElementById('edTalla').value = p.talla || '';
+                    document.getElementById('edGenero').value = p.genero || '';
+                    document.getElementById('edColor').value = p.color || '';
+                    document.getElementById('edUbiGeneral').value = p.ubicacionGeneral || '';
+                    document.getElementById('edUbiDiseno').value = p.ubicacionDiseno || '';
+                    document.getElementById('edObservaciones').value = p.observaciones || '';
+                    document.getElementById('edRemision').value = p.salidaRemision || '';
+                    document.getElementById('edFechaSalida').value = p.salidaFecha || '';
+                    document.getElementById('edTo').value = p.salidaTo || ''; 
+                    
+                    document.getElementById('edPrecio').value = p.precio || '';
+                    document.getElementById('edMoneda').value = p.moneda || 'COP';
+                    document.getElementById('edProveedor').value = p.proveedor || '';
+                    document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
+                    
+                    const selectEstado = document.getElementById('edEstado');
+                    if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
+                    modalEditar.style.display = 'flex';
+                }
+            });
+        }
+        function cerrarModalEditar() { modalEditar.style.display = 'none'; idPrendaSeleccionada = null; }
+        
+        // GUARDADO DE EDICIÓN CON PROCESAMIENTO DE IMAGEN
+        function guardarEdicion() {
+            const btn = document.getElementById('btnGuardarEdicion');
+            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
+
+            const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
+
+            if (archivoFotoNueva) {
+                // SI SUBIERON UNA FOTO NUEVA, LA COMPRIMIMOS
+                const reader = new FileReader();
+                reader.readAsDataURL(archivoFotoNueva);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; 
+                        const MAX_HEIGHT = 600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else {
+                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                        ejecutarUpdateFirebase(fotoBase64); // Se envía la nueva foto
+                    }
+                }
+            } else {
+                // SI NO SUBIERON FOTO NUEVA, ACTUALIZAMOS SIN TOCAR LA FOTO ANTERIOR
+                ejecutarUpdateFirebase(null);
+            }
+
+            // FUNCIÓN INTERNA QUE HACE EL UPDATE FINAL
+            function ejecutarUpdateFirebase(nuevaFotoData) {
+                let datosActualizar = {
+                    precinto: document.getElementById('edPrecinto').value.trim(), 
+                    referencia: document.getElementById('edReferencia').value,
+                    coleccion: document.getElementById('edColeccion').value,
+                    tipo: document.getElementById('edTipo').value,
+                    linea: document.getElementById('edLinea').value,
+                    talla: document.getElementById('edTalla').value,
+                    genero: document.getElementById('edGenero').value,
+                    color: document.getElementById('edColor').value,
+                    ubicacionGeneral: document.getElementById('edUbiGeneral').value,
+                    ubicacionDiseno: document.getElementById('edUbiDiseno').value,
+                    observaciones: document.getElementById('edObservaciones').value,
+                    estado: document.getElementById('edEstado').value,
+                    salidaRemision: document.getElementById('edRemision').value, 
+                    salidaFecha: document.getElementById('edFechaSalida').value,
+                    salidaTo: document.getElementById('edTo').value,
+                    precio: document.getElementById('edPrecio').value,
+                    moneda: document.getElementById('edMoneda').value,
+                    proveedor: document.getElementById('edProveedor').value,
+                    paisOrigen: document.getElementById('edPaisOrigen').value
+                };
+
+                // Si hay nueva foto, se agrega al paquete de actualización
+                if (nuevaFotoData !== null) {
+                    datosActualizar.fotoUrl = nuevaFotoData;
+                }
+
+                db.collection("prendas").doc(idPrendaSeleccionada).update(datosActualizar)
+                .then(() => {
+                    cerrarModalEditar();
+                    btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
+                }).catch((error) => { 
+                    alert("Error editando: " + error); 
+                    btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; 
+                });
+            }
+        }
+
+        // INSPECCIÓN DE DETALLES
+        const modalDetalles = document.getElementById('modalDetalles');
+        function cerrarModalDetalles() { modalDetalles.style.display = 'none'; }
+        function verDetalles(idDocumento) {
+            db.collection("prendas").doc(idDocumento).get().then((doc) => {
+                if (doc.exists) {
+                    const p = doc.data();
+                    document.getElementById('detFoto').src = p.fotoUrl || 'logo.png';
+                    document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
+                    document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
+                    document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
+                    document.getElementById('detPrecinto').textContent = p.precinto || '-';
+                    document.getElementById('detReferencia').textContent = p.referencia || '-';
+                    document.getElementById('detColeccion').textContent = p.coleccion || '-';
+                    document.getElementById('detTipo').textContent = p.tipo || '-';
+                    document.getElementById('detLinea').textContent = p.linea || '-';
+                    document.getElementById('detGenero').textContent = p.genero || '-';
+                    document.getElementById('detTalla').textContent = p.talla || '-';
+                    document.getElementById('detColor').textContent = p.color || '-';
+                    document.getElementById('detCantidad').textContent = p.cantidad || '-';
+                    document.getElementById('detClasificacion').textContent = p.clasificacion || '-';
+                    document.getElementById('detProveedor').textContent = p.proveedor || '-';
+                    document.getElementById('detPais').textContent = p.paisOrigen || '-';
+                    document.getElementById('detPrecio').textContent = (p.precio || '-') + ' ' + (p.moneda || '');
+                    document.getElementById('detUbiGeneral').textContent = p.ubicacionGeneral || '-';
+                    document.getElementById('detUbiDiseno').textContent = p.ubicacionDiseno || '-';
+                    document.getElementById('detEstado').textContent = p.estado || 'Disponible en inventario';
+                    document.getElementById('detRemision').textContent = p.salidaRemision || '-';
+                    document.getElementById('detFechaSalida').textContent = p.salidaFecha || '-';
+                    document.getElementById('detTo').textContent = p.salidaTo || '-'; 
+                    document.getElementById('detObservaciones').textContent = p.observaciones || 'Sin observaciones.';
+                    modalDetalles.style.display = 'flex';
+                }
+            });
+        }
+        
+        function eliminarPrenda(idDocumento) { if(confirm("¿Estás seguro de que deseas eliminar esta prenda?")) { db.collection("prendas").doc(idDocumento).delete(); } }
+        
+        const visor = document.getElementById('modalVisor');
+        const imgAmpliada = document.getElementById('imagenAmpliada');
+        function abrirVisor(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
+        function cerrarVisor() { visor.style.display = 'none'; imgAmpliada.src = ''; }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" || event.keyCode === 27) {
+                cerrarVisor(); cerrarModalSalida(); cerrarModalDetalles(); cerrarModalEditar();
+            }
+        });
+    </script>
+</body>
+</html>
