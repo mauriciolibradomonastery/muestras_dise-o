@@ -42,6 +42,7 @@
         .item-restaurar { border-left: 4px solid #e83e8c; }
         .item-bajas { border-left: 4px solid #fd7e14; }
         .item-agregar { border-left: 4px solid #0078D4; }
+        .item-importar { border-left: 4px solid #17a2b8; } /* Color para el nuevo botón */
         
         .show { display: block; }
 
@@ -87,6 +88,10 @@
             <div class="dropdown">
                 <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
                 <div id="dropdownOpciones" class="dropdown-content dropdown-contenido">
+                    <!-- NUEVO BOTÓN PARA IMPORTAR DESDE EXCEL -->
+                    <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+                    <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
+                    
                     <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
                     <button class="dropdown-item item-backup" id="btnBackupJSON">💾 Copia Seguridad (JSON)</button>
                     
@@ -245,8 +250,8 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
         // 1. CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
-        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
-        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; // Ya te dejé tu URL lista
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; // <- SOLO PEGA TU CLAVE LARGA AQUÍ
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const tabla = document.getElementById('cuerpoTabla');
@@ -277,7 +282,7 @@
                 const { data, error } = await supabase
                     .from('prendas')
                     .select('*')
-                    .order('id', { ascending: false });
+                    .order('fechaServidor', { ascending: false });
 
                 if (error) throw error;
                 renderTable(data);
@@ -287,7 +292,7 @@
             }
         }
 
-        // 3. SUSCRIPCIÓN EN TIEMPO REAL (Reemplaza a onSnapshot de Firebase)
+        // 3. SUSCRIPCIÓN EN TIEMPO REAL (Realtime)
         supabase
             .channel('cambios-prendas')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
@@ -309,7 +314,6 @@
             }
 
             data.forEach((prenda) => {
-                // Solo mostramos los disponibles en esta vista principal
                 if (prenda.estado && prenda.estado !== "Disponible en inventario") {
                     return; 
                 }
@@ -393,7 +397,79 @@
             XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
         });
 
-        // 6. BACKUP JSON (Descarga de Supabase)
+        // 6. IMPORTAR MASIVAMENTE DESDE EXCEL
+        document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
+            const archivo = event.target.files[0];
+            if (!archivo) return;
+
+            const lector = new FileReader();
+            lector.onload = async function(e) {
+                try {
+                    mensajeCarga.textContent = "Procesando Excel masivo... ⏳";
+                    mensajeCarga.style.display = "block";
+
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (excelData.length === 0) {
+                        alert("El archivo Excel está vacío o no tiene el formato correcto.");
+                        mensajeCarga.style.display = "none";
+                        return;
+                    }
+
+                    if (confirm(`⚠️ Vas a importar ${excelData.length} prendas nuevas al inventario desde este Excel.\n\nNOTA: Asegúrate de que este Excel NO contenga las prendas que ya están en el sistema para no duplicarlas.\n\n¿Deseas continuar?`)) {
+                        
+                        // Mapear las columnas del Excel (en español) a las de Supabase (en código)
+                        const registrosLimpios = excelData.map(fila => {
+                            return {
+                                registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
+                                fechaIngreso: fila["Fecha Ingreso"] || fila["fechaIngreso"] || new Date().toLocaleDateString('en-CA'),
+                                precinto: fila["Precinto"] || fila["precinto"] || "",
+                                referencia: fila["Referencia"] || fila["referencia"] || "",
+                                coleccion: fila["Colección"] || fila["coleccion"] || "",
+                                tipo: fila["Tipo"] || fila["tipo"] || "",
+                                linea: fila["Línea"] || fila["linea"] || "",
+                                talla: fila["Talla"] || fila["talla"] || "",
+                                genero: fila["Género"] || fila["genero"] || "",
+                                color: fila["Color"] || fila["color"] || "",
+                                cantidad: parseInt(fila["Cantidad"] || fila["cantidad"]) || 1,
+                                clasificacion: fila["Clasificación"] || fila["clasificacion"] || "",
+                                proveedor: fila["Proveedor"] || fila["proveedor"] || "",
+                                paisOrigen: fila["País Origen"] || fila["paisOrigen"] || "",
+                                precio: parseFloat(fila["Precio"] || fila["precio"]) || null,
+                                moneda: fila["Moneda"] || fila["moneda"] || "COP",
+                                ubicacionGeneral: fila["Ubicación General"] || fila["ubicacionGeneral"] || "",
+                                ubicacionDiseno: fila["Ubicación Diseño"] || fila["ubicacionDiseno"] || "",
+                                observaciones: fila["Observaciones"] || fila["observaciones"] || "",
+                                estado: fila["Estado Actual"] || fila["estado"] || "Disponible en inventario",
+                                salidaRemision: fila["Remisión de Salida"] || fila["salidaRemision"] || "",
+                                salidaFecha: fila["Fecha de Salida"] || fila["salidaFecha"] || "",
+                                salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
+                            };
+                        });
+
+                        // Insertar todo el bloque a Supabase de un solo golpe
+                        const { error } = await supabase.from('prendas').insert(registrosLimpios);
+                        
+                        if (error) throw error;
+
+                        alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
+                    }
+                } catch (err) {
+                    console.error("Error al importar Excel:", err);
+                    alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
+                } finally {
+                    event.target.value = ''; // Limpiar input para poder subir el mismo archivo después si se necesita
+                    mensajeCarga.style.display = "none";
+                }
+            };
+            lector.readAsArrayBuffer(archivo);
+        });
+
+        // 7. BACKUP JSON (Descarga de Supabase)
         document.getElementById('btnBackupJSON').addEventListener('click', function() {
             if(baseDatosCompleta.length === 0) { alert("No hay datos en el inventario para respaldar."); return; }
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(baseDatosCompleta, null, 2));
@@ -407,7 +483,7 @@
             alert("¡ÉXITO! Copia de seguridad completa descargada (incluye fotos Base64).");
         });
 
-        // 7. RESTAURAR JSON (Inserción Masiva en Supabase)
+        // 8. RESTAURAR JSON (Inserción Masiva en Supabase)
         document.getElementById('inputRestaurarJSON').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
@@ -421,16 +497,12 @@
                     }
                     if (confirm(`⚠️ ALERTA DE SEGURIDAD ⚠️\n¿Estás seguro de que deseas inyectar y restaurar las ${datosRestaurar.length} prendas de este backup a Supabase?`)) {
                         
-                        // Limpiamos los IDs antiguos (como los de Firebase) para que Supabase asigne los suyos
                         const registrosLimpios = datosRestaurar.map(p => {
-                            // Extraemos las propiedades viejas que puedan estorbar
                             const { idDocumentoFirestore, id, fechaServidor, ...limpio } = p; 
                             return limpio;
                         });
 
-                        // Supabase permite inserción masiva directamente en el Array
                         const { data, error } = await supabase.from('prendas').insert(registrosLimpios);
-                        
                         if(error) throw error;
                         
                         alert(`🎉 ¡SISTEMA RESTAURADO CON ÉXITO!`);
@@ -444,7 +516,7 @@
             lector.readAsText(archivo);
         });
 
-        // 8. BUSCADOR EN TIEMPO REAL
+        // 9. BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
             const textoBusqueda = this.value.toLowerCase();
             const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
