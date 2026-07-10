@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú Principal</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.209), rgba(0, 0, 0, 0.75)), url('fondo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #ffffff; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            position: relative; /* Necesario para ubicar el botón de cerrar sesión */
+        }
+
+        /* BOTÓN CERRAR SESIÓN EN LA ESQUINA */
+        .btn-logout {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background-color: rgba(220, 53, 69, 0.8); /* Rojo oscuro sutil */
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .btn-logout:hover {
+            background-color: #dc3545; /* Rojo brillante al pasar el mouse */
+            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4);
+        }
+
+        .titulo { margin-bottom: 40px; text-align: center; }
+        .titulo h2 { margin: 5px 0; font-size: 28px; letter-spacing: 1px; }
+        .titulo p { color: #aaa; margin: 0; }
+
+        .grid-menu { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; max-width: 900px; width: 100%; padding: 0 20px; box-sizing: border-box; }
+        
+        .tarjeta-menu {
+            background-color: rgba(45, 45, 45, 0.85); 
+            backdrop-filter: blur(5px); 
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            text-decoration: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tarjeta-menu:hover { border-color: #0078D4; transform: translateY(-5px); background-color: rgba(55, 55, 55, 0.95); }
+        .icono { font-size: 50px; margin-bottom: 15px; }
+        .texto { font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-logout">🚪 Cerrar Sesión</a>
+
+    <div class="titulo">
+        <img src="logo.png" alt="Logo" style="width: 160px; margin-bottom: 10px;">
+        <h2>Panel de Control</h2>
+        <p>¿Qué deseas hacer hoy?</p>
+    </div>
+
+    <div class="grid-menu">
+        <a href="formulario.html" class="tarjeta-menu">
+            <div class="icono">➕</div>
+            <div class="texto">Ingresar Nueva Prenda</div>
+        </a>
+
+        <a href="dashboard.html" class="tarjeta-menu">
+            <div class="icono">📦</div>
+            <div class="texto">Ver / Modificar Inventario</div>
+        </a>
+
+        <a href="reportes.html" class="tarjeta-menu">
+            <div class="icono">📊</div>
+            <div class="texto">Indicadores y Reportes</div>
+        </a>
+    </div>
+
+</body>
+</html>
