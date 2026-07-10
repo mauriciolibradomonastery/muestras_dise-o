@@ -26,7 +26,6 @@
         .caja-lotes input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; margin: 0; }
         .caja-lotes label { margin: 0; cursor: pointer; color: #ffc107; font-size: 15px; }
 
-        /* NUEVO ESTILO: Resaltado gris claro para celdas vacías en modo lote */
         .resaltado-vacio {
             border: 1px solid #aaaaaa !important;
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.15);
@@ -47,7 +46,7 @@
         <form id="miFormulario">
             <div class="caja-lotes">
                 <input type="checkbox" id="checkMantenerDatos" checked>
-                <label for="checkMantenerDatos">⚡ MODO LOTE: Mantener la información estructural tras guardar (Registrado por, Fecha, Tipo, Línea, Género, Clasificación, Cantidad)</label>
+                <label for="checkMantenerDatos">⚡ MODO LOTE: Mantener la información estructural tras guardar</label>
             </div>
 
             <h3 style="margin-top: 10px;">1. Información de Ingreso</h3>
@@ -77,13 +76,11 @@
                     <input type="text" id="referencia" list="listaReferencias" placeholder="Ej: Bolt">
                     <datalist id="listaReferencias"></datalist>
                 </div>
-                
                 <div>
                     <label>Colección:</label>
                     <input type="text" id="coleccion" list="listaColecciones" placeholder="Escribe o selecciona una colección...">
                     <datalist id="listaColecciones"></datalist>
                 </div>
-
                 <div><label>Tipo:</label><select id="tipo"><option value="">Selecciona...</option><option>Accesorios</option><option>Calzado</option><option>Prendas</option></select></div>
                 <div><label>Línea:</label><select id="linea"><option value="">Selecciona...</option><option>Back pack</option><option>Belt</option><option>Blazer</option><option>Body</option><option>Boxer</option><option>Bra</option><option>Cap</option><option>Card Holder</option><option>Corset</option><option>Crop Top</option><option>Dress</option><option>Duffle Bag</option><option>Fanny pack</option><option>Handle Bag</option><option>Hat</option><option>Heel</option><option>Hoodie</option><option>Jacket</option><option>Jean</option><option>Jogger</option><option>Leggin</option><option>Long Sleeve</option><option>Luggage</option><option>Overshirt</option><option>Pant</option><option>Panty</option><option>Polo</option><option>Sandal</option><option>Set</option><option>Shirt</option><option>Short</option><option>Shoulder Bag</option><option>Skirt</option><option>Sneaker</option><option>Sock</option><option>Sweatshirt</option><option>Swim Short</option><option>SwimSuit</option><option>Top</option><option>T-shirt</option><option>T-shirt Basic</option><option>T-shirt Oversized</option><option>T-shirt Pack</option><option>Vest</option><option>Visor</option><option>Wallet</option></select></div>
                 <div><label>Género:</label><select id="genero"><option value="">Selecciona...</option><option>Men</option><option>Women</option><option>Unisex</option></select></div>
@@ -105,14 +102,12 @@
                     <input type="text" id="proveedor" list="listaProveedores" placeholder="Escribe o selecciona un proveedor...">
                     <datalist id="listaProveedores"></datalist>
                 </div>
-                
                 <div>
                     <label>País de Origen:</label>
                     <input type="text" id="paisOrigen" list="listaPaises" placeholder="Ej: China, Perú, Colombia">
                     <datalist id="listaPaises"></datalist>
                 </div>
                 <div><label>Precio / Costo:</label><input type="number" id="precio" placeholder="0.00" step="0.01"></div>
-                
                 <div>
                     <label>Moneda:</label>
                     <select id="moneda">
@@ -131,7 +126,6 @@
                     <input type="text" id="ubicacionGeneral" list="listaUbiGeneral" placeholder="Ej: Bodega Principal">
                     <datalist id="listaUbiGeneral"></datalist>
                 </div>
-                
                 <div>
                     <label>Ubicación en Diseño:</label>
                     <input type="text" id="ubicacionDiseno" list="listaUbiDiseno" placeholder="Ej: Estante 3, Fila B">
@@ -141,29 +135,22 @@
             
             <div style="margin-top: 20px;"><label>Observaciones:</label><textarea id="observaciones" rows="3" placeholder="Anota aquí cualquier detalle sobre el estado de la muestra, empaque, etc..."></textarea></div>
 
-            <button type="button" class="btn-guardar" id="btnGuardarFirebase">💾 Guardar Prenda en Inventario</button>
+            <button type="button" class="btn-guardar" id="btnGuardarSupabase">💾 Guardar Prenda en Inventario</button>
         </form>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
+    <script type="module">
+        // 1. Importar Supabase desde CDN
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
-            authDomain: "inventario-monastery.firebaseapp.com",
-            projectId: "inventario-monastery",
-            storageBucket: "inventario-monastery.firebasestorage.app",
-            messagingSenderId: "1035655424934",
-            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
-            measurementId: "G-BD5MYW553K"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // 2. Configurar las credenciales (¡Reemplaza estas dos líneas con tus datos reales!)
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         const inputNumeroPrecinto = document.getElementById('numeroPrecinto');
-        const btnGuardar = document.getElementById('btnGuardarFirebase');
+        const btnGuardar = document.getElementById('btnGuardarSupabase');
         const formulario = document.getElementById('miFormulario');
         const checkMantenerDatos = document.getElementById('checkMantenerDatos');
         
@@ -184,8 +171,15 @@
             document.getElementById('fechaIngreso').value = hoyFormateado;
         }
 
-        function cargarTodosLosSugeridos() {
-            db.collection("prendas").get().then((querySnapshot) => {
+        // 3. Cargar sugeridos desde Supabase
+        async function cargarTodosLosSugeridos() {
+            try {
+                const { data, error } = await supabase
+                    .from('prendas')
+                    .select('registradoPor, coleccion, referencia, color, proveedor, paisOrigen, ubicacionGeneral, ubicacionDiseno');
+
+                if (error) throw error;
+
                 let registrados = new Set();
                 let colecciones = new Set();
                 let referencias = new Set();
@@ -197,21 +191,22 @@
 
                 memoriaProveedorPais = {}; 
 
-                querySnapshot.forEach((doc) => {
-                    let d = doc.data();
-                    if(d.registradoPor) registrados.add(d.registradoPor.trim());
-                    if(d.coleccion) colecciones.add(d.coleccion.trim());
-                    if(d.referencia) referencias.add(d.referencia.trim());
-                    if(d.color) colores.add(d.color.trim());
-                    if(d.proveedor) proveedores.add(d.proveedor.trim());
-                    if(d.paisOrigen) paises.add(d.paisOrigen.trim());
-                    if(d.ubicacionGeneral) ubiGeneral.add(d.ubicacionGeneral.trim());
-                    if(d.ubicacionDiseno) ubiDiseno.add(d.ubicacionDiseno.trim());
+                if(data) {
+                    data.forEach((d) => {
+                        if(d.registradoPor) registrados.add(d.registradoPor.trim());
+                        if(d.coleccion) colecciones.add(d.coleccion.trim());
+                        if(d.referencia) referencias.add(d.referencia.trim());
+                        if(d.color) colores.add(d.color.trim());
+                        if(d.proveedor) proveedores.add(d.proveedor.trim());
+                        if(d.paisOrigen) paises.add(d.paisOrigen.trim());
+                        if(d.ubicacionGeneral) ubiGeneral.add(d.ubicacionGeneral.trim());
+                        if(d.ubicacionDiseno) ubiDiseno.add(d.ubicacionDiseno.trim());
 
-                    if(d.proveedor && d.paisOrigen) {
-                        memoriaProveedorPais[d.proveedor.trim().toLowerCase()] = d.paisOrigen.trim();
-                    }
-                });
+                        if(d.proveedor && d.paisOrigen) {
+                            memoriaProveedorPais[d.proveedor.trim().toLowerCase()] = d.paisOrigen.trim();
+                        }
+                    });
+                }
 
                 inyectarDatosEnDatalist(datalistRegistrados, registrados);
                 inyectarDatosEnDatalist(datalistColecciones, colecciones);
@@ -221,7 +216,10 @@
                 inyectarDatosEnDatalist(datalistPaises, paises);
                 inyectarDatosEnDatalist(datalistUbiGeneral, ubiGeneral);
                 inyectarDatosEnDatalist(datalistUbiDiseno, ubiDiseno);
-            }).catch(error => console.error("Error cargando sugeridos del sistema:", error));
+                
+            } catch (error) {
+                console.error("Error cargando sugeridos de Supabase:", error);
+            }
         }
 
         function inyectarDatosEnDatalist(elementoHTML, setDatos) {
@@ -233,14 +231,12 @@
             });
         }
 
-        // FUNCIÓN NUEVA: Resalta de manera inteligente todas las celdas vacías del formulario
         function resaltarCamposVacios() {
             const todosLosCampos = formulario.querySelectorAll('input, select, textarea');
             todosLosCampos.forEach(campo => {
                 if (campo.type !== 'checkbox' && campo.value.trim() === "") {
                     campo.classList.add('resaltado-vacio');
                     
-                    // Evento dinámico: Cuando escriban o interactúen, el borde gris claro se apaga solo
                     const limpiarAlEscribir = () => {
                         campo.classList.remove('resaltado-vacio');
                         campo.removeEventListener('input', limpiarAlEscribir);
@@ -256,7 +252,6 @@
             const proveedorDigitado = this.value.trim().toLowerCase();
             if(memoriaProveedorPais[proveedorDigitado]) {
                 document.getElementById('paisOrigen').value = memoriaProveedorPais[proveedorDigitado];
-                // Como se autocompleta el país, le quitamos el resaltado de forma inmediata
                 document.getElementById('paisOrigen').classList.remove('resaltado-vacio');
             }
         });
@@ -266,7 +261,7 @@
             establecerFechaActual();
         });
 
-        btnGuardar.addEventListener('click', function() {
+        btnGuardar.addEventListener('click', async function() {
             const numeroDigitado = inputNumeroPrecinto.value.trim();
             if(numeroDigitado === "") { 
                 alert("Por favor ingresa el número del precinto."); 
@@ -288,6 +283,7 @@
             btnGuardar.textContent = "Procesando y guardando... ⏳";
             btnGuardar.disabled = true;
 
+            // Logica de redimensionamiento de foto
             if(archivoFoto) {
                 const reader = new FileReader();
                 reader.readAsDataURL(archivoFoto);
@@ -313,51 +309,50 @@
                         ctx.drawImage(img, 0, 0, width, height);
                         
                         const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                        guardarEnFirestore(fotoBase64);
+                        guardarEnSupabase(fotoBase64);
                     }
                 }
             } else {
-                guardarEnFirestore(null);
+                guardarEnSupabase(null);
             }
 
-            function guardarEnFirestore(fotoData) {
-                const registradoPorVal = document.getElementById('registradoPor').value.trim();
-                const referenciaVal = document.getElementById('referencia').value.trim();
-                const coleccionVal = document.getElementById('coleccion').value.trim();
-                const colorVal = document.getElementById('color').value.trim();
-                const proveedorVal = document.getElementById('proveedor').value.trim();
-                const paisOrigenVal = document.getElementById('paisOrigen').value.trim();
-                const ubicacionGeneralVal = document.getElementById('ubicacionGeneral').value.trim();
-                const ubicacionDisenoVal = document.getElementById('ubicacionDiseno').value.trim();
+            // 4. Función de inserción en Supabase
+            async function guardarEnSupabase(fotoData) {
+                // Parseamos los números para evitar errores en la base de datos
+                const cantidadVal = parseInt(document.getElementById('cantidad').value) || null;
+                const precioVal = parseFloat(document.getElementById('precio').value) || null;
 
                 const datosPrenda = {
-                    registradoPor: registradoPorVal,
+                    registradoPor: document.getElementById('registradoPor').value.trim(),
                     fechaIngreso: document.getElementById('fechaIngreso').value,
                     precinto: precintoFinalCompleto, 
                     fotoUrl: fotoData, 
-                    referencia: referenciaVal,
-                    coleccion: coleccionVal,
+                    referencia: document.getElementById('referencia').value.trim(),
+                    coleccion: document.getElementById('coleccion').value.trim(),
                     tipo: document.getElementById('tipo').value,
                     linea: document.getElementById('linea').value,
                     genero: document.getElementById('genero').value,
                     talla: document.getElementById('talla').value,
-                    color: colorVal,
-                    amount: document.getElementById('cantidad').value, 
-                    cantidad: document.getElementById('cantidad').value,
+                    color: document.getElementById('color').value.trim(),
+                    cantidad: cantidadVal, // Supabase prefiere números reales en columnas numéricas
                     clasificacion: document.getElementById('clasificacion').value,
-                    proveedor: proveedorVal,
-                    paisOrigen: paisOrigenVal,
-                    precio: document.getElementById('precio').value,
-                    moneda: monedaVal,
-                    ubicacionGeneral: ubicacionGeneralVal,
-                    ubicacionDiseno: ubicacionDisenoVal,
+                    proveedor: document.getElementById('proveedor').value.trim(),
+                    paisOrigen: document.getElementById('paisOrigen').value.trim(),
+                    precio: precioVal,
+                    moneda: document.getElementById('moneda').value,
+                    ubicacionGeneral: document.getElementById('ubicacionGeneral').value.trim(),
+                    ubicacionDiseno: document.getElementById('ubicacionDiseno').value.trim(),
                     observaciones: document.getElementById('observaciones').value,
-                    estado: "Disponible en inventario",
-                    fechaServidor: firebase.firestore.FieldValue.serverTimestamp()
+                    estado: "Disponible en inventario"
                 };
 
-                db.collection("prendas").add(datosPrenda)
-                .then((docRef) => {
+                try {
+                    const { data, error } = await supabase
+                        .from('prendas')
+                        .insert([datosPrenda]);
+
+                    if (error) throw error;
+
                     alert("¡ÉXITO! Prenda guardada.");
 
                     if (checkMantenerDatos.checked) {
@@ -379,7 +374,6 @@
                         document.getElementById('clasificacion').value = cacheClasificacion;
                         document.getElementById('cantidad').value = cacheCantidad;
 
-                        // SE EJECUTA EL NUEVO FILTRO VISUAL PARA RESALTAR LO VACÍO TRAS EL RESETEO
                         resaltarCamposVacios();
                     } else {
                         formulario.reset();
@@ -389,12 +383,12 @@
                     cargarTodosLosSugeridos(); 
                     restablecerBoton();
                     inputNumeroPrecinto.focus();
-                })
-                .catch((error) => {
-                    console.error(error);
-                    alert("Error al intentar guardar en la nube.");
+
+                } catch (error) {
+                    console.error("Error al guardar en Supabase:", error);
+                    alert("Error al intentar guardar en la base de datos.");
                     restablecerBoton();
-                });
+                }
             }
 
             function restablecerBoton() {

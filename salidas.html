@@ -49,37 +49,51 @@
                 </thead>
                 <tbody id="cuerpoTablaSalidas"></tbody>
             </table>
-            <div id="mensajeCarga">Cargando el archivo de bajas... ⏳</div>
+            <div id="mensajeCarga">Cargando el archivo de bajas desde Supabase... ⏳</div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
-            authDomain: "inventario-monastery.firebaseapp.com",
-            projectId: "inventario-monastery",
-            storageBucket: "inventario-monastery.firebasestorage.app",
-            messagingSenderId: "1035655424934",
-            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
-            measurementId: "G-BD5MYW553K"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
         const tabla = document.getElementById('cuerpoTablaSalidas');
         const mensajeCarga = document.getElementById('mensajeCarga');
 
-        // Escucha en tiempo real de la base de datos
-        db.collection("prendas").orderBy("fechaServidor", "desc").onSnapshot((querySnapshot) => {
+        // 1. FUNCIÓN PRINCIPAL PARA CARGAR DATOS
+        async function fetchBajas() {
+            try {
+                // Obtenemos los datos ordenados del más reciente al más antiguo
+                const { data, error } = await supabase
+                    .from('prendas')
+                    .select('*')
+                    .order('id', { ascending: false });
+
+                if (error) throw error;
+                renderTable(data);
+            } catch (error) {
+                console.error("Error al cargar las bajas:", error);
+                mensajeCarga.textContent = "Error conectando con la base de datos.";
+            }
+        }
+
+        // 2. RENDERIZADO DE TABLA
+        function renderTable(data) {
             tabla.innerHTML = ""; 
             mensajeCarga.style.display = "none";
             let contadorBajas = 0;
             
-            querySnapshot.forEach((doc) => {
-                const prenda = doc.data();
-                
+            if(!data || data.length === 0) {
+                tabla.innerHTML = "<tr><td colspan='9' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros en el sistema.</td></tr>";
+                return;
+            }
+
+            data.forEach((prenda) => {
                 // CONDICIÓN: Solo muestra lo que NO está disponible (es decir, lo que se dio de baja)
                 if (prenda.estado && prenda.estado !== "Disponible en inventario") {
                     contadorBajas++;
@@ -96,7 +110,7 @@
                         <td><span class="estado-salida">${prenda.estado}</span></td>
                         <td style="color: #ffc107; font-weight: 500;">${prenda.salidaRemision || '-'}</td>
                         <td>
-                            <button class="btn-retornar" onclick="retornarAInventario('${doc.id}')">↩️ Retornar a Bodega</button>
+                            <button class="btn-retornar" onclick="retornarAInventario('${prenda.id}')">↩️ Retornar a Bodega</button>
                         </td>
                     `;
                     tabla.appendChild(fila);
@@ -106,29 +120,50 @@
             if (contadorBajas === 0) {
                 tabla.innerHTML = "<tr><td colspan='9' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
             }
-        });
+        }
 
-        // FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo y borra los datos de salida
-        function retornarAInventario(idDocumento) {
+        // 3. SUSCRIPCIÓN EN TIEMPO REAL
+        supabase
+            .channel('cambios-bajas')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
+                fetchBajas(); // Recarga la tabla si alguien da de baja algo o lo retorna
+            })
+            .subscribe();
+
+        // INICIAR CARGA DE DATOS
+        fetchBajas();
+
+        // 4. FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo y borra los datos de salida
+        window.retornarAInventario = async function(idDocumento) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
-                db.collection("prendas").doc(idDocumento).update({
-                    estado: "Disponible en inventario",
-                    salidaRemision: "",
-                    salidaFecha: ""
-                }).then(() => {
+                const { error } = await supabase
+                    .from('prendas')
+                    .update({
+                        estado: "Disponible en inventario",
+                        salidaRemision: "",
+                        salidaFecha: "",
+                        salidaTo: "" // Limpiamos también el TO por si acaso
+                    })
+                    .eq('id', idDocumento);
+
+                if (error) {
+                    alert("Error al intentar retornar: " + error.message);
+                } else {
                     alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
-                }).catch((error) => {
-                    alert("Error al intentar retornar: " + error);
-                });
+                }
             }
         }
 
-        // BUSCADOR
+        // BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
             const textoBusqueda = this.value.toLowerCase();
             const filas = document.querySelectorAll('#cuerpoTablaSalidas tr');
             filas.forEach(fila => {
-                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { 
+                    fila.style.display = ''; 
+                } else { 
+                    fila.style.display = 'none'; 
+                }
             });
         });
     </script>

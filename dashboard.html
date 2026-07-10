@@ -117,7 +117,7 @@
                 </thead>
                 <tbody id="cuerpoTabla"></tbody>
             </table>
-            <div id="mensajeCarga">Conectando con el inventario Monastery... ⏳</div>
+            <div id="mensajeCarga">Conectando con Supabase... ⏳</div>
         </div>
     </div>
 
@@ -223,7 +223,6 @@
                 
                 <div style="grid-column: span 2;"><label class="lbl-detalle">Observaciones</label><input type="text" id="edObservaciones" class="input-edicion"></div>
 
-                <!-- NUEVO CAMPO: ACTUALIZAR FOTO EN EL MODAL DE EDICIÓN -->
                 <div style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px; margin-top: 5px;">
                     <label class="lbl-detalle" style="color: #0078D4;">📸 Actualizar Fotografía (Opcional)</label>
                     <input type="file" id="edFotoNueva" accept="image/*" class="input-edicion" style="cursor: pointer; background-color: #222; padding: 6px;">
@@ -240,28 +239,23 @@
 
     <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <!-- LIBRERÍAS EXTERNAS (EXCEL Y SUPABASE) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
-            authDomain: "inventario-monastery.firebaseapp.com",
-            projectId: "inventario-monastery",
-            storageBucket: "inventario-monastery.firebasestorage.app",
-            messagingSenderId: "1035655424934",
-            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
-            measurementId: "G-BD5MYW553K"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // 1. CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
         const tabla = document.getElementById('cuerpoTabla');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = [];
         let baseDatosCompleta = []; 
 
-        function toggleDropdown() {
+        // EXPOSICIÓN DE FUNCIONES AL WINDOW (Para que el HTML las pueda usar)
+        window.toggleDropdown = function() {
             document.getElementById("dropdownOpciones").classList.toggle("show");
         }
 
@@ -269,34 +263,53 @@
             if (!event.target.matches('.btn-opciones')) {
                 const dropdowns = document.getElementsByClassName("dropdown-contenido");
                 for (let i = 0; i < dropdowns.length; i++) {
-                    const openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
                     }
                 }
             }
         }
 
-        db.collection("prendas").orderBy("fechaServidor", "desc").onSnapshot((querySnapshot) => {
+        // 2. FUNCIÓN PRINCIPAL PARA CARGAR DATOS
+        async function fetchPrendas() {
+            try {
+                // Obtenemos los datos ordenados del más reciente al más antiguo (basado en id)
+                const { data, error } = await supabase
+                    .from('prendas')
+                    .select('*')
+                    .order('id', { ascending: false });
+
+                if (error) throw error;
+                renderTable(data);
+            } catch (error) {
+                console.error("Error al cargar prendas:", error);
+                mensajeCarga.textContent = "Error conectando con la base de datos.";
+            }
+        }
+
+        // 3. SUSCRIPCIÓN EN TIEMPO REAL (Reemplaza a onSnapshot de Firebase)
+        supabase
+            .channel('cambios-prendas')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
+                fetchPrendas(); // Recarga la tabla automáticamente si hay cambios
+            })
+            .subscribe();
+
+        // 4. RENDERIZADO DE TABLA
+        function renderTable(data) {
             tabla.innerHTML = ""; 
             mensajeCarga.style.display = "none";
             datosParaExcel = []; 
-            baseDatosCompleta = []; 
+            baseDatosCompleta = data || []; 
             let contadorDisponibles = 0;
             
-            if(querySnapshot.empty) {
+            if(!data || data.length === 0) {
                 tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
                 return;
             }
 
-            querySnapshot.forEach((doc) => {
-                const prenda = doc.data();
-
-                baseDatosCompleta.push({
-                    idDocumentoFirestore: doc.id,
-                    ...prenda
-                });
-
+            data.forEach((prenda) => {
+                // Solo mostramos los disponibles en esta vista principal
                 if (prenda.estado && prenda.estado !== "Disponible en inventario") {
                     return; 
                 }
@@ -315,16 +328,18 @@
                 fila.innerHTML = `
                     <td><img src="${urlFotoARenderizar}" class="foto-miniatura" alt="Foto" onclick="abrirVisor('${urlFotoARenderizar}')" title="Clic para ampliar"></td>
                     <td>${prenda.fechaIngreso || 'N/A'}</td>
-                    <td style="font-weight: bold; color: #fff;">${prenda.precinto}</td>
+                    <td style="font-weight: bold; color: #fff;">${prenda.precinto || '-'}</td>
                     <td>${prenda.referencia || '-'}</td>
                     <td>${prenda.linea || '-'}</td>
-                    <td style="font-weight: bold; color: #0078D4;">${prenda.cantidad || '1'}</td> <td style="white-space: nowrap;">${costoVisual}</td> <td>${prenda.ubicacionGeneral || '-'}</td>
+                    <td style="font-weight: bold; color: #0078D4;">${prenda.cantidad || '1'}</td> 
+                    <td style="white-space: nowrap;">${costoVisual}</td> 
+                    <td>${prenda.ubicacionGeneral || '-'}</td>
                     <td>${estadoHTML}</td>
                     <td style="white-space: nowrap;">
-                        <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${doc.id}')">👁️</button>
-                        <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${doc.id}')">✏️</button>
-                        <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${doc.id}')">📤</button>
-                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${doc.id}')">🗑️</button>
+                        <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${prenda.id}')">👁️</button>
+                        <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${prenda.id}')">✏️</button>
+                        <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${prenda.id}')">📤</button>
+                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${prenda.id}')">🗑️</button>
                     </td>
                 `;
                 tabla.appendChild(fila);
@@ -332,6 +347,7 @@
                 const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                 const descripcionGenerada = partesDesc.join(" - ");
 
+                // PREPARAR DATOS PARA EXCEL
                 datosParaExcel.push({
                     "Fecha Ingreso": prenda.fechaIngreso || "",
                     "Registrado Por": prenda.registradoPor || "",
@@ -352,7 +368,7 @@
                     "Ubicación General": prenda.ubicacionGeneral || "",
                     "Ubicación Diseño": prenda.ubicacionDiseno || "",
                     "Tipo": prenda.tipo || "",
-                    "Observaciones": prenda.observations || prenda.observaciones || "",
+                    "Observaciones": prenda.observaciones || "",
                     "Colección": prenda.coleccion || "",
                     "Remisión de Salida": prenda.salidaRemision || "",
                     "Orden de Traslado (TO)": prenda.salidaTo || "", 
@@ -363,66 +379,72 @@
             if (contadorDisponibles === 0) {
                 tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
             }
+        }
+
+        // INICIAR CARGA DE DATOS
+        fetchPrendas();
+
+        // 5. EXPORTAR A EXCEL
+        document.getElementById('btnExportarExcel').addEventListener('click', function() {
+            if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
+            const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
+            const libroExcel = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Inventario Monastery");
+            XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
         });
 
-        // DESCARGAR COPIA DE SEGURIDAD TOTAL
+        // 6. BACKUP JSON (Descarga de Supabase)
         document.getElementById('btnBackupJSON').addEventListener('click', function() {
             if(baseDatosCompleta.length === 0) { alert("No hay datos en el inventario para respaldar."); return; }
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(baseDatosCompleta, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             const hoy = new Date().toISOString().split('T')[0];
-            downloadAnchor.setAttribute("download", `Backup_Total_Inventario_${hoy}.json`);
+            downloadAnchor.setAttribute("download", `Backup_Total_Supabase_${hoy}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
             alert("¡ÉXITO! Copia de seguridad completa descargada (incluye fotos Base64).");
         });
 
-        // RESTAURAR COPIA DESDE ARCHIVO JSON
-        document.getElementById('inputRestaurarJSON').addEventListener('change', function(event) {
+        // 7. RESTAURAR JSON (Inserción Masiva en Supabase)
+        document.getElementById('inputRestaurarJSON').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
             const lector = new FileReader();
-            lector.onload = function(e) {
+            lector.onload = async function(e) {
                 try {
                     const datosRestaurar = JSON.parse(e.target.result);
                     if (!Array.isArray(datosRestaurar)) {
-                        alert("Error: El archivo seleccionado no tiene el formato correcto de copia de seguridad.");
+                        alert("Error: El archivo seleccionado no tiene el formato correcto.");
                         return;
                     }
-                    if (confirm(`⚠️ ALERTA DE SEGURIDAD ⚠️\n¿Estás seguro de que deseas inyectar y restaurar las ${datosRestaurar.length} prendas de este backup?`)) {
-                        let subidos = 0;
-                        datosRestaurar.forEach((prendaObjeto) => {
-                            const idOriginalDoc = prendaObjeto.idDocumentoFirestore;
-                            const limpioParaFirebase = { ...prendaObjeto };
-                            delete limpioParaFirebase.idDocumentoFirestore;
-                            limpioParaFirebase.fechaServidor = firebase.firestore.FieldValue.serverTimestamp();
-
-                            let restauracionPromesa;
-                            if (idOriginalDoc) {
-                                restauracionPromesa = db.collection("prendas").doc(idOriginalDoc).set(limpioParaFirebase);
-                            } else {
-                                restauracionPromesa = db.collection("prendas").add(limpioParaFirebase);
-                            }
-
-                            restauracionPromesa.then(() => {
-                                subidos++;
-                                if (subidos === datosRestaurar.length) {
-                                    alert(`🎉 ¡SISTEMA RESTAURADO CON ÉXITO!`);
-                                    event.target.value = '';
-                                }
-                            }).catch(err => console.error("Error restaurando ítem:", err));
+                    if (confirm(`⚠️ ALERTA DE SEGURIDAD ⚠️\n¿Estás seguro de que deseas inyectar y restaurar las ${datosRestaurar.length} prendas de este backup a Supabase?`)) {
+                        
+                        // Limpiamos los IDs antiguos (como los de Firebase) para que Supabase asigne los suyos
+                        const registrosLimpios = datosRestaurar.map(p => {
+                            // Extraemos las propiedades viejas que puedan estorbar
+                            const { idDocumentoFirestore, id, fechaServidor, ...limpio } = p; 
+                            return limpio;
                         });
+
+                        // Supabase permite inserción masiva directamente en el Array
+                        const { data, error } = await supabase.from('prendas').insert(registrosLimpios);
+                        
+                        if(error) throw error;
+                        
+                        alert(`🎉 ¡SISTEMA RESTAURADO CON ÉXITO!`);
+                        event.target.value = '';
                     }
                 } catch (err) {
-                    alert("Error crítico: No se pudo procesar la lectura de la copia de seguridad.");
+                    console.error(err);
+                    alert("Error crítico: No se pudo procesar la lectura o subida de la copia de seguridad.");
                 }
             };
             lector.readAsText(archivo);
         });
 
-        // BUSCADOR EN TIEMPO REAL
+        // 8. BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
             const textoBusqueda = this.value.toLowerCase();
             const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
@@ -432,28 +454,26 @@
             });
         });
 
-        // EXPORTAR A EXCEL
-        document.getElementById('btnExportarExcel').addEventListener('click', function() {
-            if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
-            const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
-            const libroExcel = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Inventario Monastery");
-            XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
-        });
-
-        // REGISTRAR SALIDAS
-        const modalSalida = document.getElementById('modalSalida');
+        // ==========================
+        // LÓGICA DE MODALES (SUPABASE)
+        // ==========================
         let idPrendaSeleccionada = null; 
-        function abrirModalSalida(idDocumento) {
+
+        window.abrirModalSalida = function(idDocumento) {
             idPrendaSeleccionada = idDocumento; 
             document.getElementById('salidaRemision').value = '';
             document.getElementById('salidaFecha').value = '';
             document.getElementById('salidaTipo').value = '';
             document.getElementById('salidaTo').value = ''; 
-            modalSalida.style.display = 'flex';
+            document.getElementById('modalSalida').style.display = 'flex';
         }
-        function cerrarModalSalida() { modalSalida.style.display = 'none'; idPrendaSeleccionada = null; }
-        function guardarSalida() {
+        
+        window.cerrarModalSalida = function() { 
+            document.getElementById('modalSalida').style.display = 'none'; 
+            idPrendaSeleccionada = null; 
+        }
+
+        window.guardarSalida = async function() {
             const remision = document.getElementById('salidaRemision').value.trim();
             const fecha = document.getElementById('salidaFecha').value;
             const tipo = document.getElementById('salidaTipo').value;
@@ -463,62 +483,61 @@
             const btn = document.getElementById('btnConfirmarSalida');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
-            db.collection("prendas").doc(idPrendaSeleccionada).update({
-                estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal
-            }).then(() => {
-                cerrarModalSalida();
-                btn.textContent = "Confirmar"; btn.disabled = false;
-            }).catch((error) => { alert("Error: " + error); btn.disabled = false; });
+            const { error } = await supabase.from('prendas')
+                .update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal })
+                .eq('id', idPrendaSeleccionada);
+
+            if (error) {
+                alert("Error: " + error.message);
+            } else {
+                window.cerrarModalSalida();
+            }
+            btn.textContent = "Confirmar"; btn.disabled = false;
         }
 
-        // MODAL EDICIÓN COMPLETA 
-        const modalEditar = document.getElementById('modalEditar');
-        function abrirModalEditar(idDocumento) {
+        window.abrirModalEditar = async function(idDocumento) {
             idPrendaSeleccionada = idDocumento;
-            
-            // LIMPÍAMOS EL CAMPO DE FOTO AL ABRIR
             document.getElementById('edFotoNueva').value = '';
 
-            db.collection("prendas").doc(idDocumento).get().then((doc) => {
-                if(doc.exists) {
-                    const p = doc.data();
-                    document.getElementById('edPrecinto').value = p.precinto || '';
-                    document.getElementById('edReferencia').value = p.referencia || '';
-                    document.getElementById('edColeccion').value = p.coleccion || '';
-                    document.getElementById('edTipo').value = p.tipo || '';
-                    document.getElementById('edLinea').value = p.linea || '';
-                    document.getElementById('edTalla').value = p.talla || '';
-                    document.getElementById('edGenero').value = p.genero || '';
-                    document.getElementById('edColor').value = p.color || '';
-                    document.getElementById('edUbiGeneral').value = p.ubicacionGeneral || '';
-                    document.getElementById('edUbiDiseno').value = p.ubicacionDiseno || '';
-                    document.getElementById('edObservaciones').value = p.observaciones || '';
-                    document.getElementById('edRemision').value = p.salidaRemision || '';
-                    document.getElementById('edFechaSalida').value = p.salidaFecha || '';
-                    document.getElementById('edTo').value = p.salidaTo || ''; 
-                    
-                    document.getElementById('edPrecio').value = p.precio || '';
-                    document.getElementById('edMoneda').value = p.moneda || 'COP';
-                    document.getElementById('edProveedor').value = p.proveedor || '';
-                    document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
-                    
-                    const selectEstado = document.getElementById('edEstado');
-                    if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
-                    modalEditar.style.display = 'flex';
-                }
-            });
+            const { data, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
+
+            if (data) {
+                const p = data;
+                document.getElementById('edPrecinto').value = p.precinto || '';
+                document.getElementById('edReferencia').value = p.referencia || '';
+                document.getElementById('edColeccion').value = p.coleccion || '';
+                document.getElementById('edTipo').value = p.tipo || '';
+                document.getElementById('edLinea').value = p.linea || '';
+                document.getElementById('edTalla').value = p.talla || '';
+                document.getElementById('edGenero').value = p.genero || '';
+                document.getElementById('edColor').value = p.color || '';
+                document.getElementById('edUbiGeneral').value = p.ubicacionGeneral || '';
+                document.getElementById('edUbiDiseno').value = p.ubicacionDiseno || '';
+                document.getElementById('edObservaciones').value = p.observaciones || '';
+                document.getElementById('edRemision').value = p.salidaRemision || '';
+                document.getElementById('edFechaSalida').value = p.salidaFecha || '';
+                document.getElementById('edTo').value = p.salidaTo || ''; 
+                
+                document.getElementById('edPrecio').value = p.precio || '';
+                document.getElementById('edMoneda').value = p.moneda || 'COP';
+                document.getElementById('edProveedor').value = p.proveedor || '';
+                document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
+                
+                const selectEstado = document.getElementById('edEstado');
+                if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
+                document.getElementById('modalEditar').style.display = 'flex';
+            }
         }
-        function cerrarModalEditar() { modalEditar.style.display = 'none'; idPrendaSeleccionada = null; }
-        
-        // GUARDADO DE EDICIÓN CON PROCESAMIENTO DE IMAGEN
-        function guardarEdicion() {
+
+        window.cerrarModalEditar = function() { document.getElementById('modalEditar').style.display = 'none'; idPrendaSeleccionada = null; }
+
+        window.guardarEdicion = function() {
             const btn = document.getElementById('btnGuardarEdicion');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
             const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
 
             if (archivoFotoNueva) {
-                // SI SUBIERON UNA FOTO NUEVA, LA COMPRIMIMOS
                 const reader = new FileReader();
                 reader.readAsDataURL(archivoFotoNueva);
                 reader.onload = function(event) {
@@ -526,10 +545,8 @@
                     img.src = event.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; 
-                        const MAX_HEIGHT = 600;
-                        let width = img.width;
-                        let height = img.height;
+                        const MAX_WIDTH = 600; const MAX_HEIGHT = 600;
+                        let width = img.width; let height = img.height;
 
                         if (width > height) {
                             if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
@@ -537,22 +554,19 @@
                             if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                         }
                         
-                        canvas.width = width;
-                        canvas.height = height;
+                        canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
                         const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                        ejecutarUpdateFirebase(fotoBase64); // Se envía la nueva foto
+                        ejecutarUpdateSupabase(fotoBase64); 
                     }
                 }
             } else {
-                // SI NO SUBIERON FOTO NUEVA, ACTUALIZAMOS SIN TOCAR LA FOTO ANTERIOR
-                ejecutarUpdateFirebase(null);
+                ejecutarUpdateSupabase(null);
             }
 
-            // FUNCIÓN INTERNA QUE HACE EL UPDATE FINAL
-            function ejecutarUpdateFirebase(nuevaFotoData) {
+            async function ejecutarUpdateSupabase(nuevaFotoData) {
                 let datosActualizar = {
                     precinto: document.getElementById('edPrecinto').value.trim(), 
                     referencia: document.getElementById('edReferencia').value,
@@ -569,74 +583,73 @@
                     salidaRemision: document.getElementById('edRemision').value, 
                     salidaFecha: document.getElementById('edFechaSalida').value,
                     salidaTo: document.getElementById('edTo').value,
-                    precio: document.getElementById('edPrecio').value,
+                    precio: parseFloat(document.getElementById('edPrecio').value) || null,
                     moneda: document.getElementById('edMoneda').value,
                     proveedor: document.getElementById('edProveedor').value,
                     paisOrigen: document.getElementById('edPaisOrigen').value
                 };
 
-                // Si hay nueva foto, se agrega al paquete de actualización
-                if (nuevaFotoData !== null) {
-                    datosActualizar.fotoUrl = nuevaFotoData;
-                }
+                if (nuevaFotoData !== null) { datosActualizar.fotoUrl = nuevaFotoData; }
 
-                db.collection("prendas").doc(idPrendaSeleccionada).update(datosActualizar)
-                .then(() => {
-                    cerrarModalEditar();
-                    btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
-                }).catch((error) => { 
-                    alert("Error editando: " + error); 
-                    btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; 
-                });
+                const { error } = await supabase.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada);
+                
+                if (error) {
+                    alert("Error editando: " + error.message);
+                } else {
+                    window.cerrarModalEditar();
+                }
+                btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
             }
         }
 
-        // INSPECCIÓN DE DETALLES
-        const modalDetalles = document.getElementById('modalDetalles');
-        function cerrarModalDetalles() { modalDetalles.style.display = 'none'; }
-        function verDetalles(idDocumento) {
-            db.collection("prendas").doc(idDocumento).get().then((doc) => {
-                if (doc.exists) {
-                    const p = doc.data();
-                    document.getElementById('detFoto').src = p.fotoUrl || 'logo.png';
-                    document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
-                    document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
-                    document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
-                    document.getElementById('detPrecinto').textContent = p.precinto || '-';
-                    document.getElementById('detReferencia').textContent = p.referencia || '-';
-                    document.getElementById('detColeccion').textContent = p.coleccion || '-';
-                    document.getElementById('detTipo').textContent = p.tipo || '-';
-                    document.getElementById('detLinea').textContent = p.linea || '-';
-                    document.getElementById('detGenero').textContent = p.genero || '-';
-                    document.getElementById('detTalla').textContent = p.talla || '-';
-                    document.getElementById('detColor').textContent = p.color || '-';
-                    document.getElementById('detCantidad').textContent = p.cantidad || '-';
-                    document.getElementById('detClasificacion').textContent = p.clasificacion || '-';
-                    document.getElementById('detProveedor').textContent = p.proveedor || '-';
-                    document.getElementById('detPais').textContent = p.paisOrigen || '-';
-                    document.getElementById('detPrecio').textContent = (p.precio || '-') + ' ' + (p.moneda || '');
-                    document.getElementById('detUbiGeneral').textContent = p.ubicacionGeneral || '-';
-                    document.getElementById('detUbiDiseno').textContent = p.ubicacionDiseno || '-';
-                    document.getElementById('detEstado').textContent = p.estado || 'Disponible en inventario';
-                    document.getElementById('detRemision').textContent = p.salidaRemision || '-';
-                    document.getElementById('detFechaSalida').textContent = p.salidaFecha || '-';
-                    document.getElementById('detTo').textContent = p.salidaTo || '-'; 
-                    document.getElementById('detObservaciones').textContent = p.observaciones || 'Sin observaciones.';
-                    modalDetalles.style.display = 'flex';
-                }
-            });
+        window.verDetalles = async function(idDocumento) {
+            const { data: p, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
+            if (p) {
+                document.getElementById('detFoto').src = p.fotoUrl || 'logo.png';
+                document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
+                document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
+                document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
+                document.getElementById('detPrecinto').textContent = p.precinto || '-';
+                document.getElementById('detReferencia').textContent = p.referencia || '-';
+                document.getElementById('detColeccion').textContent = p.coleccion || '-';
+                document.getElementById('detTipo').textContent = p.tipo || '-';
+                document.getElementById('detLinea').textContent = p.linea || '-';
+                document.getElementById('detGenero').textContent = p.genero || '-';
+                document.getElementById('detTalla').textContent = p.talla || '-';
+                document.getElementById('detColor').textContent = p.color || '-';
+                document.getElementById('detCantidad').textContent = p.cantidad || '-';
+                document.getElementById('detClasificacion').textContent = p.clasificacion || '-';
+                document.getElementById('detProveedor').textContent = p.proveedor || '-';
+                document.getElementById('detPais').textContent = p.paisOrigen || '-';
+                document.getElementById('detPrecio').textContent = (p.precio || '-') + ' ' + (p.moneda || '');
+                document.getElementById('detUbiGeneral').textContent = p.ubicacionGeneral || '-';
+                document.getElementById('detUbiDiseno').textContent = p.ubicacionDiseno || '-';
+                document.getElementById('detEstado').textContent = p.estado || 'Disponible en inventario';
+                document.getElementById('detRemision').textContent = p.salidaRemision || '-';
+                document.getElementById('detFechaSalida').textContent = p.salidaFecha || '-';
+                document.getElementById('detTo').textContent = p.salidaTo || '-'; 
+                document.getElementById('detObservaciones').textContent = p.observaciones || 'Sin observaciones.';
+                document.getElementById('modalDetalles').style.display = 'flex';
+            }
         }
         
-        function eliminarPrenda(idDocumento) { if(confirm("¿Estás seguro de que deseas eliminar esta prenda?")) { db.collection("prendas").doc(idDocumento).delete(); } }
+        window.cerrarModalDetalles = function() { document.getElementById('modalDetalles').style.display = 'none'; }
+        
+        window.eliminarPrenda = async function(idDocumento) { 
+            if(confirm("¿Estás seguro de que deseas eliminar esta prenda?")) { 
+                await supabase.from('prendas').delete().eq('id', idDocumento);
+            } 
+        }
         
         const visor = document.getElementById('modalVisor');
         const imgAmpliada = document.getElementById('imagenAmpliada');
-        function abrirVisor(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
-        function cerrarVisor() { visor.style.display = 'none'; imgAmpliada.src = ''; }
+        
+        window.abrirVisor = function(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
+        window.cerrarVisor = function() { visor.style.display = 'none'; imgAmpliada.src = ''; }
 
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape" || event.keyCode === 27) {
-                cerrarVisor(); cerrarModalSalida(); cerrarModalDetalles(); cerrarModalEditar();
+                window.cerrarVisor(); window.cerrarModalSalida(); window.cerrarModalDetalles(); window.cerrarModalEditar();
             }
         });
     </script>

@@ -43,7 +43,7 @@
             <a href="dashboard.html" class="btn-accion">📦 Ir al Dashboard</a>
         </div>
 
-        <div id="mensajeCarga">Obteniendo TRM actual y calculando estadísticas reales... ⏳</div>
+        <div id="mensajeCarga">Obteniendo TRM actual y calculando estadísticas desde Supabase... ⏳</div>
 
         <div id="contenidoReportes" style="display: none;">
             <div class="grid-kpis">
@@ -79,22 +79,16 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
-            authDomain: "inventario-monastery.firebaseapp.com",
-            projectId: "inventario-monastery",
-            storageBucket: "inventario-monastery.firebasestorage.app",
-            messagingSenderId: "1035655424934",
-            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
-            measurementId: "G-BD5MYW553K"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         let chartEstadosInstancia = null;
         let chartLineasInstancia = null;
@@ -102,6 +96,7 @@
         let trmUSD = 4000; 
         let trmEUR = 4300; 
 
+        // 1. OBTENER TRM ACTUAL
         async function obtenerTrmActual() {
             try {
                 const resUSD = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
@@ -119,23 +114,20 @@
             }
         }
 
-        async function iniciarReportes() {
-            await obtenerTrmActual();
+        // 2. FUNCIÓN DE CÁLCULO ESTADÍSTICO
+        function procesarDatosEstadisticos(data) {
+            document.getElementById('mensajeCarga').style.display = 'none';
+            document.getElementById('contenidoReportes').style.display = 'block';
 
-            db.collection("prendas").onSnapshot((querySnapshot) => {
-                document.getElementById('mensajeCarga').style.display = 'none';
-                document.getElementById('contenidoReportes').style.display = 'block';
+            let totalUnidadesFisicas = 0;
+            let totalDisponiblesFisicas = 0;
+            let totalSalidasFisicas = 0;
+            let valorTotalInventarioCOP = 0; 
+            
+            let conteoPorLinea = {};
 
-                let totalUnidadesFisicas = 0;
-                let totalDisponiblesFisicas = 0;
-                let totalSalidasFisicas = 0;
-                let valorTotalInventarioCOP = 0; 
-                
-                let conteoPorLinea = {};
-
-                querySnapshot.forEach((doc) => {
-                    const prenda = doc.data();
-                    
+            if(data && data.length > 0) {
+                data.forEach((prenda) => {
                     // VALIDACIÓN ESTRICTA DE UNIDADES: Si no es número o está vacío, se evalúa como 0
                     let unidadesRegistro = parseInt(prenda.cantidad);
                     if (isNaN(unidadesRegistro)) {
@@ -145,7 +137,7 @@
                     // Sumatoria total global de piezas físicas
                     totalUnidadesFisicas += unidadesRegistro;
 
-                    // CONDICIÓN ESTRICTA: Solo sumará como disponible si el texto coincide exactamente
+                    // CONDICIÓN ESTRICTA: Solo sumará como disponible si el texto coincide
                     const esDisponible = prenda.estado === "Disponible en inventario";
 
                     if (esDisponible) {
@@ -179,38 +171,68 @@
                         valorTotalInventarioCOP += (precioConvertidoUnitario * unidadesRegistro);
                     }
                 });
+            }
 
-                // Inyección de los KPI reales calculados en pantalla
-                document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
-                document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
-                document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
-                
-                document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
-                    style: 'currency', 
-                    currency: 'COP',
-                    maximumFractionDigits: 0 
-                }).format(valorTotalInventarioCOP);
+            // Inyección de los KPI reales calculados en pantalla
+            document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
+            document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
+            document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
+            
+            document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
+                style: 'currency', 
+                currency: 'COP',
+                maximumFractionDigits: 0 
+            }).format(valorTotalInventarioCOP);
 
-                // CONFIGURACIÓN DE GRÁFICAS CORREGIDA POR VOLUMEN REAL
-                const datosEstados = {
-                    labels: ['Disponibles', 'En Salida'],
-                    datasets: [{ data: [totalDisponiblesFisicas, totalSalidasFisicas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
-                };
+            // CONFIGURACIÓN DE GRÁFICAS CORREGIDA POR VOLUMEN REAL
+            const datosEstados = {
+                labels: ['Disponibles', 'En Salida'],
+                datasets: [{ data: [totalDisponiblesFisicas, totalSalidasFisicas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
+            };
 
-                const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
-                const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
-                const valoresLineas = lineasOrdenadas.map(item => item[1]);
+            const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
+            const valoresLineas = lineasOrdenadas.map(item => item[1]);
 
-                const datosLineas = {
-                    labels: etiquetasLineas,
-                    datasets: [{ label: 'Unidades Reales', data: valoresLineas, backgroundColor: '#0078D4', borderRadius: 4 }]
-                };
+            const datosLineas = {
+                labels: etiquetasLineas,
+                datasets: [{ label: 'Unidades Reales', data: valoresLineas, backgroundColor: '#0078D4', borderRadius: 4 }]
+            };
 
-                renderizarGraficaEstados(datosEstados);
-                renderizarGraficaLineas(datosLineas);
-            });
+            renderizarGraficaEstados(datosEstados);
+            renderizarGraficaLineas(datosLineas);
         }
 
+        // 3. CONSULTA INICIAL A SUPABASE
+        async function cargarDatosSupabase() {
+            try {
+                const { data, error } = await supabase.from('prendas').select('*');
+                if (error) throw error;
+                procesarDatosEstadisticos(data);
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+                document.getElementById('mensajeCarga').textContent = "Error conectando con la base de datos.";
+            }
+        }
+
+        // 4. INICIALIZAR SISTEMA Y SUSCRIBIR A TIEMPO REAL
+        async function iniciarReportes() {
+            await obtenerTrmActual();
+            await cargarDatosSupabase();
+
+            // Suscripción en Tiempo Real (Realtime de Supabase)
+            supabase
+                .channel('cambios-reportes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
+                    // Si ocurre cualquier cambio en el inventario, recalculamos las gráficas
+                    cargarDatosSupabase();
+                })
+                .subscribe();
+        }
+
+        // ==========================
+        // FUNCIONES DE GRÁFICAS (Chart.js)
+        // ==========================
         function renderizarGraficaEstados(datos) {
             const ctx = document.getElementById('graficoEstados').getContext('2d');
             if (chartEstadosInstancia) { chartEstadosInstancia.destroy(); }
@@ -223,6 +245,7 @@
             chartLineasInstancia = new Chart(ctx, { type: 'bar', data: datos, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, x: { ticks: { color: '#ccc' }, grid: { display: false } } } } });
         }
 
+        // Arrancamos el reporte
         iniciarReportes();
     </script>
 </body>

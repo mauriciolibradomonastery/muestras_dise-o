@@ -144,7 +144,7 @@
 
     <div class="caja-login">
         <div class="logo-container">
-            /* 2. TU LOGO BLANCO ENLAZADO AQUÍ                            */
+            <!-- 2. TU LOGO BLANCO ENLAZADO AQUÍ -->
             <img src="logo_blanco.png" alt="M" class="logo-img" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=\'color:#0078D4; font-weight:bold; font-size:24px;\'>M</span>'">
         </div>
         
@@ -193,25 +193,14 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAykazUY_NQUm6kCLZW2Uyaa_RfaBSdtk8",
-            authDomain: "inventario-monastery.firebaseapp.com",
-            projectId: "inventario-monastery",
-            storageBucket: "inventario-monastery.firebasestorage.app",
-            messagingSenderId: "1035655424934",
-            appId: "1:1035655424934:web:d572fbfe793485305bbd67",
-            measurementId: "G-BD5MYW553K"
-        };
-
-        let auth;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-        } catch(e) { console.error(e); }
+        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         document.addEventListener("DOMContentLoaded", function() {
             const correoGuardado = localStorage.getItem("monastery_correo");
@@ -221,7 +210,7 @@
             }
         });
 
-        function alternarPassword() {
+        window.alternarPassword = function() {
             const inputPass = document.getElementById('txtPassword');
             const btnOjo = document.getElementById('btnOjo');
             if (inputPass.type === "password") {
@@ -231,71 +220,17 @@
             }
         }
 
-        function mostrarVistaRecuperar(e) {
+        window.mostrarVistaRecuperar = function(e) {
             e.preventDefault();
             document.getElementById('vistaLogin').style.display = 'none';
             document.getElementById('vistaRecuperar').style.display = 'block';
             document.getElementById('mensajeRecuperar').style.display = 'none';
         }
 
-        function mostrarVistaLogin() {
+        window.mostrarVistaLogin = function() {
             document.getElementById('vistaRecuperar').style.display = 'none';
             document.getElementById('vistaLogin').style.display = 'block';
             document.getElementById('mensajeError').style.display = 'none';
-        }
-
-        function iniciarSesion() {
-            const msg = document.getElementById('mensajeError');
-            msg.style.display = 'none';
-
-            if (typeof firebase === 'undefined' || !auth) {
-                alert("🚨 CONTROL DE SEGURIDAD:\nEl navegador bloqueó la conexión local.\n\nAbre tu carpeta, dale clic derecho a 'index.html', 'Abrir con' y selecciona Microsoft Edge.");
-                return;
-            }
-
-            const correo = document.getElementById('txtCorreo').value.trim();
-            const password = document.getElementById('txtPassword').value;
-            const recordar = document.getElementById('chkRecordar').checked;
-            const btn = document.getElementById('btnIngresar');
-
-            if (correo === "" || password === "") { mostrarAlert(msg, "error", "Por favor ingresa tu correo y contraseña."); return; }
-
-            btn.textContent = "Verificando... ⏳"; btn.disabled = true;
-
-            auth.signInWithEmailAndPassword(correo, password)
-            .then(() => {
-                if (recordar) { localStorage.setItem("monastery_correo", correo); } 
-                else { localStorage.removeItem("monastery_correo"); }
-                window.location.href = "menu.html"; 
-            })
-            .catch((error) => {
-                btn.textContent = "Ingresar al Sistema"; btn.disabled = false;
-                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    mostrarAlert(msg, "error", "Correo o contraseña incorrectos.");
-                } else {
-                    mostrarAlert(msg, "error", "Error: " + error.message);
-                }
-            });
-        }
-
-        function enviarCorreoRestaurar() {
-            const correo = document.getElementById('txtCorreoRecuperar').value.trim();
-            const btn = document.getElementById('btnEnviarEnlace');
-            const msg = document.getElementById('mensajeRecuperar');
-
-            if (correo === "") { mostrarAlert(msg, "error", "Por favor ingresa tu correo corporativo."); return; }
-            btn.textContent = "Enviando... ⏳"; btn.disabled = true;
-
-            auth.sendPasswordResetEmail(correo)
-            .then(() => {
-                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
-                mostrarAlert(msg, "exito", "¡Enlace enviado! Revisa tu bandeja de entrada o spam.");
-                document.getElementById('txtCorreoRecuperar').value = '';
-            })
-            .catch((error) => {
-                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
-                mostrarAlert(msg, "error", error.message);
-            });
         }
 
         function mostrarAlert(elemento, tipo, texto) {
@@ -304,7 +239,70 @@
             elemento.style.display = 'block';
         }
 
-        document.getElementById('txtPassword').addEventListener('keypress', function (e) { if (e.key === 'Enter') { iniciarSesion(); } });
+        window.iniciarSesion = async function() {
+            const msg = document.getElementById('mensajeError');
+            msg.style.display = 'none';
+
+            const correo = document.getElementById('txtCorreo').value.trim();
+            const password = document.getElementById('txtPassword').value;
+            const recordar = document.getElementById('chkRecordar').checked;
+            const btn = document.getElementById('btnIngresar');
+
+            if (correo === "" || password === "") { 
+                mostrarAlert(msg, "error", "Por favor ingresa tu correo y contraseña."); 
+                return; 
+            }
+
+            btn.textContent = "Verificando... ⏳"; btn.disabled = true;
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: correo,
+                password: password,
+            });
+
+            if (error) {
+                btn.textContent = "Ingresar al Sistema"; btn.disabled = false;
+                if (error.message.includes('Invalid login credentials')) {
+                    mostrarAlert(msg, "error", "Correo o contraseña incorrectos.");
+                } else {
+                    mostrarAlert(msg, "error", "Error: " + error.message);
+                }
+            } else {
+                // Si el inicio de sesión es exitoso
+                if (recordar) { localStorage.setItem("monastery_correo", correo); } 
+                else { localStorage.removeItem("monastery_correo"); }
+                window.location.href = "menu.html"; 
+            }
+        }
+
+        window.enviarCorreoRestaurar = async function() {
+            const correo = document.getElementById('txtCorreoRecuperar').value.trim();
+            const btn = document.getElementById('btnEnviarEnlace');
+            const msg = document.getElementById('mensajeRecuperar');
+
+            if (correo === "") { 
+                mostrarAlert(msg, "error", "Por favor ingresa tu correo corporativo."); 
+                return; 
+            }
+            
+            btn.textContent = "Enviando... ⏳"; btn.disabled = true;
+
+            const { data, error } = await supabase.auth.resetPasswordForEmail(correo);
+
+            if (error) {
+                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
+                mostrarAlert(msg, "error", error.message);
+            } else {
+                btn.textContent = "Enviar Enlace al Correo"; btn.disabled = false;
+                mostrarAlert(msg, "exito", "¡Enlace enviado! Revisa tu bandeja de entrada o spam.");
+                document.getElementById('txtCorreoRecuperar').value = '';
+            }
+        }
+
+        // Ejecutar login con la tecla Enter
+        document.getElementById('txtPassword').addEventListener('keypress', function (e) { 
+            if (e.key === 'Enter') { window.iniciarSesion(); } 
+        });
     </script>
 </body>
 </html>
