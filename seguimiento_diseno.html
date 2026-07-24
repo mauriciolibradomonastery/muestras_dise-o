@@ -3,161 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguimiento de Muestras - WIPS</title>
+    <title>Seguimiento de Muestras (WIPS) - Monastery</title>
     
+    <!-- FAVICON (ÍCONO EN LA PESTAÑA DEL NAVEGADOR) -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Librería para Exportar a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f9f9f9;
-            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 25px;
+            background-image: linear-gradient(rgba(15, 15, 20, 0.92), rgba(10, 10, 15, 0.96)), url('fondo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: #e5e7eb;
+            min-height: 100vh;
         }
-        
-        .kpi-section {
-            margin-bottom: 25px;
-            background-color: white;
-            padding: 15px;
+
+        /* ENCABEZADO Y LOGO DE MARCA */
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            padding-bottom: 15px;
+        }
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .logo-header {
+            height: 42px;
+            width: auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4px 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            object-fit: contain;
+        }
+        .header-top h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+        }
+        .btn-back {
+            color: #a7f3d0;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            background: rgba(16, 185, 129, 0.15);
+            padding: 8px 16px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border: 1px solid #ddd;
-            overflow-x: auto;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
         }
-        .kpi-section h3 {
+        .btn-back:hover {
+            background: rgba(16, 185, 129, 0.3);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* SECCIÓN DE KPIS GERENCIAL */
+        .kpi-card {
+            background: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .kpi-card h3 {
             margin-top: 0;
             margin-bottom: 15px;
-            color: #1f2937;
-            font-size: 18px;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 5px;
+            font-size: 17px;
+            color: #f3f4f6;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .kpi-table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .kpi-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
             text-align: center;
+            white-space: nowrap;
         }
         .kpi-table th {
-            background-color: #374151;
-            color: white;
-            padding: 10px;
-            border: 1px solid #4b5563;
-            font-weight: bold;
+            background: #111827;
+            color: #9ca3af;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            padding: 12px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .kpi-table td {
-            padding: 8px;
-            border: 1px solid #e5e7eb;
-            color: #111827;
-            font-weight: 500;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e5e7eb;
+            background: rgba(31, 41, 55, 0.4);
         }
-        .kpi-table tr:nth-child(even) { background-color: #f9fafb; }
-        .kpi-table tr:hover { background-color: #f3f4f6; }
-        .kpi-total-row {
-            background-color: #1f2937 !important;
-            color: white !important;
-            font-weight: bold;
+        .kpi-table tr:hover td {
+            background: rgba(55, 65, 81, 0.6);
         }
         .kpi-total-row td {
-            color: white;
-            border-color: #4b5563;
+            background: #0f172a !important;
+            color: #38bdf8 !important;
+            font-weight: 700;
+            border-top: 2px solid #38bdf8;
         }
-        .col-left { text-align: left !important; }
+        .col-left { text-align: left !important; font-weight: 600; }
 
+        /* PESTAÑAS Y BARRA DE ACCIONES */
         .tabs-container {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
+            gap: 12px;
+            margin-bottom: 18px;
         }
         .tab-btn {
-            background: none; border: none; padding: 10px 20px; font-size: 16px;
-            cursor: pointer; color: #6b7280; border-bottom: 3px solid transparent;
-            font-weight: bold; transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 22px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #9ca3af;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
         }
-        .tab-btn:hover { color: #2563eb; }
-        .tab-btn.activa { color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .tab-btn.activa {
+            color: #ffffff;
+            background: #2563eb;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
 
         .header-actions {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 10px; gap: 15px; flex-wrap: wrap;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
-        
-        .buscador { padding: 8px 15px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 14px; }
-        .contador-caja { background-color: #1f2937; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .contador-numero { background-color: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 15px; }
-        
-        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
-        .btn-add { background-color: #16a34a; color: white; }
-        .btn-add:hover { background-color: #15803d; }
-        .btn-toggle { background-color: #d97706; color: white; font-size: 12px; padding: 8px 12px;}
-        .btn-toggle:hover { background-color: #b45309; }
-        .btn-export { background-color: #0284c7; color: white; }
-        .btn-export:hover { background-color: #0369a1; }
-        
-        .btn-save { background-color: #2563eb; color: white; padding: 5px 10px; font-size: 12px;}
-        .btn-save:hover { background-color: #1d4ed8;}
-        .btn-insert { background-color: #10b981; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
-        .btn-insert:hover { background-color: #059669; }
-        .btn-cancelar-fila { background-color: #f59e0b; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
-        .btn-cancelar-fila:hover { background-color: #d97706; }
-        .btn-reactivar-fila { background-color: #10b981; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
-        .btn-reactivar-fila:hover { background-color: #059669; }
-        .btn-delete { background-color: #dc2626; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px;}
-        .btn-delete:hover { background-color: #b91c1c; }
-        
-        .table-container { width: 100%; overflow-x: auto; max-height: 55vh; background-color: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ccc; }
-        table { border-collapse: collapse; width: max-content; }
-        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; white-space: nowrap; min-width: 120px; }
-        
-        thead { position: sticky; top: 0; z-index: 10; background-color: #f4f4f4; }
-        .th-title { cursor: pointer; user-select: none; font-size: 13px; }
-        .th-title:hover { background-color: #e5e7eb; } 
-        .sort-icon { font-size: 10px; margin-left: 5px; color: #6b7280; }
-        .filter-input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; font-family: inherit; }
 
-        td[contenteditable="true"]:hover { background-color: #fef9c3; }
-        td[contenteditable="true"]:focus { outline: 2px solid #2563eb; background-color: #fff; }
+        /* BOTONES DE CONTROL */
+        button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.25s ease;
+        }
+        .btn-add { background-color: #10b981; color: white; }
+        .btn-add:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         
-        .col-produccion { background-color: #e0f2fe; }
-        .col-produccion-header { background-color: #bae6fd; }
+        .btn-toggle { background-color: #d97706; color: white; }
+        .btn-toggle:hover { background-color: #b45309; }
+
+        .btn-export { background-color: #0284c7; color: white; }
+        .btn-export:hover { background-color: #0369a1; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); }
+
+        .buscador {
+            padding: 9px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            width: 320px;
+            font-size: 13px;
+            background: rgba(17, 24, 39, 0.8);
+            color: white;
+            outline: none;
+        }
+        .buscador:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+
+        .contador-caja {
+            background-color: #111827;
+            color: #9ca3af;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .contador-numero {
+            background-color: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        /* ACCIONES DE FILA DENTRO DE LA TABLA */
+        .btn-save { background-color: #2563eb; color: white; padding: 4px 8px; font-size: 12px;}
+        .btn-save:hover { background-color: #1d4ed8;}
+        .btn-insert { background-color: #10b981; color: white; padding: 4px 8px; font-size: 12px;}
+        .btn-cancelar-fila { background-color: #f59e0b; color: white; padding: 4px 8px; font-size: 12px;}
+        .btn-reactivar-fila { background-color: #10b981; color: white; padding: 4px 8px; font-size: 12px;}
+        .btn-delete { background-color: #ef4444; color: white; padding: 4px 8px; font-size: 12px;}
+
+        /* TABLA PRINCIPAL DE MUESTRAS */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            max-height: 58vh;
+            background: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+        }
+        table { border-collapse: collapse; width: max-content; }
+        
+        th, td {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 10px;
+            text-align: left;
+            white-space: nowrap;
+            min-width: 130px;
+            font-size: 13px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #111827;
+        }
+
+        .th-title {
+            cursor: pointer;
+            user-select: none;
+            color: #d1d5db;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #1f2937;
+            padding: 10px;
+        }
+        .th-title:hover { background-color: #374151; color: #ffffff; }
+        .sort-icon { font-size: 10px; margin-left: 4px; color: #9ca3af; }
+
+        .filter-input {
+            width: 100%;
+            padding: 4px 8px;
+            font-size: 11px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            background: rgba(31, 41, 55, 0.9);
+            color: #ffffff;
+        }
+        .filter-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+        tbody tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
+        tbody tr:hover { background-color: rgba(59, 130, 246, 0.08); }
+
+        td[contenteditable="true"] {
+            color: #f3f4f6;
+            outline: none;
+        }
+        td[contenteditable="true"]:hover { background-color: rgba(254, 240, 138, 0.1); }
+        td[contenteditable="true"]:focus {
+            background-color: rgba(17, 24, 39, 0.95);
+            box-shadow: inset 0 0 0 2px #3b82f6;
+            color: #ffffff;
+        }
+
+        .col-produccion { background-color: rgba(14, 165, 233, 0.06); }
+        .col-produccion-header { background-color: #0369a1 !important; color: #ffffff !important; }
+        
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <h2>Seguimiento de Muestras (WIPS)</h2>
-    <p><a href="index.html" style="color: #2563eb; text-decoration: none; font-weight: bold;">⬅ Volver al Menú Principal</a></p>
-    
-    <div class="kpi-section" id="seccionKpis">
-        <h3>📊 Resumen de Indicadores (Muestras Activas)</h3>
-        <table class="kpi-table" id="tablaKpis">
-            <thead>
-                <tr>
-                    <th class="col-left">Colección</th>
-                    <th>Total Referencias</th>
-                    <th>Total Muestras</th>
-                    <th>Total Muestras Físicas</th>
-                    <th>% Muestras físicas</th>
-                    <th>N° Prendas en tránsito</th>
-                    <th>% Muestras físicas + tránsito</th>
-                    <th>Total Muestras con costos</th>
-                    <th>% Muestras con costos</th>
-                    <th>Total Muestras con Pvp</th>
-                    <th>% Muestras con Pvp</th>
-                </tr>
-            </thead>
-            <tbody id="kpiBody">
-            </tbody>
-        </table>
+    <div class="header-top">
+        <div class="header-title-box">
+            <!-- LOGO NEGRO JUNTO AL TÍTULO -->
+            <img src="logo.png" alt="Monastery" class="logo-header">
+            <h2>Seguimiento de Muestras (WIPS)</h2>
+        </div>
+        <a href="index.html" class="btn-back">⬅ Volver al Menú Principal</a>
     </div>
 
+    <!-- TABLERO DE KPIS GERENCIAL -->
+    <div class="kpi-card">
+        <h3>📊 Resumen de Indicadores (Muestras Activas)</h3>
+        <div class="kpi-table-container">
+            <table class="kpi-table">
+                <thead>
+                    <tr>
+                        <th class="col-left">Colección</th>
+                        <th>Total Referencias</th>
+                        <th>Total Muestras</th>
+                        <th>Total Muestras Físicas</th>
+                        <th>% Muestras físicas</th>
+                        <th>N° Prendas en tránsito</th>
+                        <th>% Muestras físicas + tránsito</th>
+                        <th>Total Muestras con costos</th>
+                        <th>% Muestras con costos</th>
+                        <th>Total Muestras con Pvp</th>
+                        <th>% Muestras con Pvp</th>
+                    </tr>
+                </thead>
+                <tbody id="kpiBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PESTAÑAS -->
     <div class="tabs-container">
         <button id="tabActivas" class="tab-btn activa" onclick="cambiarVista('activas')">📂 Muestras Activas</button>
         <button id="tabCanceladas" class="tab-btn" onclick="cambiarVista('canceladas')">🚫 Muestras Canceladas</button>
     </div>
 
+    <!-- BARRA DE ACCIONES -->
     <div class="header-actions">
         <div class="acciones-izq">
             <button id="btnAgregarFila" class="btn-add" onclick="agregarFilaVacia()">+ Agregar Fila al Final</button>
@@ -172,6 +377,7 @@
         </div>
     </div>
 
+    <!-- CONTENEDOR DE LA TABLA PRINCIPAL -->
     <div class="table-container">
         <table id="tablaWips">
             <thead>
@@ -203,7 +409,7 @@
 
             colsDiseno.forEach(col => { 
                 const thTitle = document.createElement('th'); thTitle.className = 'th-title';
-                thTitle.innerHTML = `${col} <span class="sort-icon">↕️</span>`;
+                thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
 
@@ -214,7 +420,7 @@
 
             colsProduccion.forEach(col => { 
                 const thTitle = document.createElement('th'); thTitle.className = 'th-title col-produccion-header hidden';
-                thTitle.innerHTML = `${col} <span class="sort-icon">↕️</span>`;
+                thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
 
@@ -223,8 +429,13 @@
                 trFilter.appendChild(thFilter); columnIndex++;
             });
 
-            const thAcciones = document.createElement('th'); thAcciones.textContent = 'ACCIONES'; trHeader.appendChild(thAcciones);
-            const thAccionesFilter = document.createElement('th'); trFilter.appendChild(thAccionesFilter);
+            const thAcciones = document.createElement('th'); 
+            thAcciones.className = 'th-title';
+            thAcciones.textContent = 'ACCIONES'; 
+            trHeader.appendChild(thAcciones);
+            
+            const thAccionesFilter = document.createElement('th'); 
+            trFilter.appendChild(thAccionesFilter);
         }
 
         async function cargarDatos() {
@@ -343,7 +554,7 @@
 
                 kpiBody.innerHTML += `
                     <tr>
-                        <td class="col-left" style="color: #2563eb; text-decoration: underline;">${col}</td>
+                        <td class="col-left" style="color: #60a5fa; text-decoration: underline;">${col}</td>
                         <td>${data.referencias.size}</td>
                         <td>${data.totalMuestras}</td>
                         <td>${data.fisicas}</td>
@@ -384,7 +595,7 @@
             window.vistaActual = vista;
             document.getElementById('tabActivas').classList.toggle('activa', vista === 'activas');
             document.getElementById('tabCanceladas').classList.toggle('activa', vista === 'canceladas');
-            document.getElementById('btnAgregarFila').style.display = vista === 'activas' ? 'inline-block' : 'none';
+            document.getElementById('btnAgregarFila').style.display = vista === 'activas' ? 'inline-flex' : 'none';
             window.filtrarTablaCompleta();
         };
 
@@ -468,7 +679,7 @@
         };
 
         window.guardarFila = async function(btn) {
-            btn.textContent = "⏳...";
+            btn.textContent = "⏳";
             const tr = btn.closest('tr');
             const celdas = tr.querySelectorAll('td[contenteditable="true"]');
             let datosFila = [];
@@ -482,7 +693,7 @@
                 const { data, error } = await supabase.from('wips_muestras').insert([{ datos: datosFila }]).select();
                 if(error) alert("Error al guardar"); else tr.dataset.id = data[0].id; 
             }
-            btn.textContent = "✅ Guardado";
+            btn.textContent = "✅";
             calcularKPIs(); 
             setTimeout(() => btn.textContent = "💾", 2000); 
         };
