@@ -6,18 +6,21 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
         body {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.209), rgba(0, 0, 0, 0.75)), url('fondo.png');
+            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url('fondo.png'); /* Oscurecí un poquito el fondo para que resalten más las categorías */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
             color: #ffffff; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
+            justify-content: flex-start; /* Cambiado para permitir scroll si la pantalla es pequeña */
+            min-height: 100vh; 
             margin: 0; 
+            padding: 40px 20px;
+            box-sizing: border-box;
             position: relative;
         }
 
@@ -43,46 +46,76 @@
             box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4);
         }
 
-        .titulo { margin-bottom: 40px; text-align: center; }
+        .titulo { margin-bottom: 30px; text-align: center; margin-top: 20px; }
         .titulo h2 { margin: 5px 0; font-size: 28px; letter-spacing: 1px; }
-        .titulo p { color: #aaa; margin: 0; }
+        .titulo p { color: #ccc; margin: 0; }
 
-        /* MODIFICACIÓN AQUÍ: Cambié a 2 columnas (1fr 1fr) para que los 4 botones queden simétricos */
-        .grid-menu { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 30px; 
-            max-width: 700px; /* Reduje un poco el ancho para que el cuadrado se vea compacto */
-            width: 100%; 
-            padding: 0 20px; 
-            box-sizing: border-box; 
+        /* CONTENEDOR PRINCIPAL DE CATEGORÍAS */
+        .contenedor-categorias {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        /* ESTILO DE CADA CATEGORÍA */
+        .categoria {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .categoria-titulo {
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+
+        /* GRID PARA LOS BOTONES */
+        .grid-botones {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 25px;
+            width: 100%;
         }
         
         .tarjeta-menu {
-            background-color: rgba(45, 45, 45, 0.85); 
-            backdrop-filter: blur(5px); 
-            padding: 40px 20px;
+            background-color: rgba(30, 30, 30, 0.75); 
+            backdrop-filter: blur(8px); 
+            padding: 30px 20px;
             border-radius: 12px;
             text-align: center;
-            border: 2px solid transparent;
+            border: 1px solid rgba(255,255,255,0.1);
             cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
             text-decoration: none;
             color: white;
             display: flex;
             flex-direction: column;
             align-items: center;
+            width: 240px; /* Ancho fijo para que todos se vean iguales */
         }
 
         .tarjeta-menu:hover { 
             border-color: #0078D4; 
             transform: translateY(-5px); 
-            background-color: rgba(55, 55, 55, 0.95); 
+            background-color: rgba(45, 45, 45, 0.9); 
+            box-shadow: 0 15px 25px rgba(0, 120, 212, 0.3);
         }
         
-        .icono { font-size: 50px; margin-bottom: 15px; }
-        .texto { font-size: 18px; font-weight: bold; }
+        .icono { font-size: 45px; margin-bottom: 15px; }
+        .texto { font-size: 16px; font-weight: bold; line-height: 1.3;}
     </style>
 </head>
 <body>
@@ -90,32 +123,46 @@
     <button id="btnCerrarSesion" class="btn-logout">🚪 Cerrar Sesión</button>
 
     <div class="titulo">
-        <img src="logo.png" alt="Logo" style="width: 160px; margin-bottom: 10px;">
+        <img src="logo.png" alt="Logo" style="width: 140px; margin-bottom: 10px;">
         <h2>Panel de Control</h2>
         <p>¿Qué deseas hacer hoy?</p>
     </div>
 
-    <div class="grid-menu">
-        <a href="formulario.html" class="tarjeta-menu">
-            <div class="icono">➕</div>
-            <div class="texto">Ingresar Nueva Prenda</div>
-        </a>
+    <!-- CONTENEDOR DE CATEGORÍAS -->
+    <div class="contenedor-categorias">
+        
+        <!-- CATEGORÍA 1: INVENTARIO DE MUESTRAS -->
+        <div class="categoria">
+            <h3 class="categoria-titulo">📦 Inventario de Muestras</h3>
+            <div class="grid-botones">
+                <a href="formulario.html" class="tarjeta-menu">
+                    <div class="icono">➕</div>
+                    <div class="texto">Ingresar Nueva<br>Prenda</div>
+                </a>
 
-        <a href="dashboard.html" class="tarjeta-menu">
-            <div class="icono">📦</div>
-            <div class="texto">Ver / Modificar Inventario</div>
-        </a>
+                <a href="dashboard.html" class="tarjeta-menu">
+                    <div class="icono">📦</div>
+                    <div class="texto">Ver / Modificar<br>Inventario</div>
+                </a>
 
-        <a href="reportes.html" class="tarjeta-menu">
-            <div class="icono">📊</div>
-            <div class="texto">Indicadores y Reportes</div>
-        </a>
+                <a href="reportes.html" class="tarjeta-menu">
+                    <div class="icono">📊</div>
+                    <div class="texto">Indicadores y<br>Reportes</div>
+                </a>
+            </div>
+        </div>
 
-        <!-- NUEVA TARJETA: WIPS DE DISEÑO -->
-        <a href="wips.html" class="tarjeta-menu">
-            <div class="icono">🎨</div>
-            <div class="texto">WIPS de Diseño</div>
-        </a>
+        <!-- CATEGORÍA 2: WIPS DE DISEÑO -->
+        <div class="categoria">
+            <h3 class="categoria-titulo">🎨 Gestión y Seguimiento</h3>
+            <div class="grid-botones">
+                <a href="wips.html" class="tarjeta-menu">
+                    <div class="icono">🎨</div>
+                    <div class="texto">WIPS de<br>Diseño</div>
+                </a>
+            </div>
+        </div>
+
     </div>
 
     <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
@@ -129,7 +176,7 @@
         async function verificarSesion() {
             const { data: { session }, error } = await supabase.auth.getSession();
             if (!session) {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html'; // Redirige al login si no hay sesión
             }
         }
         
@@ -148,7 +195,7 @@
                 btn.textContent = "🚪 Cerrar Sesión";
                 btn.disabled = false;
             } else {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html'; // Redirige al login
             }
         });
     </script>
