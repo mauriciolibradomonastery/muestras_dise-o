@@ -2,171 +2,187 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Menú Principal</title>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguimiento de Muestras - WIPS</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
     <style>
         body {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url('fondo.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            color: #ffffff; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: flex-start; 
-            min-height: 100vh; 
-            margin: 0; 
-            padding: 40px 20px;
-            box-sizing: border-box;
-            position: relative;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
         }
-
-        /* BOTÓN CERRAR SESIÓN EN LA ESQUINA */
-        .btn-logout {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            background-color: rgba(220, 53, 69, 0.8);
-            color: white;
-            text-decoration: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 14px;
-            transition: 0.3s;
-            border: 1px solid transparent;
-            cursor: pointer;
-        }
-
-        .btn-logout:hover {
-            background-color: #dc3545;
-            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4);
-        }
-
-        .titulo { margin-bottom: 30px; text-align: center; margin-top: 20px; }
-        .titulo h2 { margin: 5px 0; font-size: 28px; letter-spacing: 1px; }
-        .titulo p { color: #ccc; margin: 0; }
-
-        /* CONTENEDOR PRINCIPAL DE CATEGORÍAS */
-        .contenedor-categorias {
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-            width: 100%;
-            max-width: 900px;
-        }
-
-        /* ESTILO DE CADA CATEGORÍA */
-        .categoria {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-
-        .categoria-titulo {
-            width: 100%;
-            text-align: center;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 400;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 10px;
+        
+        .kpi-section {
             margin-bottom: 25px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+            overflow-x: auto;
         }
-
-        /* GRID PARA LOS BOTONES */
-        .grid-botones {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 25px;
+        .kpi-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #1f2937;
+            font-size: 18px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 5px;
+        }
+        .kpi-table {
             width: 100%;
-        }
-        
-        .tarjeta-menu {
-            background-color: rgba(30, 30, 30, 0.75); 
-            backdrop-filter: blur(8px); 
-            padding: 30px 20px;
-            border-radius: 12px;
+            border-collapse: collapse;
+            font-size: 13px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-            text-decoration: none;
+        }
+        .kpi-table th {
+            background-color: #374151;
             color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 240px;
+            padding: 10px;
+            border: 1px solid #4b5563;
+            font-weight: bold;
         }
+        .kpi-table td {
+            padding: 8px;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+            font-weight: 500;
+        }
+        .kpi-table tr:nth-child(even) { background-color: #f9fafb; }
+        .kpi-table tr:hover { background-color: #f3f4f6; }
+        .kpi-total-row {
+            background-color: #1f2937 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+        .kpi-total-row td {
+            color: white;
+            border-color: #4b5563;
+        }
+        .col-left { text-align: left !important; }
 
-        .tarjeta-menu:hover { 
-            border-color: #0078D4; 
-            transform: translateY(-5px); 
-            background-color: rgba(45, 45, 45, 0.9); 
-            box-shadow: 0 15px 25px rgba(0, 120, 212, 0.3);
+        .tabs-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
         }
+        .tab-btn {
+            background: none; border: none; padding: 10px 20px; font-size: 16px;
+            cursor: pointer; color: #6b7280; border-bottom: 3px solid transparent;
+            font-weight: bold; transition: all 0.3s;
+        }
+        .tab-btn:hover { color: #2563eb; }
+        .tab-btn.activa { color: #2563eb; border-bottom-color: #2563eb; }
+
+        .header-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; gap: 15px; flex-wrap: wrap;
+        }
+        .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
         
-        .icono { font-size: 45px; margin-bottom: 15px; }
-        .texto { font-size: 16px; font-weight: bold; line-height: 1.3;}
+        .buscador { padding: 8px 15px; border: 1px solid #ccc; border-radius: 4px; width: 300px; font-size: 14px; }
+        .contador-caja { background-color: #1f2937; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .contador-numero { background-color: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 15px; }
+        
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .btn-add { background-color: #16a34a; color: white; }
+        .btn-add:hover { background-color: #15803d; }
+        .btn-toggle { background-color: #d97706; color: white; font-size: 12px; padding: 8px 12px;}
+        .btn-toggle:hover { background-color: #b45309; }
+        .btn-export { background-color: #0284c7; color: white; }
+        .btn-export:hover { background-color: #0369a1; }
+        
+        .btn-save { background-color: #2563eb; color: white; padding: 5px 10px; font-size: 12px;}
+        .btn-save:hover { background-color: #1d4ed8;}
+        .btn-insert { background-color: #10b981; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
+        .btn-insert:hover { background-color: #059669; }
+        .btn-cancelar-fila { background-color: #f59e0b; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
+        .btn-cancelar-fila:hover { background-color: #d97706; }
+        .btn-reactivar-fila { background-color: #10b981; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px; }
+        .btn-reactivar-fila:hover { background-color: #059669; }
+        .btn-delete { background-color: #dc2626; color: white; padding: 5px 10px; font-size: 12px; margin-left: 2px;}
+        .btn-delete:hover { background-color: #b91c1c; }
+        
+        .table-container { width: 100%; overflow-x: auto; max-height: 55vh; background-color: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ccc; }
+        table { border-collapse: collapse; width: max-content; }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; white-space: nowrap; min-width: 120px; }
+        
+        thead { position: sticky; top: 0; z-index: 10; background-color: #f4f4f4; }
+        .th-title { cursor: pointer; user-select: none; font-size: 13px; }
+        .th-title:hover { background-color: #e5e7eb; } 
+        .sort-icon { font-size: 10px; margin-left: 5px; color: #6b7280; }
+        .filter-input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; font-family: inherit; }
+
+        td[contenteditable="true"]:hover { background-color: #fef9c3; }
+        td[contenteditable="true"]:focus { outline: 2px solid #2563eb; background-color: #fff; }
+        
+        .col-produccion { background-color: #e0f2fe; }
+        .col-produccion-header { background-color: #bae6fd; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <button id="btnCerrarSesion" class="btn-logout">🚪 Cerrar Sesión</button>
-
-    <div class="titulo">
-        <img src="logo.png" alt="Logo" style="width: 140px; margin-bottom: 10px;">
-        <h2>Panel de Control</h2>
-        <p>¿Qué deseas hacer hoy?</p>
+    <h2>Seguimiento de Muestras (WIPS)</h2>
+    <p><a href="index.html" style="color: #2563eb; text-decoration: none; font-weight: bold;">⬅ Volver al Menú Principal</a></p>
+    
+    <div class="kpi-section" id="seccionKpis">
+        <h3>📊 Resumen de Indicadores (Muestras Activas)</h3>
+        <table class="kpi-table" id="tablaKpis">
+            <thead>
+                <tr>
+                    <th class="col-left">Colección</th>
+                    <th>Total Referencias</th>
+                    <th>Total Muestras</th>
+                    <th>Total Muestras Físicas</th>
+                    <th>% Muestras físicas</th>
+                    <th>N° Prendas en tránsito</th>
+                    <th>% Muestras físicas + tránsito</th>
+                    <th>Total Muestras con costos</th>
+                    <th>% Muestras con costos</th>
+                    <th>Total Muestras con Pvp</th>
+                    <th>% Muestras con Pvp</th>
+                </tr>
+            </thead>
+            <tbody id="kpiBody">
+            </tbody>
+        </table>
     </div>
 
-    <!-- CONTENEDOR DE CATEGORÍAS -->
-    <div class="contenedor-categorias">
-        
-        <!-- CATEGORÍA 1: INVENTARIO DE MUESTRAS -->
-        <div class="categoria">
-            <h3 class="categoria-titulo">📦 Inventario de Muestras</h3>
-            <div class="grid-botones">
-                <a href="formulario.html" class="tarjeta-menu">
-                    <div class="icono">➕</div>
-                    <div class="texto">Ingresar Nueva<br>Prenda</div>
-                </a>
-
-                <a href="dashboard.html" class="tarjeta-menu">
-                    <div class="icono">📦</div>
-                    <div class="texto">Ver / Modificar<br>Inventario</div>
-                </a>
-
-                <a href="reportes.html" class="tarjeta-menu">
-                    <div class="icono">📊</div>
-                    <div class="texto">Indicadores y<br>Reportes</div>
-                </a>
-            </div>
-        </div>
-
-        <!-- CATEGORÍA 2: WIPS DE DISEÑO -->
-        <div class="categoria">
-            <h3 class="categoria-titulo">🎨 Gestión y Seguimiento</h3>
-            <div class="grid-botones">
-                <!-- ENLACE ACTUALIZADO -->
-                <a href="seguimiento_diseño.html" class="tarjeta-menu">
-                    <div class="icono">🎨</div>
-                    <div class="texto">WIPS de<br>Diseño</div>
-                </a>
-            </div>
-        </div>
-
+    <div class="tabs-container">
+        <button id="tabActivas" class="tab-btn activa" onclick="cambiarVista('activas')">📂 Muestras Activas</button>
+        <button id="tabCanceladas" class="tab-btn" onclick="cambiarVista('canceladas')">🚫 Muestras Canceladas</button>
     </div>
 
-    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
+    <div class="header-actions">
+        <div class="acciones-izq">
+            <button id="btnAgregarFila" class="btn-add" onclick="agregarFilaVacia()">+ Agregar Fila al Final</button>
+            <button id="btnToggle" class="btn-toggle" onclick="toggleProduccion()">👁️ Mostrar Mis Columnas (Producción)</button>
+            <button class="btn-export" onclick="exportarAExcel()">📥 Exportar a Excel</button>
+            <div class="contador-caja">
+                Total Visibles: <span id="contadorMuestras" class="contador-numero">0</span>
+            </div>
+        </div>
+        <div class="acciones-der">
+            <input type="text" id="inputBusquedaGlobal" class="buscador" placeholder="🔍 Buscar en cualquier columna..." onkeyup="filtrarTablaCompleta()">
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="tablaWips">
+            <thead>
+                <tr id="tableHeaderRow"></tr>
+                <tr id="tableFilterRow"></tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -174,31 +190,354 @@
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        async function verificarSesion() {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = 'index.html'; 
-            }
-        }
+        const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR'];
+        const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
         
-        verificarSesion();
+        window.produccionVisible = false;
+        window.vistaActual = 'activas'; 
 
-        document.getElementById('btnCerrarSesion').addEventListener('click', async function(e) {
-            e.preventDefault();
-            const btn = this;
-            btn.textContent = "Saliendo... ⏳";
-            btn.disabled = true;
+        function inicializarEncabezados() {
+            const trHeader = document.getElementById('tableHeaderRow');
+            const trFilter = document.getElementById('tableFilterRow');
+            let columnIndex = 0;
 
-            const { error } = await supabase.auth.signOut();
+            colsDiseno.forEach(col => { 
+                const thTitle = document.createElement('th'); thTitle.className = 'th-title';
+                thTitle.innerHTML = `${col} <span class="sort-icon">↕️</span>`;
+                let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
+                trHeader.appendChild(thTitle); 
+
+                const thFilter = document.createElement('th');
+                thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
+                trFilter.appendChild(thFilter); columnIndex++;
+            });
+
+            colsProduccion.forEach(col => { 
+                const thTitle = document.createElement('th'); thTitle.className = 'th-title col-produccion-header hidden';
+                thTitle.innerHTML = `${col} <span class="sort-icon">↕️</span>`;
+                let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
+                trHeader.appendChild(thTitle); 
+
+                const thFilter = document.createElement('th'); thFilter.className = 'col-produccion-header hidden';
+                thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
+                trFilter.appendChild(thFilter); columnIndex++;
+            });
+
+            const thAcciones = document.createElement('th'); thAcciones.textContent = 'ACCIONES'; trHeader.appendChild(thAcciones);
+            const thAccionesFilter = document.createElement('th'); trFilter.appendChild(thAccionesFilter);
+        }
+
+        async function cargarDatos() {
+            const { data, error } = await supabase.from('wips_muestras').select('*').order('id', { ascending: true });
+            if (error) { console.error("Error:", error); return; }
             
-            if (error) {
-                alert("Error al cerrar sesión: " + error.message);
-                btn.textContent = "🚪 Cerrar Sesión";
-                btn.disabled = false;
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = ''; 
+
+            if(data.length === 0) {
+                agregarFilaVacia();
             } else {
-                window.location.href = 'index.html'; 
+                data.forEach(filaBD => tbody.appendChild(crearFilaHTML(filaBD.id, filaBD.datos)));
             }
-        });
+            window.filtrarTablaCompleta(); 
+            calcularKPIs(); 
+        }
+
+        function crearFilaHTML(id = null, datos = []) {
+            const tr = document.createElement('tr');
+            if (id) tr.dataset.id = id;
+            let indexGlobal = 0;
+
+            colsDiseno.forEach(() => {
+                const td = document.createElement('td'); td.contentEditable = "true";
+                td.textContent = datos[indexGlobal] || ''; tr.appendChild(td); indexGlobal++;
+            });
+
+            colsProduccion.forEach(() => {
+                const td = document.createElement('td'); td.contentEditable = "true";
+                td.textContent = datos[indexGlobal] || '';
+                td.className = window.produccionVisible ? 'col-produccion' : 'col-produccion hidden';
+                tr.appendChild(td); indexGlobal++;
+            });
+
+            const estadoActual = (datos[43] || '').trim().toUpperCase(); 
+            const esCancelado = estadoActual === 'CANCELADO';
+
+            const tdAcciones = document.createElement('td');
+            tdAcciones.innerHTML = `
+                <button class="btn-save" onclick="guardarFila(this)" title="Guardar">💾</button>
+                <button class="btn-insert" onclick="insertarFilaAbajo(this)" title="Insertar fila abajo">➕</button>
+                <button class="btn-cancelar-fila ${esCancelado ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'CANCELADO')" title="Cancelar Muestra">🚫</button>
+                <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
+                <button class="btn-delete" onclick="eliminarFila(this)" title="Eliminar Permanente">🗑️</button>
+            `;
+            tr.appendChild(tdAcciones);
+            return tr;
+        }
+
+        window.calcularKPIs = function() {
+            const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
+            const datosKpi = {};
+            const totales = {
+                referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0
+            };
+
+            filas.forEach(fila => {
+                const celdas = fila.querySelectorAll('td');
+                if (celdas.length < 60) return;
+                
+                const estado = (celdas[43].textContent || '').trim().toUpperCase();
+                if (estado === 'CANCELADO') return; 
+
+                const coleccion = (celdas[1].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)';
+                const referencia = (celdas[9].textContent || '').trim();
+                const fechaTentativa = (celdas[51].textContent || '').trim();
+                const fechaLlegada = (celdas[52].textContent || '').trim();
+                const costoUnitario = (celdas[55].textContent || '').trim();
+                const pvpUnitario = (celdas[56].textContent || '').trim();
+
+                if (!datosKpi[coleccion]) {
+                    datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
+                }
+
+                if (referencia) {
+                    datosKpi[coleccion].referencias.add(referencia);
+                    totales.referencias.add(referencia);
+                }
+                
+                datosKpi[coleccion].totalMuestras++;
+                totales.totalMuestras++;
+
+                if (fechaLlegada !== '') {
+                    datosKpi[coleccion].fisicas++;
+                    totales.fisicas++;
+                }
+
+                if (fechaTentativa !== '' && fechaLlegada === '') {
+                    datosKpi[coleccion].transito++;
+                    totales.transito++;
+                }
+
+                if (costoUnitario !== '') {
+                    datosKpi[coleccion].conCostos++;
+                    totales.conCostos++;
+                }
+
+                if (pvpUnitario !== '') {
+                    datosKpi[coleccion].conPvp++;
+                    totales.conPvp++;
+                }
+            });
+
+            const calcPct = (valor, total) => total > 0 ? ((valor / total) * 100).toFixed(1) + '%' : '0.0%';
+
+            const kpiBody = document.getElementById('kpiBody');
+            kpiBody.innerHTML = '';
+
+            for (const col in datosKpi) {
+                const data = datosKpi[col];
+                const pctFisicas = calcPct(data.fisicas, data.totalMuestras);
+                const pctFisicasTransito = calcPct(data.fisicas + data.transito, data.totalMuestras);
+                const pctCostos = calcPct(data.conCostos, data.totalMuestras);
+                const pctPvp = calcPct(data.conPvp, data.totalMuestras);
+
+                kpiBody.innerHTML += `
+                    <tr>
+                        <td class="col-left" style="color: #2563eb; text-decoration: underline;">${col}</td>
+                        <td>${data.referencias.size}</td>
+                        <td>${data.totalMuestras}</td>
+                        <td>${data.fisicas}</td>
+                        <td>${pctFisicas}</td>
+                        <td>${data.transito}</td>
+                        <td>${pctFisicasTransito}</td>
+                        <td>${data.conCostos}</td>
+                        <td>${pctCostos}</td>
+                        <td>${data.conPvp}</td>
+                        <td>${pctPvp}</td>
+                    </tr>
+                `;
+            }
+
+            const pctFisicasTot = calcPct(totales.fisicas, totales.totalMuestras);
+            const pctFisicasTransitoTot = calcPct(totales.fisicas + totales.transito, totales.totalMuestras);
+            const pctCostosTot = calcPct(totales.conCostos, totales.totalMuestras);
+            const pctPvpTot = calcPct(totales.conPvp, totales.totalMuestras);
+
+            kpiBody.innerHTML += `
+                <tr class="kpi-total-row">
+                    <td class="col-left">Total</td>
+                    <td>${totales.referencias.size}</td>
+                    <td>${totales.totalMuestras}</td>
+                    <td>${totales.fisicas}</td>
+                    <td>${pctFisicasTot}</td>
+                    <td>${totales.transito}</td>
+                    <td>${pctFisicasTransitoTot}</td>
+                    <td>${totales.conCostos}</td>
+                    <td>${pctCostosTot}</td>
+                    <td>${totales.conPvp}</td>
+                    <td>${pctPvpTot}</td>
+                </tr>
+            `;
+        };
+
+        window.cambiarVista = function(vista) {
+            window.vistaActual = vista;
+            document.getElementById('tabActivas').classList.toggle('activa', vista === 'activas');
+            document.getElementById('tabCanceladas').classList.toggle('activa', vista === 'canceladas');
+            document.getElementById('btnAgregarFila').style.display = vista === 'activas' ? 'inline-block' : 'none';
+            window.filtrarTablaCompleta();
+        };
+
+        window.actualizarContador = function() {
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            let visibles = 0;
+            filas.forEach(fila => { if(fila.style.display !== 'none') visibles++; });
+            document.getElementById('contadorMuestras').textContent = visibles;
+        };
+
+        window.filtrarTablaCompleta = function() {
+            const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
+            const inputsColumnas = document.querySelectorAll('.col-filter');
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            const indiceEstado = 43; 
+
+            filas.forEach(fila => {
+                const celdas = fila.querySelectorAll('td');
+                const estadoCelda = (celdas[indiceEstado].innerText || '').trim().toUpperCase();
+                const esCancelado = estadoCelda === 'CANCELADO';
+
+                let coincideVista = (window.vistaActual === 'activas' && !esCancelado) || (window.vistaActual === 'canceladas' && esCancelado);
+                if (!coincideVista) { fila.style.display = 'none'; return; }
+
+                let coincideGlobal = true;
+                if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
+
+                let coincidenColumnas = true;
+                inputsColumnas.forEach(input => {
+                    const textoFiltro = input.value.toLowerCase().trim();
+                    if (textoFiltro !== "") {
+                        const colIndex = input.getAttribute('data-colindex');
+                        if (!celdas[colIndex].innerText.toLowerCase().includes(textoFiltro)) { coincidenColumnas = false; }
+                    }
+                });
+
+                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+            });
+            actualizarContador();
+        };
+
+        window.cambiarEstadoFila = async function(btn, nuevoEstado) {
+            if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
+            const tr = btn.closest('tr');
+            const celdas = tr.querySelectorAll('td[contenteditable="true"]');
+            celdas[43].innerText = nuevoEstado;
+            const btnCancelar = tr.querySelector('.btn-cancelar-fila');
+            const btnReactivar = tr.querySelector('.btn-reactivar-fila');
+            if (nuevoEstado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); } 
+            else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
+            const btnSave = tr.querySelector('.btn-save');
+            await window.guardarFila(btnSave);
+            window.filtrarTablaCompleta();
+        };
+
+        let columnaOrdenadaActual = -1; let ordenAscendente = true;
+        window.ordenarTabla = function(colIndex) {
+            const tbody = document.getElementById('tableBody');
+            const filas = Array.from(tbody.querySelectorAll('tr'));
+            if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
+            filas.sort((a, b) => {
+                let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
+                let numA = parseFloat(valorA); let numB = parseFloat(valorB);
+                if (!isNaN(numA) && !isNaN(numB)) return ordenAscendente ? numA - numB : numB - numA;
+                if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
+            });
+            filas.forEach(fila => tbody.appendChild(fila));
+        };
+
+        window.agregarFilaVacia = function() {
+            document.getElementById('tableBody').appendChild(crearFilaHTML());
+            actualizarContador();
+            calcularKPIs(); 
+        };
+
+        window.insertarFilaAbajo = function(btn) {
+            const trActual = btn.closest('tr');
+            trActual.insertAdjacentElement('afterend', crearFilaHTML());
+            actualizarContador();
+            calcularKPIs(); 
+        };
+
+        window.guardarFila = async function(btn) {
+            btn.textContent = "⏳...";
+            const tr = btn.closest('tr');
+            const celdas = tr.querySelectorAll('td[contenteditable="true"]');
+            let datosFila = [];
+            celdas.forEach(c => datosFila.push(c.innerText.trim()));
+
+            const idDb = tr.dataset.id;
+            if (idDb) {
+                const { error } = await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
+                if(error) alert("Error al actualizar");
+            } else {
+                const { data, error } = await supabase.from('wips_muestras').insert([{ datos: datosFila }]).select();
+                if(error) alert("Error al guardar"); else tr.dataset.id = data[0].id; 
+            }
+            btn.textContent = "✅ Guardado";
+            calcularKPIs(); 
+            setTimeout(() => btn.textContent = "💾", 2000); 
+        };
+
+        window.eliminarFila = async function(btn) {
+            if(!confirm("¿Seguro que deseas eliminar esta muestra definitivamente? No se puede deshacer.")) return;
+            const tr = btn.closest('tr');
+            const idDb = tr.dataset.id;
+            if(idDb) {
+                const { error } = await supabase.from('wips_muestras').delete().eq('id', idDb);
+                if(error) { alert("Error al eliminar"); return; }
+            }
+            tr.remove(); 
+            actualizarContador(); 
+            calcularKPIs(); 
+        };
+
+        window.toggleProduccion = function() {
+            window.produccionVisible = !window.produccionVisible;
+            const headersTitle = document.querySelectorAll('.col-produccion-header');
+            const celdas = document.querySelectorAll('.col-produccion');
+            const btn = document.getElementById('btnToggle');
+
+            headersTitle.forEach(el => window.produccionVisible ? el.classList.remove('hidden') : el.classList.add('hidden'));
+            celdas.forEach(el => window.produccionVisible ? el.classList.remove('hidden') : el.classList.add('hidden'));
+
+            if (window.produccionVisible) {
+                btn.textContent = "👁️ Ocultar Mis Columnas (Producción)"; btn.style.backgroundColor = "#b45309";
+            } else {
+                btn.textContent = "👁️ Mostrar Mis Columnas (Producción)"; btn.style.backgroundColor = "#d97706";
+            }
+        };
+
+        window.exportarAExcel = function() {
+            let dataExcel = []; let encabezados = [];
+            colsDiseno.forEach(c => encabezados.push(c)); colsProduccion.forEach(c => encabezados.push(c));
+            dataExcel.push(encabezados);
+
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            filas.forEach(fila => {
+                if(fila.style.display !== 'none') {
+                    let filaData = []; const celdas = fila.querySelectorAll('td');
+                    for(let i = 0; i < celdas.length - 1; i++) { filaData.push(celdas[i].innerText.trim()); }
+                    dataExcel.push(filaData);
+                }
+            });
+
+            const hoja = XLSX.utils.aoa_to_sheet(dataExcel);
+            const libro = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libro, hoja, "Muestras");
+            XLSX.writeFile(libro, "Seguimiento_Muestras_WIPS.xlsx");
+        };
+
+        inicializarEncabezados();
+        cargarDatos();
     </script>
 </body>
 </html>

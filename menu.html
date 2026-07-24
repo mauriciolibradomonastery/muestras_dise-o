@@ -6,7 +6,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
         body {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url('fondo.png'); /* Oscurecí un poquito el fondo para que resalten más las categorías */
+            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url('fondo.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -16,7 +16,7 @@
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            justify-content: flex-start; /* Cambiado para permitir scroll si la pantalla es pequeña */
+            justify-content: flex-start; 
             min-height: 100vh; 
             margin: 0; 
             padding: 40px 20px;
@@ -24,7 +24,6 @@
             position: relative;
         }
 
-        /* BOTÓN CERRAR SESIÓN EN LA ESQUINA */
         .btn-logout {
             position: absolute;
             top: 20px;
@@ -50,7 +49,6 @@
         .titulo h2 { margin: 5px 0; font-size: 28px; letter-spacing: 1px; }
         .titulo p { color: #ccc; margin: 0; }
 
-        /* CONTENEDOR PRINCIPAL DE CATEGORÍAS */
         .contenedor-categorias {
             display: flex;
             flex-direction: column;
@@ -59,7 +57,6 @@
             max-width: 900px;
         }
 
-        /* ESTILO DE CADA CATEGORÍA */
         .categoria {
             display: flex;
             flex-direction: column;
@@ -80,7 +77,6 @@
             margin-bottom: 25px;
         }
 
-        /* GRID PARA LOS BOTONES */
         .grid-botones {
             display: flex;
             justify-content: center;
@@ -104,7 +100,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 240px; /* Ancho fijo para que todos se vean iguales */
+            width: 240px;
         }
 
         .tarjeta-menu:hover { 
@@ -128,7 +124,6 @@
         <p>¿Qué deseas hacer hoy?</p>
     </div>
 
-    <!-- CONTENEDOR DE CATEGORÍAS -->
     <div class="contenedor-categorias">
         
         <!-- CATEGORÍA 1: INVENTARIO DE MUESTRAS -->
@@ -156,7 +151,7 @@
         <div class="categoria">
             <h3 class="categoria-titulo">🎨 Gestión y Seguimiento</h3>
             <div class="grid-botones">
-                <a href="wips.html" class="tarjeta-menu">
+                <a href="seguimiento_diseno.html" class="tarjeta-menu">
                     <div class="icono">🎨</div>
                     <div class="texto">WIPS de<br>Diseño</div>
                 </a>
@@ -165,7 +160,6 @@
 
     </div>
 
-    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -176,7 +170,7 @@
         async function verificarSesion() {
             const { data: { session }, error } = await supabase.auth.getSession();
             if (!session) {
-                window.location.href = 'index.html'; // Redirige al login si no hay sesión
+                window.location.href = 'index.html'; 
             }
         }
         
@@ -195,7 +189,7 @@
                 btn.textContent = "🚪 Cerrar Sesión";
                 btn.disabled = false;
             } else {
-                window.location.href = 'index.html'; // Redirige al login
+                window.location.href = 'index.html'; 
             }
         });
     </script>
