@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seguimiento de Muestras (WIPS) - Monastery</title>
     
-    <!-- FAVICON (ÍCONO EN LA PESTAÑA DEL NAVEGADOR) -->
+    <!-- FAVICON -->
     <link rel="icon" type="image/png" href="favicon.png">
 
-    <!-- Librería para Exportar a Excel -->
+    <!-- Librería para Leer y Exportar a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
@@ -60,21 +60,23 @@
             display: flex;
             align-items: center;
         }
+        
+        /* BOTÓN VOLVER NEUTRO */
         .btn-back {
-            color: #a7f3d0;
+            color: #d1d5db;
             text-decoration: none;
             font-weight: 600;
             font-size: 14px;
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(255, 255, 255, 0.05);
             padding: 8px 16px;
             border-radius: 8px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s ease;
         }
         .btn-back:hover {
-            background: rgba(16, 185, 129, 0.3);
+            background: rgba(255, 255, 255, 0.15);
             color: #ffffff;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
         }
 
         /* SECCIÓN DE KPIS GERENCIAL */
@@ -130,13 +132,13 @@
         }
         .kpi-total-row td {
             background: #0f172a !important;
-            color: #38bdf8 !important;
+            color: #e5e7eb !important;
             font-weight: 700;
-            border-top: 2px solid #38bdf8;
+            border-top: 2px solid #6b7280;
         }
         .col-left { text-align: left !important; font-weight: 600; }
 
-        /* PESTAÑAS Y BARRA DE ACCIONES */
+        /* PESTAÑAS NEUTRAS */
         .tabs-container {
             display: flex;
             gap: 12px;
@@ -144,7 +146,7 @@
         }
         .tab-btn {
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 10px 22px;
             font-size: 14px;
             cursor: pointer;
@@ -158,10 +160,10 @@
             background: rgba(255, 255, 255, 0.1);
         }
         .tab-btn.activa {
-            color: #ffffff;
-            background: #2563eb;
-            border-color: #3b82f6;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            color: #111827;
+            background: #f3f4f6;
+            border-color: #f3f4f6;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
         }
 
         .header-actions {
@@ -174,7 +176,7 @@
         }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
 
-        /* BOTONES DE CONTROL */
+        /* BOTONES DE CONTROL SUPERIORES (UNIFICADOS Y ELEGANTES) */
         button {
             padding: 9px 16px;
             border: none;
@@ -187,14 +189,18 @@
             gap: 6px;
             transition: all 0.25s ease;
         }
-        .btn-add { background-color: #10b981; color: white; }
-        .btn-add:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-        
-        .btn-toggle { background-color: #d97706; color: white; }
-        .btn-toggle:hover { background-color: #b45309; }
-
-        .btn-export { background-color: #0284c7; color: white; }
-        .btn-export:hover { background-color: #0369a1; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); }
+        .btn-add, .btn-toggle, .btn-export, .btn-import {
+            background-color: rgba(31, 41, 55, 0.85);
+            color: #e5e7eb;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+        }
+        .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover {
+            background-color: rgba(75, 85, 99, 0.95);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.35);
+        }
 
         .buscador {
             padding: 9px 16px;
@@ -207,37 +213,46 @@
             outline: none;
         }
         .buscador:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+            border-color: #6b7280;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
 
         .contador-caja {
-            background-color: #111827;
+            background-color: rgba(17, 24, 39, 0.8);
             color: #9ca3af;
             padding: 8px 14px;
             border-radius: 8px;
             font-weight: 600;
             font-size: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             display: flex;
             align-items: center;
             gap: 8px;
         }
         .contador-numero {
-            background-color: #3b82f6;
+            background-color: #4b5563;
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 13px;
         }
 
-        /* ACCIONES DE FILA DENTRO DE LA TABLA */
-        .btn-save { background-color: #2563eb; color: white; padding: 4px 8px; font-size: 12px;}
-        .btn-save:hover { background-color: #1d4ed8;}
-        .btn-insert { background-color: #10b981; color: white; padding: 4px 8px; font-size: 12px;}
-        .btn-cancelar-fila { background-color: #f59e0b; color: white; padding: 4px 8px; font-size: 12px;}
-        .btn-reactivar-fila { background-color: #10b981; color: white; padding: 4px 8px; font-size: 12px;}
-        .btn-delete { background-color: #ef4444; color: white; padding: 4px 8px; font-size: 12px;}
+        /* ACCIONES DE FILA DENTRO DE LA TABLA (UNIFICADAS) */
+        .btn-save, .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete {
+            background-color: rgba(55, 65, 81, 0.8);
+            color: #d1d5db;
+            padding: 5px 9px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .btn-save:hover, .btn-insert:hover, .btn-cancelar-fila:hover, .btn-reactivar-fila:hover, .btn-delete:hover {
+            background-color: rgba(75, 85, 99, 0.95);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
 
         /* TABLA PRINCIPAL DE MUESTRAS */
         .table-container {
@@ -292,7 +307,7 @@
             color: #ffffff;
         }
         .filter-input:focus {
-            border-color: #3b82f6;
+            border-color: #9ca3af;
             outline: none;
         }
 
@@ -300,21 +315,21 @@
             transition: background 0.2s;
         }
         tbody tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
-        tbody tr:hover { background-color: rgba(59, 130, 246, 0.08); }
+        tbody tr:hover { background-color: rgba(255, 255, 255, 0.06); }
 
         td[contenteditable="true"] {
             color: #f3f4f6;
             outline: none;
         }
-        td[contenteditable="true"]:hover { background-color: rgba(254, 240, 138, 0.1); }
+        td[contenteditable="true"]:hover { background-color: rgba(255, 255, 255, 0.05); }
         td[contenteditable="true"]:focus {
-            background-color: rgba(17, 24, 39, 0.95);
-            box-shadow: inset 0 0 0 2px #3b82f6;
+            background-color: rgba(31, 41, 55, 0.95);
+            box-shadow: inset 0 0 0 1px #9ca3af;
             color: #ffffff;
         }
 
-        .col-produccion { background-color: rgba(14, 165, 233, 0.06); }
-        .col-produccion-header { background-color: #0369a1 !important; color: #ffffff !important; }
+        .col-produccion { background-color: rgba(255, 255, 255, 0.03); }
+        .col-produccion-header { background-color: #374151 !important; color: #ffffff !important; }
         
         .hidden { display: none !important; }
     </style>
@@ -323,7 +338,6 @@
 
     <div class="header-top">
         <div class="header-title-box">
-            <!-- LOGO NEGRO JUNTO AL TÍTULO -->
             <img src="logo.png" alt="Monastery" class="logo-header">
             <h2>Seguimiento de Muestras (WIPS)</h2>
         </div>
@@ -368,6 +382,10 @@
             <button id="btnAgregarFila" class="btn-add" onclick="agregarFilaVacia()">+ Agregar Fila al Final</button>
             <button id="btnToggle" class="btn-toggle" onclick="toggleProduccion()">👁️ Mostrar Mis Columnas (Producción)</button>
             <button class="btn-export" onclick="exportarAExcel()">📥 Exportar a Excel</button>
+            
+            <input type="file" id="fileCSV" accept=".csv, .xlsx" style="display: none;" onchange="importarMasivo(event)">
+            <button id="btnImportar" class="btn-import" onclick="document.getElementById('fileCSV').click()">📤 Carga Masiva</button>
+            
             <div class="contador-caja">
                 Total Visibles: <span id="contadorMuestras" class="contador-numero">0</span>
             </div>
@@ -494,6 +512,9 @@
             };
 
             filas.forEach(fila => {
+                // AQUÍ ESTÁ LA MAGIA: Ignora las filas que no han sido guardadas en la base de datos
+                if (!fila.dataset.id) return; 
+
                 const celdas = fila.querySelectorAll('td');
                 if (celdas.length < 60) return;
                 
@@ -554,7 +575,7 @@
 
                 kpiBody.innerHTML += `
                     <tr>
-                        <td class="col-left" style="color: #60a5fa; text-decoration: underline;">${col}</td>
+                        <td class="col-left" style="color: #d1d5db;">${col}</td>
                         <td>${data.referencias.size}</td>
                         <td>${data.totalMuestras}</td>
                         <td>${data.fisicas}</td>
@@ -602,7 +623,10 @@
         window.actualizarContador = function() {
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             let visibles = 0;
-            filas.forEach(fila => { if(fila.style.display !== 'none') visibles++; });
+            filas.forEach(fila => { 
+                // TAMBIÉN ACTUALIZADO: El contador general ignora filas vacías
+                if(fila.style.display !== 'none' && fila.dataset.id) visibles++; 
+            });
             document.getElementById('contadorMuestras').textContent = visibles;
         };
 
@@ -721,9 +745,11 @@
             celdas.forEach(el => window.produccionVisible ? el.classList.remove('hidden') : el.classList.add('hidden'));
 
             if (window.produccionVisible) {
-                btn.textContent = "👁️ Ocultar Mis Columnas (Producción)"; btn.style.backgroundColor = "#b45309";
+                btn.innerHTML = "👁️ Ocultar Mis Columnas (Producción)"; 
+                btn.style.backgroundColor = "rgba(75, 85, 99, 0.9)";
             } else {
-                btn.textContent = "👁️ Mostrar Mis Columnas (Producción)"; btn.style.backgroundColor = "#d97706";
+                btn.innerHTML = "👁️ Mostrar Mis Columnas (Producción)"; 
+                btn.style.backgroundColor = ""; 
             }
         };
 
@@ -745,6 +771,64 @@
             const libro = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(libro, hoja, "Muestras");
             XLSX.writeFile(libro, "Seguimiento_Muestras_WIPS.xlsx");
+        };
+
+        window.importarMasivo = function(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            const btn = document.getElementById('btnImportar');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Cargando...";
+            btn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const filasCSV = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+
+                    filasCSV.shift();
+
+                    const registrosParaSupabase = filasCSV.map(fila => {
+                        let datosLimpios = fila.map(celda => String(celda).trim());
+                        while(datosLimpios.length < 61) datosLimpios.push(""); 
+                        return { datos: datosLimpios.slice(0, 61) };
+                    }).filter(r => r.datos.join("").trim() !== ""); 
+
+                    if(registrosParaSupabase.length === 0) {
+                        alert("El archivo parece estar vacío o sin formato.");
+                        btn.innerHTML = textoOriginal;
+                        btn.disabled = false;
+                        document.getElementById('fileCSV').value = "";
+                        return;
+                    }
+
+                    if(!confirm(`¿Estás listo para cargar ${registrosParaSupabase.length} muestras a la plataforma?`)) {
+                        btn.innerHTML = textoOriginal;
+                        btn.disabled = false;
+                        document.getElementById('fileCSV').value = "";
+                        return;
+                    }
+
+                    const { error } = await supabase.from('wips_muestras').insert(registrosParaSupabase);
+
+                    if(error) throw error;
+
+                    alert("¡Carga masiva exitosa! 🎉");
+                    window.location.reload(); 
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Hubo un error al procesar el archivo: " + err.message);
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                    document.getElementById('fileCSV').value = "";
+                }
+            };
+            reader.readAsArrayBuffer(file);
         };
 
         inicializarEncabezados();
