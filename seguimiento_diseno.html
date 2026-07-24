@@ -19,13 +19,13 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 25px;
-            /* FONDO CLARO Y ELEGANTE (Degradado blanco/gris suave sobre la imagen de fondo) */
+            /* FONDO CLARO Y ELEGANTE */
             background-image: linear-gradient(rgba(245, 247, 250, 0.88), rgba(230, 235, 242, 0.92)), url('fondo.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            color: #1f2937; /* Texto principal oscuro y legible */
+            color: #1f2937; 
             min-height: 100vh;
         }
 
@@ -62,7 +62,6 @@
             align-items: center;
         }
         
-        /* BOTÓN VOLVER NEUTRO CLARO */
         .btn-back {
             color: #374151;
             text-decoration: none;
@@ -330,6 +329,34 @@
             color: #111827;
         }
 
+        /* ----- CLASES PARA LA COLUMNA DE REFERENCIA FIJA ----- */
+        .col-fija {
+            position: sticky !important;
+            left: 0;
+            background-color: #ffffff;
+            z-index: 5;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); /* Sombra para separar */
+            border-right: 2px solid #d1d5db !important; /* Borde más marcado */
+        }
+        th.col-fija {
+            z-index: 15 !important; /* El header necesita más nivel para no quedar tapado */
+            background-color: #f3f4f6 !important;
+        }
+        #tableFilterRow th.col-fija {
+            background-color: #f9fafb !important;
+        }
+        tbody tr:nth-child(even) td.col-fija {
+            background-color: #f9fafb;
+        }
+        tbody tr:hover td.col-fija {
+            background-color: #f3f4f6;
+        }
+        td.col-fija[contenteditable="true"]:focus {
+            background-color: #ffffff !important;
+            box-shadow: inset 0 0 0 2px #374151 !important;
+        }
+        /* ----------------------------------------------------- */
+
         .col-produccion { background-color: #f0fdf4; }
         .col-produccion-header { background-color: #d1fae5 !important; color: #065f46 !important; }
         
@@ -428,12 +455,17 @@
             let columnIndex = 0;
 
             colsDiseno.forEach(col => { 
-                const thTitle = document.createElement('th'); thTitle.className = 'th-title';
+                const thTitle = document.createElement('th'); 
+                thTitle.className = 'th-title';
+                if(col === 'REFERENCIA') thTitle.classList.add('col-fija'); // Aplicar clase fija
+
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
 
                 const thFilter = document.createElement('th');
+                if(col === 'REFERENCIA') thFilter.classList.add('col-fija'); // Aplicar clase fija
+
                 thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
                 trFilter.appendChild(thFilter); columnIndex++;
             });
@@ -474,14 +506,69 @@
             calcularKPIs(); 
         }
 
+        window.seleccionarImagenCelda = function(td) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 120;
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        const base64Mini = canvas.toDataURL('image/jpeg', 0.8);
+                        td.innerHTML = `<img src="${base64Mini}" style="height: 40px; border-radius: 4px; object-fit: contain;">`;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        };
+
         function crearFilaHTML(id = null, datos = []) {
             const tr = document.createElement('tr');
             if (id) tr.dataset.id = id;
             let indexGlobal = 0;
 
             colsDiseno.forEach(() => {
-                const td = document.createElement('td'); td.contentEditable = "true";
-                td.textContent = datos[indexGlobal] || ''; tr.appendChild(td); indexGlobal++;
+                const td = document.createElement('td'); 
+                
+                if(indexGlobal === 9) td.classList.add('col-fija'); // Clase fija a Referencia
+                
+                if(indexGlobal === 0) {
+                    td.contentEditable = "false"; 
+                    td.title = "Doble clic para cargar imagen";
+                    td.style.cursor = "pointer";
+                    td.style.textAlign = "center";
+                    td.style.verticalAlign = "middle";
+                    
+                    const valor = datos[indexGlobal] || '';
+                    if(valor.startsWith('data:image') || valor.startsWith('http')) {
+                        td.innerHTML = `<img src="${valor}" style="height: 40px; border-radius: 4px; object-fit: contain;">`;
+                    } else {
+                        td.innerHTML = `<span style="font-size:10px; color:#9ca3af;">Doble Clic</span>`;
+                    }
+                    
+                    td.ondblclick = function() { window.seleccionarImagenCelda(this); };
+                } else {
+                    td.contentEditable = "true";
+                    td.textContent = datos[indexGlobal] || ''; 
+                }
+                
+                tr.appendChild(td); 
+                indexGlobal++;
             });
 
             colsProduccion.forEach(() => {
@@ -664,7 +751,7 @@
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
             if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
             const tr = btn.closest('tr');
-            const celdas = tr.querySelectorAll('td[contenteditable="true"]');
+            const celdas = tr.querySelectorAll('td');
             celdas[43].innerText = nuevoEstado;
             const btnCancelar = tr.querySelector('.btn-cancelar-fila');
             const btnReactivar = tr.querySelector('.btn-reactivar-fila');
@@ -705,9 +792,17 @@
         window.guardarFila = async function(btn) {
             btn.textContent = "⏳";
             const tr = btn.closest('tr');
-            const celdas = tr.querySelectorAll('td[contenteditable="true"]');
+            const celdas = tr.querySelectorAll('td');
             let datosFila = [];
-            celdas.forEach(c => datosFila.push(c.innerText.trim()));
+            
+            for(let i = 0; i < celdas.length - 1; i++) {
+                if(i === 0) {
+                    const img = celdas[i].querySelector('img');
+                    datosFila.push(img ? img.src : "");
+                } else {
+                    datosFila.push(celdas[i].innerText.trim());
+                }
+            }
 
             const idDb = tr.dataset.id;
             if (idDb) {
@@ -746,8 +841,10 @@
 
             if (window.produccionVisible) {
                 btn.innerHTML = "👁️ Ocultar Mis Columnas (Producción)"; 
+                btn.style.backgroundColor = "#e5e7eb";
             } else {
                 btn.innerHTML = "👁️ Mostrar Mis Columnas (Producción)"; 
+                btn.style.backgroundColor = "#ffffff"; 
             }
         };
 
@@ -760,7 +857,13 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = []; const celdas = fila.querySelectorAll('td');
-                    for(let i = 0; i < celdas.length - 1; i++) { filaData.push(celdas[i].innerText.trim()); }
+                    for(let i = 0; i < celdas.length - 1; i++) { 
+                        if(i === 0 && celdas[i].querySelector('img')) {
+                            filaData.push("🖼️ Imagen Cargada");
+                        } else {
+                            filaData.push(celdas[i].innerText.trim()); 
+                        }
+                    }
                     dataExcel.push(filaData);
                 }
             });
