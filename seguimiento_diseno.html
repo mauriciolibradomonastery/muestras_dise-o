@@ -361,7 +361,7 @@
         
         .hidden { display: none !important; }
 
-        /* MODAL DE IMAGEN (LIGHTBOX) */
+        /* MODAL DE IMAGEN (LIGHTBOX) MEJORADO */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -378,6 +378,9 @@
         .modal-content {
             max-width: 90vw;
             max-height: 90vh;
+            min-width: 300px; /* Para que al menos se vea a buen tamaño si es pequeña */
+            background-color: white; /* Fondo blanco por si la imagen tiene fondo transparente */
+            padding: 10px;
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             object-fit: contain;
@@ -579,15 +582,19 @@
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 120;
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
+                        // TAMAÑO AUMENTADO A 800px PARA ALTA CALIDAD EN EL LIGHTBOX
+                        const MAX_WIDTH = 800;
+                        let scaleSize = 1;
+                        if(img.width > MAX_WIDTH) {
+                            scaleSize = MAX_WIDTH / img.width;
+                        }
+                        canvas.width = img.width * scaleSize;
                         canvas.height = img.height * scaleSize;
                         
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
-                        const base64Mini = canvas.toDataURL('image/jpeg', 0.8);
+                        const base64Mini = canvas.toDataURL('image/jpeg', 0.85);
                         td.innerHTML = `<img src="${base64Mini}" style="height: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar, Doble clic para cambiar">`;
                     };
                     img.src = event.target.result;
