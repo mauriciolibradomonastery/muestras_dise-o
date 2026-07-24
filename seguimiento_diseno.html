@@ -19,12 +19,13 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 25px;
-            background-image: linear-gradient(rgba(15, 15, 20, 0.92), rgba(10, 10, 15, 0.96)), url('fondo.png');
+            /* FONDO CLARO Y ELEGANTE (Degradado blanco/gris suave sobre la imagen de fondo) */
+            background-image: linear-gradient(rgba(245, 247, 250, 0.88), rgba(230, 235, 242, 0.92)), url('fondo.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            color: #e5e7eb;
+            color: #1f2937; /* Texto principal oscuro y legible */
             min-height: 100vh;
         }
 
@@ -34,7 +35,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             padding-bottom: 15px;
         }
         .header-title-box {
@@ -45,10 +46,10 @@
         .logo-header {
             height: 42px;
             width: auto;
-            background: rgba(255, 255, 255, 0.95);
+            background: #ffffff;
             padding: 4px 10px;
             border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
             object-fit: contain;
         }
         .header-top h2 {
@@ -56,44 +57,44 @@
             font-size: 24px;
             font-weight: 700;
             letter-spacing: 0.5px;
-            color: #ffffff;
+            color: #111827;
             display: flex;
             align-items: center;
         }
         
-        /* BOTÓN VOLVER NEUTRO */
+        /* BOTÓN VOLVER NEUTRO CLARO */
         .btn-back {
-            color: #d1d5db;
+            color: #374151;
             text-decoration: none;
             font-weight: 600;
             font-size: 14px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.7);
             padding: 8px 16px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.15);
             transition: all 0.3s ease;
         }
         .btn-back:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: #ffffff;
-            box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+            background: #ffffff;
+            color: #111827;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         }
 
         /* SECCIÓN DE KPIS GERENCIAL */
         .kpi-card {
-            background: rgba(22, 27, 34, 0.85);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
         .kpi-card h3 {
             margin-top: 0;
             margin-bottom: 15px;
             font-size: 17px;
-            color: #f3f4f6;
+            color: #1f2937;
             letter-spacing: 0.5px;
             display: flex;
             align-items: center;
@@ -102,7 +103,7 @@
         .kpi-table-container {
             overflow-x: auto;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid #e5e7eb;
         }
         .kpi-table {
             width: 100%;
@@ -112,58 +113,58 @@
             white-space: nowrap;
         }
         .kpi-table th {
-            background: #111827;
-            color: #9ca3af;
+            background: #374151;
+            color: #ffffff;
             font-weight: 600;
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.8px;
             padding: 12px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid #4b5563;
         }
         .kpi-table td {
             padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            color: #e5e7eb;
-            background: rgba(31, 41, 55, 0.4);
+            border: 1px solid #e5e7eb;
+            color: #1f2937;
+            background: #ffffff;
         }
         .kpi-table tr:hover td {
-            background: rgba(55, 65, 81, 0.6);
+            background: #f9fafb;
         }
         .kpi-total-row td {
-            background: #0f172a !important;
-            color: #e5e7eb !important;
+            background: #1f2937 !important;
+            color: #ffffff !important;
             font-weight: 700;
-            border-top: 2px solid #6b7280;
+            border-top: 2px solid #111827;
         }
         .col-left { text-align: left !important; font-weight: 600; }
 
-        /* PESTAÑAS NEUTRAS */
+        /* PESTAÑAS CLARAS */
         .tabs-container {
             display: flex;
             gap: 12px;
             margin-bottom: 18px;
         }
         .tab-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid #d1d5db;
             padding: 10px 22px;
             font-size: 14px;
             cursor: pointer;
-            color: #9ca3af;
+            color: #4b5563;
             border-radius: 8px;
             font-weight: 600;
             transition: all 0.3s;
         }
         .tab-btn:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
+            color: #111827;
+            background: #ffffff;
         }
         .tab-btn.activa {
-            color: #111827;
-            background: #f3f4f6;
-            border-color: #f3f4f6;
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            background: #1f2937;
+            border-color: #1f2937;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .header-actions {
@@ -176,7 +177,7 @@
         }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
 
-        /* BOTONES DE CONTROL SUPERIORES (UNIFICADOS Y ELEGANTES) */
+        /* BOTONES DE CONTROL SUPERIORES NEUTROS CLAROS */
         button {
             padding: 9px 16px;
             border: none;
@@ -190,68 +191,70 @@
             transition: all 0.25s ease;
         }
         .btn-add, .btn-toggle, .btn-export, .btn-import {
-            background-color: rgba(31, 41, 55, 0.85);
-            color: #e5e7eb;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(4px);
+            background-color: #ffffff;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
         }
         .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover {
-            background-color: rgba(75, 85, 99, 0.95);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.35);
+            background-color: #f3f4f6;
+            color: #111827;
+            border-color: #9ca3af;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         }
 
         .buscador {
             padding: 9px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid #d1d5db;
             border-radius: 8px;
             width: 320px;
             font-size: 13px;
-            background: rgba(17, 24, 39, 0.8);
-            color: white;
+            background: #ffffff;
+            color: #1f2937;
             outline: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
         }
         .buscador:focus {
             border-color: #6b7280;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
         }
 
         .contador-caja {
-            background-color: rgba(17, 24, 39, 0.8);
-            color: #9ca3af;
+            background-color: #ffffff;
+            color: #4b5563;
             padding: 8px 14px;
             border-radius: 8px;
             font-weight: 600;
             font-size: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid #d1d5db;
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
         }
         .contador-numero {
-            background-color: #4b5563;
+            background-color: #374151;
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 13px;
         }
 
-        /* ACCIONES DE FILA DENTRO DE LA TABLA (UNIFICADAS) */
+        /* ACCIONES DE FILA DENTRO DE LA TABLA */
         .btn-save, .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete {
-            background-color: rgba(55, 65, 81, 0.8);
-            color: #d1d5db;
+            background-color: #f3f4f6;
+            color: #374151;
             padding: 5px 9px;
             font-size: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid #d1d5db;
             border-radius: 6px;
             transition: all 0.2s;
         }
         .btn-save:hover, .btn-insert:hover, .btn-cancelar-fila:hover, .btn-reactivar-fila:hover, .btn-delete:hover {
-            background-color: rgba(75, 85, 99, 0.95);
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.4);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            background-color: #e5e7eb;
+            color: #111827;
+            border-color: #9ca3af;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
         /* TABLA PRINCIPAL DE MUESTRAS */
@@ -259,16 +262,15 @@
             width: 100%;
             overflow-x: auto;
             max-height: 58vh;
-            background: rgba(17, 24, 39, 0.9);
-            backdrop-filter: blur(10px);
+            background: #ffffff;
             border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid #d1d5db;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
         }
         table { border-collapse: collapse; width: max-content; }
         
         th, td {
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid #e5e7eb;
             padding: 8px 10px;
             text-align: left;
             white-space: nowrap;
@@ -280,56 +282,56 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            background-color: #111827;
+            background-color: #f9fafb;
         }
 
         .th-title {
             cursor: pointer;
             user-select: none;
-            color: #d1d5db;
+            color: #374151;
             font-weight: 600;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: #1f2937;
+            background: #f3f4f6;
             padding: 10px;
         }
-        .th-title:hover { background-color: #374151; color: #ffffff; }
-        .sort-icon { font-size: 10px; margin-left: 4px; color: #9ca3af; }
+        .th-title:hover { background-color: #e5e7eb; color: #111827; }
+        .sort-icon { font-size: 10px; margin-left: 4px; color: #6b7280; }
 
         .filter-input {
             width: 100%;
             padding: 4px 8px;
             font-size: 11px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid #d1d5db;
             border-radius: 4px;
-            background: rgba(31, 41, 55, 0.9);
-            color: #ffffff;
+            background: #ffffff;
+            color: #111827;
         }
         .filter-input:focus {
-            border-color: #9ca3af;
+            border-color: #374151;
             outline: none;
         }
 
         tbody tr {
             transition: background 0.2s;
         }
-        tbody tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
-        tbody tr:hover { background-color: rgba(255, 255, 255, 0.06); }
+        tbody tr:nth-child(even) { background-color: #f9fafb; }
+        tbody tr:hover { background-color: #f3f4f6; }
 
         td[contenteditable="true"] {
-            color: #f3f4f6;
+            color: #1f2937;
             outline: none;
         }
-        td[contenteditable="true"]:hover { background-color: rgba(255, 255, 255, 0.05); }
+        td[contenteditable="true"]:hover { background-color: #fef9c3; }
         td[contenteditable="true"]:focus {
-            background-color: rgba(31, 41, 55, 0.95);
-            box-shadow: inset 0 0 0 1px #9ca3af;
-            color: #ffffff;
+            background-color: #ffffff;
+            box-shadow: inset 0 0 0 2px #374151;
+            color: #111827;
         }
 
-        .col-produccion { background-color: rgba(255, 255, 255, 0.03); }
-        .col-produccion-header { background-color: #374151 !important; color: #ffffff !important; }
+        .col-produccion { background-color: #f0fdf4; }
+        .col-produccion-header { background-color: #d1fae5 !important; color: #065f46 !important; }
         
         .hidden { display: none !important; }
     </style>
@@ -512,7 +514,6 @@
             };
 
             filas.forEach(fila => {
-                // AQUÍ ESTÁ LA MAGIA: Ignora las filas que no han sido guardadas en la base de datos
                 if (!fila.dataset.id) return; 
 
                 const celdas = fila.querySelectorAll('td');
@@ -575,7 +576,7 @@
 
                 kpiBody.innerHTML += `
                     <tr>
-                        <td class="col-left" style="color: #d1d5db;">${col}</td>
+                        <td class="col-left" style="color: #2563eb;">${col}</td>
                         <td>${data.referencias.size}</td>
                         <td>${data.totalMuestras}</td>
                         <td>${data.fisicas}</td>
@@ -624,7 +625,6 @@
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             let visibles = 0;
             filas.forEach(fila => { 
-                // TAMBIÉN ACTUALIZADO: El contador general ignora filas vacías
                 if(fila.style.display !== 'none' && fila.dataset.id) visibles++; 
             });
             document.getElementById('contadorMuestras').textContent = visibles;
@@ -746,10 +746,8 @@
 
             if (window.produccionVisible) {
                 btn.innerHTML = "👁️ Ocultar Mis Columnas (Producción)"; 
-                btn.style.backgroundColor = "rgba(75, 85, 99, 0.9)";
             } else {
                 btn.innerHTML = "👁️ Mostrar Mis Columnas (Producción)"; 
-                btn.style.backgroundColor = ""; 
             }
         };
 
