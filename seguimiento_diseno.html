@@ -329,17 +329,17 @@
             color: #111827;
         }
 
-        /* ----- CLASES PARA LA COLUMNA DE REFERENCIA FIJA ----- */
+        /* CLASES PARA LA COLUMNA DE REFERENCIA FIJA */
         .col-fija {
             position: sticky !important;
             left: 0;
             background-color: #ffffff;
             z-index: 5;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); /* Sombra para separar */
-            border-right: 2px solid #d1d5db !important; /* Borde más marcado */
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); 
+            border-right: 2px solid #d1d5db !important; 
         }
         th.col-fija {
-            z-index: 15 !important; /* El header necesita más nivel para no quedar tapado */
+            z-index: 15 !important; 
             background-color: #f3f4f6 !important;
         }
         #tableFilterRow th.col-fija {
@@ -355,12 +355,46 @@
             background-color: #ffffff !important;
             box-shadow: inset 0 0 0 2px #374151 !important;
         }
-        /* ----------------------------------------------------- */
 
         .col-produccion { background-color: #f0fdf4; }
         .col-produccion-header { background-color: #d1fae5 !important; color: #065f46 !important; }
         
         .hidden { display: none !important; }
+
+        /* MODAL DE IMAGEN (LIGHTBOX) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            object-fit: contain;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .modal-close:hover {
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
@@ -436,6 +470,12 @@
         </table>
     </div>
 
+    <!-- MODAL PARA PREVISUALIZAR IMAGEN -->
+    <div id="imageModal" class="modal-overlay" onclick="cerrarModalImagen()">
+        <span class="modal-close" onclick="cerrarModalImagen()">&times;</span>
+        <img class="modal-content" id="imgModalSrc">
+    </div>
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -449,6 +489,26 @@
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
 
+        // LÓGICA DEL MODAL DE IMÁGENES
+        window.abrirModalImagen = function(src, event) {
+            if(event) event.stopPropagation(); // Evitar que seleccione la celda por error
+            const modal = document.getElementById('imageModal');
+            const imgModal = document.getElementById('imgModalSrc');
+            imgModal.src = src;
+            modal.style.display = 'flex';
+        };
+
+        window.cerrarModalImagen = function() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        };
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                window.cerrarModalImagen();
+            }
+        });
+
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow');
             const trFilter = document.getElementById('tableFilterRow');
@@ -457,14 +517,14 @@
             colsDiseno.forEach(col => { 
                 const thTitle = document.createElement('th'); 
                 thTitle.className = 'th-title';
-                if(col === 'REFERENCIA') thTitle.classList.add('col-fija'); // Aplicar clase fija
+                if(col === 'REFERENCIA') thTitle.classList.add('col-fija');
 
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
 
                 const thFilter = document.createElement('th');
-                if(col === 'REFERENCIA') thFilter.classList.add('col-fija'); // Aplicar clase fija
+                if(col === 'REFERENCIA') thFilter.classList.add('col-fija');
 
                 thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
                 trFilter.appendChild(thFilter); columnIndex++;
@@ -528,7 +588,7 @@
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
                         const base64Mini = canvas.toDataURL('image/jpeg', 0.8);
-                        td.innerHTML = `<img src="${base64Mini}" style="height: 40px; border-radius: 4px; object-fit: contain;">`;
+                        td.innerHTML = `<img src="${base64Mini}" style="height: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar, Doble clic para cambiar">`;
                     };
                     img.src = event.target.result;
                 };
@@ -545,7 +605,7 @@
             colsDiseno.forEach(() => {
                 const td = document.createElement('td'); 
                 
-                if(indexGlobal === 9) td.classList.add('col-fija'); // Clase fija a Referencia
+                if(indexGlobal === 9) td.classList.add('col-fija');
                 
                 if(indexGlobal === 0) {
                     td.contentEditable = "false"; 
@@ -556,7 +616,7 @@
                     
                     const valor = datos[indexGlobal] || '';
                     if(valor.startsWith('data:image') || valor.startsWith('http')) {
-                        td.innerHTML = `<img src="${valor}" style="height: 40px; border-radius: 4px; object-fit: contain;">`;
+                        td.innerHTML = `<img src="${valor}" style="height: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar, Doble clic para cambiar">`;
                     } else {
                         td.innerHTML = `<span style="font-size:10px; color:#9ca3af;">Doble Clic</span>`;
                     }
