@@ -18,7 +18,7 @@
             justify-content: center; 
             height: 100vh; 
             margin: 0; 
-            position: relative; /* Necesario para ubicar el botón de cerrar sesión */
+            position: relative;
         }
 
         /* BOTÓN CERRAR SESIÓN EN LA ESQUINA */
@@ -26,7 +26,7 @@
             position: absolute;
             top: 20px;
             right: 30px;
-            background-color: rgba(220, 53, 69, 0.8); /* Rojo oscuro sutil */
+            background-color: rgba(220, 53, 69, 0.8);
             color: white;
             text-decoration: none;
             padding: 10px 15px;
@@ -39,7 +39,7 @@
         }
 
         .btn-logout:hover {
-            background-color: #dc3545; /* Rojo brillante al pasar el mouse */
+            background-color: #dc3545;
             box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4);
         }
 
@@ -47,7 +47,16 @@
         .titulo h2 { margin: 5px 0; font-size: 28px; letter-spacing: 1px; }
         .titulo p { color: #aaa; margin: 0; }
 
-        .grid-menu { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; max-width: 900px; width: 100%; padding: 0 20px; box-sizing: border-box; }
+        /* MODIFICACIÓN AQUÍ: Cambié a 2 columnas (1fr 1fr) para que los 4 botones queden simétricos */
+        .grid-menu { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            max-width: 700px; /* Reduje un poco el ancho para que el cuadrado se vea compacto */
+            width: 100%; 
+            padding: 0 20px; 
+            box-sizing: border-box; 
+        }
         
         .tarjeta-menu {
             background-color: rgba(45, 45, 45, 0.85); 
@@ -66,14 +75,18 @@
             align-items: center;
         }
 
-        .tarjeta-menu:hover { border-color: #0078D4; transform: translateY(-5px); background-color: rgba(55, 55, 55, 0.95); }
+        .tarjeta-menu:hover { 
+            border-color: #0078D4; 
+            transform: translateY(-5px); 
+            background-color: rgba(55, 55, 55, 0.95); 
+        }
+        
         .icono { font-size: 50px; margin-bottom: 15px; }
         .texto { font-size: 18px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- Cambiamos la etiqueta <a> por un <button> para manejar el cierre de sesión con JS -->
     <button id="btnCerrarSesion" class="btn-logout">🚪 Cerrar Sesión</button>
 
     <div class="titulo">
@@ -97,38 +110,37 @@
             <div class="icono">📊</div>
             <div class="texto">Indicadores y Reportes</div>
         </a>
+
+        <!-- NUEVA TARJETA: WIPS DE DISEÑO -->
+        <a href="wips.html" class="tarjeta-menu">
+            <div class="icono">🎨</div>
+            <div class="texto">WIPS de Diseño</div>
+        </a>
     </div>
 
     <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 1. PROTECCIÓN DE RUTA: Verificar si hay un usuario logueado
         async function verificarSesion() {
             const { data: { session }, error } = await supabase.auth.getSession();
-            
-            // Si no hay sesión activa, expulsamos al usuario al Login
             if (!session) {
                 window.location.href = 'index.html';
             }
         }
         
-        // Ejecutamos la verificación apenas carga la página
         verificarSesion();
 
-        // 2. LÓGICA PARA CERRAR SESIÓN DE FORMA SEGURA
         document.getElementById('btnCerrarSesion').addEventListener('click', async function(e) {
             e.preventDefault();
             const btn = this;
             btn.textContent = "Saliendo... ⏳";
             btn.disabled = true;
 
-            // Supabase destruye el token de sesión
             const { error } = await supabase.auth.signOut();
             
             if (error) {
@@ -136,7 +148,6 @@
                 btn.textContent = "🚪 Cerrar Sesión";
                 btn.disabled = false;
             } else {
-                // Redirigir al login
                 window.location.href = 'index.html';
             }
         });
