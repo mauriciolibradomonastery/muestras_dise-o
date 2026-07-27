@@ -399,9 +399,23 @@
             color: #111827;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* --- CLASES PARA LAS MULTIPLES COLUMNAS FIJAS (EFECTO CASCADA) --- */
-        /* ----------------------------------------------------------------- */
+        /* CLASES PARA COLUMNAS FIJAS Y FECHAS/MONEDA */
+        .date-input, .select-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            color: #1f2937;
+            cursor: pointer;
+        }
+        
+        .select-input {
+            border-bottom: 1px solid #d1d5db;
+            padding-bottom: 2px;
+        }
+
         .col-checkbox {
             position: sticky !important;
             left: 0;
@@ -480,7 +494,6 @@
             background-color: #ffffff !important;
             box-shadow: inset 0 0 0 2px #374151 !important;
         }
-        /* ----------------------------------------------------------------- */
 
         .col-produccion { background-color: #f0fdf4; }
         .col-produccion-header { background-color: #d1fae5 !important; color: #065f46 !important; }
@@ -544,7 +557,6 @@
             <img src="logo.png" alt="Monastery" class="logo-header">
             <h2>Seguimiento de Muestras (WIPS)</h2>
             
-            <!-- SEGMENTADOR ESTRICTO -->
             <div class="segmentador">
                 <button id="btnCatTodas" class="seg-btn activa" onclick="filtrarPorCategoria('todas')">🌐 Consolidado General</button>
                 <button id="btnCatMasculina" class="seg-btn" onclick="filtrarPorCategoria('masculina')">👕 Men</button>
@@ -642,14 +654,24 @@
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR'];
-        const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
+        const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR', 'FICHA TECNICA'];
+        
+        // --- SE AGREGÓ TIPO DE MONEDA DESPUÉS DE COSTO UNITARIO ---
+        const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
+        const allCols = [...colsDiseno, ...colsProduccion]; // Total: 64 columnas (sin contar checkbox)
         
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
 
-        // LÓGICA DE FILTRO DEL SEGMENTADOR ESTRICTO
+        window.formatearFecha = function(fechaStr) {
+            if(!fechaStr) return "";
+            if(/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) return fechaStr;
+            let partes = fechaStr.split('/');
+            if(partes.length === 3) return `${partes[2]}-${partes[1]}-${partes[0]}`;
+            return fechaStr;
+        };
+
         window.filtrarPorCategoria = function(cat) {
             window.categoriaActiva = cat;
             
@@ -671,7 +693,6 @@
             window.calcularKPIs();
         };
 
-        // LÓGICA DE SELECCIÓN MASIVA
         window.toggleSelectAll = function() {
             const isChecked = document.getElementById('selectAll').checked;
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
@@ -702,7 +723,6 @@
             }
         };
 
-        // LÓGICA DEL MODAL DE IMÁGENES
         window.abrirModalImagen = function(src, event) {
             if(event) event.stopPropagation(); 
             const modal = document.getElementById('imageModal');
@@ -712,21 +732,17 @@
         };
 
         window.cerrarModalImagen = function() {
-            const modal = document.getElementById('imageModal');
-            modal.style.display = 'none';
+            document.getElementById('imageModal').style.display = 'none';
         };
 
         document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                window.cerrarModalImagen();
-            }
+            if (event.key === "Escape") window.cerrarModalImagen();
         });
 
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow');
             const trFilter = document.getElementById('tableFilterRow');
             
-            // COLUMNA 0: CHECKBOX
             const thCheck = document.createElement('th');
             thCheck.className = 'col-checkbox';
             thCheck.innerHTML = `<input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
@@ -736,16 +752,16 @@
             thCheckFilter.className = 'col-checkbox';
             trFilter.appendChild(thCheckFilter);
 
-            let columnIndex = 1;
+            let columnIndex = 1; 
 
-            colsDiseno.forEach(col => { 
+            allCols.forEach(col => { 
                 const thTitle = document.createElement('th'); 
                 thTitle.className = 'th-title';
                 
-                // ASIGNAR CLASES DE COLUMNAS FIJAS MULTIPLES
                 if(col === 'LINEA') thTitle.classList.add('col-fija-linea');
                 if(col === 'REFERENCIA') thTitle.classList.add('col-fija-ref');
                 if(col === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
+                if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
@@ -756,18 +772,8 @@
                 if(col === 'LINEA') thFilter.classList.add('col-fija-linea');
                 if(col === 'REFERENCIA') thFilter.classList.add('col-fija-ref');
                 if(col === 'COLOR COLECCIÓN') thFilter.classList.add('col-fija-color');
+                if(columnIndex > colsDiseno.length) thFilter.classList.add('col-produccion-header', 'hidden');
 
-                thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
-                trFilter.appendChild(thFilter); columnIndex++;
-            });
-
-            colsProduccion.forEach(col => { 
-                const thTitle = document.createElement('th'); thTitle.className = 'th-title col-produccion-header hidden';
-                thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
-                let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
-                trHeader.appendChild(thTitle); 
-
-                const thFilter = document.createElement('th'); thFilter.className = 'col-produccion-header hidden';
                 thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
                 trFilter.appendChild(thFilter); columnIndex++;
             });
@@ -791,7 +797,22 @@
             if(data.length === 0) {
                 agregarFilaVacia();
             } else {
-                data.forEach(filaBD => tbody.appendChild(crearFilaHTML(filaBD.id, filaBD.datos)));
+                data.forEach(filaBD => {
+                    let d = filaBD.datos;
+                    // --- MIGRACIÓN AUTOMÁTICA INTELIGENTE ---
+                    if (d && d.length < 64) {
+                        if (d.length === 61) {
+                            d.splice(50, 0, ""); // Inserta FICHA TECNICA
+                            d.splice(57, 0, ""); // Inserta TIPO DE MONEDA
+                        } else if (d.length === 62) {
+                            d.splice(57, 0, ""); // Inserta TIPO DE MONEDA (si ya tenía ficha)
+                        } else if (d.length === 63) {
+                            d.splice(57, 0, ""); // Por seguridad
+                        }
+                        while(d.length < 64) d.push("");
+                    }
+                    tbody.appendChild(crearFilaHTML(filaBD.id, d));
+                });
             }
             window.filtrarTablaCompleta(); 
             calcularKPIs(); 
@@ -812,9 +833,7 @@
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 800;
                         let scaleSize = 1;
-                        if(img.width > MAX_WIDTH) {
-                            scaleSize = MAX_WIDTH / img.width;
-                        }
+                        if(img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
                         canvas.width = img.width * scaleSize;
                         canvas.height = img.height * scaleSize;
                         
@@ -843,11 +862,70 @@
             td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarImagenCelda(this.closest('td'))">📷 Agregar</button>`;
         };
 
+        window.seleccionarPDFCelda = function(td) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/pdf';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.size > 2 * 1024 * 1024) { 
+                    alert("El PDF es muy pesado. Por favor, sube un archivo menor a 2MB para no saturar la base de datos.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64PDF = event.target.result;
+                    td.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <a href="${base64PDF}" download="Ficha_Tecnica.pdf" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Descargar PDF">📥 Ver PDF</a>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span class="img-action-btn" title="Cambiar PDF" onclick="window.seleccionarPDFCelda(this.closest('td'))">🔄</span>
+                                <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
+                            </div>
+                        </div>`;
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        };
+
+        window.borrarPDFCelda = function(td) {
+            td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`;
+        };
+
+        window.extraerDatosFila = function(tr) {
+            const celdas = tr.querySelectorAll('td');
+            let datosFila = [];
+            for(let i = 1; i < celdas.length - 1; i++) { 
+                let indexGlobal = i - 1;
+                let colName = allCols[indexGlobal].toUpperCase();
+                
+                if (indexGlobal === 0) { 
+                    const img = celdas[i].querySelector('img');
+                    datosFila.push(img ? img.src : "");
+                } else if (colName === 'FICHA TECNICA') { 
+                    const link = celdas[i].querySelector('a.ficha-link');
+                    datosFila.push(link ? link.href : "");
+                } else if (colName === 'TIPO DE MONEDA') { 
+                    const select = celdas[i].querySelector('select');
+                    datosFila.push(select ? select.value : "");
+                } else if (colName.startsWith('FECHA')) { 
+                    const dateInp = celdas[i].querySelector('input[type="date"]');
+                    datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
+                } else { 
+                    datosFila.push(celdas[i].innerText.trim());
+                }
+            }
+            return datosFila;
+        };
+
         function crearFilaHTML(id = null, datos = []) {
             const tr = document.createElement('tr');
             if (id) tr.dataset.id = id;
             
-            // CELDA 0: CHECKBOX
             const tdCheck = document.createElement('td');
             tdCheck.className = 'col-checkbox';
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
@@ -855,24 +933,28 @@
 
             let indexGlobal = 0;
 
-            colsDiseno.forEach(() => {
+            allCols.forEach((colNameOriginal) => {
+                const colName = colNameOriginal.toUpperCase();
                 const td = document.createElement('td'); 
                 
-                // ASIGNAR CLASES DE COLUMNAS FIJAS
                 if(indexGlobal === 2) td.classList.add('col-fija-linea');
                 if(indexGlobal === 9) td.classList.add('col-fija-ref');
                 if(indexGlobal === 12) td.classList.add('col-fija-color');
                 
-                if(indexGlobal === 0) { // IMAGEN
+                if(indexGlobal >= colsDiseno.length) {
+                    td.className += window.produccionVisible ? ' col-produccion' : ' col-produccion hidden';
+                }
+                
+                const valorRaw = datos[indexGlobal] || '';
+
+                if(indexGlobal === 0) { 
                     td.contentEditable = "false"; 
                     td.style.textAlign = "center";
                     td.style.verticalAlign = "middle";
-                    
-                    const valor = datos[indexGlobal] || '';
-                    if(valor.startsWith('data:image') || valor.startsWith('http')) {
+                    if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <img src="${valor}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
+                                <img src="${valorRaw}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <span class="img-action-btn" title="Cambiar foto" onclick="window.seleccionarImagenCelda(this.closest('td'))">🔄</span>
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
@@ -881,23 +963,46 @@
                     } else {
                         td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarImagenCelda(this.closest('td'))">📷 Agregar</button>`;
                     }
-                } else {
+                } else if (colName === 'FICHA TECNICA') { 
+                    td.contentEditable = "false"; 
+                    td.style.textAlign = "center";
+                    td.style.verticalAlign = "middle";
+                    if(valorRaw.startsWith('data:application/pdf') || valorRaw.startsWith('http')) {
+                        td.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <a href="${valorRaw}" download="Ficha_Tecnica.pdf" target="_blank" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Descargar PDF">📥 Ver PDF</a>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <span class="img-action-btn" title="Cambiar PDF" onclick="window.seleccionarPDFCelda(this.closest('td'))">🔄</span>
+                                    <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
+                                </div>
+                            </div>`;
+                    } else {
+                        td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`;
+                    }
+                } else if (colName === 'TIPO DE MONEDA') { 
+                    // DROPDOWN PARA EL TIPO DE MONEDA
+                    td.contentEditable = "false";
+                    td.innerHTML = `
+                        <select class="select-input">
+                            <option value=""></option>
+                            <option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option>
+                            <option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option>
+                            <option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option>
+                        </select>
+                    `;
+                } else if (colName.startsWith('FECHA')) { 
+                    td.contentEditable = "false";
+                    td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
+                } else { 
                     td.contentEditable = "true";
-                    td.textContent = datos[indexGlobal] || ''; 
+                    td.textContent = valorRaw; 
                 }
                 
                 tr.appendChild(td); 
                 indexGlobal++;
             });
 
-            colsProduccion.forEach(() => {
-                const td = document.createElement('td'); td.contentEditable = "true";
-                td.textContent = datos[indexGlobal] || '';
-                td.className = window.produccionVisible ? 'col-produccion' : 'col-produccion hidden';
-                tr.appendChild(td); indexGlobal++;
-            });
-
-            // ESTADO ahora está en la celda 44
+            // EL ESTADO AHORA ESTÁ EN LA COLUMNA 44 DE LA TABLA (INDEX GLOBAL 43 DEL ARRAY)
             const estadoActual = (datos[43] || '').trim().toUpperCase(); 
             const esCancelado = estadoActual === 'CANCELADO';
 
@@ -923,12 +1028,11 @@
                 if (!fila.dataset.id) return; 
 
                 const celdas = fila.querySelectorAll('td');
-                if (celdas.length < 61) return; 
+                if (celdas.length < 62) return; 
                 
                 const estado = (celdas[44].textContent || '').trim().toUpperCase(); 
                 if (estado === 'CANCELADO') return; 
 
-                // --- FILTRO EXACTO PARA KPIS ---
                 let coincideCategoria = true;
                 const genero = (celdas[7].textContent || '').trim().toUpperCase();
                 const familia = (celdas[8].textContent || '').trim().toUpperCase();
@@ -943,14 +1047,18 @@
                 }
 
                 if (!coincideCategoria) return; 
-                // -------------------------------------
 
                 const coleccion = (celdas[2].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)'; 
                 const referencia = (celdas[10].textContent || '').trim(); 
-                const fechaTentativa = (celdas[52].textContent || '').trim(); 
-                const fechaLlegada = (celdas[53].textContent || '').trim(); 
-                const costoUnitario = (celdas[56].textContent || '').trim(); 
-                const pvpUnitario = (celdas[57].textContent || '').trim(); 
+                
+                const inputTentativa = celdas[53].querySelector('input[type="date"]');
+                const fechaTentativa = (inputTentativa ? inputTentativa.value : celdas[53].textContent).trim(); 
+                
+                const inputLlegada = celdas[54].querySelector('input[type="date"]');
+                const fechaLlegada = (inputLlegada ? inputLlegada.value : celdas[54].textContent).trim(); 
+
+                const costoUnitario = (celdas[57].textContent || '').trim(); 
+                const pvpUnitario = (celdas[59].textContent || '').trim(); // MOVIDO AL 59
 
                 if (!datosKpi[coleccion]) {
                     datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
@@ -1071,7 +1179,6 @@
                     return; 
                 }
 
-                // --- FILTRO EXACTO EN LA TABLA ---
                 let coincideCategoria = true;
                 const esFilaNuevaSinGuardar = !fila.dataset.id;
                 
@@ -1134,22 +1241,13 @@
             
             const idDb = tr.dataset.id;
             if(idDb) {
-                let datosFila = [];
-                for(let i = 1; i < celdas.length - 1; i++) {
-                    if(i === 1) {
-                        const img = celdas[i].querySelector('img');
-                        datosFila.push(img ? img.src : "");
-                    } else {
-                        datosFila.push(celdas[i].innerText.trim());
-                    }
-                }
+                let datosFila = window.extraerDatosFila(tr);
                 await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
             }
             window.filtrarTablaCompleta();
             window.calcularKPIs();
         };
 
-        // --- ACCIONES MASIVAS (ARREGLADO PARA USAR UPDATE) ---
         window.cancelarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             let rowsToUpdate = [];
@@ -1174,16 +1272,7 @@
 
                 const idDb = tr.dataset.id;
                 if(idDb) {
-                    let datosFila = [];
-                    for(let i = 1; i < celdas.length - 1; i++) {
-                        if(i === 1) {
-                            const img = celdas[i].querySelector('img');
-                            datosFila.push(img ? img.src : "");
-                        } else {
-                            datosFila.push(celdas[i].innerText.trim());
-                        }
-                    }
-                    // Utilizamos UPDATE en lugar de UPSERT para evitar errores de ID
+                    let datosFila = window.extraerDatosFila(tr);
                     promesasUpdate.push(
                         supabase.from('wips_muestras')
                         .update({ datos: datosFila })
@@ -1243,15 +1332,21 @@
             if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
             filas.sort((a, b) => {
                 let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
+                
+                const inputA = a.cells[colIndex].querySelector('input[type="date"]');
+                const inputB = b.cells[colIndex].querySelector('input[type="date"]');
+                if(inputA) valorA = inputA.value;
+                if(inputB) valorB = inputB.value;
+
                 let numA = parseFloat(valorA); let numB = parseFloat(valorB);
-                if (!isNaN(numA) && !isNaN(numB)) return ordenAscendente ? numA - numB : numB - numA;
+                if (!isNaN(numA) && !isNaN(numB) && !inputA) return ordenAscendente ? numA - numB : numB - numA;
                 if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
             });
             filas.forEach(fila => tbody.appendChild(fila));
         };
 
         window.agregarFilaVacia = function() {
-            let datosInic = new Array(61).fill('');
+            let datosInic = new Array(64).fill(''); // 64 COLUMNAS AHORA
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
@@ -1262,7 +1357,7 @@
         };
 
         window.insertarFilaAbajo = function(btn) {
-            let datosInic = new Array(61).fill('');
+            let datosInic = new Array(64).fill('');
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
@@ -1273,7 +1368,6 @@
             window.calcularKPIs(); 
         };
 
-        // --- BOTÓN DE GUARDADO MASIVO (ARREGLADO PARA USAR UPDATE) ---
         window.guardarCambiosVisibles = async function() {
             const btn = document.getElementById('btnGuardarGlobal');
             const textoOriginal = btn.innerHTML;
@@ -1288,19 +1382,9 @@
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
 
-                const celdas = tr.querySelectorAll('td');
-                let datosFila = [];
-                for(let i = 1; i < celdas.length - 1; i++) { 
-                    if(i === 1) {
-                        const img = celdas[i].querySelector('img');
-                        datosFila.push(img ? img.src : "");
-                    } else {
-                        datosFila.push(celdas[i].innerText.trim());
-                    }
-                }
+                let datosFila = window.extraerDatosFila(tr);
 
                 if (tr.dataset.id) {
-                    // UTILIZAMOS UPDATE EN LUGAR DE UPSERT
                     promesasUpdate.push(
                         supabase.from('wips_muestras')
                         .update({ datos: datosFila })
@@ -1313,7 +1397,6 @@
             }
 
             try {
-                // Actualizar filas existentes en paralelo
                 if (promesasUpdate.length > 0) {
                     const resultados = await Promise.all(promesasUpdate);
                     for (let res of resultados) {
@@ -1321,7 +1404,6 @@
                     }
                 }
                 
-                // Insertar filas nuevas
                 if (rowsToInsert.length > 0) {
                     const { data, error } = await supabase.from('wips_muestras').insert(rowsToInsert).select();
                     if (error) throw error;
@@ -1345,6 +1427,19 @@
             }, 3000);
         };
 
+        window.eliminarFila = async function(btn) {
+            if(!confirm("¿Seguro que deseas eliminar esta muestra definitivamente? No se puede deshacer.")) return;
+            const tr = btn.closest('tr');
+            const idDb = tr.dataset.id;
+            if(idDb) {
+                const { error } = await supabase.from('wips_muestras').delete().eq('id', idDb);
+                if(error) { alert("Error al eliminar"); return; }
+            }
+            tr.remove(); 
+            window.actualizarContador(); 
+            window.calcularKPIs(); 
+        };
+
         window.toggleProduccion = function() {
             window.produccionVisible = !window.produccionVisible;
             const headersTitle = document.querySelectorAll('.col-produccion-header');
@@ -1365,19 +1460,16 @@
 
         window.exportarAExcel = function() {
             let dataExcel = []; let encabezados = [];
-            colsDiseno.forEach(c => encabezados.push(c)); colsProduccion.forEach(c => encabezados.push(c));
+            allCols.forEach(c => encabezados.push(c));
             dataExcel.push(encabezados);
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
-                    let filaData = []; const celdas = fila.querySelectorAll('td');
-                    for(let i = 1; i < celdas.length - 1; i++) { 
-                        if(i === 1 && celdas[i].querySelector('img')) {
-                            filaData.push("🖼️ Imagen Cargada");
-                        } else {
-                            filaData.push(celdas[i].innerText.trim()); 
-                        }
+                    let filaData = window.extraerDatosFila(fila);
+                    for(let i = 0; i < filaData.length; i++) { 
+                        if(i === 0 && filaData[i].startsWith('data:image')) filaData[i] = "🖼️ Imagen Cargada";
+                        if(i === 51 && filaData[i].startsWith('data:application/pdf')) filaData[i] = "📄 PDF Cargado";
                     }
                     dataExcel.push(filaData);
                 }
@@ -1410,8 +1502,8 @@
 
                     const registrosParaSupabase = filasCSV.map(fila => {
                         let datosLimpios = fila.map(celda => String(celda).trim());
-                        while(datosLimpios.length < 61) datosLimpios.push(""); 
-                        return { datos: datosLimpios.slice(0, 61) };
+                        while(datosLimpios.length < 64) datosLimpios.push(""); 
+                        return { datos: datosLimpios.slice(0, 64) };
                     }).filter(r => r.datos.join("").trim() !== ""); 
 
                     if(registrosParaSupabase.length === 0) {
