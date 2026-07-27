@@ -13,7 +13,7 @@
 
     <style>
         :root {
-            --w-col-0: 40px;  
+            --w-col-0: 80px;  
             --w-col-3: 150px; 
             --w-col-10: 150px; 
             --w-col-13: 150px; 
@@ -37,75 +37,35 @@
             min-height: 100vh;
         }
 
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            padding-bottom: 15px;
-        }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); padding-bottom: 15px; }
         .header-title-box { display: flex; align-items: center; gap: 15px; }
-        .logo-header {
-            height: 42px; width: auto; background: #ffffff; padding: 4px 10px;
-            border-radius: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); object-fit: contain;
-        }
+        .logo-header { height: 42px; width: auto; background: #ffffff; padding: 4px 10px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); object-fit: contain; }
         .header-top h2 { margin: 0; font-size: 24px; font-weight: 700; color: #111827; }
 
         .header-right { display: flex; align-items: center; gap: 20px; position: relative; }
         .active-users-container { display: flex; flex-direction: row-reverse; align-items: center; }
-        .user-avatar {
-            width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center;
-            justify-content: center; font-weight: bold; font-size: 13px; border: 2px solid #ffffff;
-            margin-left: -10px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); position: relative; cursor: default; transition: transform 0.2s;
-        }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; border: 2px solid #ffffff; margin-left: -10px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); position: relative; cursor: default; transition: transform 0.2s; }
         .user-avatar:hover { transform: translateY(-3px); z-index: 50 !important; }
-        .user-avatar:hover::after {
-            content: attr(title); position: absolute; bottom: -30px; background: #1f2937; color: white;
-            padding: 5px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100;
-        }
+        .user-avatar:hover::after { content: attr(title); position: absolute; bottom: -30px; background: #1f2937; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100; }
         .users-label { font-size: 12px; color: #6b7280; font-weight: 600; margin-right: 15px; display: none; }
 
-        /* --- SISTEMA DE NOTIFICACIONES --- */
         .notif-wrapper { position: relative; display: flex; align-items: center; }
-        .notif-btn { 
-            background: #ffffff; border: 1px solid #d1d5db; border-radius: 50%; width: 40px; height: 40px; 
-            font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; padding: 0;
-        }
+        .notif-btn { background: #ffffff; border: 1px solid #d1d5db; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; padding: 0; }
         .notif-btn:hover { background: #f3f4f6; }
-        .notif-badge { 
-            position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; 
-            font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-        }
-        .notif-panel { 
-            display: none; position: absolute; top: 50px; right: 0; width: 320px; background: white; 
-            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; 
-            z-index: 9999; flex-direction: column; overflow: hidden; 
-        }
-        .notif-header { 
-            background: #f9fafb; padding: 12px 15px; font-weight: bold; font-size: 14px; 
-            border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; 
-        }
+        .notif-badge { position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .notif-panel { display: none; position: absolute; top: 50px; right: 0; width: 320px; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; z-index: 9999; flex-direction: column; overflow: hidden; }
+        .notif-header { background: #f9fafb; padding: 12px 15px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
         .notif-close { cursor: pointer; color: #9ca3af; font-size: 16px; }
         .notif-close:hover { color: #ef4444; }
         .notif-body { max-height: 280px; overflow-y: auto; padding: 10px; background: #f9fafb; }
-        .notif-item { 
-            background: white; border-left: 4px solid #3b82f6; padding: 10px; margin-bottom: 8px; 
-            border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size: 12px; 
-        }
+        .notif-item { background: white; border-left: 4px solid #3b82f6; padding: 10px; margin-bottom: 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size: 12px; }
         .notif-item.read { border-left-color: #d1d5db; opacity: 0.7; }
         .notif-meta { display: flex; justify-content: space-between; color: #6b7280; font-size: 10px; margin-bottom: 4px; }
         .notif-footer { padding: 12px; background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
         .notif-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; }
-        .notif-send-btn { 
-            background: #10b981; color: white; border: none; padding: 8px; border-radius: 6px; 
-            font-weight: bold; cursor: pointer; transition: 0.2s; 
-        }
+        .notif-send-btn { background: #10b981; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .notif-send-btn:hover { background: #059669; }
 
-        /* SEGMENTADOR DE CATEGORÍAS */
         .segmentador { display: flex; gap: 8px; margin-left: 20px; border-left: 2px solid #d1d5db; padding-left: 20px; }
         .seg-btn { background: rgba(255, 255, 255, 0.5); border: 1px solid #d1d5db; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #4b5563; cursor: pointer; transition: all 0.2s; }
         .seg-btn:hover { background: #ffffff; color: #111827; border-color: #9ca3af; }
@@ -163,7 +123,7 @@
         .date-input, .select-input { width: 100%; border: none; background: transparent; font-size: 13px; cursor: pointer; }
         .select-input { border-bottom: 1px solid #d1d5db; padding-bottom: 2px; }
 
-        .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; }
+        .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         .col-fija-linea { position: sticky !important; left: var(--l-linea) !important; background-color: #ffffff; z-index: 7; border-right: 1px solid #d1d5db !important; }
         .col-fija-ref { position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; }
         .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
@@ -221,12 +181,10 @@
             </div>
         </div>
 
-        <!-- AVATARES Y NOTIFICACIONES -->
         <div class="header-right">
             <span id="usersLabel" class="users-label">En línea:</span>
             <div id="activeUsersContainer" class="active-users-container"></div>
             
-            <!-- CAMPANA DE NOTIFICACIONES -->
             <div class="notif-wrapper">
                 <button class="notif-btn" onclick="toggleNotifPanel()">
                     🔔<span id="notifBadge" class="notif-badge" style="display:none;">0</span>
@@ -238,7 +196,6 @@
                         <span class="notif-close" onclick="toggleNotifPanel()">✖</span>
                     </div>
                     <div id="notifBody" class="notif-body">
-                        <!-- Aquí caen los mensajes -->
                         <div style="text-align: center; color: #9ca3af; padding: 20px;">Bandeja limpia ✨</div>
                     </div>
                     <div class="notif-footer">
@@ -334,6 +291,16 @@
         const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
         const allCols = [...colsDiseno, ...colsProduccion]; 
         
+        // --- COLUMNAS QUE NO LLEVARÁN FILTRO ---
+        const colsSinFiltro = [
+            'RESPONSABLE', 'FAMILIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR SKU', 
+            'INSUMO ARTE', 'PRECIO', 'MONEDA', 'OBSERVACIONES CAMBIO #1', 
+            'OBSERVACIONES CAMBIO #2', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 
+            'OBSERVACIONES DE DISEÑO', 'OBSERVACIONES', 'OBSERVACIONES DE DISEÑO2', 
+            'OBSERVACIONES2', 'PP SAMPLE APROBADO POR CALIDAD', 'OBSERVACIONES DE DISEÑO23', 
+            'OBERVACIONES', 'SEMÁFORO (COLORES)', 'VALOR'
+        ];
+
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
@@ -402,7 +369,7 @@
                 .order('created_at', { ascending: false })
                 .limit(20);
 
-            if (error) { console.error("Error notificaciones:", error); return; }
+            if (error) return;
 
             const body = document.getElementById('notifBody');
             const badge = document.getElementById('notifBadge');
@@ -417,7 +384,6 @@
                     if(!n.leido) unreadCount++;
                     const item = document.createElement('div');
                     item.className = `notif-item ${n.leido ? 'read' : ''}`;
-                    
                     const fechaObj = new Date(n.created_at);
                     const fechaFix = `${fechaObj.getDate()}/${fechaObj.getMonth()+1} ${fechaObj.getHours()}:${String(fechaObj.getMinutes()).padStart(2, '0')}`;
 
@@ -433,34 +399,18 @@
                 });
             }
 
-            if(unreadCount > 0) {
-                badge.textContent = unreadCount;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
+            if(unreadCount > 0) { badge.textContent = unreadCount; badge.style.display = 'flex'; } 
+            else { badge.style.display = 'none'; }
         }
 
         window.enviarNotificacion = async function() {
             const dest = document.getElementById('notifDestinatario').value.trim();
             const msj = document.getElementById('notifMensaje').value.trim();
-            
             if(!dest || !msj) { alert("Escribe el destinatario y el mensaje"); return; }
-            
             const btn = document.querySelector('.notif-send-btn');
             btn.textContent = "⏳";
-            
-            const { error } = await supabase.from('wips_notificaciones').insert([{
-                remitente: miNombre,
-                destinatario: dest,
-                mensaje: msj
-            }]);
-
-            if(error) { alert("Error al enviar"); } 
-            else {
-                document.getElementById('notifMensaje').value = '';
-                cargarNotificaciones();
-            }
+            const { error } = await supabase.from('wips_notificaciones').insert([{ remitente: miNombre, destinatario: dest, mensaje: msj }]);
+            if(error) { alert("Error al enviar"); } else { document.getElementById('notifMensaje').value = ''; cargarNotificaciones(); }
             btn.textContent = "Enviar Tarea";
         };
 
@@ -469,10 +419,8 @@
             cargarNotificaciones();
         };
 
-        // Recargar notificaciones cada 15 segundos para no depender de sockets complejos
         setInterval(cargarNotificaciones, 15000);
-        setTimeout(cargarNotificaciones, 1000); // Primera carga
-
+        setTimeout(cargarNotificaciones, 1000); 
 
         // =====================================================================
         // --- RESTO DEL CÓDIGO NORMAL DE LA TABLA ---
@@ -574,7 +522,7 @@
             
             const thCheck = document.createElement('th');
             thCheck.className = 'col-checkbox';
-            thCheck.innerHTML = `<input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
+            thCheck.innerHTML = `<div style="font-size: 10px; margin-bottom: 5px; color: #374151;">SELECCIONAR</div><input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
             trHeader.appendChild(thCheck);
             initResizer(thCheck, 0); 
 
@@ -585,12 +533,13 @@
             let columnIndex = 1; 
 
             allCols.forEach(col => { 
+                const colUpper = col.toUpperCase();
                 const thTitle = document.createElement('th'); 
                 thTitle.className = 'th-title';
                 
-                if(col === 'LINEA') thTitle.classList.add('col-fija-linea');
-                if(col === 'REFERENCIA') thTitle.classList.add('col-fija-ref');
-                if(col === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
+                if(colUpper === 'LINEA') thTitle.classList.add('col-fija-linea');
+                if(colUpper === 'REFERENCIA') thTitle.classList.add('col-fija-ref');
+                if(colUpper === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
@@ -599,13 +548,15 @@
                 initResizer(thTitle, columnIndex); 
 
                 const thFilter = document.createElement('th');
-                if(col === 'LINEA') thFilter.classList.add('col-fija-linea');
-                if(col === 'REFERENCIA') thFilter.classList.add('col-fija-ref');
-                if(col === 'COLOR COLECCIÓN') thFilter.classList.add('col-fija-color');
+                if(colUpper === 'LINEA') thFilter.classList.add('col-fija-linea');
+                if(colUpper === 'REFERENCIA') thFilter.classList.add('col-fija-ref');
+                if(colUpper === 'COLOR COLECCIÓN') thFilter.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thFilter.classList.add('col-produccion-header', 'hidden');
 
-                if (col === 'IMAGEN') {
+                if (colUpper === 'IMAGEN' || colUpper === 'SOPORTE PROFORMA (IMAGEN)' || colsSinFiltro.includes(colUpper)) {
                     thFilter.innerHTML = ``;
+                } else if (colUpper.startsWith('FECHA')) {
+                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx}" oninput="filtrarTablaCompleta()">`;
                 } else {
                     thFilter.innerHTML = `
                         <input type="text" class="filter-input col-filter" list="datalist_${idx}" data-colindex="${idx}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()">
@@ -650,7 +601,7 @@
 
         window.actualizarDatalists = function() {
             const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
-            const inputsColumnas = document.querySelectorAll('.col-filter');
+            const inputsColumnas = document.querySelectorAll('.col-filter[type="text"]');
             inputsColumnas.forEach(input => {
                 const colIndex = input.getAttribute('data-colindex');
                 const datalist = document.getElementById(`datalist_${colIndex}`);
@@ -734,7 +685,7 @@
             for(let i = 1; i < celdas.length - 1; i++) { 
                 let indexGlobal = i - 1; let colName = allCols[indexGlobal].toUpperCase();
                 
-                if (indexGlobal === 0) { 
+                if (colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') { 
                     const img = celdas[i].querySelector('img'); datosFila.push(img ? img.src : "");
                 } else if (colName === 'FICHA TECNICA') { 
                     const link = celdas[i].querySelector('a.ficha-link'); datosFila.push(link ? link.href : "");
@@ -760,14 +711,14 @@
             allCols.forEach((colNameOriginal) => {
                 const colName = colNameOriginal.toUpperCase(); const td = document.createElement('td'); 
                 
-                if(indexGlobal === 2) td.classList.add('col-fija-linea');
-                if(indexGlobal === 9) td.classList.add('col-fija-ref');
-                if(indexGlobal === 12) td.classList.add('col-fija-color');
+                if(colName === 'LINEA') td.classList.add('col-fija-linea');
+                if(colName === 'REFERENCIA') td.classList.add('col-fija-ref');
+                if(colName === 'COLOR COLECCIÓN') td.classList.add('col-fija-color');
                 if(indexGlobal >= colsDiseno.length) { td.className += window.produccionVisible ? ' col-produccion' : ' col-produccion hidden'; }
                 
                 const valorRaw = datos[indexGlobal] || '';
 
-                if(indexGlobal === 0) { 
+                if(colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') { 
                     td.contentEditable = "false"; td.style.textAlign = "center"; td.style.verticalAlign = "middle";
                     if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
@@ -1107,8 +1058,13 @@
                 if(fila.style.display !== 'none') {
                     let filaData = window.extraerDatosFila(fila);
                     for(let i = 0; i < filaData.length; i++) { 
-                        if(i === 0 && filaData[i].startsWith('data:image')) filaData[i] = "🖼️ Imagen Cargada";
-                        if(i === 51 && filaData[i].startsWith('data:application/pdf')) filaData[i] = "📄 PDF Cargado";
+                        let colName = allCols[i].toUpperCase();
+                        if((colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) {
+                            filaData[i] = "🖼️ Imagen Cargada";
+                        }
+                        if(colName === 'FICHA TECNICA' && (filaData[i].startsWith('data:application/pdf') || filaData[i].startsWith('http'))) {
+                            filaData[i] = "📄 PDF Cargado";
+                        }
                     }
                     dataExcel.push(filaData);
                 }
