@@ -12,6 +12,19 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
+        /* --- VARIABLES CSS PARA ANCHOS DINÁMICOS DE COLUMNAS --- */
+        :root {
+            --w-col-0: 40px;  /* Checkbox */
+            --w-col-3: 150px; /* Linea */
+            --w-col-10: 150px; /* Referencia */
+            --w-col-13: 150px; /* Color Colección */
+            
+            /* Posiciones 'Left' auto-calculadas para la cascada */
+            --l-linea: var(--w-col-0);
+            --l-ref: calc(var(--w-col-0) + var(--w-col-3));
+            --l-color: calc(var(--w-col-0) + var(--w-col-3) + var(--w-col-10));
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -338,13 +351,17 @@
         }
         table { border-collapse: collapse; width: max-content; }
         
+        /* PREVENCIÓN DE DESBORDAMIENTO (Solución para texto montado) */
         th, td {
             border: 1px solid #e5e7eb;
             padding: 8px 10px;
             text-align: left;
+            /* CLAVES PARA QUE NO SE MONTE EL TEXTO */
             white-space: nowrap;
-            min-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
             font-size: 13px;
+            position: relative; /* Para el handle de arrastre */
         }
 
         thead {
@@ -397,9 +414,10 @@
             background-color: #ffffff;
             box-shadow: inset 0 0 0 2px #374151;
             color: #111827;
+            z-index: 20; /* Elevado sobre el resto al editar */
         }
 
-        /* CLASES PARA COLUMNAS FIJAS Y FECHAS/MONEDA */
+        /* CLASES PARA COLUMNAS FIJAS */
         .date-input, .select-input {
             width: 100%;
             border: none;
@@ -421,20 +439,12 @@
             left: 0;
             background-color: #ffffff;
             z-index: 8;
-            width: 40px !important;
-            min-width: 40px !important;
-            max-width: 40px !important;
-            padding: 0 !important;
-            text-align: center;
             border-right: 1px solid #d1d5db !important;
         }
 
         .col-fija-linea {
             position: sticky !important;
-            left: 40px; 
-            width: 150px !important;
-            min-width: 150px !important;
-            max-width: 150px !important;
+            left: var(--l-linea) !important;
             background-color: #ffffff;
             z-index: 7;
             border-right: 1px solid #d1d5db !important; 
@@ -442,10 +452,7 @@
 
         .col-fija-ref {
             position: sticky !important;
-            left: 190px; 
-            width: 150px !important;
-            min-width: 150px !important;
-            max-width: 150px !important;
+            left: var(--l-ref) !important;
             background-color: #ffffff;
             z-index: 6;
             border-right: 1px solid #d1d5db !important; 
@@ -453,10 +460,7 @@
 
         .col-fija-color {
             position: sticky !important;
-            left: 340px; 
-            width: 150px !important;
-            min-width: 150px !important;
-            max-width: 150px !important;
+            left: var(--l-color) !important;
             background-color: #ffffff;
             z-index: 5;
             box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); 
@@ -548,9 +552,43 @@
         .img-action-btn:hover {
             background-color: #e5e7eb;
         }
+
+        /* --- CLASES DEL AGARRADOR (RESIZER EXCEL) --- */
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            cursor: col-resize;
+            user-select: none;
+            height: 100%;
+            z-index: 25;
+            background-color: transparent;
+        }
+        .resizer:hover, .resizer.resizing {
+            background-color: #3b82f6; /* Línea azul al arrastrar */
+            border-right: 1px solid #1d4ed8;
+        }
     </style>
 </head>
 <body>
+
+    <!-- INYECCIÓN DEL ESTILO DINÁMICO PARA COLUMNAS -->
+    <script>
+        const styleEl = document.createElement('style');
+        let cssRules = "";
+        for(let i=0; i<=70; i++) {
+            // El fallback predeterminado para columnas normales es 130px y máx de 400px (salvo que el usuario arrastre)
+            cssRules += `
+                th:nth-child(${i+1}), td:nth-child(${i+1}) { 
+                    width: var(--w-col-${i}, 130px) !important; 
+                    min-width: var(--w-col-${i}, 130px) !important; 
+                    max-width: var(--w-col-${i}, 400px) !important; 
+                }\n`;
+        }
+        styleEl.innerHTML = cssRules;
+        document.head.appendChild(styleEl);
+    </script>
 
     <div class="header-top">
         <div class="header-title-box">
@@ -625,7 +663,7 @@
             </div>
         </div>
         <div class="acciones-der">
-            <input type="text" id="inputBusquedaGlobal" class="buscador" placeholder="🔍 Buscar en cualquier columna..." onkeyup="filtrarTablaCompleta()">
+            <input type="text" id="inputBusquedaGlobal" class="buscador" placeholder="🔍 Buscar en cualquier columna..." oninput="filtrarTablaCompleta()">
         </div>
     </div>
 
@@ -655,14 +693,47 @@
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR', 'FICHA TECNICA'];
-        
-        // --- SE AGREGÓ TIPO DE MONEDA DESPUÉS DE COSTO UNITARIO ---
         const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
-        const allCols = [...colsDiseno, ...colsProduccion]; // Total: 64 columnas (sin contar checkbox)
+        const allCols = [...colsDiseno, ...colsProduccion]; 
         
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
+
+        // --- SISTEMA DE ARRASTRE PARA REDIMENSIONAR COLUMNAS (EXCEL-STYLE) ---
+        function initResizer(th, colIndex) {
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            th.appendChild(resizer);
+
+            let x = 0;
+            let w = 0;
+
+            const mouseDownHandler = function(e) {
+                x = e.clientX;
+                const styles = window.getComputedStyle(th);
+                w = parseInt(styles.width, 10);
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+                resizer.classList.add('resizing');
+            };
+
+            const mouseMoveHandler = function(e) {
+                const dx = e.clientX - x;
+                let newWidth = w + dx;
+                if (newWidth < 40) newWidth = 40; // Límite mínimo para que no desaparezca
+                // Modifica directamente la variable global, haciendo que toda la columna se actualice instantáneamente
+                document.documentElement.style.setProperty(`--w-col-${colIndex}`, `${newWidth}px`);
+            };
+
+            const mouseUpHandler = function() {
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+                resizer.classList.remove('resizing');
+            };
+
+            resizer.addEventListener('mousedown', mouseDownHandler);
+        }
 
         window.formatearFecha = function(fechaStr) {
             if(!fechaStr) return "";
@@ -674,7 +745,6 @@
 
         window.filtrarPorCategoria = function(cat) {
             window.categoriaActiva = cat;
-            
             document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('activa'));
             if(cat === 'todas') document.getElementById('btnCatTodas').classList.add('activa');
             if(cat === 'femenina') document.getElementById('btnCatFemenina').classList.add('activa');
@@ -688,7 +758,6 @@
                 'accesorios': '(Accesorios y Calzado)'
             };
             document.getElementById('kpiTitleContext').textContent = titulos[cat];
-
             window.filtrarTablaCompleta();
             window.calcularKPIs();
         };
@@ -726,8 +795,7 @@
         window.abrirModalImagen = function(src, event) {
             if(event) event.stopPropagation(); 
             const modal = document.getElementById('imageModal');
-            const imgModal = document.getElementById('imgModalSrc');
-            imgModal.src = src;
+            document.getElementById('imgModalSrc').src = src;
             modal.style.display = 'flex';
         };
 
@@ -747,6 +815,7 @@
             thCheck.className = 'col-checkbox';
             thCheck.innerHTML = `<input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
             trHeader.appendChild(thCheck);
+            initResizer(thCheck, 0); // Índice 0 para Checkbox
 
             const thCheckFilter = document.createElement('th');
             thCheckFilter.className = 'col-checkbox';
@@ -766,15 +835,22 @@
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
+                initResizer(thTitle, columnIndex); // Habilita resizer para todas las columnas
 
                 const thFilter = document.createElement('th');
-                
                 if(col === 'LINEA') thFilter.classList.add('col-fija-linea');
                 if(col === 'REFERENCIA') thFilter.classList.add('col-fija-ref');
                 if(col === 'COLOR COLECCIÓN') thFilter.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thFilter.classList.add('col-produccion-header', 'hidden');
 
-                thFilter.innerHTML = `<input type="text" class="filter-input col-filter" data-colindex="${idx}" placeholder="Filtrar..." onkeyup="filtrarTablaCompleta()">`;
+                if (col === 'IMAGEN') {
+                    thFilter.innerHTML = ``;
+                } else {
+                    thFilter.innerHTML = `
+                        <input type="text" class="filter-input col-filter" list="datalist_${idx}" data-colindex="${idx}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()">
+                        <datalist id="datalist_${idx}"></datalist>
+                    `;
+                }
                 trFilter.appendChild(thFilter); columnIndex++;
             });
 
@@ -799,15 +875,14 @@
             } else {
                 data.forEach(filaBD => {
                     let d = filaBD.datos;
-                    // --- MIGRACIÓN AUTOMÁTICA INTELIGENTE ---
                     if (d && d.length < 64) {
                         if (d.length === 61) {
-                            d.splice(50, 0, ""); // Inserta FICHA TECNICA
-                            d.splice(57, 0, ""); // Inserta TIPO DE MONEDA
+                            d.splice(50, 0, ""); 
+                            d.splice(57, 0, ""); 
                         } else if (d.length === 62) {
-                            d.splice(57, 0, ""); // Inserta TIPO DE MONEDA (si ya tenía ficha)
+                            d.splice(57, 0, ""); 
                         } else if (d.length === 63) {
-                            d.splice(57, 0, ""); // Por seguridad
+                            d.splice(57, 0, ""); 
                         }
                         while(d.length < 64) d.push("");
                     }
@@ -816,7 +891,44 @@
             }
             window.filtrarTablaCompleta(); 
             calcularKPIs(); 
+            window.actualizarDatalists();
         }
+
+        window.actualizarDatalists = function() {
+            const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
+            const inputsColumnas = document.querySelectorAll('.col-filter');
+            
+            inputsColumnas.forEach(input => {
+                const colIndex = input.getAttribute('data-colindex');
+                const datalist = document.getElementById(`datalist_${colIndex}`);
+                if (!datalist) return;
+
+                const uniqueValues = new Set();
+                filas.forEach(fila => {
+                    if(!fila.dataset.id) return; 
+                    const celdas = fila.querySelectorAll('td');
+                    if (celdas[colIndex]) {
+                        let val = "";
+                        const celda = celdas[colIndex];
+                        if (celda.querySelector('select')) {
+                            val = celda.querySelector('select').value;
+                        } else if (celda.querySelector('input[type="date"]')) {
+                            val = celda.querySelector('input[type="date"]').value;
+                        } else {
+                            val = celda.innerText.trim();
+                        }
+                        if (val !== "") uniqueValues.add(val);
+                    }
+                });
+
+                datalist.innerHTML = '';
+                Array.from(uniqueValues).sort().forEach(val => {
+                    const option = document.createElement('option');
+                    option.value = val;
+                    datalist.appendChild(option);
+                });
+            });
+        };
 
         window.seleccionarImagenCelda = function(td) {
             const input = document.createElement('input');
@@ -825,7 +937,6 @@
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
@@ -841,7 +952,6 @@
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
                         const base64Mini = canvas.toDataURL('image/jpeg', 0.85);
-                        
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <img src="${base64Mini}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
@@ -869,12 +979,10 @@
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
                 if (file.size > 2 * 1024 * 1024) { 
                     alert("El PDF es muy pesado. Por favor, sube un archivo menor a 2MB para no saturar la base de datos.");
                     return;
                 }
-
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const base64PDF = event.target.result;
@@ -980,7 +1088,6 @@
                         td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`;
                     }
                 } else if (colName === 'TIPO DE MONEDA') { 
-                    // DROPDOWN PARA EL TIPO DE MONEDA
                     td.contentEditable = "false";
                     td.innerHTML = `
                         <select class="select-input">
@@ -1002,7 +1109,6 @@
                 indexGlobal++;
             });
 
-            // EL ESTADO AHORA ESTÁ EN LA COLUMNA 44 DE LA TABLA (INDEX GLOBAL 43 DEL ARRAY)
             const estadoActual = (datos[43] || '').trim().toUpperCase(); 
             const esCancelado = estadoActual === 'CANCELADO';
 
@@ -1020,13 +1126,10 @@
         window.calcularKPIs = function() {
             const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
             const datosKpi = {};
-            const totales = {
-                referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0
-            };
+            const totales = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
 
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
-
                 const celdas = fila.querySelectorAll('td');
                 if (celdas.length < 62) return; 
                 
@@ -1058,90 +1161,44 @@
                 const fechaLlegada = (inputLlegada ? inputLlegada.value : celdas[54].textContent).trim(); 
 
                 const costoUnitario = (celdas[57].textContent || '').trim(); 
-                const pvpUnitario = (celdas[59].textContent || '').trim(); // MOVIDO AL 59
+                const pvpUnitario = (celdas[59].textContent || '').trim(); 
 
-                if (!datosKpi[coleccion]) {
-                    datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
-                }
-
-                if (referencia) {
-                    datosKpi[coleccion].referencias.add(referencia);
-                    totales.referencias.add(referencia);
-                }
+                if (!datosKpi[coleccion]) datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
+                if (referencia) { datosKpi[coleccion].referencias.add(referencia); totales.referencias.add(referencia); }
                 
-                datosKpi[coleccion].totalMuestras++;
-                totales.totalMuestras++;
-
-                if (fechaLlegada !== '') {
-                    datosKpi[coleccion].fisicas++;
-                    totales.fisicas++;
-                }
-
-                if (fechaTentativa !== '' && fechaLlegada === '') {
-                    datosKpi[coleccion].transito++;
-                    totales.transito++;
-                }
-
-                if (costoUnitario !== '') {
-                    datosKpi[coleccion].conCostos++;
-                    totales.conCostos++;
-                }
-
-                if (pvpUnitario !== '') {
-                    datosKpi[coleccion].conPvp++;
-                    totales.conPvp++;
-                }
+                datosKpi[coleccion].totalMuestras++; totales.totalMuestras++;
+                if (fechaLlegada !== '') { datosKpi[coleccion].fisicas++; totales.fisicas++; }
+                if (fechaTentativa !== '' && fechaLlegada === '') { datosKpi[coleccion].transito++; totales.transito++; }
+                if (costoUnitario !== '') { datosKpi[coleccion].conCostos++; totales.conCostos++; }
+                if (pvpUnitario !== '') { datosKpi[coleccion].conPvp++; totales.conPvp++; }
             });
 
             const calcPct = (valor, total) => total > 0 ? ((valor / total) * 100).toFixed(1) + '%' : '0.0%';
-
             const kpiBody = document.getElementById('kpiBody');
             kpiBody.innerHTML = '';
 
             for (const col in datosKpi) {
                 const data = datosKpi[col];
-                const pctFisicas = calcPct(data.fisicas, data.totalMuestras);
-                const pctFisicasTransito = calcPct(data.fisicas + data.transito, data.totalMuestras);
-                const pctCostos = calcPct(data.conCostos, data.totalMuestras);
-                const pctPvp = calcPct(data.conPvp, data.totalMuestras);
-
                 kpiBody.innerHTML += `
                     <tr>
                         <td class="col-left" style="color: #2563eb;">${col}</td>
-                        <td>${data.referencias.size}</td>
-                        <td>${data.totalMuestras}</td>
-                        <td>${data.fisicas}</td>
-                        <td>${pctFisicas}</td>
-                        <td>${data.transito}</td>
-                        <td>${pctFisicasTransito}</td>
-                        <td>${data.conCostos}</td>
-                        <td>${pctCostos}</td>
-                        <td>${data.conPvp}</td>
-                        <td>${pctPvp}</td>
-                    </tr>
-                `;
+                        <td>${data.referencias.size}</td><td>${data.totalMuestras}</td><td>${data.fisicas}</td>
+                        <td>${calcPct(data.fisicas, data.totalMuestras)}</td><td>${data.transito}</td>
+                        <td>${calcPct(data.fisicas + data.transito, data.totalMuestras)}</td><td>${data.conCostos}</td>
+                        <td>${calcPct(data.conCostos, data.totalMuestras)}</td><td>${data.conPvp}</td>
+                        <td>${calcPct(data.conPvp, data.totalMuestras)}</td>
+                    </tr>`;
             }
-
-            const pctFisicasTot = calcPct(totales.fisicas, totales.totalMuestras);
-            const pctFisicasTransitoTot = calcPct(totales.fisicas + totales.transito, totales.totalMuestras);
-            const pctCostosTot = calcPct(totales.conCostos, totales.totalMuestras);
-            const pctPvpTot = calcPct(totales.conPvp, totales.totalMuestras);
 
             kpiBody.innerHTML += `
                 <tr class="kpi-total-row">
                     <td class="col-left">Total</td>
-                    <td>${totales.referencias.size}</td>
-                    <td>${totales.totalMuestras}</td>
-                    <td>${totales.fisicas}</td>
-                    <td>${pctFisicasTot}</td>
-                    <td>${totales.transito}</td>
-                    <td>${pctFisicasTransitoTot}</td>
-                    <td>${totales.conCostos}</td>
-                    <td>${pctCostosTot}</td>
-                    <td>${totales.conPvp}</td>
-                    <td>${pctPvpTot}</td>
-                </tr>
-            `;
+                    <td>${totales.referencias.size}</td><td>${totales.totalMuestras}</td><td>${totales.fisicas}</td>
+                    <td>${calcPct(totales.fisicas, totales.totalMuestras)}</td><td>${totales.transito}</td>
+                    <td>${calcPct(totales.fisicas + totales.transito, totales.totalMuestras)}</td><td>${totales.conCostos}</td>
+                    <td>${calcPct(totales.conCostos, totales.totalMuestras)}</td><td>${totales.conPvp}</td>
+                    <td>${calcPct(totales.conPvp, totales.totalMuestras)}</td>
+                </tr>`;
         };
 
         window.cambiarVista = function(vista) {
@@ -1155,9 +1212,7 @@
         window.actualizarContador = function() {
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             let visibles = 0;
-            filas.forEach(fila => { 
-                if(fila.style.display !== 'none' && fila.dataset.id) visibles++; 
-            });
+            filas.forEach(fila => { if(fila.style.display !== 'none' && fila.dataset.id) visibles++; });
             document.getElementById('contadorMuestras').textContent = visibles;
         };
 
@@ -1206,10 +1261,38 @@
 
                 let coincidenColumnas = true;
                 inputsColumnas.forEach(input => {
-                    const textoFiltro = input.value.toLowerCase().trim();
-                    if (textoFiltro !== "") {
+                    const textoFiltroRaw = input.value.trim();
+                    const textoFiltroLower = textoFiltroRaw.toLowerCase();
+                    
+                    if (textoFiltroRaw !== "") {
                         const colIndex = input.getAttribute('data-colindex');
-                        if (!celdas[colIndex].innerText.toLowerCase().includes(textoFiltro)) { coincidenColumnas = false; }
+                        const celda = celdas[colIndex];
+                        let celdaTexto = "";
+                        
+                        if (celda.querySelector('select')) {
+                            celdaTexto = celda.querySelector('select').value;
+                        } else if (celda.querySelector('input[type="date"]')) {
+                            celdaTexto = celda.querySelector('input[type="date"]').value;
+                        } else {
+                            celdaTexto = celda.innerText.trim();
+                        }
+                        const celdaTextoLower = celdaTexto.toLowerCase();
+
+                        const datalist = document.getElementById(`datalist_${colIndex}`);
+                        let isExactOption = false;
+                        if (datalist) {
+                            const options = Array.from(datalist.options).map(o => o.value.toLowerCase());
+                            if (options.includes(textoFiltroLower)) isExactOption = true;
+                        }
+
+                        if (textoFiltroRaw.startsWith('"') && textoFiltroRaw.endsWith('"')) {
+                            let exactTerm = textoFiltroLower.slice(1, -1).trim(); 
+                            if (exactTerm !== celdaTextoLower) coincidenColumnas = false; 
+                        } else if (isExactOption) {
+                            if (celdaTextoLower !== textoFiltroLower) coincidenColumnas = false;
+                        } else {
+                            if (!celdaTextoLower.includes(textoFiltroLower)) coincidenColumnas = false;
+                        }
                     }
                 });
 
@@ -1274,9 +1357,7 @@
                 if(idDb) {
                     let datosFila = window.extraerDatosFila(tr);
                     promesasUpdate.push(
-                        supabase.from('wips_muestras')
-                        .update({ datos: datosFila })
-                        .eq('id', idDb)
+                        supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb)
                     );
                 }
             }
@@ -1284,10 +1365,7 @@
             if (promesasUpdate.length > 0) {
                 const resultados = await Promise.all(promesasUpdate);
                 for (let res of resultados) {
-                    if (res.error) {
-                        alert("Error al cancelar masivamente: " + res.error.message);
-                        return;
-                    }
+                    if (res.error) { alert("Error al cancelar masivamente: " + res.error.message); return; }
                 }
             }
 
@@ -1323,6 +1401,7 @@
             window.actualizarContador();
             window.calcularKPIs();
             window.actualizarSeleccion();
+            window.actualizarDatalists();
         };
 
         let columnaOrdenadaActual = -1; let ordenAscendente = true;
@@ -1333,8 +1412,8 @@
             filas.sort((a, b) => {
                 let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
                 
-                const inputA = a.cells[colIndex].querySelector('input[type="date"]');
-                const inputB = b.cells[colIndex].querySelector('input[type="date"]');
+                const inputA = a.cells[colIndex].querySelector('input[type="date"], select');
+                const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
                 if(inputA) valorA = inputA.value;
                 if(inputB) valorB = inputB.value;
 
@@ -1346,7 +1425,7 @@
         };
 
         window.agregarFilaVacia = function() {
-            let datosInic = new Array(64).fill(''); // 64 COLUMNAS AHORA
+            let datosInic = new Array(64).fill('');
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
@@ -1381,14 +1460,11 @@
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
-
                 let datosFila = window.extraerDatosFila(tr);
 
                 if (tr.dataset.id) {
                     promesasUpdate.push(
-                        supabase.from('wips_muestras')
-                        .update({ datos: datosFila })
-                        .eq('id', tr.dataset.id)
+                        supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id)
                     );
                 } else {
                     rowsToInsert.push({ datos: datosFila });
@@ -1399,32 +1475,24 @@
             try {
                 if (promesasUpdate.length > 0) {
                     const resultados = await Promise.all(promesasUpdate);
-                    for (let res of resultados) {
-                        if (res.error) throw res.error;
-                    }
+                    for (let res of resultados) { if (res.error) throw res.error; }
                 }
-                
                 if (rowsToInsert.length > 0) {
                     const { data, error } = await supabase.from('wips_muestras').insert(rowsToInsert).select();
                     if (error) throw error;
-                    
-                    for(let i = 0; i < data.length; i++) {
-                        filasNuevasDOM[i].dataset.id = data[i].id;
-                    }
+                    for(let i = 0; i < data.length; i++) filasNuevasDOM[i].dataset.id = data[i].id;
                 }
 
                 btn.innerHTML = "✅ ¡Todo guardado!";
                 window.calcularKPIs();
+                window.actualizarDatalists(); 
             } catch (err) {
                 console.error(err);
                 alert("Hubo un error al guardar masivamente: " + err.message);
                 btn.innerHTML = "❌ Error";
             }
 
-            setTimeout(() => {
-                btn.innerHTML = textoOriginal;
-                btn.disabled = false;
-            }, 3000);
+            setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
         window.eliminarFila = async function(btn) {
@@ -1438,6 +1506,7 @@
             tr.remove(); 
             window.actualizarContador(); 
             window.calcularKPIs(); 
+            window.actualizarDatalists();
         };
 
         window.toggleProduccion = function() {
