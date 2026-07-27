@@ -12,27 +12,22 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
-        /* --- VARIABLES CSS PARA ANCHOS DINÁMICOS DE COLUMNAS --- */
         :root {
-            --w-col-0: 40px;  /* Checkbox */
-            --w-col-3: 150px; /* Linea */
-            --w-col-10: 150px; /* Referencia */
-            --w-col-13: 150px; /* Color Colección */
+            --w-col-0: 40px;  
+            --w-col-3: 150px; 
+            --w-col-10: 150px; 
+            --w-col-13: 150px; 
             
-            /* Posiciones 'Left' auto-calculadas para la cascada */
             --l-linea: var(--w-col-0);
             --l-ref: calc(var(--w-col-0) + var(--w-col-3));
             --l-color: calc(var(--w-col-0) + var(--w-col-3) + var(--w-col-10));
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 25px;
-            /* FONDO CLARO Y ELEGANTE */
             background-image: linear-gradient(rgba(245, 247, 250, 0.88), rgba(230, 235, 242, 0.92)), url('fondo.png');
             background-size: cover;
             background-position: center;
@@ -42,7 +37,6 @@
             min-height: 100vh;
         }
 
-        /* ENCABEZADO Y LOGO DE MARCA */
         .header-top {
             display: flex;
             justify-content: space-between;
@@ -51,534 +45,158 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             padding-bottom: 15px;
         }
-        .header-title-box {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+        .header-title-box { display: flex; align-items: center; gap: 15px; }
         .logo-header {
-            height: 42px;
-            width: auto;
-            background: #ffffff;
-            padding: 4px 10px;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-            object-fit: contain;
+            height: 42px; width: auto; background: #ffffff; padding: 4px 10px;
+            border-radius: 6px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); object-fit: contain;
         }
-        .header-top h2 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            color: #111827;
-            display: flex;
-            align-items: center;
+        .header-top h2 { margin: 0; font-size: 24px; font-weight: 700; color: #111827; }
+
+        .header-right { display: flex; align-items: center; gap: 20px; position: relative; }
+        .active-users-container { display: flex; flex-direction: row-reverse; align-items: center; }
+        .user-avatar {
+            width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center;
+            justify-content: center; font-weight: bold; font-size: 13px; border: 2px solid #ffffff;
+            margin-left: -10px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); position: relative; cursor: default; transition: transform 0.2s;
         }
+        .user-avatar:hover { transform: translateY(-3px); z-index: 50 !important; }
+        .user-avatar:hover::after {
+            content: attr(title); position: absolute; bottom: -30px; background: #1f2937; color: white;
+            padding: 5px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100;
+        }
+        .users-label { font-size: 12px; color: #6b7280; font-weight: 600; margin-right: 15px; display: none; }
+
+        /* --- SISTEMA DE NOTIFICACIONES --- */
+        .notif-wrapper { position: relative; display: flex; align-items: center; }
+        .notif-btn { 
+            background: #ffffff; border: 1px solid #d1d5db; border-radius: 50%; width: 40px; height: 40px; 
+            font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; padding: 0;
+        }
+        .notif-btn:hover { background: #f3f4f6; }
+        .notif-badge { 
+            position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; 
+            font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+        }
+        .notif-panel { 
+            display: none; position: absolute; top: 50px; right: 0; width: 320px; background: white; 
+            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; 
+            z-index: 9999; flex-direction: column; overflow: hidden; 
+        }
+        .notif-header { 
+            background: #f9fafb; padding: 12px 15px; font-weight: bold; font-size: 14px; 
+            border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; 
+        }
+        .notif-close { cursor: pointer; color: #9ca3af; font-size: 16px; }
+        .notif-close:hover { color: #ef4444; }
+        .notif-body { max-height: 280px; overflow-y: auto; padding: 10px; background: #f9fafb; }
+        .notif-item { 
+            background: white; border-left: 4px solid #3b82f6; padding: 10px; margin-bottom: 8px; 
+            border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size: 12px; 
+        }
+        .notif-item.read { border-left-color: #d1d5db; opacity: 0.7; }
+        .notif-meta { display: flex; justify-content: space-between; color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+        .notif-footer { padding: 12px; background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
+        .notif-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; }
+        .notif-send-btn { 
+            background: #10b981; color: white; border: none; padding: 8px; border-radius: 6px; 
+            font-weight: bold; cursor: pointer; transition: 0.2s; 
+        }
+        .notif-send-btn:hover { background: #059669; }
 
         /* SEGMENTADOR DE CATEGORÍAS */
-        .segmentador {
-            display: flex;
-            gap: 8px;
-            margin-left: 20px;
-            border-left: 2px solid #d1d5db;
-            padding-left: 20px;
-        }
-        .seg-btn {
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid #d1d5db;
-            padding: 6px 16px;
-            border-radius: 20px; 
-            font-size: 13px;
-            font-weight: 600;
-            color: #4b5563;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .seg-btn:hover {
-            background: #ffffff;
-            color: #111827;
-            border-color: #9ca3af;
-        }
-        .seg-btn.activa {
-            background: #1f2937;
-            color: #ffffff;
-            border-color: #1f2937;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        }
+        .segmentador { display: flex; gap: 8px; margin-left: 20px; border-left: 2px solid #d1d5db; padding-left: 20px; }
+        .seg-btn { background: rgba(255, 255, 255, 0.5); border: 1px solid #d1d5db; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #4b5563; cursor: pointer; transition: all 0.2s; }
+        .seg-btn:hover { background: #ffffff; color: #111827; border-color: #9ca3af; }
+        .seg-btn.activa { background: #1f2937; color: #ffffff; border-color: #1f2937; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
         
-        .btn-back {
-            color: #374151;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
-        }
-        .btn-back:hover {
-            background: #ffffff;
-            color: #111827;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        }
+        .btn-back { color: #374151; text-decoration: none; font-weight: 600; font-size: 14px; background: rgba(255, 255, 255, 0.7); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.15); transition: all 0.3s ease; }
+        .btn-back:hover { background: #ffffff; color: #111827; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
 
-        /* SECCIÓN DE KPIS GERENCIAL */
-        .kpi-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-        }
-        .kpi-card h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 17px;
-            color: #1f2937;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .kpi-table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-        }
-        .kpi-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .kpi-table th {
-            background: #374151;
-            color: #ffffff;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.8px;
-            padding: 12px 10px;
-            border: 1px solid #4b5563;
-        }
-        .kpi-table td {
-            padding: 10px;
-            border: 1px solid #e5e7eb;
-            color: #1f2937;
-            background: #ffffff;
-        }
-        .kpi-table tr:hover td {
-            background: #f9fafb;
-        }
-        .kpi-total-row td {
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            font-weight: 700;
-            border-top: 2px solid #111827;
-        }
+        .kpi-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); }
+        .kpi-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 17px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .kpi-table-container { overflow-x: auto; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .kpi-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; white-space: nowrap; }
+        .kpi-table th { background: #374151; color: #ffffff; font-weight: 600; font-size: 11px; letter-spacing: 0.8px; padding: 12px 10px; border: 1px solid #4b5563; }
+        .kpi-table td { padding: 10px; border: 1px solid #e5e7eb; background: #ffffff; }
+        .kpi-table tr:hover td { background: #f9fafb; }
+        .kpi-total-row td { background: #1f2937 !important; color: #ffffff !important; font-weight: 700; border-top: 2px solid #111827; }
         .col-left { text-align: left !important; font-weight: 600; }
 
-        /* PESTAÑAS CLARAS */
-        .tabs-container {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid #d1d5db;
-            padding: 10px 22px;
-            font-size: 14px;
-            cursor: pointer;
-            color: #4b5563;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .tab-btn:hover {
-            color: #111827;
-            background: #ffffff;
-        }
-        .tab-btn.activa {
-            color: #ffffff;
-            background: #1f2937;
-            border-color: #1f2937;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+        .tabs-container { display: flex; gap: 12px; margin-bottom: 18px; }
+        .tab-btn { background: rgba(255, 255, 255, 0.6); border: 1px solid #d1d5db; padding: 10px 22px; font-size: 14px; cursor: pointer; color: #4b5563; border-radius: 8px; font-weight: 600; transition: all 0.3s; }
+        .tab-btn:hover { background: #ffffff; color: #111827; }
+        .tab-btn.activa { color: #ffffff; background: #1f2937; border-color: #1f2937; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
 
-        .header-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
 
-        /* BOTONES DE CONTROL SUPERIORES */
-        button {
-            padding: 9px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.25s ease;
-        }
-        .btn-add, .btn-toggle, .btn-export, .btn-import {
-            background-color: #ffffff;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-        }
-        .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover {
-            background-color: #f3f4f6;
-            color: #111827;
-            border-color: #9ca3af;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-        }
+        button { padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.25s ease; }
+        .btn-add, .btn-toggle, .btn-export, .btn-import { background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
+        .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
 
-        /* BOTÓN GLOBAL DE GUARDAR */
-        .btn-save-global {
-            background-color: #10b981; 
-            color: white;
-            border: none;
-            padding: 9px 18px;
-            font-size: 14px;
-            font-weight: 700;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            transition: all 0.3s;
-        }
-        .btn-save-global:hover {
-            background-color: #059669;
-            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
-            transform: translateY(-1px);
-        }
-        .btn-save-global:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
+        .btn-save-global { background-color: #10b981; color: white; border: none; padding: 9px 18px; font-size: 14px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-save-global:hover { background-color: #059669; transform: translateY(-1px); }
+        .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; }
 
-        /* BOTONES DE ACCIÓN MASIVA (Cancelar / Eliminar) */
-        .btn-bulk-cancel {
-            background-color: #fef2f2;
-            color: #ef4444;
-            border: 1px solid #fca5a5;
-        }
-        .btn-bulk-cancel:hover { background-color: #fee2e2; }
-        .btn-bulk-delete {
-            background-color: #fff1f2;
-            color: #b91c1c;
-            border: 1px solid #fda4af;
-        }
-        .btn-bulk-delete:hover { background-color: #ffe4e6; }
+        .btn-bulk-cancel { background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
+        .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; }
 
-        .buscador {
-            padding: 9px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            width: 320px;
-            font-size: 13px;
-            background: #ffffff;
-            color: #1f2937;
-            outline: none;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-        }
-        .buscador:focus {
-            border-color: #6b7280;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
-        }
-
-        .contador-caja {
-            background-color: #ffffff;
-            color: #4b5563;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            border: 1px solid #d1d5db;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-        }
-        .contador-numero {
-            background-color: #374151;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 13px;
-        }
-
-        /* ACCIONES DE FILA DENTRO DE LA TABLA */
-        .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete {
-            background-color: #f3f4f6;
-            color: #374151;
-            padding: 5px 9px;
-            font-size: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        .btn-insert:hover, .btn-cancelar-fila:hover, .btn-reactivar-fila:hover, .btn-delete:hover {
-            background-color: #e5e7eb;
-            color: #111827;
-            border-color: #9ca3af;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        /* TABLA PRINCIPAL DE MUESTRAS */
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            max-height: 58vh;
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid #d1d5db;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-        }
-        table { border-collapse: collapse; width: max-content; }
+        .buscador { padding: 9px 16px; border: 1px solid #d1d5db; border-radius: 8px; width: 320px; font-size: 13px; background: #ffffff; outline: none; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
         
-        /* PREVENCIÓN DE DESBORDAMIENTO (Solución para texto montado) */
-        th, td {
-            border: 1px solid #e5e7eb;
-            padding: 8px 10px;
-            text-align: left;
-            /* CLAVES PARA QUE NO SE MONTE EL TEXTO */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-size: 13px;
-            position: relative; /* Para el handle de arrastre */
-        }
+        .contador-caja { background-color: #ffffff; color: #4b5563; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; border: 1px solid #d1d5db; display: flex; align-items: center; gap: 8px; }
+        .contador-numero { background-color: #374151; color: white; padding: 2px 8px; border-radius: 10px; font-size: 13px; }
 
-        thead {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #f9fafb;
-        }
+        .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete { background-color: #f3f4f6; color: #374151; padding: 5px 9px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 6px; }
 
-        .th-title {
-            cursor: pointer;
-            user-select: none;
-            color: #374151;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: #f3f4f6;
-            padding: 10px;
-        }
-        .th-title:hover { background-color: #e5e7eb; color: #111827; }
-        .sort-icon { font-size: 10px; margin-left: 4px; color: #6b7280; }
-
-        .filter-input {
-            width: 100%;
-            padding: 4px 8px;
-            font-size: 11px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            background: #ffffff;
-            color: #111827;
-        }
-        .filter-input:focus {
-            border-color: #374151;
-            outline: none;
-        }
-
-        tbody tr {
-            transition: background 0.2s;
-        }
+        .table-container { width: 100%; overflow-x: auto; max-height: 58vh; background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
+        table { border-collapse: collapse; width: max-content; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; }
+        thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
+        .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; }
+        .filter-input { width: 100%; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; }
         tbody tr:nth-child(even) { background-color: #f9fafb; }
         tbody tr:hover { background-color: #f3f4f6; }
+        td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; color: #111827; z-index: 20; }
 
-        td[contenteditable="true"] {
-            color: #1f2937;
-            outline: none;
-        }
-        td[contenteditable="true"]:hover { background-color: #fef9c3; }
-        td[contenteditable="true"]:focus {
-            background-color: #ffffff;
-            box-shadow: inset 0 0 0 2px #374151;
-            color: #111827;
-            z-index: 20; /* Elevado sobre el resto al editar */
-        }
+        .date-input, .select-input { width: 100%; border: none; background: transparent; font-size: 13px; cursor: pointer; }
+        .select-input { border-bottom: 1px solid #d1d5db; padding-bottom: 2px; }
 
-        /* CLASES PARA COLUMNAS FIJAS */
-        .date-input, .select-input {
-            width: 100%;
-            border: none;
-            outline: none;
-            background: transparent;
-            font-family: inherit;
-            font-size: 13px;
-            color: #1f2937;
-            cursor: pointer;
-        }
-        
-        .select-input {
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 2px;
-        }
-
-        .col-checkbox {
-            position: sticky !important;
-            left: 0;
-            background-color: #ffffff;
-            z-index: 8;
-            border-right: 1px solid #d1d5db !important;
-        }
-
-        .col-fija-linea {
-            position: sticky !important;
-            left: var(--l-linea) !important;
-            background-color: #ffffff;
-            z-index: 7;
-            border-right: 1px solid #d1d5db !important; 
-        }
-
-        .col-fija-ref {
-            position: sticky !important;
-            left: var(--l-ref) !important;
-            background-color: #ffffff;
-            z-index: 6;
-            border-right: 1px solid #d1d5db !important; 
-        }
-
-        .col-fija-color {
-            position: sticky !important;
-            left: var(--l-color) !important;
-            background-color: #ffffff;
-            z-index: 5;
-            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); 
-            border-right: 2px solid #d1d5db !important; 
-        }
+        .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; }
+        .col-fija-linea { position: sticky !important; left: var(--l-linea) !important; background-color: #ffffff; z-index: 7; border-right: 1px solid #d1d5db !important; }
+        .col-fija-ref { position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; }
+        .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
 
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         th.col-fija-linea { z-index: 18 !important; background-color: #f3f4f6 !important; }
         th.col-fija-ref { z-index: 17 !important; background-color: #f3f4f6 !important; }
         th.col-fija-color { z-index: 16 !important; background-color: #f3f4f6 !important; }
         
-        #tableFilterRow th.col-checkbox,
-        #tableFilterRow th.col-fija-linea,
-        #tableFilterRow th.col-fija-ref,
-        #tableFilterRow th.col-fija-color {
-            background-color: #f9fafb !important;
-        }
-
-        tbody tr:nth-child(even) td.col-checkbox,
-        tbody tr:nth-child(even) td.col-fija-linea,
-        tbody tr:nth-child(even) td.col-fija-ref,
-        tbody tr:nth-child(even) td.col-fija-color {
-            background-color: #f9fafb;
-        }
-        tbody tr:hover td.col-checkbox,
-        tbody tr:hover td.col-fija-linea,
-        tbody tr:hover td.col-fija-ref,
-        tbody tr:hover td.col-fija-color {
-            background-color: #f3f4f6;
-        }
-
-        td.col-fija-linea[contenteditable="true"]:focus,
-        td.col-fija-ref[contenteditable="true"]:focus,
-        td.col-fija-color[contenteditable="true"]:focus {
-            background-color: #ffffff !important;
-            box-shadow: inset 0 0 0 2px #374151 !important;
-        }
+        #tableFilterRow th.col-checkbox, #tableFilterRow th.col-fija-linea, #tableFilterRow th.col-fija-ref, #tableFilterRow th.col-fija-color { background-color: #f9fafb !important; }
+        tbody tr:nth-child(even) td.col-checkbox, tbody tr:nth-child(even) td.col-fija-linea, tbody tr:nth-child(even) td.col-fija-ref, tbody tr:nth-child(even) td.col-fija-color { background-color: #f9fafb; }
+        tbody tr:hover td.col-checkbox, tbody tr:hover td.col-fija-linea, tbody tr:hover td.col-fija-ref, tbody tr:hover td.col-fija-color { background-color: #f3f4f6; }
+        td.col-fija-linea[contenteditable="true"]:focus, td.col-fija-ref[contenteditable="true"]:focus, td.col-fija-color[contenteditable="true"]:focus { background-color: #ffffff !important; box-shadow: inset 0 0 0 2px #374151 !important; }
 
         .col-produccion { background-color: #f0fdf4; }
         .col-produccion-header { background-color: #d1fae5 !important; color: #065f46 !important; }
-        
         .hidden { display: none !important; }
 
-        /* MODAL DE IMAGEN (LIGHTBOX) */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            z-index: 9999;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            max-width: 90vw;
-            max-height: 90vh;
-            min-width: 300px;
-            background-color: white; 
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            object-fit: contain;
-        }
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 35px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .modal-close:hover {
-            color: #9ca3af;
-        }
+        .modal-overlay { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; }
+        .modal-content { max-width: 90vw; max-height: 90vh; background-color: white; padding: 10px; border-radius: 8px; object-fit: contain; }
+        .modal-close { position: absolute; top: 20px; right: 30px; color: white; font-size: 35px; cursor: pointer; }
+        .img-action-btn { cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
 
-        .img-action-btn {
-            cursor: pointer;
-            font-size: 14px;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .img-action-btn:hover {
-            background-color: #e5e7eb;
-        }
-
-        /* --- CLASES DEL AGARRADOR (RESIZER EXCEL) --- */
-        .resizer {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 6px;
-            cursor: col-resize;
-            user-select: none;
-            height: 100%;
-            z-index: 25;
-            background-color: transparent;
-        }
-        .resizer:hover, .resizer.resizing {
-            background-color: #3b82f6; /* Línea azul al arrastrar */
-            border-right: 1px solid #1d4ed8;
-        }
+        .resizer { position: absolute; top: 0; right: 0; width: 6px; cursor: col-resize; user-select: none; height: 100%; z-index: 25; background-color: transparent; }
+        .resizer:hover, .resizer.resizing { background-color: #3b82f6; border-right: 1px solid #1d4ed8; }
     </style>
 </head>
 <body>
 
-    <!-- INYECCIÓN DEL ESTILO DINÁMICO PARA COLUMNAS -->
     <script>
         const styleEl = document.createElement('style');
         let cssRules = "";
         for(let i=0; i<=70; i++) {
-            // El fallback predeterminado para columnas normales es 130px y máx de 400px (salvo que el usuario arrastre)
             cssRules += `
                 th:nth-child(${i+1}), td:nth-child(${i+1}) { 
                     width: var(--w-col-${i}, 130px) !important; 
@@ -601,9 +219,38 @@
                 <button id="btnCatFemenina" class="seg-btn" onclick="filtrarPorCategoria('femenina')">👗 Women</button>
                 <button id="btnCatAccesorios" class="seg-btn" onclick="filtrarPorCategoria('accesorios')">🎒 Accesorios / Calzado</button>
             </div>
-
         </div>
-        <a href="index.html" class="btn-back">⬅ Volver al Menú Principal</a>
+
+        <!-- AVATARES Y NOTIFICACIONES -->
+        <div class="header-right">
+            <span id="usersLabel" class="users-label">En línea:</span>
+            <div id="activeUsersContainer" class="active-users-container"></div>
+            
+            <!-- CAMPANA DE NOTIFICACIONES -->
+            <div class="notif-wrapper">
+                <button class="notif-btn" onclick="toggleNotifPanel()">
+                    🔔<span id="notifBadge" class="notif-badge" style="display:none;">0</span>
+                </button>
+                
+                <div id="notifPanel" class="notif-panel">
+                    <div class="notif-header">
+                        <span>📋 Tareas y Mensajes</span>
+                        <span class="notif-close" onclick="toggleNotifPanel()">✖</span>
+                    </div>
+                    <div id="notifBody" class="notif-body">
+                        <!-- Aquí caen los mensajes -->
+                        <div style="text-align: center; color: #9ca3af; padding: 20px;">Bandeja limpia ✨</div>
+                    </div>
+                    <div class="notif-footer">
+                        <input type="text" id="notifDestinatario" class="notif-input" placeholder="¿Para quién? (Ej: Diana o 'Todos')">
+                        <input type="text" id="notifMensaje" class="notif-input" placeholder="Escribe la tarea a realizar...">
+                        <button class="notif-send-btn" onclick="enviarNotificacion()">Enviar Tarea</button>
+                    </div>
+                </div>
+            </div>
+
+            <a href="index.html" class="btn-back">⬅ Volver</a>
+        </div>
     </div>
 
     <!-- TABLERO DE KPIS GERENCIAL -->
@@ -632,13 +279,11 @@
         </div>
     </div>
 
-    <!-- PESTAÑAS -->
     <div class="tabs-container">
         <button id="tabActivas" class="tab-btn activa" onclick="cambiarVista('activas')">📂 Muestras Activas</button>
         <button id="tabCanceladas" class="tab-btn" onclick="cambiarVista('canceladas')">🚫 Muestras Canceladas</button>
     </div>
 
-    <!-- BARRA DE ACCIONES -->
     <div class="header-actions">
         <div class="acciones-izq">
             <button id="btnAgregarFila" class="btn-add" onclick="agregarFilaVacia()">+ Agregar Fila al Final</button>
@@ -648,14 +293,9 @@
             <input type="file" id="fileCSV" accept=".csv, .xlsx" style="display: none;" onchange="importarMasivo(event)">
             <button id="btnImportar" class="btn-import" onclick="document.getElementById('fileCSV').click()">📤 Carga Masiva</button>
             
-            <div class="contador-caja">
-                Total Visibles: <span id="contadorMuestras" class="contador-numero">0</span>
-            </div>
-
-            <!-- BOTÓN DE GUARDADO MASIVO -->
+            <div class="contador-caja">Total Visibles: <span id="contadorMuestras" class="contador-numero">0</span></div>
             <button id="btnGuardarGlobal" class="btn-save-global" onclick="guardarCambiosVisibles()">💾 Guardar Cambios Visibles</button>
 
-            <!-- PANEL DE ACCIONES MASIVAS -->
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 10px; border-left: 2px solid #d1d5db; padding-left: 10px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
                 <button class="btn-bulk-cancel" onclick="cancelarSeleccionadas()">🚫 Cancelar Masivo</button>
@@ -667,7 +307,6 @@
         </div>
     </div>
 
-    <!-- CONTENEDOR DE LA TABLA PRINCIPAL -->
     <div class="table-container">
         <table id="tablaWips">
             <thead>
@@ -679,7 +318,6 @@
         </table>
     </div>
 
-    <!-- MODAL PARA PREVISUALIZAR IMAGEN -->
     <div id="imageModal" class="modal-overlay" onclick="cerrarModalImagen()">
         <span class="modal-close" onclick="cerrarModalImagen()">&times;</span>
         <img class="modal-content" id="imgModalSrc">
@@ -700,15 +338,150 @@
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
 
-        // --- SISTEMA DE ARRASTRE PARA REDIMENSIONAR COLUMNAS (EXCEL-STYLE) ---
+        // =====================================================================
+        // --- 1. LÓGICA DE PRESENCIA (USUARIOS CONECTADOS) ---
+        // =====================================================================
+        let miNombre = localStorage.getItem('wips_username');
+        if (!miNombre) {
+            miNombre = prompt("Para mostrarte en línea, ¿Cuál es tu nombre?") || "Anónimo";
+            localStorage.setItem('wips_username', miNombre);
+        }
+        
+        const misIniciales = miNombre.substring(0, 2).toUpperCase();
+        const paletaColores = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185'];
+        
+        let miColor = localStorage.getItem('wips_usercolor');
+        if(!miColor) {
+            miColor = paletaColores[Math.floor(Math.random() * paletaColores.length)];
+            localStorage.setItem('wips_usercolor', miColor);
+        }
+
+        const room = supabase.channel('wips_room');
+        room.on('presence', { event: 'sync' }, () => {
+            const state = room.presenceState();
+            renderActiveUsers(state);
+        }).subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await room.track({ name: miNombre, initials: misIniciales, color: miColor });
+            }
+        });
+
+        function renderActiveUsers(state) {
+            const container = document.getElementById('activeUsersContainer');
+            const label = document.getElementById('usersLabel');
+            container.innerHTML = '';
+            
+            let count = 0;
+            for (const id in state) {
+                const user = state[id][0]; 
+                const div = document.createElement('div');
+                div.className = 'user-avatar';
+                div.style.backgroundColor = user.color;
+                div.title = user.name; 
+                div.innerText = user.initials;
+                div.style.zIndex = count + 1; 
+                container.appendChild(div);
+                count++;
+            }
+            label.style.display = count > 0 ? 'block' : 'none';
+        }
+
+        // =====================================================================
+        // --- 2. LÓGICA DE NOTIFICACIONES (TAREAS) ---
+        // =====================================================================
+        window.toggleNotifPanel = function() {
+            const panel = document.getElementById('notifPanel');
+            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+        };
+
+        async function cargarNotificaciones() {
+            const { data, error } = await supabase
+                .from('wips_notificaciones')
+                .select('*')
+                .or(`destinatario.ilike.%${miNombre}%,destinatario.ilike.todos`)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (error) { console.error("Error notificaciones:", error); return; }
+
+            const body = document.getElementById('notifBody');
+            const badge = document.getElementById('notifBadge');
+            
+            body.innerHTML = '';
+            let unreadCount = 0;
+
+            if (data.length === 0) {
+                body.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Bandeja limpia ✨</div>';
+            } else {
+                data.forEach(n => {
+                    if(!n.leido) unreadCount++;
+                    const item = document.createElement('div');
+                    item.className = `notif-item ${n.leido ? 'read' : ''}`;
+                    
+                    const fechaObj = new Date(n.created_at);
+                    const fechaFix = `${fechaObj.getDate()}/${fechaObj.getMonth()+1} ${fechaObj.getHours()}:${String(fechaObj.getMinutes()).padStart(2, '0')}`;
+
+                    item.innerHTML = `
+                        <div class="notif-meta">
+                            <span>De: <b>${n.remitente}</b></span>
+                            <span>${fechaFix}</span>
+                        </div>
+                        <div style="margin-bottom: 5px;">${n.mensaje}</div>
+                        ${!n.leido ? `<button onclick="marcarNotificacionLeida(${n.id})" style="background:none; border:none; color:#3b82f6; font-size:10px; cursor:pointer; padding:0; text-decoration:underline;">Marcar como leída</button>` : ''}
+                    `;
+                    body.appendChild(item);
+                });
+            }
+
+            if(unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        window.enviarNotificacion = async function() {
+            const dest = document.getElementById('notifDestinatario').value.trim();
+            const msj = document.getElementById('notifMensaje').value.trim();
+            
+            if(!dest || !msj) { alert("Escribe el destinatario y el mensaje"); return; }
+            
+            const btn = document.querySelector('.notif-send-btn');
+            btn.textContent = "⏳";
+            
+            const { error } = await supabase.from('wips_notificaciones').insert([{
+                remitente: miNombre,
+                destinatario: dest,
+                mensaje: msj
+            }]);
+
+            if(error) { alert("Error al enviar"); } 
+            else {
+                document.getElementById('notifMensaje').value = '';
+                cargarNotificaciones();
+            }
+            btn.textContent = "Enviar Tarea";
+        };
+
+        window.marcarNotificacionLeida = async function(id) {
+            await supabase.from('wips_notificaciones').update({ leido: true }).eq('id', id);
+            cargarNotificaciones();
+        };
+
+        // Recargar notificaciones cada 15 segundos para no depender de sockets complejos
+        setInterval(cargarNotificaciones, 15000);
+        setTimeout(cargarNotificaciones, 1000); // Primera carga
+
+
+        // =====================================================================
+        // --- RESTO DEL CÓDIGO NORMAL DE LA TABLA ---
+        // =====================================================================
         function initResizer(th, colIndex) {
             const resizer = document.createElement('div');
             resizer.className = 'resizer';
             th.appendChild(resizer);
-
-            let x = 0;
-            let w = 0;
-
+            let x = 0; let w = 0;
             const mouseDownHandler = function(e) {
                 x = e.clientX;
                 const styles = window.getComputedStyle(th);
@@ -717,21 +490,16 @@
                 document.addEventListener('mouseup', mouseUpHandler);
                 resizer.classList.add('resizing');
             };
-
             const mouseMoveHandler = function(e) {
-                const dx = e.clientX - x;
-                let newWidth = w + dx;
-                if (newWidth < 40) newWidth = 40; // Límite mínimo para que no desaparezca
-                // Modifica directamente la variable global, haciendo que toda la columna se actualice instantáneamente
+                const dx = e.clientX - x; let newWidth = w + dx;
+                if (newWidth < 40) newWidth = 40; 
                 document.documentElement.style.setProperty(`--w-col-${colIndex}`, `${newWidth}px`);
             };
-
             const mouseUpHandler = function() {
                 document.removeEventListener('mousemove', mouseMoveHandler);
                 document.removeEventListener('mouseup', mouseUpHandler);
                 resizer.classList.remove('resizing');
             };
-
             resizer.addEventListener('mousedown', mouseDownHandler);
         }
 
@@ -780,9 +548,7 @@
             const countSpan = document.getElementById('selectedCount');
             
             let visiblesChecked = 0;
-            checkboxes.forEach(cb => {
-                if(cb.closest('tr').style.display !== 'none') visiblesChecked++;
-            });
+            checkboxes.forEach(cb => { if(cb.closest('tr').style.display !== 'none') visiblesChecked++; });
 
             if (visiblesChecked > 0) {
                 bulkDiv.style.display = 'flex';
@@ -799,13 +565,8 @@
             modal.style.display = 'flex';
         };
 
-        window.cerrarModalImagen = function() {
-            document.getElementById('imageModal').style.display = 'none';
-        };
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") window.cerrarModalImagen();
-        });
+        window.cerrarModalImagen = function() { document.getElementById('imageModal').style.display = 'none'; };
+        document.addEventListener('keydown', function(event) { if (event.key === "Escape") window.cerrarModalImagen(); });
 
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow');
@@ -815,7 +576,7 @@
             thCheck.className = 'col-checkbox';
             thCheck.innerHTML = `<input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
             trHeader.appendChild(thCheck);
-            initResizer(thCheck, 0); // Índice 0 para Checkbox
+            initResizer(thCheck, 0); 
 
             const thCheckFilter = document.createElement('th');
             thCheckFilter.className = 'col-checkbox';
@@ -835,7 +596,7 @@
                 thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
-                initResizer(thTitle, columnIndex); // Habilita resizer para todas las columnas
+                initResizer(thTitle, columnIndex); 
 
                 const thFilter = document.createElement('th');
                 if(col === 'LINEA') thFilter.classList.add('col-fija-linea');
@@ -858,7 +619,6 @@
             thAcciones.className = 'th-title';
             thAcciones.textContent = 'ACCIONES'; 
             trHeader.appendChild(thAcciones);
-            
             const thAccionesFilter = document.createElement('th'); 
             trFilter.appendChild(thAccionesFilter);
         }
@@ -870,20 +630,14 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = ''; 
 
-            if(data.length === 0) {
-                agregarFilaVacia();
-            } else {
+            if(data.length === 0) { agregarFilaVacia(); } 
+            else {
                 data.forEach(filaBD => {
                     let d = filaBD.datos;
                     if (d && d.length < 64) {
-                        if (d.length === 61) {
-                            d.splice(50, 0, ""); 
-                            d.splice(57, 0, ""); 
-                        } else if (d.length === 62) {
-                            d.splice(57, 0, ""); 
-                        } else if (d.length === 63) {
-                            d.splice(57, 0, ""); 
-                        }
+                        if (d.length === 61) { d.splice(50, 0, ""); d.splice(57, 0, ""); } 
+                        else if (d.length === 62) { d.splice(57, 0, ""); } 
+                        else if (d.length === 63) { d.splice(57, 0, ""); }
                         while(d.length < 64) d.push("");
                     }
                     tbody.appendChild(crearFilaHTML(filaBD.id, d));
@@ -897,60 +651,41 @@
         window.actualizarDatalists = function() {
             const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
             const inputsColumnas = document.querySelectorAll('.col-filter');
-            
             inputsColumnas.forEach(input => {
                 const colIndex = input.getAttribute('data-colindex');
                 const datalist = document.getElementById(`datalist_${colIndex}`);
                 if (!datalist) return;
-
                 const uniqueValues = new Set();
                 filas.forEach(fila => {
                     if(!fila.dataset.id) return; 
                     const celdas = fila.querySelectorAll('td');
                     if (celdas[colIndex]) {
-                        let val = "";
-                        const celda = celdas[colIndex];
-                        if (celda.querySelector('select')) {
-                            val = celda.querySelector('select').value;
-                        } else if (celda.querySelector('input[type="date"]')) {
-                            val = celda.querySelector('input[type="date"]').value;
-                        } else {
-                            val = celda.innerText.trim();
-                        }
+                        let val = ""; const celda = celdas[colIndex];
+                        if (celda.querySelector('select')) { val = celda.querySelector('select').value; } 
+                        else if (celda.querySelector('input[type="date"]')) { val = celda.querySelector('input[type="date"]').value; } 
+                        else { val = celda.innerText.trim(); }
                         if (val !== "") uniqueValues.add(val);
                     }
                 });
-
                 datalist.innerHTML = '';
                 Array.from(uniqueValues).sort().forEach(val => {
-                    const option = document.createElement('option');
-                    option.value = val;
-                    datalist.appendChild(option);
+                    const option = document.createElement('option'); option.value = val; datalist.appendChild(option);
                 });
             });
         };
 
         window.seleccionarImagenCelda = function(td) {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
+            const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
             input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
+                const file = e.target.files[0]; if (!file) return;
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        let scaleSize = 1;
+                        const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let scaleSize = 1;
                         if(img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = img.width * scaleSize;
-                        canvas.height = img.height * scaleSize;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
+                        canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         const base64Mini = canvas.toDataURL('image/jpeg', 0.85);
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -960,12 +695,9 @@
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
                                 </div>
                             </div>`;
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            };
-            input.click();
+                    }; img.src = event.target.result;
+                }; reader.readAsDataURL(file);
+            }; input.click();
         };
 
         window.borrarImagenCelda = function(td) {
@@ -973,16 +705,10 @@
         };
 
         window.seleccionarPDFCelda = function(td) {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'application/pdf';
+            const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/pdf';
             input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (file.size > 2 * 1024 * 1024) { 
-                    alert("El PDF es muy pesado. Por favor, sube un archivo menor a 2MB para no saturar la base de datos.");
-                    return;
-                }
+                const file = e.target.files[0]; if (!file) return;
+                if (file.size > 2 * 1024 * 1024) { alert("El PDF es muy pesado (máximo 2MB)."); return; }
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const base64PDF = event.target.result;
@@ -994,10 +720,8 @@
                                 <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
                             </div>
                         </div>`;
-                };
-                reader.readAsDataURL(file);
-            };
-            input.click();
+                }; reader.readAsDataURL(file);
+            }; input.click();
         };
 
         window.borrarPDFCelda = function(td) {
@@ -1008,57 +732,43 @@
             const celdas = tr.querySelectorAll('td');
             let datosFila = [];
             for(let i = 1; i < celdas.length - 1; i++) { 
-                let indexGlobal = i - 1;
-                let colName = allCols[indexGlobal].toUpperCase();
+                let indexGlobal = i - 1; let colName = allCols[indexGlobal].toUpperCase();
                 
                 if (indexGlobal === 0) { 
-                    const img = celdas[i].querySelector('img');
-                    datosFila.push(img ? img.src : "");
+                    const img = celdas[i].querySelector('img'); datosFila.push(img ? img.src : "");
                 } else if (colName === 'FICHA TECNICA') { 
-                    const link = celdas[i].querySelector('a.ficha-link');
-                    datosFila.push(link ? link.href : "");
+                    const link = celdas[i].querySelector('a.ficha-link'); datosFila.push(link ? link.href : "");
                 } else if (colName === 'TIPO DE MONEDA') { 
-                    const select = celdas[i].querySelector('select');
-                    datosFila.push(select ? select.value : "");
+                    const select = celdas[i].querySelector('select'); datosFila.push(select ? select.value : "");
                 } else if (colName.startsWith('FECHA')) { 
-                    const dateInp = celdas[i].querySelector('input[type="date"]');
-                    datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
+                    const dateInp = celdas[i].querySelector('input[type="date"]'); datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
                 } else { 
                     datosFila.push(celdas[i].innerText.trim());
                 }
-            }
-            return datosFila;
+            } return datosFila;
         };
 
         function crearFilaHTML(id = null, datos = []) {
             const tr = document.createElement('tr');
             if (id) tr.dataset.id = id;
             
-            const tdCheck = document.createElement('td');
-            tdCheck.className = 'col-checkbox';
+            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox';
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
 
             let indexGlobal = 0;
-
             allCols.forEach((colNameOriginal) => {
-                const colName = colNameOriginal.toUpperCase();
-                const td = document.createElement('td'); 
+                const colName = colNameOriginal.toUpperCase(); const td = document.createElement('td'); 
                 
                 if(indexGlobal === 2) td.classList.add('col-fija-linea');
                 if(indexGlobal === 9) td.classList.add('col-fija-ref');
                 if(indexGlobal === 12) td.classList.add('col-fija-color');
-                
-                if(indexGlobal >= colsDiseno.length) {
-                    td.className += window.produccionVisible ? ' col-produccion' : ' col-produccion hidden';
-                }
+                if(indexGlobal >= colsDiseno.length) { td.className += window.produccionVisible ? ' col-produccion' : ' col-produccion hidden'; }
                 
                 const valorRaw = datos[indexGlobal] || '';
 
                 if(indexGlobal === 0) { 
-                    td.contentEditable = "false"; 
-                    td.style.textAlign = "center";
-                    td.style.verticalAlign = "middle";
+                    td.contentEditable = "false"; td.style.textAlign = "center"; td.style.verticalAlign = "middle";
                     if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -1068,13 +778,9 @@
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
                                 </div>
                             </div>`;
-                    } else {
-                        td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarImagenCelda(this.closest('td'))">📷 Agregar</button>`;
-                    }
+                    } else { td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer;" onclick="window.seleccionarImagenCelda(this.closest('td'))">📷 Agregar</button>`; }
                 } else if (colName === 'FICHA TECNICA') { 
-                    td.contentEditable = "false"; 
-                    td.style.textAlign = "center";
-                    td.style.verticalAlign = "middle";
+                    td.contentEditable = "false"; td.style.textAlign = "center"; td.style.verticalAlign = "middle";
                     if(valorRaw.startsWith('data:application/pdf') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -1084,34 +790,19 @@
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
                                 </div>
                             </div>`;
-                    } else {
-                        td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`;
-                    }
+                    } else { td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer;" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`; }
                 } else if (colName === 'TIPO DE MONEDA') { 
                     td.contentEditable = "false";
-                    td.innerHTML = `
-                        <select class="select-input">
-                            <option value=""></option>
-                            <option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option>
-                            <option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option>
-                            <option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option>
-                        </select>
-                    `;
+                    td.innerHTML = `<select class="select-input"><option value=""></option><option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option><option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option><option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option></select>`;
                 } else if (colName.startsWith('FECHA')) { 
-                    td.contentEditable = "false";
-                    td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
+                    td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
                 } else { 
-                    td.contentEditable = "true";
-                    td.textContent = valorRaw; 
+                    td.contentEditable = "true"; td.textContent = valorRaw; 
                 }
-                
-                tr.appendChild(td); 
-                indexGlobal++;
+                tr.appendChild(td); indexGlobal++;
             });
 
-            const estadoActual = (datos[43] || '').trim().toUpperCase(); 
-            const esCancelado = estadoActual === 'CANCELADO';
-
+            const estadoActual = (datos[43] || '').trim().toUpperCase(); const esCancelado = estadoActual === 'CANCELADO';
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `
                 <button class="btn-insert" onclick="insertarFilaAbajo(this)" title="Insertar fila abajo">➕</button>
@@ -1119,8 +810,7 @@
                 <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
                 <button class="btn-delete" onclick="eliminarFila(this)" title="Eliminar Permanente">🗑️</button>
             `;
-            tr.appendChild(tdAcciones);
-            return tr;
+            tr.appendChild(tdAcciones); return tr;
         }
 
         window.calcularKPIs = function() {
@@ -1130,25 +820,17 @@
 
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
-                const celdas = fila.querySelectorAll('td');
-                if (celdas.length < 62) return; 
-                
-                const estado = (celdas[44].textContent || '').trim().toUpperCase(); 
-                if (estado === 'CANCELADO') return; 
+                const celdas = fila.querySelectorAll('td'); if (celdas.length < 62) return; 
+                const estado = (celdas[44].textContent || '').trim().toUpperCase(); if (estado === 'CANCELADO') return; 
 
                 let coincideCategoria = true;
                 const genero = (celdas[7].textContent || '').trim().toUpperCase();
                 const familia = (celdas[8].textContent || '').trim().toUpperCase();
                 const esPrenda = (familia === 'PRENDAS' || familia === 'PRENDAS SET');
 
-                if (window.categoriaActiva === 'femenina') {
-                    coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO');
-                } else if (window.categoriaActiva === 'masculina') {
-                    coincideCategoria = esPrenda && (genero === 'MEN' || genero === 'MASCULINO');
-                } else if (window.categoriaActiva === 'accesorios') {
-                    coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO');
-                }
-
+                if (window.categoriaActiva === 'femenina') { coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO'); } 
+                else if (window.categoriaActiva === 'masculina') { coincideCategoria = esPrenda && (genero === 'MEN' || genero === 'MASCULINO'); } 
+                else if (window.categoriaActiva === 'accesorios') { coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO'); }
                 if (!coincideCategoria) return; 
 
                 const coleccion = (celdas[2].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)'; 
@@ -1156,7 +838,6 @@
                 
                 const inputTentativa = celdas[53].querySelector('input[type="date"]');
                 const fechaTentativa = (inputTentativa ? inputTentativa.value : celdas[53].textContent).trim(); 
-                
                 const inputLlegada = celdas[54].querySelector('input[type="date"]');
                 const fechaLlegada = (inputLlegada ? inputLlegada.value : celdas[54].textContent).trim(); 
 
@@ -1174,8 +855,7 @@
             });
 
             const calcPct = (valor, total) => total > 0 ? ((valor / total) * 100).toFixed(1) + '%' : '0.0%';
-            const kpiBody = document.getElementById('kpiBody');
-            kpiBody.innerHTML = '';
+            const kpiBody = document.getElementById('kpiBody'); kpiBody.innerHTML = '';
 
             for (const col in datosKpi) {
                 const data = datosKpi[col];
@@ -1210,8 +890,7 @@
         };
 
         window.actualizarContador = function() {
-            const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let visibles = 0;
+            const filas = document.getElementById('tableBody').querySelectorAll('tr'); let visibles = 0;
             filas.forEach(fila => { if(fila.style.display !== 'none' && fila.dataset.id) visibles++; });
             document.getElementById('contadorMuestras').textContent = visibles;
         };
@@ -1228,58 +907,37 @@
                 const esCancelado = estadoCelda === 'CANCELADO';
 
                 let coincideVista = (window.vistaActual === 'activas' && !esCancelado) || (window.vistaActual === 'canceladas' && esCancelado);
-                if (!coincideVista) { 
-                    fila.style.display = 'none'; 
-                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
-                    return; 
-                }
+                if (!coincideVista) { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; return; }
 
-                let coincideCategoria = true;
-                const esFilaNuevaSinGuardar = !fila.dataset.id;
+                let coincideCategoria = true; const esFilaNuevaSinGuardar = !fila.dataset.id;
                 
                 if (!esFilaNuevaSinGuardar) {
                     const genero = (celdas[7].innerText || '').trim().toUpperCase();
                     const familia = (celdas[8].innerText || '').trim().toUpperCase();
                     const esPrenda = (familia === 'PRENDAS' || familia === 'PRENDAS SET');
 
-                    if (window.categoriaActiva === 'femenina') {
-                        coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO');
-                    } else if (window.categoriaActiva === 'masculina') {
-                        coincideCategoria = esPrenda && (genero === 'MEN' || genero === 'MASCULINO');
-                    } else if (window.categoriaActiva === 'accesorios') {
-                        coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO');
-                    }
+                    if (window.categoriaActiva === 'femenina') { coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO'); } 
+                    else if (window.categoriaActiva === 'masculina') { coincideCategoria = esPrenda && (genero === 'MEN' || genero === 'MASCULINO'); } 
+                    else if (window.categoriaActiva === 'accesorios') { coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO'); }
                 }
-                if (!coincideCategoria) { 
-                    fila.style.display = 'none'; 
-                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
-                    return; 
-                }
+                if (!coincideCategoria) { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; return; }
 
                 let coincideGlobal = true;
                 if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
 
                 let coincidenColumnas = true;
                 inputsColumnas.forEach(input => {
-                    const textoFiltroRaw = input.value.trim();
-                    const textoFiltroLower = textoFiltroRaw.toLowerCase();
+                    const textoFiltroRaw = input.value.trim(); const textoFiltroLower = textoFiltroRaw.toLowerCase();
                     
                     if (textoFiltroRaw !== "") {
-                        const colIndex = input.getAttribute('data-colindex');
-                        const celda = celdas[colIndex];
-                        let celdaTexto = "";
+                        const colIndex = input.getAttribute('data-colindex'); const celda = celdas[colIndex]; let celdaTexto = "";
                         
-                        if (celda.querySelector('select')) {
-                            celdaTexto = celda.querySelector('select').value;
-                        } else if (celda.querySelector('input[type="date"]')) {
-                            celdaTexto = celda.querySelector('input[type="date"]').value;
-                        } else {
-                            celdaTexto = celda.innerText.trim();
-                        }
+                        if (celda.querySelector('select')) { celdaTexto = celda.querySelector('select').value; } 
+                        else if (celda.querySelector('input[type="date"]')) { celdaTexto = celda.querySelector('input[type="date"]').value; } 
+                        else { celdaTexto = celda.innerText.trim(); }
                         const celdaTextoLower = celdaTexto.toLowerCase();
 
-                        const datalist = document.getElementById(`datalist_${colIndex}`);
-                        let isExactOption = false;
+                        const datalist = document.getElementById(`datalist_${colIndex}`); let isExactOption = false;
                         if (datalist) {
                             const options = Array.from(datalist.options).map(o => o.value.toLowerCase());
                             if (options.includes(textoFiltroLower)) isExactOption = true;
@@ -1296,97 +954,58 @@
                     }
                 });
 
-                if (coincideGlobal && coincidenColumnas) { 
-                    fila.style.display = ''; 
-                } else { 
-                    fila.style.display = 'none'; 
-                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
-                }
+                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } 
+                else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
             });
-            actualizarContador();
-            window.actualizarSeleccion(); 
+            actualizarContador(); window.actualizarSeleccion(); 
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
             if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
-            const tr = btn.closest('tr');
-            const celdas = tr.querySelectorAll('td');
-            celdas[44].innerText = nuevoEstado;
-            
-            const btnCancelar = tr.querySelector('.btn-cancelar-fila');
-            const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-            
-            if (nuevoEstado === 'CANCELADO') { 
-                btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); 
-            } else { 
-                btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); 
-            }
+            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td'); celdas[44].innerText = nuevoEstado;
+            const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
+            if (nuevoEstado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); } 
+            else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
             
             const idDb = tr.dataset.id;
             if(idDb) {
                 let datosFila = window.extraerDatosFila(tr);
                 await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
             }
-            window.filtrarTablaCompleta();
-            window.calcularKPIs();
+            window.filtrarTablaCompleta(); window.calcularKPIs();
         };
 
         window.cancelarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            let rowsToUpdate = [];
-            let promesasUpdate = [];
-            
-            checkboxes.forEach(cb => {
-                const tr = cb.closest('tr');
-                if(tr.style.display !== 'none') rowsToUpdate.push(tr);
-            });
+            let rowsToUpdate = []; let promesasUpdate = [];
+            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none') rowsToUpdate.push(tr); });
 
             if (rowsToUpdate.length === 0) return;
             if (!confirm(`¿Seguro que deseas CANCELAR masivamente ${rowsToUpdate.length} muestras?`)) return;
 
             for (let tr of rowsToUpdate) {
-                const celdas = tr.querySelectorAll('td');
-                celdas[44].innerText = 'CANCELADO'; 
-                
-                const btnCancelar = tr.querySelector('.btn-cancelar-fila');
-                const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-                if (btnCancelar) btnCancelar.classList.add('hidden'); 
-                if (btnReactivar) btnReactivar.classList.remove('hidden');
+                const celdas = tr.querySelectorAll('td'); celdas[44].innerText = 'CANCELADO'; 
+                const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
+                if (btnCancelar) btnCancelar.classList.add('hidden'); if (btnReactivar) btnReactivar.classList.remove('hidden');
 
                 const idDb = tr.dataset.id;
                 if(idDb) {
                     let datosFila = window.extraerDatosFila(tr);
-                    promesasUpdate.push(
-                        supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb)
-                    );
+                    promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb) );
                 }
             }
-
             if (promesasUpdate.length > 0) {
                 const resultados = await Promise.all(promesasUpdate);
-                for (let res of resultados) {
-                    if (res.error) { alert("Error al cancelar masivamente: " + res.error.message); return; }
-                }
+                for (let res of resultados) { if (res.error) { alert("Error: " + res.error.message); return; } }
             }
-
             document.getElementById('selectAll').checked = false;
-            window.filtrarTablaCompleta();
-            window.calcularKPIs();
-            window.actualizarSeleccion();
+            window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
         };
 
         window.eliminarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            let idsToDelete = [];
-            let rowsToRemove = [];
-            
-            checkboxes.forEach(cb => {
-                const tr = cb.closest('tr');
-                if(tr.style.display !== 'none') {
-                    if(tr.dataset.id) idsToDelete.push(tr.dataset.id);
-                    rowsToRemove.push(tr);
-                }
-            });
+            let idsToDelete = []; let rowsToRemove = [];
+            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none') { if(tr.dataset.id) idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
 
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás COMPLETAMENTE SEGURO de eliminar definitivamente ${rowsToRemove.length} muestras?`)) return;
@@ -1395,28 +1014,18 @@
                 const { error } = await supabase.from('wips_muestras').delete().in('id', idsToDelete);
                 if(error) { alert("Error al eliminar masivamente"); return; }
             }
-
-            rowsToRemove.forEach(tr => tr.remove());
-            document.getElementById('selectAll').checked = false;
-            window.actualizarContador();
-            window.calcularKPIs();
-            window.actualizarSeleccion();
-            window.actualizarDatalists();
+            rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false;
+            window.actualizarContador(); window.calcularKPIs(); window.actualizarSeleccion(); window.actualizarDatalists();
         };
 
         let columnaOrdenadaActual = -1; let ordenAscendente = true;
         window.ordenarTabla = function(colIndex) {
-            const tbody = document.getElementById('tableBody');
-            const filas = Array.from(tbody.querySelectorAll('tr'));
+            const tbody = document.getElementById('tableBody'); const filas = Array.from(tbody.querySelectorAll('tr'));
             if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
             filas.sort((a, b) => {
                 let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
-                
-                const inputA = a.cells[colIndex].querySelector('input[type="date"], select');
-                const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
-                if(inputA) valorA = inputA.value;
-                if(inputB) valorB = inputB.value;
-
+                const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
+                if(inputA) valorA = inputA.value; if(inputB) valorB = inputB.value;
                 let numA = parseFloat(valorA); let numB = parseFloat(valorB);
                 if (!isNaN(numA) && !isNaN(numB) && !inputA) return ordenAscendente ? numA - numB : numB - numA;
                 if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
@@ -1429,10 +1038,8 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-
             document.getElementById('tableBody').appendChild(crearFilaHTML(null, datosInic));
-            window.actualizarContador();
-            window.calcularKPIs(); 
+            window.actualizarContador(); window.calcularKPIs(); 
         };
 
         window.insertarFilaAbajo = function(btn) {
@@ -1440,98 +1047,61 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-
-            const trActual = btn.closest('tr');
-            trActual.insertAdjacentElement('afterend', crearFilaHTML(null, datosInic));
-            window.actualizarContador();
-            window.calcularKPIs(); 
+            const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', crearFilaHTML(null, datosInic));
+            window.actualizarContador(); window.calcularKPIs(); 
         };
 
         window.guardarCambiosVisibles = async function() {
-            const btn = document.getElementById('btnGuardarGlobal');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Guardando...";
-            btn.disabled = true;
+            const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let promesasUpdate = [];
-            let rowsToInsert = [];
-            let filasNuevasDOM = [];
+            let promesasUpdate = []; let rowsToInsert = []; let filasNuevasDOM = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
-
-                if (tr.dataset.id) {
-                    promesasUpdate.push(
-                        supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id)
-                    );
-                } else {
-                    rowsToInsert.push({ datos: datosFila });
-                    filasNuevasDOM.push(tr);
-                }
+                if (tr.dataset.id) { promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id) ); } 
+                else { rowsToInsert.push({ datos: datosFila }); filasNuevasDOM.push(tr); }
             }
 
             try {
-                if (promesasUpdate.length > 0) {
-                    const resultados = await Promise.all(promesasUpdate);
-                    for (let res of resultados) { if (res.error) throw res.error; }
-                }
+                if (promesasUpdate.length > 0) { const resultados = await Promise.all(promesasUpdate); for (let res of resultados) { if (res.error) throw res.error; } }
                 if (rowsToInsert.length > 0) {
                     const { data, error } = await supabase.from('wips_muestras').insert(rowsToInsert).select();
                     if (error) throw error;
                     for(let i = 0; i < data.length; i++) filasNuevasDOM[i].dataset.id = data[i].id;
                 }
-
                 btn.innerHTML = "✅ ¡Todo guardado!";
-                window.calcularKPIs();
-                window.actualizarDatalists(); 
+                window.calcularKPIs(); window.actualizarDatalists(); 
             } catch (err) {
-                console.error(err);
-                alert("Hubo un error al guardar masivamente: " + err.message);
-                btn.innerHTML = "❌ Error";
+                console.error(err); alert("Hubo un error al guardar masivamente: " + err.message); btn.innerHTML = "❌ Error";
             }
-
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
         window.eliminarFila = async function(btn) {
             if(!confirm("¿Seguro que deseas eliminar esta muestra definitivamente? No se puede deshacer.")) return;
-            const tr = btn.closest('tr');
-            const idDb = tr.dataset.id;
+            const tr = btn.closest('tr'); const idDb = tr.dataset.id;
             if(idDb) {
                 const { error } = await supabase.from('wips_muestras').delete().eq('id', idDb);
                 if(error) { alert("Error al eliminar"); return; }
             }
-            tr.remove(); 
-            window.actualizarContador(); 
-            window.calcularKPIs(); 
-            window.actualizarDatalists();
+            tr.remove(); window.actualizarContador(); window.calcularKPIs(); window.actualizarDatalists();
         };
 
         window.toggleProduccion = function() {
             window.produccionVisible = !window.produccionVisible;
-            const headersTitle = document.querySelectorAll('.col-produccion-header');
-            const celdas = document.querySelectorAll('.col-produccion');
+            const headersTitle = document.querySelectorAll('.col-produccion-header'); const celdas = document.querySelectorAll('.col-produccion');
             const btn = document.getElementById('btnToggle');
-
             headersTitle.forEach(el => window.produccionVisible ? el.classList.remove('hidden') : el.classList.add('hidden'));
             celdas.forEach(el => window.produccionVisible ? el.classList.remove('hidden') : el.classList.add('hidden'));
-
-            if (window.produccionVisible) {
-                btn.innerHTML = "👁️ Ocultar Mis Columnas (Producción)"; 
-                btn.style.backgroundColor = "#e5e7eb";
-            } else {
-                btn.innerHTML = "👁️ Mostrar Mis Columnas (Producción)"; 
-                btn.style.backgroundColor = "#ffffff"; 
-            }
+            if (window.produccionVisible) { btn.innerHTML = "👁️ Ocultar Mis Columnas (Producción)"; btn.style.backgroundColor = "#e5e7eb"; } 
+            else { btn.innerHTML = "👁️ Mostrar Mis Columnas (Producción)"; btn.style.backgroundColor = "#ffffff"; }
         };
 
         window.exportarAExcel = function() {
-            let dataExcel = []; let encabezados = [];
-            allCols.forEach(c => encabezados.push(c));
-            dataExcel.push(encabezados);
-
+            let dataExcel = []; let encabezados = []; allCols.forEach(c => encabezados.push(c)); dataExcel.push(encabezados);
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
@@ -1543,69 +1113,33 @@
                     dataExcel.push(filaData);
                 }
             });
-
-            const hoja = XLSX.utils.aoa_to_sheet(dataExcel);
-            const libro = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(libro, hoja, "Muestras");
-            XLSX.writeFile(libro, "Seguimiento_Muestras_WIPS.xlsx");
+            const hoja = XLSX.utils.aoa_to_sheet(dataExcel); const libro = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libro, hoja, "Muestras"); XLSX.writeFile(libro, "Seguimiento_Muestras_WIPS.xlsx");
         };
 
         window.importarMasivo = function(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-
-            const btn = document.getElementById('btnImportar');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Cargando...";
-            btn.disabled = true;
-
+            const file = event.target.files[0]; if(!file) return;
+            const btn = document.getElementById('btnImportar'); const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Cargando..."; btn.disabled = true;
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const filasCSV = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
-
+                    const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]]; const filasCSV = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
                     filasCSV.shift();
-
                     const registrosParaSupabase = filasCSV.map(fila => {
                         let datosLimpios = fila.map(celda => String(celda).trim());
                         while(datosLimpios.length < 64) datosLimpios.push(""); 
                         return { datos: datosLimpios.slice(0, 64) };
                     }).filter(r => r.datos.join("").trim() !== ""); 
 
-                    if(registrosParaSupabase.length === 0) {
-                        alert("El archivo parece estar vacío o sin formato.");
-                        btn.innerHTML = textoOriginal;
-                        btn.disabled = false;
-                        document.getElementById('fileCSV').value = "";
-                        return;
-                    }
-
-                    if(!confirm(`¿Estás listo para cargar ${registrosParaSupabase.length} muestras a la plataforma?`)) {
-                        btn.innerHTML = textoOriginal;
-                        btn.disabled = false;
-                        document.getElementById('fileCSV').value = "";
-                        return;
-                    }
+                    if(registrosParaSupabase.length === 0) { alert("Archivo vacío."); btn.innerHTML = textoOriginal; btn.disabled = false; document.getElementById('fileCSV').value = ""; return; }
+                    if(!confirm(`¿Cargar ${registrosParaSupabase.length} muestras?`)) { btn.innerHTML = textoOriginal; btn.disabled = false; document.getElementById('fileCSV').value = ""; return; }
 
                     const { error } = await supabase.from('wips_muestras').insert(registrosParaSupabase);
-
-                    if(error) throw error;
-
-                    alert("¡Carga masiva exitosa! 🎉");
-                    window.location.reload(); 
-
-                } catch (err) {
-                    console.error(err);
-                    alert("Hubo un error al procesar el archivo: " + err.message);
-                    btn.innerHTML = textoOriginal;
-                    btn.disabled = false;
-                    document.getElementById('fileCSV').value = "";
-                }
-            };
-            reader.readAsArrayBuffer(file);
+                    if(error) throw error; alert("¡Carga masiva exitosa! 🎉"); window.location.reload(); 
+                } catch (err) { console.error(err); alert("Error: " + err.message); btn.innerHTML = textoOriginal; btn.disabled = false; document.getElementById('fileCSV').value = ""; }
+            }; reader.readAsArrayBuffer(file);
         };
 
         inicializarEncabezados();
