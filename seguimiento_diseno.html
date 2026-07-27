@@ -61,6 +61,37 @@
             display: flex;
             align-items: center;
         }
+
+        /* SEGMENTADOR DE CATEGORÍAS */
+        .segmentador {
+            display: flex;
+            gap: 8px;
+            margin-left: 20px;
+            border-left: 2px solid #d1d5db;
+            padding-left: 20px;
+        }
+        .seg-btn {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid #d1d5db;
+            padding: 6px 16px;
+            border-radius: 20px; 
+            font-size: 13px;
+            font-weight: 600;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .seg-btn:hover {
+            background: #ffffff;
+            color: #111827;
+            border-color: #9ca3af;
+        }
+        .seg-btn.activa {
+            background: #1f2937;
+            color: #ffffff;
+            border-color: #1f2937;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
         
         .btn-back {
             color: #374151;
@@ -176,7 +207,7 @@
         }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
 
-        /* BOTONES DE CONTROL SUPERIORES NEUTROS CLAROS */
+        /* BOTONES DE CONTROL SUPERIORES */
         button {
             padding: 9px 16px;
             border: none;
@@ -201,6 +232,45 @@
             border-color: #9ca3af;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         }
+
+        /* NUEVO BOTÓN GLOBAL DE GUARDAR */
+        .btn-save-global {
+            background-color: #10b981; 
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s;
+        }
+        .btn-save-global:hover {
+            background-color: #059669;
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+            transform: translateY(-1px);
+        }
+        .btn-save-global:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* BOTONES DE ACCIÓN MASIVA (Cancelar / Eliminar) */
+        .btn-bulk-cancel {
+            background-color: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+        }
+        .btn-bulk-cancel:hover { background-color: #fee2e2; }
+        .btn-bulk-delete {
+            background-color: #fff1f2;
+            color: #b91c1c;
+            border: 1px solid #fda4af;
+        }
+        .btn-bulk-delete:hover { background-color: #ffe4e6; }
 
         .buscador {
             padding: 9px 16px;
@@ -240,7 +310,7 @@
         }
 
         /* ACCIONES DE FILA DENTRO DE LA TABLA */
-        .btn-save, .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete {
+        .btn-insert, .btn-cancelar-fila, .btn-reactivar-fila, .btn-delete {
             background-color: #f3f4f6;
             color: #374151;
             padding: 5px 9px;
@@ -249,7 +319,7 @@
             border-radius: 6px;
             transition: all 0.2s;
         }
-        .btn-save:hover, .btn-insert:hover, .btn-cancelar-fila:hover, .btn-reactivar-fila:hover, .btn-delete:hover {
+        .btn-insert:hover, .btn-cancelar-fila:hover, .btn-reactivar-fila:hover, .btn-delete:hover {
             background-color: #e5e7eb;
             color: #111827;
             border-color: #9ca3af;
@@ -329,10 +399,30 @@
             color: #111827;
         }
 
-        /* CLASES PARA LA COLUMNA DE REFERENCIA FIJA */
-        .col-fija {
+        /* CLASES PARA COLUMNAS FIJAS (CHECKBOX Y REFERENCIA) */
+        .col-checkbox {
             position: sticky !important;
             left: 0;
+            background-color: #ffffff;
+            z-index: 6;
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 40px !important;
+            padding: 0 !important;
+            text-align: center;
+            border-right: 1px solid #d1d5db !important;
+        }
+        th.col-checkbox {
+            z-index: 16 !important; 
+            background-color: #f3f4f6 !important;
+        }
+        #tableFilterRow th.col-checkbox {
+            background-color: #f9fafb !important;
+        }
+
+        .col-fija {
+            position: sticky !important;
+            left: 40px; /* Se ancla justo después del checkbox (40px) */
             background-color: #ffffff;
             z-index: 5;
             box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); 
@@ -345,9 +435,11 @@
         #tableFilterRow th.col-fija {
             background-color: #f9fafb !important;
         }
+        tbody tr:nth-child(even) td.col-checkbox,
         tbody tr:nth-child(even) td.col-fija {
             background-color: #f9fafb;
         }
+        tbody tr:hover td.col-checkbox,
         tbody tr:hover td.col-fija {
             background-color: #f3f4f6;
         }
@@ -399,7 +491,6 @@
             color: #9ca3af;
         }
 
-        /* ESTILOS PARA LOS BOTONES DE IMAGEN */
         .img-action-btn {
             cursor: pointer;
             font-size: 14px;
@@ -418,13 +509,22 @@
         <div class="header-title-box">
             <img src="logo.png" alt="Monastery" class="logo-header">
             <h2>Seguimiento de Muestras (WIPS)</h2>
+            
+            <!-- SEGMENTADOR -->
+            <div class="segmentador">
+                <button id="btnCatTodas" class="seg-btn activa" onclick="filtrarPorCategoria('todas')">🌐 Consolidado General</button>
+                <button id="btnCatMasculina" class="seg-btn" onclick="filtrarPorCategoria('masculina')">👕 Men</button>
+                <button id="btnCatFemenina" class="seg-btn" onclick="filtrarPorCategoria('femenina')">👗 Women</button>
+                <button id="btnCatAccesorios" class="seg-btn" onclick="filtrarPorCategoria('accesorios')">🎒 Accesorios</button>
+            </div>
+
         </div>
         <a href="index.html" class="btn-back">⬅ Volver al Menú Principal</a>
     </div>
 
     <!-- TABLERO DE KPIS GERENCIAL -->
     <div class="kpi-card">
-        <h3>📊 Resumen de Indicadores (Muestras Activas)</h3>
+        <h3>📊 Resumen de Indicadores <span id="kpiTitleContext" style="color: #6b7280; font-size: 14px; font-weight: normal;">(Consolidado General)</span></h3>
         <div class="kpi-table-container">
             <table class="kpi-table">
                 <thead>
@@ -467,6 +567,16 @@
             <div class="contador-caja">
                 Total Visibles: <span id="contadorMuestras" class="contador-numero">0</span>
             </div>
+
+            <!-- BOTÓN DE GUARDADO MASIVO (SOLO LO VISIBLE) -->
+            <button id="btnGuardarGlobal" class="btn-save-global" onclick="guardarCambiosVisibles()">💾 Guardar Cambios Visibles</button>
+
+            <!-- PANEL DE ACCIONES MASIVAS (SELECCIÓN DE CHECKBOXES) -->
+            <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 10px; border-left: 2px solid #d1d5db; padding-left: 10px;">
+                <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
+                <button class="btn-bulk-cancel" onclick="cancelarSeleccionadas()">🚫 Cancelar Masivo</button>
+                <button class="btn-bulk-delete" onclick="eliminarSeleccionadas()">🗑️ Eliminar Masivo</button>
+            </div>
         </div>
         <div class="acciones-der">
             <input type="text" id="inputBusquedaGlobal" class="buscador" placeholder="🔍 Buscar en cualquier columna..." onkeyup="filtrarTablaCompleta()">
@@ -503,6 +613,60 @@
         
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
+        window.categoriaActiva = 'todas'; 
+
+        // LÓGICA DE FILTRO DEL SEGMENTADOR SUPERIOR
+        window.filtrarPorCategoria = function(cat) {
+            window.categoriaActiva = cat;
+            
+            document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('activa'));
+            if(cat === 'todas') document.getElementById('btnCatTodas').classList.add('activa');
+            if(cat === 'femenina') document.getElementById('btnCatFemenina').classList.add('activa');
+            if(cat === 'masculina') document.getElementById('btnCatMasculina').classList.add('activa');
+            if(cat === 'accesorios') document.getElementById('btnCatAccesorios').classList.add('activa');
+            
+            const titulos = {
+                'todas': '(Consolidado General)',
+                'femenina': '(Línea Femenina)',
+                'masculina': '(Línea Masculina)',
+                'accesorios': '(Accesorios y Calzado)'
+            };
+            document.getElementById('kpiTitleContext').textContent = titulos[cat];
+
+            window.filtrarTablaCompleta();
+            window.calcularKPIs();
+        };
+
+        // LÓGICA DE SELECCIÓN MASIVA
+        window.toggleSelectAll = function() {
+            const isChecked = document.getElementById('selectAll').checked;
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            filas.forEach(tr => {
+                if(tr.style.display !== 'none') {
+                    const cb = tr.querySelector('.row-checkbox');
+                    if(cb) cb.checked = isChecked;
+                }
+            });
+            window.actualizarSeleccion();
+        };
+
+        window.actualizarSeleccion = function() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const bulkDiv = document.getElementById('bulkActions');
+            const countSpan = document.getElementById('selectedCount');
+            
+            let visiblesChecked = 0;
+            checkboxes.forEach(cb => {
+                if(cb.closest('tr').style.display !== 'none') visiblesChecked++;
+            });
+
+            if (visiblesChecked > 0) {
+                bulkDiv.style.display = 'flex';
+                countSpan.textContent = visiblesChecked + " selec.";
+            } else {
+                bulkDiv.style.display = 'none';
+            }
+        };
 
         // LÓGICA DEL MODAL DE IMÁGENES
         window.abrirModalImagen = function(src, event) {
@@ -527,7 +691,18 @@
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow');
             const trFilter = document.getElementById('tableFilterRow');
-            let columnIndex = 0;
+            
+            // COLUMNA 0: CHECKBOX
+            const thCheck = document.createElement('th');
+            thCheck.className = 'col-checkbox';
+            thCheck.innerHTML = `<input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
+            trHeader.appendChild(thCheck);
+
+            const thCheckFilter = document.createElement('th');
+            thCheckFilter.className = 'col-checkbox';
+            trFilter.appendChild(thCheckFilter);
+
+            let columnIndex = 1; // Empezamos en 1 porque la 0 es Checkbox
 
             colsDiseno.forEach(col => { 
                 const thTitle = document.createElement('th'); 
@@ -581,7 +756,6 @@
             calcularKPIs(); 
         }
 
-        // --- NUEVA LÓGICA DE CARGA Y ELIMINACIÓN DE IMÁGENES ---
         window.seleccionarImagenCelda = function(td) {
             const input = document.createElement('input');
             input.type = 'file';
@@ -595,7 +769,7 @@
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; // Alta calidad para el modal
+                        const MAX_WIDTH = 800;
                         let scaleSize = 1;
                         if(img.width > MAX_WIDTH) {
                             scaleSize = MAX_WIDTH / img.width;
@@ -608,7 +782,6 @@
                         
                         const base64Mini = canvas.toDataURL('image/jpeg', 0.85);
                         
-                        // Generar el bloque visual (Imagen + Botones Editar/Borrar)
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <img src="${base64Mini}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
@@ -632,14 +805,21 @@
         function crearFilaHTML(id = null, datos = []) {
             const tr = document.createElement('tr');
             if (id) tr.dataset.id = id;
+            
+            // CELDA 0: CHECKBOX
+            const tdCheck = document.createElement('td');
+            tdCheck.className = 'col-checkbox';
+            tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
+            tr.appendChild(tdCheck);
+
             let indexGlobal = 0;
 
             colsDiseno.forEach(() => {
                 const td = document.createElement('td'); 
                 
-                if(indexGlobal === 9) td.classList.add('col-fija');
+                if(indexGlobal === 9) td.classList.add('col-fija'); // Ref mapea aquí
                 
-                if(indexGlobal === 0) {
+                if(indexGlobal === 0) { // IMAGEN
                     td.contentEditable = "false"; 
                     td.style.textAlign = "center";
                     td.style.verticalAlign = "middle";
@@ -673,12 +853,12 @@
                 tr.appendChild(td); indexGlobal++;
             });
 
+            // ESTADO ahora está en la celda 44 (43 + 1 por el checkbox)
             const estadoActual = (datos[43] || '').trim().toUpperCase(); 
             const esCancelado = estadoActual === 'CANCELADO';
 
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `
-                <button class="btn-save" onclick="guardarFila(this)" title="Guardar">💾</button>
                 <button class="btn-insert" onclick="insertarFilaAbajo(this)" title="Insertar fila abajo">➕</button>
                 <button class="btn-cancelar-fila ${esCancelado ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'CANCELADO')" title="Cancelar Muestra">🚫</button>
                 <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
@@ -699,17 +879,34 @@
                 if (!fila.dataset.id) return; 
 
                 const celdas = fila.querySelectorAll('td');
-                if (celdas.length < 60) return;
+                if (celdas.length < 61) return; // 61 porque sumamos la celda de checkbox
                 
-                const estado = (celdas[43].textContent || '').trim().toUpperCase();
+                const estado = (celdas[44].textContent || '').trim().toUpperCase(); // ESTADO ES 44
                 if (estado === 'CANCELADO') return; 
 
-                const coleccion = (celdas[1].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)';
-                const referencia = (celdas[9].textContent || '').trim();
-                const fechaTentativa = (celdas[51].textContent || '').trim();
-                const fechaLlegada = (celdas[52].textContent || '').trim();
-                const costoUnitario = (celdas[55].textContent || '').trim();
-                const pvpUnitario = (celdas[56].textContent || '').trim();
+                // --- FILTRO DE KPIS SEGÚN EL SEGMENTADOR ---
+                let coincideCategoria = true;
+                const genero = (celdas[7].textContent || '').trim().toUpperCase(); // GENERO ES 7
+                const familia = (celdas[8].textContent || '').trim().toUpperCase(); // FAMILIA ES 8
+                const lineaCol = (celdas[3].textContent || '').trim().toUpperCase(); // LINEA ES 3
+
+                if (window.categoriaActiva === 'femenina') {
+                    coincideCategoria = (genero === 'WOMEN' || genero === 'FEMENINO' || lineaCol.includes('WOMEN') || lineaCol.includes('FEMENINA'));
+                } else if (window.categoriaActiva === 'masculina') {
+                    coincideCategoria = (genero === 'MEN' || genero === 'MASCULINO' || lineaCol.includes('MEN') || lineaCol.includes('MASCULINA'));
+                } else if (window.categoriaActiva === 'accesorios') {
+                    coincideCategoria = (familia.includes('ACCESORIOS') || familia.includes('CALZADO') || lineaCol.includes('ACCESORIOS'));
+                }
+
+                if (!coincideCategoria) return; 
+                // ------------------------------------------
+
+                const coleccion = (celdas[2].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)'; // 2
+                const referencia = (celdas[10].textContent || '').trim(); // 10
+                const fechaTentativa = (celdas[52].textContent || '').trim(); // 52
+                const fechaLlegada = (celdas[53].textContent || '').trim(); // 53
+                const costoUnitario = (celdas[56].textContent || '').trim(); // 56
+                const pvpUnitario = (celdas[57].textContent || '').trim(); // 57
 
                 if (!datosKpi[coleccion]) {
                     datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
@@ -816,19 +1013,49 @@
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = document.querySelectorAll('.col-filter');
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            const indiceEstado = 43; 
+            const indiceEstado = 44; // Ahora es 44 por la columna de checkbox
 
             filas.forEach(fila => {
                 const celdas = fila.querySelectorAll('td');
                 const estadoCelda = (celdas[indiceEstado].innerText || '').trim().toUpperCase();
                 const esCancelado = estadoCelda === 'CANCELADO';
 
+                // Filtro 1: Activas vs Canceladas
                 let coincideVista = (window.vistaActual === 'activas' && !esCancelado) || (window.vistaActual === 'canceladas' && esCancelado);
-                if (!coincideVista) { fila.style.display = 'none'; return; }
+                if (!coincideVista) { 
+                    fila.style.display = 'none'; 
+                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
+                    return; 
+                }
 
+                // Filtro 2: Segmentador de Trabajo 
+                let coincideCategoria = true;
+                const esFilaNuevaSinGuardar = !fila.dataset.id;
+                
+                if (!esFilaNuevaSinGuardar) {
+                    const genero = (celdas[7].innerText || '').trim().toUpperCase();
+                    const familia = (celdas[8].innerText || '').trim().toUpperCase();
+                    const lineaCol = (celdas[3].innerText || '').trim().toUpperCase();
+
+                    if (window.categoriaActiva === 'femenina') {
+                        coincideCategoria = (genero === 'WOMEN' || genero === 'FEMENINO' || lineaCol.includes('WOMEN') || lineaCol.includes('FEMENINA'));
+                    } else if (window.categoriaActiva === 'masculina') {
+                        coincideCategoria = (genero === 'MEN' || genero === 'MASCULINO' || lineaCol.includes('MEN') || lineaCol.includes('MASCULINA'));
+                    } else if (window.categoriaActiva === 'accesorios') {
+                        coincideCategoria = (familia.includes('ACCESORIOS') || familia.includes('CALZADO') || lineaCol.includes('ACCESORIOS'));
+                    }
+                }
+                if (!coincideCategoria) { 
+                    fila.style.display = 'none'; 
+                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
+                    return; 
+                }
+
+                // Filtro 3: Búsqueda Global
                 let coincideGlobal = true;
                 if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
 
+                // Filtro 4: Buscadores por columna individual
                 let coincidenColumnas = true;
                 inputsColumnas.forEach(input => {
                     const textoFiltro = input.value.toLowerCase().trim();
@@ -838,23 +1065,124 @@
                     }
                 });
 
-                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+                if (coincideGlobal && coincidenColumnas) { 
+                    fila.style.display = ''; 
+                } else { 
+                    fila.style.display = 'none'; 
+                    const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false;
+                }
             });
             actualizarContador();
+            window.actualizarSeleccion(); // Refrescar contador de seleccionadas
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
             if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
             const tr = btn.closest('tr');
             const celdas = tr.querySelectorAll('td');
-            celdas[43].innerText = nuevoEstado;
+            celdas[44].innerText = nuevoEstado;
+            
             const btnCancelar = tr.querySelector('.btn-cancelar-fila');
             const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-            if (nuevoEstado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); } 
-            else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
-            const btnSave = tr.querySelector('.btn-save');
-            await window.guardarFila(btnSave);
+            
+            if (nuevoEstado === 'CANCELADO') { 
+                btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); 
+            } else { 
+                btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); 
+            }
+            
+            const idDb = tr.dataset.id;
+            if(idDb) {
+                let datosFila = [];
+                for(let i = 1; i < celdas.length - 1; i++) {
+                    if(i === 1) {
+                        const img = celdas[i].querySelector('img');
+                        datosFila.push(img ? img.src : "");
+                    } else {
+                        datosFila.push(celdas[i].innerText.trim());
+                    }
+                }
+                await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
+            }
             window.filtrarTablaCompleta();
+            window.calcularKPIs();
+        };
+
+        // --- ACCIONES MASIVAS ---
+        window.cancelarSeleccionadas = async function() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            let rowsToUpdate = [];
+            let upsertData = [];
+            
+            checkboxes.forEach(cb => {
+                const tr = cb.closest('tr');
+                if(tr.style.display !== 'none') rowsToUpdate.push(tr);
+            });
+
+            if (rowsToUpdate.length === 0) return;
+            if (!confirm(`¿Seguro que deseas CANCELAR masivamente ${rowsToUpdate.length} muestras?`)) return;
+
+            for (let tr of rowsToUpdate) {
+                const celdas = tr.querySelectorAll('td');
+                celdas[44].innerText = 'CANCELADO'; 
+                
+                const btnCancelar = tr.querySelector('.btn-cancelar-fila');
+                const btnReactivar = tr.querySelector('.btn-reactivar-fila');
+                if (btnCancelar) btnCancelar.classList.add('hidden'); 
+                if (btnReactivar) btnReactivar.classList.remove('hidden');
+
+                const idDb = tr.dataset.id;
+                if(idDb) {
+                    let datosFila = [];
+                    for(let i = 1; i < celdas.length - 1; i++) {
+                        if(i === 1) {
+                            const img = celdas[i].querySelector('img');
+                            datosFila.push(img ? img.src : "");
+                        } else {
+                            datosFila.push(celdas[i].innerText.trim());
+                        }
+                    }
+                    upsertData.push({ id: idDb, datos: datosFila });
+                }
+            }
+
+            if (upsertData.length > 0) {
+                const { error } = await supabase.from('wips_muestras').upsert(upsertData);
+                if(error) { alert("Error al cancelar masivamente"); return; }
+            }
+
+            document.getElementById('selectAll').checked = false;
+            window.filtrarTablaCompleta();
+            window.calcularKPIs();
+            window.actualizarSeleccion();
+        };
+
+        window.eliminarSeleccionadas = async function() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            let idsToDelete = [];
+            let rowsToRemove = [];
+            
+            checkboxes.forEach(cb => {
+                const tr = cb.closest('tr');
+                if(tr.style.display !== 'none') {
+                    if(tr.dataset.id) idsToDelete.push(tr.dataset.id);
+                    rowsToRemove.push(tr);
+                }
+            });
+
+            if (rowsToRemove.length === 0) return;
+            if (!confirm(`¿Estás COMPLETAMENTE SEGURO de eliminar definitivamente ${rowsToRemove.length} muestras?`)) return;
+
+            if (idsToDelete.length > 0) {
+                const { error } = await supabase.from('wips_muestras').delete().in('id', idsToDelete);
+                if(error) { alert("Error al eliminar masivamente"); return; }
+            }
+
+            rowsToRemove.forEach(tr => tr.remove());
+            document.getElementById('selectAll').checked = false;
+            window.actualizarContador();
+            window.calcularKPIs();
+            window.actualizarSeleccion();
         };
 
         let columnaOrdenadaActual = -1; let ordenAscendente = true;
@@ -872,44 +1200,90 @@
         };
 
         window.agregarFilaVacia = function() {
-            document.getElementById('tableBody').appendChild(crearFilaHTML());
-            actualizarContador();
-            calcularKPIs(); 
+            let datosInic = new Array(61).fill('');
+            if (window.categoriaActiva === 'femenina') datosInic[6] = 'WOMEN';
+            if (window.categoriaActiva === 'masculina') datosInic[6] = 'MEN';
+            if (window.categoriaActiva === 'accesorios') datosInic[7] = 'ACCESORIOS';
+
+            document.getElementById('tableBody').appendChild(crearFilaHTML(null, datosInic));
+            window.actualizarContador();
+            window.calcularKPIs(); 
         };
 
         window.insertarFilaAbajo = function(btn) {
+            let datosInic = new Array(61).fill('');
+            if (window.categoriaActiva === 'femenina') datosInic[6] = 'WOMEN';
+            if (window.categoriaActiva === 'masculina') datosInic[6] = 'MEN';
+            if (window.categoriaActiva === 'accesorios') datosInic[7] = 'ACCESORIOS';
+
             const trActual = btn.closest('tr');
-            trActual.insertAdjacentElement('afterend', crearFilaHTML());
-            actualizarContador();
-            calcularKPIs(); 
+            trActual.insertAdjacentElement('afterend', crearFilaHTML(null, datosInic));
+            window.actualizarContador();
+            window.calcularKPIs(); 
         };
 
-        window.guardarFila = async function(btn) {
-            btn.textContent = "⏳";
-            const tr = btn.closest('tr');
-            const celdas = tr.querySelectorAll('td');
-            let datosFila = [];
-            
-            for(let i = 0; i < celdas.length - 1; i++) {
-                if(i === 0) {
-                    const img = celdas[i].querySelector('img');
-                    datosFila.push(img ? img.src : "");
+        // --- BOTÓN DE GUARDADO MASIVO DE TODO LO VISIBLE ---
+        window.guardarCambiosVisibles = async function() {
+            const btn = document.getElementById('btnGuardarGlobal');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Guardando...";
+            btn.disabled = true;
+
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            let rowsToUpsert = [];
+            let rowsToInsert = [];
+            let filasNuevasDOM = [];
+
+            for (let tr of filas) {
+                // IGNORAR FILAS OCULTAS POR EL SEGMENTADOR
+                if (tr.style.display === 'none') continue; 
+
+                const celdas = tr.querySelectorAll('td');
+                let datosFila = [];
+                for(let i = 1; i < celdas.length - 1; i++) { // Empezar en 1 por la celda checkbox
+                    if(i === 1) {
+                        const img = celdas[i].querySelector('img');
+                        datosFila.push(img ? img.src : "");
+                    } else {
+                        datosFila.push(celdas[i].innerText.trim());
+                    }
+                }
+
+                if (tr.dataset.id) {
+                    rowsToUpsert.push({ id: tr.dataset.id, datos: datosFila });
                 } else {
-                    datosFila.push(celdas[i].innerText.trim());
+                    rowsToInsert.push({ datos: datosFila });
+                    filasNuevasDOM.push(tr);
                 }
             }
 
-            const idDb = tr.dataset.id;
-            if (idDb) {
-                const { error } = await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
-                if(error) alert("Error al actualizar");
-            } else {
-                const { data, error } = await supabase.from('wips_muestras').insert([{ datos: datosFila }]).select();
-                if(error) alert("Error al guardar"); else tr.dataset.id = data[0].id; 
+            try {
+                if (rowsToUpsert.length > 0) {
+                    const { error } = await supabase.from('wips_muestras').upsert(rowsToUpsert);
+                    if (error) throw error;
+                }
+                
+                if (rowsToInsert.length > 0) {
+                    const { data, error } = await supabase.from('wips_muestras').insert(rowsToInsert).select();
+                    if (error) throw error;
+                    
+                    for(let i = 0; i < data.length; i++) {
+                        filasNuevasDOM[i].dataset.id = data[i].id;
+                    }
+                }
+
+                btn.innerHTML = "✅ ¡Todo guardado!";
+                window.calcularKPIs();
+            } catch (err) {
+                console.error(err);
+                alert("Hubo un error al guardar masivamente: " + err.message);
+                btn.innerHTML = "❌ Error";
             }
-            btn.textContent = "✅";
-            calcularKPIs(); 
-            setTimeout(() => btn.textContent = "💾", 2000); 
+
+            setTimeout(() => {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }, 3000);
         };
 
         window.eliminarFila = async function(btn) {
@@ -921,8 +1295,8 @@
                 if(error) { alert("Error al eliminar"); return; }
             }
             tr.remove(); 
-            actualizarContador(); 
-            calcularKPIs(); 
+            window.actualizarContador(); 
+            window.calcularKPIs(); 
         };
 
         window.toggleProduccion = function() {
@@ -952,8 +1326,8 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = []; const celdas = fila.querySelectorAll('td');
-                    for(let i = 0; i < celdas.length - 1; i++) { 
-                        if(i === 0 && celdas[i].querySelector('img')) {
+                    for(let i = 1; i < celdas.length - 1; i++) { 
+                        if(i === 1 && celdas[i].querySelector('img')) {
                             filaData.push("🖼️ Imagen Cargada");
                         } else {
                             filaData.push(celdas[i].innerText.trim()); 
