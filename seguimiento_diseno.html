@@ -156,7 +156,7 @@
     <script>
         const styleEl = document.createElement('style');
         let cssRules = "";
-        for(let i=0; i<=70; i++) {
+        for(let i=0; i<=75; i++) {
             cssRules += `
                 th:nth-child(${i+1}), td:nth-child(${i+1}) { 
                     width: var(--w-col-${i}, 130px) !important; 
@@ -210,7 +210,6 @@
         </div>
     </div>
 
-    <!-- TABLERO DE KPIS GERENCIAL -->
     <div class="kpi-card">
         <h3>📊 Resumen de Indicadores <span id="kpiTitleContext" style="color: #6b7280; font-size: 14px; font-weight: normal;">(Consolidado General)</span></h3>
         <div class="kpi-table-container">
@@ -288,10 +287,9 @@
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR', 'FICHA TECNICA'];
-        const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
+        const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO INICIAL', 'COSTO UNITARIO FINAL', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
         const allCols = [...colsDiseno, ...colsProduccion]; 
         
-        // --- COLUMNAS QUE NO LLEVARÁN FILTRO ---
         const colsSinFiltro = [
             'RESPONSABLE', 'FAMILIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR SKU', 
             'INSUMO ARTE', 'PRECIO', 'MONEDA', 'OBSERVACIONES CAMBIO #1', 
@@ -305,9 +303,6 @@
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
 
-        // =====================================================================
-        // --- 1. LÓGICA DE PRESENCIA (USUARIOS CONECTADOS) ---
-        // =====================================================================
         let miNombre = localStorage.getItem('wips_username');
         if (!miNombre) {
             miNombre = prompt("Para mostrarte en línea, ¿Cuál es tu nombre?") || "Anónimo";
@@ -353,9 +348,6 @@
             label.style.display = count > 0 ? 'block' : 'none';
         }
 
-        // =====================================================================
-        // --- 2. LÓGICA DE NOTIFICACIONES (TAREAS) ---
-        // =====================================================================
         window.toggleNotifPanel = function() {
             const panel = document.getElementById('notifPanel');
             panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
@@ -422,9 +414,6 @@
         setInterval(cargarNotificaciones, 15000);
         setTimeout(cargarNotificaciones, 1000); 
 
-        // =====================================================================
-        // --- RESTO DEL CÓDIGO NORMAL DE LA TABLA ---
-        // =====================================================================
         function initResizer(th, colIndex) {
             const resizer = document.createElement('div');
             resizer.className = 'resizer';
@@ -586,9 +575,9 @@
                 data.forEach(filaBD => {
                     let d = filaBD.datos;
                     if (d && d.length < 64) {
-                        if (d.length === 61) { d.splice(50, 0, ""); d.splice(57, 0, ""); } 
-                        else if (d.length === 62) { d.splice(57, 0, ""); } 
-                        else if (d.length === 63) { d.splice(57, 0, ""); }
+                        if (d.length === 61) { d.splice(50, 0, ""); d.splice(56, 0, ""); d.splice(58, 0, ""); } 
+                        else if (d.length === 62) { d.splice(56, 0, ""); d.splice(58, 0, ""); } 
+                        else if (d.length === 63) { d.splice(56, 0, ""); }
                         while(d.length < 64) d.push("");
                     }
                     tbody.appendChild(crearFilaHTML(filaBD.id, d));
@@ -771,7 +760,7 @@
 
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
-                const celdas = fila.querySelectorAll('td'); if (celdas.length < 62) return; 
+                const celdas = fila.querySelectorAll('td'); if (celdas.length < 64) return; 
                 const estado = (celdas[44].textContent || '').trim().toUpperCase(); if (estado === 'CANCELADO') return; 
 
                 let coincideCategoria = true;
@@ -792,8 +781,8 @@
                 const inputLlegada = celdas[54].querySelector('input[type="date"]');
                 const fechaLlegada = (inputLlegada ? inputLlegada.value : celdas[54].textContent).trim(); 
 
-                const costoUnitario = (celdas[57].textContent || '').trim(); 
-                const pvpUnitario = (celdas[59].textContent || '').trim(); 
+                const costoUnitario = (celdas[58].textContent || '').trim(); 
+                const pvpUnitario = (celdas[60].textContent || '').trim(); 
 
                 if (!datosKpi[coleccion]) datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
                 if (referencia) { datosKpi[coleccion].referencias.add(referencia); totales.referencias.add(referencia); }
