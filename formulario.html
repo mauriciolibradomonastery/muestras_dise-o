@@ -146,7 +146,6 @@
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         
-        // CORRECCIÓN APLICADA AQUÍ: Restaurado a localStorage para solucionar el error de permisos entre pestañas.
         const supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { storage: window.localStorage }
         });
@@ -384,7 +383,8 @@
 
                 } catch (error) {
                     console.error("Error al guardar en Supabase:", error);
-                    alert("Error al intentar guardar en la base de datos.");
+                    // CAMBIO APLICADO AQUÍ PARA MOSTRAR EL ERROR REAL DE SUPABASE
+                    alert("ERROR DE SUPABASE:\n" + error.message + "\n\nPor favor envíame una captura de este mensaje para solucionarlo.");
                     restablecerBoton();
                 }
             }

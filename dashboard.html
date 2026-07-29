@@ -111,7 +111,6 @@
                         <th>Foto</th>
                         <th>Fecha Ingreso</th>
                         <th>Código Precinto</th>
-                        <!-- NUEVA COLUMNA DE DESCRIPCIÓN AQUÍ -->
                         <th>Descripción</th>
                         <th>Referencia</th>
                         <th>Línea</th>
@@ -252,8 +251,9 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; 
+        // 🚨 CAMBIO A LOCALSTORAGE PARA COMPARTIR SESIÓN ENTRE PESTAÑAS
         const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: { storage: window.sessionStorage }
+            auth: { storage: window.localStorage }
         });
 
         const tabla = document.getElementById('cuerpoTabla');
@@ -311,13 +311,9 @@
             }
 
             data.forEach((prenda) => {
-                // FILTRO MÁS INTELIGENTE Y FLEXIBLE
                 let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
                 
-                // Si la palabra "disponible" NO está en el estado, asumimos que se dio de baja y la ocultamos
                 if (!estadoDB.includes("disponible") && estadoDB !== "") return; 
-                
-                // Si está en la lista negra temporal de borrar, la ocultamos
                 if (prendasAEliminarLocal.includes(prenda.id)) return;
 
                 contadorDisponibles++;

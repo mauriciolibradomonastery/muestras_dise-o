@@ -200,7 +200,11 @@
         // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // CORRECCIÓN: Aseguramos explícitamente el uso de localStorage para sincronizar con el Formulario
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { storage: window.localStorage }
+        });
 
         document.addEventListener("DOMContentLoaded", function() {
             const correoGuardado = localStorage.getItem("monastery_correo");

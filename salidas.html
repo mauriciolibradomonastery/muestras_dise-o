@@ -92,8 +92,9 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        // 🚨 CAMBIO APLICADO: Uso de localStorage para mantener la sesión segura entre pestañas
         const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: { storage: window.sessionStorage }
+            auth: { storage: window.localStorage }
         });
 
         const tabla = document.getElementById('cuerpoTablaSalidas');
@@ -142,7 +143,10 @@
             }
 
             data.forEach((prenda) => {
-                if (prenda.estado && prenda.estado !== "Disponible en inventario") {
+                let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+
+                // CONDICIÓN: Solo muestra lo que NO está disponible (lo que se dio de baja)
+                if (!estadoDB.includes("disponible") && estadoDB !== "") {
                     contadorBajas++;
                     const urlFoto = prenda.fotoUrl || 'logo.png'; 
                     const fila = document.createElement('tr');
