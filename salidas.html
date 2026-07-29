@@ -67,6 +67,8 @@
                         <th>Foto</th>
                         <th>Fecha Salida</th>
                         <th>Código Precinto</th>
+                        <!-- NUEVA COLUMNA DE DESCRIPCIÓN AQUÍ -->
+                        <th>Descripción</th>
                         <th>Referencia</th>
                         <th>Línea</th>
                         <th>Cant.</th>
@@ -88,19 +90,16 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        // Agregamos la seguridad de sesión
         const supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { storage: window.sessionStorage }
         });
 
         const tabla = document.getElementById('cuerpoTablaSalidas');
         const mensajeCarga = document.getElementById('mensajeCarga');
-        let datosParaExcel = []; // Arreglo para exportar
+        let datosParaExcel = []; 
 
-        // Lógica del menú desplegable
         window.toggleDropdown = function() {
             document.getElementById("dropdownOpciones").classList.toggle("show");
         }
@@ -116,7 +115,6 @@
             }
         }
 
-        // 1. FUNCIÓN PRINCIPAL PARA CARGAR DATOS
         async function fetchBajas() {
             try {
                 const { data, error } = await supabase
@@ -132,29 +130,32 @@
             }
         }
 
-        // 2. RENDERIZADO DE TABLA
         function renderTable(data) {
             tabla.innerHTML = ""; 
             mensajeCarga.style.display = "none";
-            datosParaExcel = []; // Reiniciamos los datos de exportación
+            datosParaExcel = []; 
             let contadorBajas = 0;
             
             if(!data || data.length === 0) {
-                tabla.innerHTML = "<tr><td colspan='9' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros en el sistema.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros en el sistema.</td></tr>";
                 return;
             }
 
             data.forEach((prenda) => {
-                // CONDICIÓN: Solo muestra lo que NO está disponible (lo que se dio de baja)
                 if (prenda.estado && prenda.estado !== "Disponible en inventario") {
                     contadorBajas++;
                     const urlFoto = prenda.fotoUrl || 'logo.png'; 
                     const fila = document.createElement('tr');
                     
+                    // LÓGICA DE CONCATENACIÓN PARA LA DESCRIPCIÓN CON ESPACIOS
+                    const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
+                    const descripcionGenerada = partesDesc.join(" ");
+                    
                     fila.innerHTML = `
                         <td><img src="${urlFoto}" class="foto-miniatura"></td>
                         <td>${prenda.salidaFecha || 'N/A'}</td>
                         <td style="font-weight: bold; color: #fff;">${prenda.precinto}</td>
+                        <td style="color: #ccc; font-size: 13px;">${descripcionGenerada || '-'}</td>
                         <td>${prenda.referencia || '-'}</td>
                         <td>${prenda.linea || '-'}</td>
                         <td style="font-weight: bold; color: #fd7e14;">${prenda.cantidad || '1'}</td>
@@ -165,10 +166,6 @@
                         </td>
                     `;
                     tabla.appendChild(fila);
-
-                    // Preparamos los datos para Excel
-                    const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
-                    const descripcionGenerada = partesDesc.join(" - ");
 
                     datosParaExcel.push({
                         "Fecha de Salida": prenda.salidaFecha || "",
@@ -200,11 +197,10 @@
             });
 
             if (contadorBajas === 0) {
-                tabla.innerHTML = "<tr><td colspan='9' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
             }
         }
 
-        // 3. SUSCRIPCIÓN EN TIEMPO REAL
         supabase
             .channel('cambios-bajas')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
@@ -212,10 +208,8 @@
             })
             .subscribe();
 
-        // INICIAR CARGA DE DATOS
         fetchBajas();
 
-        // 4. FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo
         window.retornarAInventario = async function(idDocumento) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
                 const { error } = await supabase
@@ -236,7 +230,6 @@
             }
         }
 
-        // 5. EXPORTAR A EXCEL
         document.getElementById('btnExportarExcel').addEventListener('click', function() {
             if(datosParaExcel.length === 0) { alert("No hay registros de bajas para exportar."); return; }
             const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
@@ -245,7 +238,6 @@
             XLSX.writeFile(libroExcel, "Historial_Bajas_Monastery.xlsx");
         });
 
-        // 6. IMPORTAR MASIVAMENTE DESDE EXCEL
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
@@ -313,7 +305,6 @@
             lector.readAsArrayBuffer(archivo);
         });
 
-        // BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
             const textoBusqueda = this.value.toLowerCase();
             const filas = document.querySelectorAll('#cuerpoTablaSalidas tr');
