@@ -10,14 +10,21 @@
         .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 15px; }
         .buscador { padding: 10px; width: 350px; border-radius: 6px; border: 1px solid #555; background-color: #1a1a1a; color: white; }
         .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; margin-right: 15px; font-weight: bold; }
+        
+        .btn-accion { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 4px; transition: 0.2s; }
+        .btn-ver { background-color: #17a2b8; color: white; }
+        .btn-editar { background-color: #ffc107; color: black; }
         .btn-retornar { background-color: #0078D4; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
-        .btn-retornar:hover { background-color: #005a9e; }
+        .btn-accion:hover, .btn-retornar:hover { opacity: 0.8; }
+
         .contenedor-tabla { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th { color: #fd7e14; text-align: left; padding: 12px; border-bottom: 2px solid #555; white-space: nowrap; }
         td { padding: 12px; border-bottom: 1px solid #444; vertical-align: middle; }
         tr:hover { background-color: #3d3d3d; }
-        .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; }
+        
+        .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer; transition: 0.2s; }
+        .foto-miniatura:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
         .estado-salida { background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
 
@@ -25,6 +32,7 @@
         .dropdown { position: relative; display: inline-block; }
         .btn-opciones { background-color: #0078D4; color: white; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
         .btn-opciones:hover { background-color: #005a9e; }
+        .btn-borrar { background-color: #dc3545; color: white; }
         .dropdown-contenido { display: none; position: absolute; right: 0; background-color: #222222; min-width: 250px; box-shadow: 0px 8px 24px rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 8px; z-index: 100; margin-top: 6px; overflow: hidden; }
         
         .dropdown-item { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; text-align: left; background: none; border: none; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; box-sizing: border-box; transition: 0.2s; font-weight: 500; }
@@ -37,6 +45,27 @@
         /* ESTILO ORDENAMIENTO */
         .th-sortable { cursor: pointer; user-select: none; transition: 0.2s; }
         .th-sortable:hover { background-color: #444; color: #fff; }
+
+        /* MODALES */
+        .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-contenido-amplio { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 680px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .det-cabecera { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .det-foto-grande { width: 110px; height: 110px; object-fit: cover; border-radius: 8px; border: 1px solid #555; }
+        .cuadricula-detalles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; margin-bottom: 20px; }
+        .item-detalle { border-bottom: 1px solid #3a3a3a; padding-bottom: 6px; }
+        .lbl-detalle { font-size: 11px; color: #0078D4; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .val-detalle { font-size: 14px; color: #fff; margin-top: 2px; font-weight: 500; }
+        
+        .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
+        .titulo-edicion { color: #ffc107 !important; }
+        
+        .modal-botones { display: flex; justify-content: space-between; margin-top: 25px; }
+        .btn-cancelar { background-color: #444; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-confirmar { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 48%; font-weight: bold; transition: 0.3s; }
+        .btn-confirmar:hover { background-color: #218838; }
+
+        .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
+        .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
     </style>
 </head>
 <body>
@@ -59,6 +88,9 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar baja por precinto, remisión...">
                 
+                <!-- BOTÓN DE ELIMINACIÓN MASIVA -->
+                <button id="btnEliminarSeleccionados" class="btn-opciones btn-borrar" style="display: none;" onclick="ejecutarEliminacionMasiva()">🗑️ Borrar (<span id="cantSeleccionada">0</span>)</button>
+
                 <div class="dropdown">
                     <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
                     <div id="dropdownOpciones" class="dropdown-contenido">
@@ -74,6 +106,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 30px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodos" onclick="toggleSeleccionarTodos()" style="cursor: pointer; width: 16px; height: 16px;"></th>
                         <th>Foto</th>
                         <th class="th-sortable" onclick="ordenarTabla('salidaFecha', this)">Fecha Salida ↕️</th>
                         <th class="th-sortable" onclick="ordenarTabla('precinto', this)">Código Precinto ↕️</th>
@@ -91,6 +124,108 @@
             <div id="mensajeCarga">Cargando el archivo de bajas desde Supabase... ⏳</div>
         </div>
     </div>
+
+    <!-- MODAL DETALLES FICHA TÉCNICA -->
+    <div id="modalDetalles" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <div class="det-cabecera">
+                <img id="detFoto" class="det-foto-grande" src="logo.png">
+                <div>
+                    <h2 style="margin:0; color:#0078D4;">Ficha de la Prenda</h2>
+                    <p style="margin:5px 0 0 0; color:#aaa; font-size:14px;">Precinto No: <span id="detPrecintoTitulo" style="color:#fff; font-weight:bold;">-</span></p>
+                </div>
+            </div>
+            <div class="cuadricula-detalles">
+                <div class="item-detalle"><div class="lbl-detalle">Registrado por</div><div class="val-detalle" id="detRegistradoPor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Ingreso</div><div class="val-detalle" id="detFechaIngreso">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha Entrega CI</div><div class="val-detalle" id="detFechaEntregaCI">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Código Precinto</div><div class="val-detalle" id="detPrecinto">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Referencia</div><div class="val-detalle" id="detReferencia">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Colección</div><div class="val-detalle" id="detColeccion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Tipo</div><div class="val-detalle" id="detTipo">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Línea</div><div class="val-detalle" id="detLinea">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Género</div><div class="val-detalle" id="detGenero">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Talla</div><div class="val-detalle" id="detTalla">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Color / Descripción</div><div class="val-detalle" id="detColor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Cantidad</div><div class="val-detalle" id="detCantidad">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Clasificación</div><div class="val-detalle" id="detClasificacion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Proveedor / Marca</div><div class="val-detalle" id="detProveedor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">País de Origen</div><div class="val-detalle" id="detPais">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Precio / Costo</div><div class="val-detalle" id="detPrecio">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación General</div><div class="val-detalle" id="detUbiGeneral">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación en Diseño</div><div class="val-detalle" id="detUbiDiseno">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Estado actual</div><div class="val-detalle" id="detEstado">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Remisión / Factura</div><div class="val-detalle" id="detRemision">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Salida</div><div class="val-detalle" id="detFechaSalida">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Orden de Traslado (TO)</div><div class="val-detalle" id="detTo">-</div></div>
+            </div>
+            <div style="border-top:1px solid #444; padding-top:10px; margin-bottom:20px;">
+                <div class="lbl-detalle">Observaciones / Notas</div>
+                <div class="val-detalle" id="detObservaciones" style="font-style:italic; color:#ccc;">-</div>
+            </div>
+            <button class="btn-cancelar" onclick="cerrarModalDetalles()">❌ Cerrar Vista</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR INFORMACIÓN -->
+    <div id="modalEditar" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
+            
+            <div class="cuadricula-detalles" style="margin-top:15px;">
+                <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Colección</label><input type="text" id="edColeccion" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Fecha Entrega CI</label><input type="date" id="edFechaEntregaCI" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Tipo</label><input type="text" id="edTipo" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Línea</label><input type="text" id="edLinea" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Género</label><input type="text" id="edGenero" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Color</label><input type="text" id="edColor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación General</label><input type="text" id="edUbiGeneral" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación Diseño</label><input type="text" id="edUbiDiseno" class="input-edicion"></div>
+                
+                <div><label class="lbl-detalle">Precio / Costo</label><input type="number" id="edPrecio" class="input-edicion" step="0.01"></div>
+                <div>
+                    <label class="lbl-detalle">Moneda</label>
+                    <select id="edMoneda" class="input-edicion" style="background-color: #1a1a1a; height: 33px; margin-top: 4px;">
+                        <option value="COP">COP (Pesos Colombianos)</option>
+                        <option value="USD">USD (Dólares)</option>
+                        <option value="EUR">EUR (Euros)</option>
+                    </select>
+                </div>
+                <div><label class="lbl-detalle">Proveedor / Marca</label><input type="text" id="edProveedor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">País de Origen</label><input type="text" id="edPaisOrigen" class="input-edicion"></div>
+
+                <div style="grid-column: span 2;">
+                    <label class="lbl-detalle" style="color:#ffc107;">Modificar Estado Actual de la Prenda</label>
+                    <select id="edEstado" class="input-edicion" style="background-color: #222; font-weight: bold;">
+                        <option value="Disponible en inventario">🟢 Disponible en inventario (Regresar a bodega)</option>
+                        <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option><option value="PARA FOTOS">PARA FOTOS</option><option value="PARA MERCADEO">PARA MERCADEO</option><option value="PARA COMERCIAL">PARA COMERCIAL</option><option value="OBSEQUIO">OBSEQUIO</option><option value="BODEGA">BODEGA</option><option value="PATRONAJE</option><option value="SALE DE INVENTARIO PARA JENNY">SALE DE INVENTARIO PARA JENNY</option><option value="GERENCIA">GERENCIA</option><option value="PEDRO CASTELLANOS">PEDRO CASTELLANOS</option><option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option><option value="ENVIO MUESTRA PROVEEDOR">ENVIO MUESTRA PROVEEDOR</option><option value="PRUEBA DE USO">PRUEBA DE USO</option><option value="PROVEEDOR">PROVEEDOR</option><option value="PRESENTAR EN EL PROJECT DE LAS VEGAS">PRESENTAR EN EL PROJECT DE LAS VEGAS</option><option value="PROVEEDOR PANAMA">PROVEEDOR PANAMA</option><option value="MUESTRAS SALIENTES">MUESTRAS SALIENTES</option><option value="DOTACION/PEDRO">DOTACION/PEDRO</option><option value="ANTHONY PRODUCCIÓN">ANTHONY PRODUCCIÓN</option><option value="GESTION HUMANA">GESTION HUMANA</option><option value="DONACION">DONACION</option>
+                    </select>
+                </div>
+                <div><label class="lbl-detalle">Remisión / Factura</label><input type="text" id="edRemision" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Fecha de Salida</label><input type="date" id="edFechaSalida" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Orden de Traslado (TO)</label><input type="text" id="edTo" class="input-edicion"></div>
+                
+                <div style="grid-column: span 2;"><label class="lbl-detalle">Observaciones</label><input type="text" id="edObservaciones" class="input-edicion"></div>
+
+                <div style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px; margin-top: 5px;">
+                    <label class="lbl-detalle" style="color: #0078D4;">📸 Actualizar Fotografía (Opcional)</label>
+                    <input type="file" id="edFotoNueva" accept="image/*" class="input-edicion" style="cursor: pointer; background-color: #222; padding: 6px;">
+                    <span style="font-size: 11px; color: #888; display: block; margin-top: 5px;">*Si no seleccionas ningún archivo, el sistema mantendrá la foto actual de la prenda.</span>
+                </div>
+            </div>
+
+            <div class="modal-botones">
+                <button class="btn-cancelar" onclick="cerrarModalEditar()" style="width:48%">Cancelar</button>
+                <button class="btn-confirmar" id="btnGuardarEdicion" onclick="guardarEdicion()" style="width:48%; background-color:#ffc107; color:black;">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISOR DE FOTOS AMPLIADAS -->
+    <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module">
@@ -114,7 +249,8 @@
         const tabla = document.getElementById('cuerpoTablaSalidas');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = []; 
-        let datosActualesGlobales = []; // Para ordenar
+        let datosActualesGlobales = []; 
+        let idPrendaSeleccionada = null;
 
         // ==========================================
         // LÓGICA DE ORDENAMIENTO
@@ -154,6 +290,67 @@
             renderTable(datosActualesGlobales);
         }
 
+        // ==========================================
+        // LÓGICA DE CHECKBOXES Y ELIMINACIÓN MASIVA
+        // ==========================================
+        window.toggleSeleccionarTodos = function() {
+            const chkTodos = document.getElementById('chkSeleccionarTodos');
+            const checkboxes = document.querySelectorAll('.chk-prenda');
+            checkboxes.forEach(chk => {
+                if (chk.closest('tr').style.display !== 'none') {
+                    chk.checked = chkTodos.checked;
+                }
+            });
+            window.actualizarBotonEliminarMasivo();
+        }
+
+        window.actualizarBotonEliminarMasivo = function() {
+            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
+            const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+            const spanCant = document.getElementById('cantSeleccionada');
+            
+            if (checkboxes.length > 0) {
+                spanCant.textContent = checkboxes.length;
+                btnEliminar.style.display = 'flex';
+            } else {
+                btnEliminar.style.display = 'none';
+            }
+            
+            const checkboxesVisibles = Array.from(document.querySelectorAll('.chk-prenda')).filter(chk => chk.closest('tr').style.display !== 'none');
+            const todosSeleccionados = checkboxesVisibles.length > 0 && checkboxesVisibles.every(chk => chk.checked);
+            document.getElementById('chkSeleccionarTodos').checked = todosSeleccionados;
+        }
+
+        window.ejecutarEliminacionMasiva = async function() {
+            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
+            if (checkboxes.length === 0) return;
+            
+            if (confirm(`⚠️ Estás a punto de eliminar DEFINITIVAMENTE ${checkboxes.length} registros del historial.\n\n¿Estás completamente seguro de continuar?`)) {
+                
+                const btn = document.getElementById('btnEliminarSeleccionados');
+                btn.innerHTML = "⏳ Borrando...";
+                btn.disabled = true;
+
+                const idsAEliminar = Array.from(checkboxes).map(chk => chk.value);
+
+                try {
+                    const { error } = await supabase.from('prendas').delete().in('id', idsAEliminar);
+                    if (error) throw error;
+                    
+                    alert(`✅ Se eliminaron ${idsAEliminar.length} registros exitosamente.`);
+                    document.getElementById('chkSeleccionarTodos').checked = false;
+                    btn.style.display = 'none';
+                    fetchBajas();
+                } catch (err) {
+                    console.error("Error eliminando:", err);
+                    alert("Error al intentar eliminar los registros: " + err.message);
+                } finally {
+                    btn.innerHTML = `🗑️ Borrar (<span id="cantSeleccionada">0</span>)`;
+                    btn.disabled = false;
+                }
+            }
+        }
+
         window.toggleDropdown = function() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
             if (!event.target.matches('.btn-opciones')) {
@@ -183,7 +380,7 @@
             let contadorBajas = 0;
             
             if(!data || data.length === 0) {
-                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros en el sistema.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='11' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros en el sistema.</td></tr>";
                 return;
             }
 
@@ -198,8 +395,10 @@
                     const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                     const descripcionGenerada = partesDesc.join(" ");
                     
+                    // BOTONES AHORA CON VER (👁️), EDITAR (✏️) Y RETORNAR (↩️)
                     fila.innerHTML = `
-                        <td><img src="${urlFoto}" class="foto-miniatura"></td>
+                        <td style="text-align: center;"><input type="checkbox" class="chk-prenda" value="${prenda.id}" onclick="window.actualizarBotonEliminarMasivo()" style="cursor: pointer; width: 16px; height: 16px;"></td>
+                        <td><img src="${urlFoto}" class="foto-miniatura" onclick="abrirVisor('${urlFoto}')" title="Clic para ampliar"></td>
                         <td>${prenda.salidaFecha || 'N/A'}</td>
                         <td style="font-weight: bold; color: #fff;">${prenda.precinto}</td>
                         <td style="color: #ccc; font-size: 13px;">${descripcionGenerada || '-'}</td>
@@ -208,12 +407,15 @@
                         <td style="font-weight: bold; color: #fd7e14;">${prenda.cantidad || '1'}</td>
                         <td><span class="estado-salida">${prenda.estado}</span></td>
                         <td style="color: #ffc107; font-weight: 500;">${prenda.salidaRemision || '-'}</td>
-                        <td>
-                            <button class="btn-retornar" onclick="retornarAInventario('${prenda.id}')">↩️ Retornar a Bodega</button>
+                        <td style="white-space: nowrap;">
+                            <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${prenda.id}')">👁️</button>
+                            <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${prenda.id}')">✏️</button>
+                            <button class="btn-retornar" title="Retornar a Bodega" onclick="retornarAInventario('${prenda.id}')">↩️</button>
                         </td>
                     `;
                     tabla.appendChild(fila);
 
+                    // EXPORTACIÓN A EXCEL
                     datosParaExcel.push({
                         "Fecha de Salida": prenda.salidaFecha || "",
                         "Remisión de Salida": prenda.salidaRemision || "",
@@ -245,7 +447,7 @@
             });
 
             if (contadorBajas === 0) {
-                tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='11' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
             }
             
             document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
@@ -260,6 +462,159 @@
                 if (error) { alert("Error al intentar retornar: " + error.message); } else { alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢"); fetchBajas(); }
             }
         }
+
+        // ==========================================
+        // LÓGICA DE EDICIÓN Y VISUALIZACIÓN DE FICHAS (COPIA DE DASHBOARD)
+        // ==========================================
+        window.abrirModalEditar = async function(idDocumento) {
+            idPrendaSeleccionada = idDocumento;
+            document.getElementById('edFotoNueva').value = '';
+
+            const { data, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
+
+            if (data) {
+                const p = data;
+                document.getElementById('edPrecinto').value = p.precinto || '';
+                document.getElementById('edReferencia').value = p.referencia || '';
+                document.getElementById('edColeccion').value = p.coleccion || '';
+                document.getElementById('edFechaEntregaCI').value = p.fechaEntregaCI || '';
+                document.getElementById('edTipo').value = p.tipo || '';
+                document.getElementById('edLinea').value = p.linea || '';
+                document.getElementById('edTalla').value = p.talla || '';
+                document.getElementById('edGenero').value = p.genero || '';
+                document.getElementById('edColor').value = p.color || '';
+                document.getElementById('edUbiGeneral').value = p.ubicacionGeneral || '';
+                document.getElementById('edUbiDiseno').value = p.ubicacionDiseno || '';
+                document.getElementById('edObservaciones').value = p.observaciones || '';
+                document.getElementById('edRemision').value = p.salidaRemision || '';
+                document.getElementById('edFechaSalida').value = p.salidaFecha || '';
+                document.getElementById('edTo').value = p.salidaTo || ''; 
+                document.getElementById('edPrecio').value = p.precio || '';
+                document.getElementById('edMoneda').value = p.moneda || 'COP';
+                document.getElementById('edProveedor').value = p.proveedor || '';
+                document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
+                
+                const selectEstado = document.getElementById('edEstado');
+                if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
+                document.getElementById('modalEditar').style.display = 'flex';
+            }
+        }
+
+        window.cerrarModalEditar = function() { document.getElementById('modalEditar').style.display = 'none'; idPrendaSeleccionada = null; }
+
+        window.guardarEdicion = function() {
+            const btn = document.getElementById('btnGuardarEdicion');
+            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
+
+            const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
+
+            if (archivoFotoNueva) {
+                const reader = new FileReader();
+                reader.readAsDataURL(archivoFotoNueva);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; const MAX_HEIGHT = 600;
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                        ejecutarUpdateSupabase(fotoBase64); 
+                    }
+                }
+            } else {
+                ejecutarUpdateSupabase(null);
+            }
+
+            async function ejecutarUpdateSupabase(nuevaFotoData) {
+                let datosActualizar = {
+                    precinto: document.getElementById('edPrecinto').value.trim(), 
+                    referencia: document.getElementById('edReferencia').value,
+                    coleccion: document.getElementById('edColeccion').value,
+                    fechaEntregaCI: document.getElementById('edFechaEntregaCI').value,
+                    tipo: document.getElementById('edTipo').value,
+                    linea: document.getElementById('edLinea').value,
+                    talla: document.getElementById('edTalla').value,
+                    genero: document.getElementById('edGenero').value,
+                    color: document.getElementById('edColor').value,
+                    ubicacionGeneral: document.getElementById('edUbiGeneral').value,
+                    ubicacionDiseno: document.getElementById('edUbiDiseno').value,
+                    observaciones: document.getElementById('edObservaciones').value,
+                    estado: document.getElementById('edEstado').value,
+                    salidaRemision: document.getElementById('edRemision').value, 
+                    salidaFecha: document.getElementById('edFechaSalida').value,
+                    salidaTo: document.getElementById('edTo').value,
+                    precio: parseFloat(document.getElementById('edPrecio').value) || null,
+                    moneda: document.getElementById('edMoneda').value,
+                    proveedor: document.getElementById('edProveedor').value,
+                    paisOrigen: document.getElementById('edPaisOrigen').value
+                };
+
+                if (nuevaFotoData !== null) { datosActualizar.fotoUrl = nuevaFotoData; }
+
+                const { error } = await supabase.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada);
+                
+                if (error) {
+                    alert("Error editando: " + error.message);
+                } else {
+                    window.cerrarModalEditar();
+                    fetchBajas(); // Se llama fetchBajas porque estamos en la página de Salidas
+                }
+                btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
+            }
+        }
+
+        window.verDetalles = async function(idDocumento) {
+            const { data: p, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
+            if (p) {
+                document.getElementById('detFoto').src = p.fotoUrl || 'logo.png';
+                document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
+                document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
+                document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
+                document.getElementById('detFechaEntregaCI').textContent = p.fechaEntregaCI || '-';
+                document.getElementById('detPrecinto').textContent = p.precinto || '-';
+                document.getElementById('detReferencia').textContent = p.referencia || '-';
+                document.getElementById('detColeccion').textContent = p.coleccion || '-';
+                document.getElementById('detTipo').textContent = p.tipo || '-';
+                document.getElementById('detLinea').textContent = p.linea || '-';
+                document.getElementById('detGenero').textContent = p.genero || '-';
+                document.getElementById('detTalla').textContent = p.talla || '-';
+                document.getElementById('detColor').textContent = p.color || '-';
+                document.getElementById('detCantidad').textContent = p.cantidad || '-';
+                document.getElementById('detClasificacion').textContent = p.clasificacion || '-';
+                document.getElementById('detProveedor').textContent = p.proveedor || '-';
+                document.getElementById('detPais').textContent = p.paisOrigen || '-';
+                document.getElementById('detPrecio').textContent = (p.precio || '-') + ' ' + (p.moneda || '');
+                document.getElementById('detUbiGeneral').textContent = p.ubicacionGeneral || '-';
+                document.getElementById('detUbiDiseno').textContent = p.ubicacionDiseno || '-';
+                document.getElementById('detEstado').textContent = p.estado || 'Disponible en inventario';
+                document.getElementById('detRemision').textContent = p.salidaRemision || '-';
+                document.getElementById('detFechaSalida').textContent = p.salidaFecha || '-';
+                document.getElementById('detTo').textContent = p.salidaTo || '-'; 
+                document.getElementById('detObservaciones').textContent = p.observaciones || 'Sin observaciones.';
+                document.getElementById('modalDetalles').style.display = 'flex';
+            }
+        }
+        
+        window.cerrarModalDetalles = function() { document.getElementById('modalDetalles').style.display = 'none'; }
+        
+        const visor = document.getElementById('modalVisor');
+        const imgAmpliada = document.getElementById('imagenAmpliada');
+        
+        window.abrirVisor = function(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
+        window.cerrarVisor = function() { visor.style.display = 'none'; imgAmpliada.src = ''; }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" || event.keyCode === 27) {
+                window.cerrarVisor(); window.cerrarModalDetalles(); window.cerrarModalEditar();
+            }
+        });
 
         document.getElementById('btnExportarExcel').addEventListener('click', function() {
             if(datosParaExcel.length === 0) { alert("No hay registros de bajas para exportar."); return; }
@@ -328,12 +683,12 @@
                         });
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
                         if (error) throw error;
-                        alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
+                        alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} registros al sistema.`);
                         fetchBajas();
                     }
                 } catch (err) {
                     console.error("Error al importar Excel:", err); alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
-                } finally { event.target.value = ''; mensajeCarga.style.display = "none"; }
+                } finally { event.target.value = ''; mensajeCarga.style.display = "none"; document.getElementById('chkSeleccionarTodos').checked = false; }
             };
             lector.readAsArrayBuffer(archivo);
         });
@@ -342,9 +697,14 @@
             const textoBusqueda = this.value.toLowerCase();
             const filas = document.querySelectorAll('#cuerpoTablaSalidas tr');
             filas.forEach(fila => {
-                if(fila.cells.length === 1) return;
-                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+                if(fila.cells.length === 1) return; // ignora la fila vacía
+                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { 
+                    fila.style.display = ''; 
+                } else { 
+                    fila.style.display = 'none'; 
+                }
             });
+            window.actualizarBotonEliminarMasivo();
         });
     </script>
 </body>
