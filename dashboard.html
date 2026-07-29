@@ -111,6 +111,7 @@
                         <th>Foto</th>
                         <th>Fecha Ingreso</th>
                         <th>Código Precinto</th>
+                        <!-- NUEVA COLUMNA DE DESCRIPCIÓN AQUÍ -->
                         <th>Descripción</th>
                         <th>Referencia</th>
                         <th>Línea</th>
@@ -251,7 +252,6 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; 
-        // 🚨 CAMBIO A LOCALSTORAGE PARA COMPARTIR SESIÓN ENTRE PESTAÑAS
         const supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { storage: window.localStorage }
         });
@@ -503,6 +503,8 @@
                 alert("Error: " + error.message);
             } else {
                 window.cerrarModalSalida();
+                // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga de la tabla al instante
+                fetchPrendas(); 
             }
             btn.textContent = "Confirmar"; btn.disabled = false;
         }
@@ -609,6 +611,8 @@
                     alert("Error editando: " + error.message);
                 } else {
                     window.cerrarModalEditar();
+                    // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga visual de la tabla al instante
+                    fetchPrendas();
                 }
                 btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
             }

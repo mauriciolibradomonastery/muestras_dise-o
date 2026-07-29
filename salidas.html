@@ -67,7 +67,6 @@
                         <th>Foto</th>
                         <th>Fecha Salida</th>
                         <th>Código Precinto</th>
-                        <!-- NUEVA COLUMNA DE DESCRIPCIÓN AQUÍ -->
                         <th>Descripción</th>
                         <th>Referencia</th>
                         <th>Línea</th>
@@ -92,7 +91,6 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        // 🚨 CAMBIO APLICADO: Uso de localStorage para mantener la sesión segura entre pestañas
         const supabase = createClient(supabaseUrl, supabaseKey, {
             auth: { storage: window.localStorage }
         });
@@ -151,7 +149,6 @@
                     const urlFoto = prenda.fotoUrl || 'logo.png'; 
                     const fila = document.createElement('tr');
                     
-                    // LÓGICA DE CONCATENACIÓN PARA LA DESCRIPCIÓN CON ESPACIOS
                     const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                     const descripcionGenerada = partesDesc.join(" ");
                     
@@ -230,6 +227,8 @@
                     alert("Error al intentar retornar: " + error.message);
                 } else {
                     alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
+                    // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga de la tabla al instante
+                    fetchBajas();
                 }
             }
         }
