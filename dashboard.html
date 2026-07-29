@@ -32,17 +32,18 @@
         .dropdown { position: relative; display: inline-block; }
         .btn-opciones { background-color: #0078D4; color: white; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
         .btn-opciones:hover { background-color: #005a9e; }
+        .btn-guardar { background-color: #10b981; } /* Botón verde de guardar masivo */
+        .btn-guardar:hover { background-color: #059669; }
+
         .dropdown-contenido { display: none; position: absolute; right: 0; background-color: #222222; min-width: 250px; box-shadow: 0px 8px 24px rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 8px; z-index: 100; margin-top: 6px; overflow: hidden; }
         
         .dropdown-item { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; text-align: left; background: none; border: none; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; box-sizing: border-box; transition: 0.2s; font-weight: 500; }
         .dropdown-item:hover { background-color: #333333; }
         
         .item-excel { border-left: 4px solid #28a745; }
-        .item-backup { border-left: 4px solid #6f42c1; }
-        .item-restaurar { border-left: 4px solid #e83e8c; }
         .item-bajas { border-left: 4px solid #fd7e14; }
         .item-agregar { border-left: 4px solid #0078D4; }
-        .item-importar { border-left: 4px solid #17a2b8; } /* Color para el nuevo botón */
+        .item-importar { border-left: 4px solid #17a2b8; } 
         
         .show { display: block; }
 
@@ -85,21 +86,22 @@
             
             <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar por Precinto, Referencia, etc...">
             
-            <div class="dropdown">
-                <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
-                <div id="dropdownOpciones" class="dropdown-content dropdown-contenido">
-                    <!-- NUEVO BOTÓN PARA IMPORTAR DESDE EXCEL -->
-                    <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-                    <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
-                    
-                    <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
-                    <button class="dropdown-item item-backup" id="btnBackupJSON">💾 Copia Seguridad (JSON)</button>
-                    
-                    <input type="file" id="inputRestaurarJSON" accept=".json" style="display: none;">
-                    <button class="dropdown-item item-restaurar" onclick="document.getElementById('inputRestaurarJSON').click()">↩️ Restaurar Copia (JSON)</button>
-                    
-                    <a href="salidas.html" class="dropdown-item item-bajas">📋 Ver Bajas / Salidas</a>
-                    <a href="formulario.html" class="dropdown-item item-agregar">➕ Agregar Prenda</a>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- NUEVO BOTÓN DE GUARDADO MASIVO (Oculto por defecto) -->
+                <button id="btnGuardarMasivo" class="btn-opciones btn-guardar" style="display: none;" onclick="guardarCambiosMasivos()">💾 Guardar Cambios</button>
+
+                <div class="dropdown">
+                    <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
+                    <div id="dropdownOpciones" class="dropdown-content dropdown-contenido">
+                        <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+                        <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
+                        
+                        <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
+                        <!-- SE ELIMINARON LOS BOTONES JSON DE AQUÍ -->
+                        
+                        <a href="salidas.html" class="dropdown-item item-bajas">📋 Ver Bajas / Salidas</a>
+                        <a href="formulario.html" class="dropdown-item item-agregar">➕ Agregar Prenda</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -244,22 +246,23 @@
 
     <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
 
-    <!-- LIBRERÍAS EXTERNAS (EXCEL Y SUPABASE) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // 1. CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
-        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; // Ya te dejé tu URL lista
-        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; // <- SOLO PEGA TU CLAVE LARGA AQUÍ
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; 
+        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; 
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { storage: window.sessionStorage }
+        });
 
         const tabla = document.getElementById('cuerpoTabla');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = [];
-        let baseDatosCompleta = []; 
+        
+        // --- NUEVA VARIABLE: Guarda los IDs de las prendas que el usuario quiere eliminar ---
+        let prendasAEliminarLocal = []; 
 
-        // EXPOSICIÓN DE FUNCIONES AL WINDOW (Para que el HTML las pueda usar)
         window.toggleDropdown = function() {
             document.getElementById("dropdownOpciones").classList.toggle("show");
         }
@@ -275,10 +278,8 @@
             }
         }
 
-        // 2. FUNCIÓN PRINCIPAL PARA CARGAR DATOS
         async function fetchPrendas() {
             try {
-                // Obtenemos los datos ordenados del más reciente al más antiguo (basado en id)
                 const { data, error } = await supabase
                     .from('prendas')
                     .select('*')
@@ -292,20 +293,17 @@
             }
         }
 
-        // 3. SUSCRIPCIÓN EN TIEMPO REAL (Realtime)
         supabase
             .channel('cambios-prendas')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                fetchPrendas(); // Recarga la tabla automáticamente si hay cambios
+                fetchPrendas(); 
             })
             .subscribe();
 
-        // 4. RENDERIZADO DE TABLA
         function renderTable(data) {
             tabla.innerHTML = ""; 
             mensajeCarga.style.display = "none";
             datosParaExcel = []; 
-            baseDatosCompleta = data || []; 
             let contadorDisponibles = 0;
             
             if(!data || data.length === 0) {
@@ -314,9 +312,9 @@
             }
 
             data.forEach((prenda) => {
-                if (prenda.estado && prenda.estado !== "Disponible en inventario") {
-                    return; 
-                }
+                // Si la prenda no está en inventario O si está en nuestra lista negra local, NO LA MOSTRAMOS.
+                if (prenda.estado && prenda.estado !== "Disponible en inventario") return; 
+                if (prendasAEliminarLocal.includes(prenda.id)) return;
 
                 contadorDisponibles++;
                 const urlFotoARenderizar = prenda.fotoUrl || 'logo.png'; 
@@ -329,6 +327,7 @@
                     costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`;
                 }
                 
+                // Agregamos `this` al botón borrar para referenciar el botón exacto presionado
                 fila.innerHTML = `
                     <td><img src="${urlFotoARenderizar}" class="foto-miniatura" alt="Foto" onclick="abrirVisor('${urlFotoARenderizar}')" title="Clic para ampliar"></td>
                     <td>${prenda.fechaIngreso || 'N/A'}</td>
@@ -343,7 +342,7 @@
                         <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${prenda.id}')">👁️</button>
                         <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${prenda.id}')">✏️</button>
                         <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${prenda.id}')">📤</button>
-                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${prenda.id}')">🗑️</button>
+                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${prenda.id}', this)">🗑️</button>
                     </td>
                 `;
                 tabla.appendChild(fila);
@@ -351,7 +350,6 @@
                 const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                 const descripcionGenerada = partesDesc.join(" - ");
 
-                // PREPARAR DATOS PARA EXCEL
                 datosParaExcel.push({
                     "Fecha Ingreso": prenda.fechaIngreso || "",
                     "Registrado Por": prenda.registradoPor || "",
@@ -385,10 +383,8 @@
             }
         }
 
-        // INICIAR CARGA DE DATOS
         fetchPrendas();
 
-        // 5. EXPORTAR A EXCEL
         document.getElementById('btnExportarExcel').addEventListener('click', function() {
             if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
             const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
@@ -397,7 +393,6 @@
             XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
         });
 
-        // 6. IMPORTAR MASIVAMENTE DESDE EXCEL
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
@@ -422,7 +417,6 @@
 
                     if (confirm(`⚠️ Vas a importar ${excelData.length} prendas nuevas al inventario desde este Excel.\n\nNOTA: Asegúrate de que este Excel NO contenga las prendas que ya están en el sistema para no duplicarlas.\n\n¿Deseas continuar?`)) {
                         
-                        // Mapear las columnas del Excel (en español) a las de Supabase (en código)
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
@@ -451,69 +445,19 @@
                             };
                         });
 
-                        // Insertar todo el bloque a Supabase de un solo golpe
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
-                        
                         if (error) throw error;
-
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
                     }
                 } catch (err) {
                     console.error("Error al importar Excel:", err);
                     alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
                 } finally {
-                    event.target.value = ''; // Limpiar input para poder subir el mismo archivo después si se necesita
+                    event.target.value = ''; 
                     mensajeCarga.style.display = "none";
                 }
             };
             lector.readAsArrayBuffer(archivo);
-        });
-
-        // 7. BACKUP JSON (Descarga de Supabase)
-        document.getElementById('btnBackupJSON').addEventListener('click', function() {
-            if(baseDatosCompleta.length === 0) { alert("No hay datos en el inventario para respaldar."); return; }
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(baseDatosCompleta, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            const hoy = new Date().toISOString().split('T')[0];
-            downloadAnchor.setAttribute("download", `Backup_Total_Supabase_${hoy}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            alert("¡ÉXITO! Copia de seguridad completa descargada (incluye fotos Base64).");
-        });
-
-        // 8. RESTAURAR JSON (Inserción Masiva en Supabase)
-        document.getElementById('inputRestaurarJSON').addEventListener('change', async function(event) {
-            const archivo = event.target.files[0];
-            if (!archivo) return;
-            const lector = new FileReader();
-            lector.onload = async function(e) {
-                try {
-                    const datosRestaurar = JSON.parse(e.target.result);
-                    if (!Array.isArray(datosRestaurar)) {
-                        alert("Error: El archivo seleccionado no tiene el formato correcto.");
-                        return;
-                    }
-                    if (confirm(`⚠️ ALERTA DE SEGURIDAD ⚠️\n¿Estás seguro de que deseas inyectar y restaurar las ${datosRestaurar.length} prendas de este backup a Supabase?`)) {
-                        
-                        const registrosLimpios = datosRestaurar.map(p => {
-                            const { idDocumentoFirestore, id, fechaServidor, ...limpio } = p; 
-                            return limpio;
-                        });
-
-                        const { data, error } = await supabase.from('prendas').insert(registrosLimpios);
-                        if(error) throw error;
-                        
-                        alert(`🎉 ¡SISTEMA RESTAURADO CON ÉXITO!`);
-                        event.target.value = '';
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert("Error crítico: No se pudo procesar la lectura o subida de la copia de seguridad.");
-                }
-            };
-            lector.readAsText(archivo);
         });
 
         // 9. BUSCADOR EN TIEMPO REAL
@@ -707,10 +651,48 @@
         
         window.cerrarModalDetalles = function() { document.getElementById('modalDetalles').style.display = 'none'; }
         
-        window.eliminarPrenda = async function(idDocumento) { 
-            if(confirm("¿Estás seguro de que deseas eliminar esta prenda?")) { 
-                await supabase.from('prendas').delete().eq('id', idDocumento);
+        // --- NUEVA LÓGICA OPTIMISTA PARA ELIMINAR ---
+        window.eliminarPrenda = function(idDocumento, botonPresionado) { 
+            if(confirm("¿Quitar esta prenda de la vista para eliminarla?\n\n(Recuerda presionar el botón verde 'Guardar Cambios' para borrarla definitivamente).")) { 
+                
+                // 1. Guardamos el ID en la "lista negra" local
+                prendasAEliminarLocal.push(idDocumento);
+                
+                // 2. Ocultamos la fila visualmente al instante
+                const filaElemento = botonPresionado.closest('tr');
+                if (filaElemento) filaElemento.style.display = 'none';
+                
+                // 3. Mostramos el botón de Guardado Masivo
+                document.getElementById('btnGuardarMasivo').style.display = 'flex';
             } 
+        }
+
+        // --- FUNCIÓN PARA GUARDAR LAS ELIMINACIONES EN MASA ---
+        window.guardarCambiosMasivos = async function() {
+            if(prendasAEliminarLocal.length === 0) return;
+
+            const btn = document.getElementById('btnGuardarMasivo');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "⏳ Eliminando...";
+            btn.disabled = true;
+
+            try {
+                // Borramos de Supabase todos los IDs que se recopilaron de un solo golpe
+                const { error } = await supabase.from('prendas').delete().in('id', prendasAEliminarLocal);
+                if (error) throw error;
+                
+                // Limpiamos la lista y ocultamos el botón
+                prendasAEliminarLocal = []; 
+                btn.style.display = 'none';
+                alert("¡Base de datos actualizada! Las prendas fueron eliminadas.");
+                
+            } catch (error) {
+                console.error("Error al eliminar masivamente:", error);
+                alert("Hubo un problema guardando los cambios.");
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
         }
         
         const visor = document.getElementById('modalVisor');

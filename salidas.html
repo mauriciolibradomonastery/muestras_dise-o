@@ -20,6 +20,20 @@
         .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; }
         .estado-salida { background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
+
+        /* ESTILOS DEL MENÚ DESPLEGABLE "OPCIONES" */
+        .dropdown { position: relative; display: inline-block; }
+        .btn-opciones { background-color: #0078D4; color: white; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-opciones:hover { background-color: #005a9e; }
+        .dropdown-contenido { display: none; position: absolute; right: 0; background-color: #222222; min-width: 250px; box-shadow: 0px 8px 24px rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 8px; z-index: 100; margin-top: 6px; overflow: hidden; }
+        
+        .dropdown-item { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; text-align: left; background: none; border: none; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; box-sizing: border-box; transition: 0.2s; font-weight: 500; }
+        .dropdown-item:hover { background-color: #333333; }
+        
+        .item-excel { border-left: 4px solid #28a745; }
+        .item-importar { border-left: 4px solid #17a2b8; } 
+        
+        .show { display: block; }
     </style>
 </head>
 <body>
@@ -29,7 +43,21 @@
                 <a href="dashboard.html" class="btn-volver">📦 Volver al Dashboard</a>
                 <h2 style="margin: 0; color: #fd7e14;">📋 Consolidado de Bajas y Salidas</h2>
             </div>
-            <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar baja por precinto, remisión...">
+
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar baja por precinto, remisión...">
+                
+                <!-- MENÚ DESPLEGABLE OPCIONES -->
+                <div class="dropdown">
+                    <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
+                    <div id="dropdownOpciones" class="dropdown-contenido">
+                        <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+                        <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
+                        
+                        <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="contenedor-tabla">
@@ -53,6 +81,9 @@
         </div>
     </div>
 
+    <!-- LIBRERÍAS EXTERNAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -60,15 +91,34 @@
         // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        // Agregamos la seguridad de sesión
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { storage: window.sessionStorage }
+        });
 
         const tabla = document.getElementById('cuerpoTablaSalidas');
         const mensajeCarga = document.getElementById('mensajeCarga');
+        let datosParaExcel = []; // Arreglo para exportar
+
+        // Lógica del menú desplegable
+        window.toggleDropdown = function() {
+            document.getElementById("dropdownOpciones").classList.toggle("show");
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.btn-opciones')) {
+                const dropdowns = document.getElementsByClassName("dropdown-contenido");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                    }
+                }
+            }
+        }
 
         // 1. FUNCIÓN PRINCIPAL PARA CARGAR DATOS
         async function fetchBajas() {
             try {
-                // Obtenemos los datos ordenados del más reciente al más antiguo
                 const { data, error } = await supabase
                     .from('prendas')
                     .select('*')
@@ -86,6 +136,7 @@
         function renderTable(data) {
             tabla.innerHTML = ""; 
             mensajeCarga.style.display = "none";
+            datosParaExcel = []; // Reiniciamos los datos de exportación
             let contadorBajas = 0;
             
             if(!data || data.length === 0) {
@@ -94,7 +145,7 @@
             }
 
             data.forEach((prenda) => {
-                // CONDICIÓN: Solo muestra lo que NO está disponible (es decir, lo que se dio de baja)
+                // CONDICIÓN: Solo muestra lo que NO está disponible (lo que se dio de baja)
                 if (prenda.estado && prenda.estado !== "Disponible en inventario") {
                     contadorBajas++;
                     const urlFoto = prenda.fotoUrl || 'logo.png'; 
@@ -114,6 +165,37 @@
                         </td>
                     `;
                     tabla.appendChild(fila);
+
+                    // Preparamos los datos para Excel
+                    const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
+                    const descripcionGenerada = partesDesc.join(" - ");
+
+                    datosParaExcel.push({
+                        "Fecha de Salida": prenda.salidaFecha || "",
+                        "Remisión de Salida": prenda.salidaRemision || "",
+                        "Tipo de Salida / Destino": prenda.estado || "",
+                        "Orden de Traslado (TO)": prenda.salidaTo || "", 
+                        "Fecha Ingreso Original": prenda.fechaIngreso || "",
+                        "Registrado Por": prenda.registradoPor || "",
+                        "Precinto": prenda.precinto || "",
+                        "Descripción": descripcionGenerada,
+                        "Referencia": prenda.referencia || "",
+                        "Línea": prenda.linea || "",
+                        "Color": prenda.color || "",
+                        "Talla": prenda.talla || "",
+                        "Género": prenda.genero || "",
+                        "Proveedor": prenda.proveedor || "",
+                        "País Origen": prenda.paisOrigen || "",
+                        "Precio": prenda.precio || "",
+                        "Moneda": prenda.moneda || "",
+                        "Cantidad": prenda.cantidad || "",
+                        "Clasificación": prenda.clasificacion || "",
+                        "Ubicación General": prenda.ubicacionGeneral || "",
+                        "Ubicación Diseño": prenda.ubicacionDiseno || "",
+                        "Tipo": prenda.tipo || "",
+                        "Observaciones": prenda.observaciones || "",
+                        "Colección": prenda.coleccion || ""
+                    });
                 }
             });
 
@@ -126,14 +208,14 @@
         supabase
             .channel('cambios-bajas')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                fetchBajas(); // Recarga la tabla si alguien da de baja algo o lo retorna
+                fetchBajas(); 
             })
             .subscribe();
 
         // INICIAR CARGA DE DATOS
         fetchBajas();
 
-        // 4. FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo y borra los datos de salida
+        // 4. FUNCIÓN MÁGICA: Devuelve la prenda al inventario activo
         window.retornarAInventario = async function(idDocumento) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
                 const { error } = await supabase
@@ -142,7 +224,7 @@
                         estado: "Disponible en inventario",
                         salidaRemision: "",
                         salidaFecha: "",
-                        salidaTo: "" // Limpiamos también el TO por si acaso
+                        salidaTo: "" 
                     })
                     .eq('id', idDocumento);
 
@@ -153,6 +235,83 @@
                 }
             }
         }
+
+        // 5. EXPORTAR A EXCEL
+        document.getElementById('btnExportarExcel').addEventListener('click', function() {
+            if(datosParaExcel.length === 0) { alert("No hay registros de bajas para exportar."); return; }
+            const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
+            const libroExcel = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Historial Bajas");
+            XLSX.writeFile(libroExcel, "Historial_Bajas_Monastery.xlsx");
+        });
+
+        // 6. IMPORTAR MASIVAMENTE DESDE EXCEL
+        document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
+            const archivo = event.target.files[0];
+            if (!archivo) return;
+
+            const lector = new FileReader();
+            lector.onload = async function(e) {
+                try {
+                    mensajeCarga.textContent = "Procesando Excel masivo... ⏳";
+                    mensajeCarga.style.display = "block";
+
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (excelData.length === 0) {
+                        alert("El archivo Excel está vacío o no tiene el formato correcto.");
+                        mensajeCarga.style.display = "none";
+                        return;
+                    }
+
+                    if (confirm(`⚠️ Vas a importar ${excelData.length} prendas al sistema desde este Excel.\n\n¿Deseas continuar?`)) {
+                        
+                        const registrosLimpios = excelData.map(fila => {
+                            return {
+                                registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
+                                fechaIngreso: fila["Fecha Ingreso Original"] || fila["Fecha Ingreso"] || new Date().toLocaleDateString('en-CA'),
+                                precinto: fila["Precinto"] || fila["precinto"] || "",
+                                referencia: fila["Referencia"] || fila["referencia"] || "",
+                                coleccion: fila["Colección"] || fila["coleccion"] || "",
+                                tipo: fila["Tipo"] || fila["tipo"] || "",
+                                linea: fila["Línea"] || fila["linea"] || "",
+                                talla: fila["Talla"] || fila["talla"] || "",
+                                genero: fila["Género"] || fila["genero"] || "",
+                                color: fila["Color"] || fila["color"] || "",
+                                cantidad: parseInt(fila["Cantidad"] || fila["cantidad"]) || 1,
+                                clasificacion: fila["Clasificación"] || fila["clasificacion"] || "",
+                                proveedor: fila["Proveedor"] || fila["proveedor"] || "",
+                                paisOrigen: fila["País Origen"] || fila["paisOrigen"] || "",
+                                precio: parseFloat(fila["Precio"] || fila["precio"]) || null,
+                                moneda: fila["Moneda"] || fila["moneda"] || "COP",
+                                ubicacionGeneral: fila["Ubicación General"] || fila["ubicacionGeneral"] || "",
+                                ubicacionDiseno: fila["Ubicación Diseño"] || fila["ubicacionDiseno"] || "",
+                                observaciones: fila["Observaciones"] || fila["observaciones"] || "",
+                                estado: fila["Tipo de Salida / Destino"] || fila["Estado Actual"] || fila["estado"] || "SALIDA DEL INVENTARIO",
+                                salidaRemision: fila["Remisión de Salida"] || fila["salidaRemision"] || "",
+                                salidaFecha: fila["Fecha de Salida"] || fila["salidaFecha"] || "",
+                                salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
+                            };
+                        });
+
+                        const { error } = await supabase.from('prendas').insert(registrosLimpios);
+                        if (error) throw error;
+                        alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
+                    }
+                } catch (err) {
+                    console.error("Error al importar Excel:", err);
+                    alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
+                } finally {
+                    event.target.value = ''; 
+                    mensajeCarga.style.display = "none";
+                }
+            };
+            lector.readAsArrayBuffer(archivo);
+        });
 
         // BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
