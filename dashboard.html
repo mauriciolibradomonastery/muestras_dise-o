@@ -87,6 +87,9 @@
             <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar por Precinto, Referencia, etc...">
             
             <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- NUEVO BOTÓN DE ELIMINACIÓN MASIVA -->
+                <button id="btnEliminarSeleccionados" class="btn-opciones btn-borrar" style="display: none; background-color: #dc3545;" onclick="ejecutarEliminacionMasiva()">🗑️ Borrar (<span id="cantSeleccionada">0</span>)</button>
+                
                 <button id="btnGuardarMasivo" class="btn-opciones btn-guardar" style="display: none;" onclick="guardarCambiosMasivos()">💾 Guardar Cambios</button>
 
                 <div class="dropdown">
@@ -108,6 +111,8 @@
             <table>
                 <thead>
                     <tr>
+                        <!-- CHECKBOX MAESTRO PARA SELECCIONAR TODO -->
+                        <th style="width: 30px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodos" onclick="toggleSeleccionarTodos()" style="cursor: pointer; width: 16px; height: 16px;"></th>
                         <th>Foto</th>
                         <th>Fecha Ingreso</th>
                         <th>Código Precinto</th>
@@ -260,8 +265,69 @@
         const tabla = document.getElementById('cuerpoTabla');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = [];
-        
         let prendasAEliminarLocal = []; 
+
+        // ==========================================
+        // LÓGICA DE CHECKBOXES Y ELIMINACIÓN MASIVA
+        // ==========================================
+        window.toggleSeleccionarTodos = function() {
+            const chkTodos = document.getElementById('chkSeleccionarTodos');
+            const checkboxes = document.querySelectorAll('.chk-prenda');
+            checkboxes.forEach(chk => {
+                if (chk.closest('tr').style.display !== 'none') {
+                    chk.checked = chkTodos.checked;
+                }
+            });
+            window.actualizarBotonEliminarMasivo();
+        }
+
+        window.actualizarBotonEliminarMasivo = function() {
+            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
+            const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+            const spanCant = document.getElementById('cantSeleccionada');
+            
+            if (checkboxes.length > 0) {
+                spanCant.textContent = checkboxes.length;
+                btnEliminar.style.display = 'flex';
+            } else {
+                btnEliminar.style.display = 'none';
+            }
+            
+            const checkboxesVisibles = Array.from(document.querySelectorAll('.chk-prenda')).filter(chk => chk.closest('tr').style.display !== 'none');
+            const todosSeleccionados = checkboxesVisibles.length > 0 && checkboxesVisibles.every(chk => chk.checked);
+            document.getElementById('chkSeleccionarTodos').checked = todosSeleccionados;
+        }
+
+        window.ejecutarEliminacionMasiva = async function() {
+            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
+            if (checkboxes.length === 0) return;
+            
+            if (confirm(`⚠️ Estás a punto de eliminar DEFINITIVAMENTE ${checkboxes.length} prendas de la base de datos.\n\n¿Estás completamente seguro de continuar?`)) {
+                
+                const btn = document.getElementById('btnEliminarSeleccionados');
+                btn.innerHTML = "⏳ Borrando...";
+                btn.disabled = true;
+
+                const idsAEliminar = Array.from(checkboxes).map(chk => chk.value);
+
+                try {
+                    const { error } = await supabase.from('prendas').delete().in('id', idsAEliminar);
+                    if (error) throw error;
+                    
+                    alert(`✅ Se eliminaron ${idsAEliminar.length} prendas exitosamente.`);
+                    document.getElementById('chkSeleccionarTodos').checked = false;
+                    btn.style.display = 'none';
+                    fetchPrendas();
+                } catch (err) {
+                    console.error("Error eliminando:", err);
+                    alert("Error al intentar eliminar las prendas: " + err.message);
+                } finally {
+                    btn.innerHTML = `🗑️ Borrar (<span id="cantSeleccionada">0</span>)`;
+                    btn.disabled = false;
+                }
+            }
+        }
+        // ==========================================
 
         window.toggleDropdown = function() {
             document.getElementById("dropdownOpciones").classList.toggle("show");
@@ -307,7 +373,7 @@
             let contadorDisponibles = 0;
             
             if(!data || data.length === 0) {
-                tabla.innerHTML = "<tr><td colspan='11' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
                 return;
             }
 
@@ -332,6 +398,7 @@
                 const descripcionGenerada = partesDesc.join(" ");
 
                 fila.innerHTML = `
+                    <td style="text-align: center;"><input type="checkbox" class="chk-prenda" value="${prenda.id}" onclick="window.actualizarBotonEliminarMasivo()" style="cursor: pointer; width: 16px; height: 16px;"></td>
                     <td><img src="${urlFotoARenderizar}" class="foto-miniatura" alt="Foto" onclick="abrirVisor('${urlFotoARenderizar}')" title="Clic para ampliar"></td>
                     <td>${prenda.fechaIngreso || 'N/A'}</td>
                     <td style="font-weight: bold; color: #fff;">${prenda.precinto || '-'}</td>
@@ -346,12 +413,11 @@
                         <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${prenda.id}')">👁️</button>
                         <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${prenda.id}')">✏️</button>
                         <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${prenda.id}')">📤</button>
-                        <button class="btn-accion btn-borrar" title="Eliminar" onclick="eliminarPrenda('${prenda.id}', this)">🗑️</button>
+                        <button class="btn-accion btn-borrar" title="Eliminar Individual" onclick="eliminarPrenda('${prenda.id}', this)">🗑️</button>
                     </td>
                 `;
                 tabla.appendChild(fila);
 
-                // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final absoluto
                 datosParaExcel.push({
                     "Fecha Ingreso": prenda.fechaIngreso || "",
                     "Registrado Por": prenda.registradoPor || "",
@@ -382,7 +448,7 @@
             });
 
             if (contadorDisponibles === 0) {
-                tabla.innerHTML = "<tr><td colspan='11' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
+                tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
             }
         }
 
@@ -395,6 +461,19 @@
             XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Inventario Monastery");
             XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
         });
+
+        // FUNCIÓN PARA TRADUCIR FECHAS RARAS DE EXCEL
+        function formatearFechaExcel(fechaStrONum) {
+            if (!fechaStrONum) return "";
+            if (typeof fechaStrONum === 'string') return fechaStrONum;
+            if (typeof fechaStrONum === 'number') {
+                const fechaUnix = Math.round((fechaStrONum - 25569) * 86400 * 1000);
+                const fechaPura = new Date(fechaUnix);
+                const fechaAjustada = new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000));
+                return fechaAjustada.toISOString().split('T')[0];
+            }
+            return "";
+        }
 
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
@@ -423,8 +502,9 @@
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
-                                fechaIngreso: fila["Fecha Ingreso"] || fila["fechaIngreso"] || new Date().toLocaleDateString('en-CA'),
-                                fechaEntregaCI: fila["Fecha Entrega CI"] || fila["fechaEntregaCI"] || "",
+                                // SE USA EL TRADUCTOR DE FECHAS AQUÍ:
+                                fechaIngreso: formatearFechaExcel(fila["Fecha Ingreso"] || fila["fechaIngreso"]) || new Date().toLocaleDateString('en-CA'),
+                                fechaEntregaCI: formatearFechaExcel(fila["Fecha Entrega CI"] || fila["fechaEntregaCI"]),
                                 precinto: fila["Precinto"] || fila["precinto"] || "",
                                 referencia: fila["Referencia"] || fila["referencia"] || "",
                                 coleccion: fila["Colección"] || fila["coleccion"] || "",
@@ -444,7 +524,7 @@
                                 observaciones: fila["Observaciones"] || fila["observaciones"] || "",
                                 estado: fila["Estado Actual"] || fila["estado"] || "Disponible en inventario",
                                 salidaRemision: fila["Remisión de Salida"] || fila["salidaRemision"] || "",
-                                salidaFecha: fila["Fecha de Salida"] || fila["salidaFecha"] || "",
+                                salidaFecha: formatearFechaExcel(fila["Fecha de Salida"] || fila["salidaFecha"]),
                                 salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
                             };
                         });
@@ -459,6 +539,7 @@
                 } finally {
                     event.target.value = ''; 
                     mensajeCarga.style.display = "none";
+                    document.getElementById('chkSeleccionarTodos').checked = false;
                 }
             };
             lector.readAsArrayBuffer(archivo);
@@ -471,6 +552,7 @@
                 const contenidoFila = fila.textContent.toLowerCase();
                 if (contenidoFila.includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
             });
+            window.actualizarBotonEliminarMasivo();
         });
 
         let idPrendaSeleccionada = null; 

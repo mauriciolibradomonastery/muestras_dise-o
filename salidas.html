@@ -167,7 +167,7 @@
                     `;
                     tabla.appendChild(fila);
 
-                    // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final absoluto
+                    // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final
                     datosParaExcel.push({
                         "Fecha de Salida": prenda.salidaFecha || "",
                         "Remisión de Salida": prenda.salidaRemision || "",
@@ -241,6 +241,19 @@
             XLSX.writeFile(libroExcel, "Historial_Bajas_Monastery.xlsx");
         });
 
+        // FUNCIÓN PARA TRADUCIR FECHAS RARAS DE EXCEL
+        function formatearFechaExcel(fechaStrONum) {
+            if (!fechaStrONum) return "";
+            if (typeof fechaStrONum === 'string') return fechaStrONum;
+            if (typeof fechaStrONum === 'number') {
+                const fechaUnix = Math.round((fechaStrONum - 25569) * 86400 * 1000);
+                const fechaPura = new Date(fechaUnix);
+                const fechaAjustada = new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000));
+                return fechaAjustada.toISOString().split('T')[0];
+            }
+            return "";
+        }
+
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
@@ -268,8 +281,9 @@
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
-                                fechaIngreso: fila["Fecha Ingreso Original"] || fila["Fecha Ingreso"] || new Date().toLocaleDateString('en-CA'),
-                                fechaEntregaCI: fila["Fecha Entrega CI"] || fila["fechaEntregaCI"] || "",
+                                // FECHAS PROTEGIDAS CON EL TRADUCTOR
+                                fechaIngreso: formatearFechaExcel(fila["Fecha Ingreso Original"] || fila["Fecha Ingreso"]) || new Date().toLocaleDateString('en-CA'),
+                                fechaEntregaCI: formatearFechaExcel(fila["Fecha Entrega CI"] || fila["fechaEntregaCI"]),
                                 precinto: fila["Precinto"] || fila["precinto"] || "",
                                 referencia: fila["Referencia"] || fila["referencia"] || "",
                                 coleccion: fila["Colección"] || fila["coleccion"] || "",
@@ -289,7 +303,7 @@
                                 observaciones: fila["Observaciones"] || fila["observaciones"] || "",
                                 estado: fila["Tipo de Salida / Destino"] || fila["Estado Actual"] || fila["estado"] || "SALIDA DEL INVENTARIO",
                                 salidaRemision: fila["Remisión de Salida"] || fila["salidaRemision"] || "",
-                                salidaFecha: fila["Fecha de Salida"] || fila["salidaFecha"] || "",
+                                salidaFecha: formatearFechaExcel(fila["Fecha de Salida"] || fila["salidaFecha"]),
                                 salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
                             };
                         });
