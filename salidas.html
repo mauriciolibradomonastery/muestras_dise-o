@@ -241,7 +241,6 @@
             XLSX.writeFile(libroExcel, "Historial_Bajas_Monastery.xlsx");
         });
 
-        // FUNCIÓN PARA TRADUCIR FECHAS RARAS DE EXCEL
         function formatearFechaExcel(fechaStrONum) {
             if (!fechaStrONum) return "";
             if (typeof fechaStrONum === 'string') return fechaStrONum;
@@ -281,7 +280,6 @@
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
-                                // FECHAS PROTEGIDAS CON EL TRADUCTOR
                                 fechaIngreso: formatearFechaExcel(fila["Fecha Ingreso Original"] || fila["Fecha Ingreso"]) || new Date().toLocaleDateString('en-CA'),
                                 fechaEntregaCI: formatearFechaExcel(fila["Fecha Entrega CI"] || fila["fechaEntregaCI"]),
                                 precinto: fila["Precinto"] || fila["precinto"] || "",
@@ -311,6 +309,9 @@
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
                         if (error) throw error;
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
+                        
+                        // RECARGA TURBO
+                        fetchBajas();
                     }
                 } catch (err) {
                     console.error("Error al importar Excel:", err);
