@@ -145,9 +145,10 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        // CAMBIO CRUCIAL: Agregar la protección de la sesión aquí
+        
+        // CORRECCIÓN APLICADA AQUÍ: Restaurado a localStorage para solucionar el error de permisos entre pestañas.
         const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: { storage: window.sessionStorage }
+            auth: { storage: window.localStorage }
         });
 
         const inputNumeroPrecinto = document.getElementById('numeroPrecinto');
