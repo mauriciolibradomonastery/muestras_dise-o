@@ -32,12 +32,24 @@
         
         .item-excel { border-left: 4px solid #28a745; }
         .item-importar { border-left: 4px solid #17a2b8; } 
-        
         .show { display: block; }
+
+        /* ESTILO ORDENAMIENTO */
+        .th-sortable { cursor: pointer; user-select: none; transition: 0.2s; }
+        .th-sortable:hover { background-color: #444; color: #fff; }
     </style>
 </head>
 <body>
     <div class="contenedor">
+        <!-- BARRA SUPERIOR DE USUARIO -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
+            <div style="display: flex; align-items: center; gap: 10px; background-color: #222; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; font-size: 13px; color: #ccc;">
+                <span id="userEmail">Verificando usuario...</span>
+                <button onclick="cerrarSesion()" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
+            </div>
+        </div>
+
         <div class="barra-control">
             <div style="display: flex; align-items: center;">
                 <a href="dashboard.html" class="btn-volver">📦 Volver al Dashboard</a>
@@ -47,13 +59,11 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar baja por precinto, remisión...">
                 
-                <!-- MENÚ DESPLEGABLE OPCIONES -->
                 <div class="dropdown">
                     <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
                     <div id="dropdownOpciones" class="dropdown-contenido">
                         <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
                         <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
-                        
                         <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
                     </div>
                 </div>
@@ -65,14 +75,14 @@
                 <thead>
                     <tr>
                         <th>Foto</th>
-                        <th>Fecha Salida</th>
-                        <th>Código Precinto</th>
+                        <th class="th-sortable" onclick="ordenarTabla('salidaFecha', this)">Fecha Salida ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('precinto', this)">Código Precinto ↕️</th>
                         <th>Descripción</th>
-                        <th>Referencia</th>
-                        <th>Línea</th>
-                        <th>Cant.</th>
-                        <th>Tipo de Salida / Destino</th>
-                        <th>No. Remisión</th>
+                        <th class="th-sortable" onclick="ordenarTabla('referencia', this)">Referencia ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('linea', this)">Línea ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('cantidad', this)">Cant. ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('estado', this)">Tipo de Salida ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('salidaRemision', this)">No. Remisión ↕️</th>
                         <th>Acción Correctiva</th>
                     </tr>
                 </thead>
@@ -82,10 +92,7 @@
         </div>
     </div>
 
-    <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -95,34 +102,74 @@
             auth: { storage: window.localStorage }
         });
 
+        // AUTENTICACIÓN Y SESIÓN
+        async function verificarSesion() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = "index.html"; } 
+            else { document.getElementById('userEmail').textContent = "👤 " + session.user.email; }
+        }
+        window.cerrarSesion = async function() { await supabase.auth.signOut(); window.location.href = "index.html"; }
+        verificarSesion();
+
         const tabla = document.getElementById('cuerpoTablaSalidas');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = []; 
+        let datosActualesGlobales = []; // Para ordenar
 
-        window.toggleDropdown = function() {
-            document.getElementById("dropdownOpciones").classList.toggle("show");
+        // ==========================================
+        // LÓGICA DE ORDENAMIENTO
+        // ==========================================
+        let ordenActual = { columna: '', descendente: false };
+
+        window.ordenarTabla = function(columna, thElement) {
+            if (ordenActual.columna === columna) {
+                ordenActual.descendente = !ordenActual.descendente;
+            } else {
+                ordenActual.columna = columna;
+                ordenActual.descendente = false;
+            }
+
+            document.querySelectorAll('th.th-sortable').forEach(th => {
+                th.innerHTML = th.innerHTML.replace(' ⬆️', '').replace(' ⬇️', '').replace(' ↕️', '') + ' ↕️';
+            });
+
+            thElement.innerHTML = thElement.innerHTML.replace(' ↕️', '').replace(' ⬆️', '').replace(' ⬇️', '') + (ordenActual.descendente ? ' ⬇️' : ' ⬆️');
+
+            datosActualesGlobales.sort((a, b) => {
+                let valA = a[columna]; let valB = b[columna];
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+
+                if (columna === 'cantidad') {
+                    valA = parseFloat(valA) || 0; valB = parseFloat(valB) || 0;
+                } else {
+                    valA = valA.toString().toLowerCase(); valB = valB.toString().toLowerCase();
+                }
+
+                if (valA < valB) return ordenActual.descendente ? 1 : -1;
+                if (valA > valB) return ordenActual.descendente ? -1 : 1;
+                return 0;
+            });
+
+            renderTable(datosActualesGlobales);
         }
 
+        window.toggleDropdown = function() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
             if (!event.target.matches('.btn-opciones')) {
                 const dropdowns = document.getElementsByClassName("dropdown-contenido");
                 for (let i = 0; i < dropdowns.length; i++) {
-                    if (dropdowns[i].classList.contains('show')) {
-                        dropdowns[i].classList.remove('show');
-                    }
+                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
                 }
             }
         }
 
         async function fetchBajas() {
             try {
-                const { data, error } = await supabase
-                    .from('prendas')
-                    .select('*')
-                    .order('id', { ascending: false });
-
+                const { data, error } = await supabase.from('prendas').select('*').order('id', { ascending: false });
                 if (error) throw error;
-                renderTable(data);
+                datosActualesGlobales = data;
+                renderTable(datosActualesGlobales);
             } catch (error) {
                 console.error("Error al cargar las bajas:", error);
                 mensajeCarga.textContent = "Error conectando con la base de datos.";
@@ -167,7 +214,6 @@
                     `;
                     tabla.appendChild(fila);
 
-                    // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final
                     datosParaExcel.push({
                         "Fecha de Salida": prenda.salidaFecha || "",
                         "Remisión de Salida": prenda.salidaRemision || "",
@@ -201,35 +247,17 @@
             if (contadorBajas === 0) {
                 tabla.innerHTML = "<tr><td colspan='10' style='text-align:center; padding: 20px; color:#aaa;'>No hay registros de bajas en este momento.</td></tr>";
             }
+            
+            document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
         }
 
-        supabase
-            .channel('cambios-bajas')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                fetchBajas(); 
-            })
-            .subscribe();
-
+        supabase.channel('cambios-bajas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => { fetchBajas(); }).subscribe();
         fetchBajas();
 
         window.retornarAInventario = async function(idDocumento) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
-                const { error } = await supabase
-                    .from('prendas')
-                    .update({
-                        estado: "Disponible en inventario",
-                        salidaRemision: "",
-                        salidaFecha: "",
-                        salidaTo: "" 
-                    })
-                    .eq('id', idDocumento);
-
-                if (error) {
-                    alert("Error al intentar retornar: " + error.message);
-                } else {
-                    alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
-                    fetchBajas();
-                }
+                const { error } = await supabase.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", salidaTo: "" }).eq('id', idDocumento);
+                if (error) { alert("Error al intentar retornar: " + error.message); } else { alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢"); fetchBajas(); }
             }
         }
 
@@ -256,27 +284,20 @@
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
-
             const lector = new FileReader();
             lector.onload = async function(e) {
                 try {
                     mensajeCarga.textContent = "Procesando Excel masivo... ⏳";
                     mensajeCarga.style.display = "block";
-
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const excelData = XLSX.utils.sheet_to_json(worksheet);
 
-                    if (excelData.length === 0) {
-                        alert("El archivo Excel está vacío o no tiene el formato correcto.");
-                        mensajeCarga.style.display = "none";
-                        return;
-                    }
+                    if (excelData.length === 0) { alert("El archivo Excel está vacío o no tiene el formato correcto."); mensajeCarga.style.display = "none"; return; }
 
                     if (confirm(`⚠️ Vas a importar ${excelData.length} prendas al sistema desde este Excel.\n\n¿Deseas continuar?`)) {
-                        
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
@@ -305,21 +326,14 @@
                                 salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
                             };
                         });
-
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
                         if (error) throw error;
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
-                        
-                        // RECARGA TURBO
                         fetchBajas();
                     }
                 } catch (err) {
-                    console.error("Error al importar Excel:", err);
-                    alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
-                } finally {
-                    event.target.value = ''; 
-                    mensajeCarga.style.display = "none";
-                }
+                    console.error("Error al importar Excel:", err); alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
+                } finally { event.target.value = ''; mensajeCarga.style.display = "none"; }
             };
             lector.readAsArrayBuffer(archivo);
         });
@@ -328,11 +342,8 @@
             const textoBusqueda = this.value.toLowerCase();
             const filas = document.querySelectorAll('#cuerpoTablaSalidas tr');
             filas.forEach(fila => {
-                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { 
-                    fila.style.display = ''; 
-                } else { 
-                    fila.style.display = 'none'; 
-                }
+                if(fila.cells.length === 1) return;
+                if (fila.textContent.toLowerCase().includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
             });
         });
     </script>

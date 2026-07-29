@@ -32,19 +32,39 @@
         #mensajeCarga { text-align: center; color: #aaa; font-style: italic; margin-top: 50px; }
         
         /* ESTILO PARA EL SEGMENTADOR */
-        .select-segmentador { background-color: #222; color: #0078D4; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; outline: none; }
+        .select-segmentador { background-color: #222; color: #0078D4; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; outline: none; transition: 0.3s; }
         .select-segmentador:hover { border-color: #0078D4; }
     </style>
 </head>
 <body>
 
     <div class="contenedor">
+        <!-- BARRA SUPERIOR DE USUARIO -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
+            <div style="display: flex; align-items: center; gap: 10px; background-color: #222; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; font-size: 13px; color: #ccc;">
+                <span id="userEmail">Verificando usuario...</span>
+                <button onclick="cerrarSesion()" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
+            </div>
+        </div>
+
         <div class="barra-control">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <a href="menu.html" class="btn-volver">🔙 Menú Principal</a>
                 <h2 style="margin: 0;">📊 Indicadores y Reportes</h2>
             </div>
-            <a href="dashboard.html" class="btn-accion">📦 Ir al Dashboard</a>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- SEGMENTADOR GLOBAL -->
+                <select id="filtroSegmento" class="select-segmentador" onchange="window.actualizarReporteInteractivo()">
+                    <option value="TODOS">Ver Todas las Categorías</option>
+                    <option value="ACCESORIOS">Filtro: Solo Accesorios</option>
+                    <option value="MEN">Filtro: Solo Men</option>
+                    <option value="WOMEN">Filtro: Solo Women</option>
+                </select>
+                
+                <a href="dashboard.html" class="btn-accion">📦 Ir al Dashboard</a>
+            </div>
         </div>
 
         <div id="mensajeCarga">Obteniendo TRM histórica y calculando estadísticas desde Supabase... ⏳</div>
@@ -76,20 +96,10 @@
                     <canvas id="graficoEstados"></canvas>
                 </div>
                 
-                <!-- GRÁFICA TOP 5 CON SEGMENTADOR -->
                 <div class="tarjeta-grafica">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
-                        <h3 style="margin: 0; font-size: 16px; color: #ccc;">Top 5: Unidades Disponibles</h3>
-                        <select id="filtroSegmento" class="select-segmentador" onchange="window.actualizarGraficoTop5()">
-                            <option value="TODOS">Ver Todas</option>
-                            <option value="ACCESORIOS">Solo Accesorios</option>
-                            <option value="MEN">Solo Men</option>
-                            <option value="WOMEN">Solo Women</option>
-                        </select>
-                    </div>
+                    <h3 class="grafica-titulo">Unidades Disponibles por Línea</h3>
                     <canvas id="graficoLineas"></canvas>
                 </div>
-
             </div>
         </div>
     </div>
@@ -106,14 +116,22 @@
             auth: { storage: window.localStorage }
         });
 
+        // AUTENTICACIÓN Y SESIÓN
+        async function verificarSesion() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = "index.html"; } 
+            else { document.getElementById('userEmail').textContent = "👤 " + session.user.email; }
+        }
+        window.cerrarSesion = async function() { await supabase.auth.signOut(); window.location.href = "index.html"; }
+        verificarSesion();
+
         let chartEstadosInstancia = null;
         let chartLineasInstancia = null;
 
-        // Variables globales
         let trmUSD_Actual = 4000; 
         let trmEUR_Actual = 4300; 
         const cacheTRMHistorica = {};
-        let datosGlobales = []; // Aquí guardaremos la data para poder filtrarla sin recargar
+        let datosGlobales = []; 
 
         async function obtenerTrmActual() {
             try {
@@ -153,44 +171,81 @@
         }
 
         // ===============================================
-        // FUNCIÓN EXCLUSIVA PARA EL GRÁFICO TOP 5 (FILTRABLE)
+        // FUNCIÓN GLOBAL E INTERACTIVA (FILTRA TODO: KPIs y GRÁFICAS)
         // ===============================================
-        window.actualizarGraficoTop5 = function() {
+        window.actualizarReporteInteractivo = function() {
             const filtro = document.getElementById('filtroSegmento').value;
+            
             let conteoPorLinea = {};
+            let totalIngresadasFiltradas = 0;
+            let totalDisponiblesFiltradas = 0;
+            let totalSalidasFiltradas = 0;
+            let valorTotalCOPFiltrado = 0;
 
             datosGlobales.forEach((prenda) => {
-                let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
+                let tipo = (prenda.tipo || "").toUpperCase();
+                let genero = (prenda.genero || "").toUpperCase();
+                let pasaFiltro = false;
 
-                // REGLA 1: Solo sumar las que están DISPONIBLES
-                if (esDisponible) {
-                    let tipo = (prenda.tipo || "").toUpperCase();
-                    let genero = (prenda.genero || "").toUpperCase();
-                    let pasaFiltro = false;
+                // REGLA: ¿Entra en la categoría que elegiste arriba?
+                if (filtro === "TODOS") { pasaFiltro = true; }
+                else if (filtro === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltro = true; }
+                else if (filtro === "MEN" && genero === "MEN") { pasaFiltro = true; }
+                else if (filtro === "WOMEN" && genero === "WOMEN") { pasaFiltro = true; }
 
-                    // REGLA 2: Aplicar el segmentador
-                    if (filtro === "TODOS") { pasaFiltro = true; }
-                    else if (filtro === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltro = true; }
-                    else if (filtro === "MEN" && genero === "MEN") { pasaFiltro = true; }
-                    else if (filtro === "WOMEN" && genero === "WOMEN") { pasaFiltro = true; }
+                if (pasaFiltro) {
+                    let unidades = parseInt(prenda.cantidad);
+                    if (isNaN(unidades)) { unidades = 0; }
+                    
+                    totalIngresadasFiltradas += unidades;
 
-                    if (pasaFiltro) {
-                        let unidadesRegistro = parseInt(prenda.cantidad);
-                        if (isNaN(unidadesRegistro)) { unidadesRegistro = 0; }
+                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
 
+                    if (esDisponible) {
+                        totalDisponiblesFiltradas += unidades;
+                        
+                        // Solo graficamos las líneas de las prendas que SÍ están en la bodega
                         const linea = prenda.linea || "Sin Línea";
                         if (conteoPorLinea[linea]) {
-                            conteoPorLinea[linea] += unidadesRegistro;
+                            conteoPorLinea[linea] += unidades;
                         } else {
-                            conteoPorLinea[linea] = unidadesRegistro;
+                            conteoPorLinea[linea] = unidades;
                         }
+
+                        // Cálculo financiero
+                        if (unidades > 0) {
+                            let precioBase = parseFloat(prenda.precio) || 0;
+                            let moneda = (prenda.moneda || 'COP').toUpperCase();
+                            let fechaIngreso = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
+                            
+                            let trmAplicar = cacheTRMHistorica[`${moneda}_${fechaIngreso}`] || 1;
+                            if (moneda === 'COP') trmAplicar = 1;
+
+                            valorTotalCOPFiltrado += (precioBase * trmAplicar) * unidades;
+                        }
+                    } else {
+                        totalSalidasFiltradas += unidades;
                     }
                 }
             });
 
-            // Ordenar de mayor a menor y tomar el Top 5
-            const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            // Inyectamos los números interactivos a los 4 cuadros (KPIs)
+            document.getElementById('kpiTotal').textContent = totalIngresadasFiltradas;
+            document.getElementById('kpiDisponibles').textContent = totalDisponiblesFiltradas;
+            document.getElementById('kpiSalidas').textContent = totalSalidasFiltradas;
+            document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
+                style: 'currency', currency: 'COP', maximumFractionDigits: 0 
+            }).format(valorTotalCOPFiltrado);
+
+            // Refrescamos gráfica circular (Doughnut)
+            const datosEstados = {
+                labels: ['Disponibles', 'En Salida'],
+                datasets: [{ data: [totalDisponiblesFiltradas, totalSalidasFiltradas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
+            };
+
+            // Refrescamos gráfica de barras (Todas las líneas de mayor a menor, sin límite de Top 5)
+            const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]);
             const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
             const valoresLineas = lineasOrdenadas.map(item => item[1]);
 
@@ -204,24 +259,20 @@
                 }]
             };
 
+            renderizarGraficaEstados(datosEstados);
             renderizarGraficaLineas(datosLineas);
         }
 
-        async function procesarDatosEstadisticos(data) {
-            datosGlobales = data; // Guardar en memoria global para el segmentador
-
-            let totalUnidadesFisicas = 0;
-            let totalDisponiblesFisicas = 0;
-            let totalSalidasFisicas = 0;
-            let valorTotalInventarioCOP = 0; 
+        async function procesarDatosCargaInicial(data) {
+            datosGlobales = data; 
 
             if(data && data.length > 0) {
+                // Descargamos las TRMs necesarias primero de forma silenciosa
                 const paresTRMRequeridos = new Set();
                 data.forEach(prenda => {
                     let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
                     const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
                     let moneda = (prenda.moneda || 'COP').toUpperCase();
-                    
                     if (esDisponible && moneda !== 'COP' && parseFloat(prenda.precio) > 0) {
                         let fecha = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
                         paresTRMRequeridos.add(`${moneda}_${fecha}`);
@@ -233,65 +284,20 @@
                     await obtenerTrmHistorica(mon, fec);
                 });
                 await Promise.all(promesasTRM);
-
-                data.forEach((prenda) => {
-                    let unidadesRegistro = parseInt(prenda.cantidad);
-                    if (isNaN(unidadesRegistro)) { unidadesRegistro = 0; }
-                    
-                    totalUnidadesFisicas += unidadesRegistro;
-
-                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
-
-                    if (esDisponible) {
-                        totalDisponiblesFisicas += unidadesRegistro;
-                    } else {
-                        totalSalidasFisicas += unidadesRegistro;
-                    }
-
-                    if (esDisponible && unidadesRegistro > 0) {
-                        let precioBase = parseFloat(prenda.precio) || 0;
-                        let moneda = (prenda.moneda || 'COP').toUpperCase();
-                        let fechaIngreso = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
-                        
-                        let trmAplicar = cacheTRMHistorica[`${moneda}_${fechaIngreso}`] || 1;
-                        if (moneda === 'COP') trmAplicar = 1;
-
-                        let costoTotalPrendaCOP = (precioBase * trmAplicar) * unidadesRegistro;
-                        valorTotalInventarioCOP += costoTotalPrendaCOP;
-                    }
-                });
             }
 
             document.getElementById('mensajeCarga').style.display = 'none';
             document.getElementById('contenidoReportes').style.display = 'block';
 
-            document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
-            document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
-            document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
-            
-            document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
-                style: 'currency', 
-                currency: 'COP',
-                maximumFractionDigits: 0 
-            }).format(valorTotalInventarioCOP);
-
-            const datosEstados = {
-                labels: ['Disponibles', 'En Salida'],
-                datasets: [{ data: [totalDisponiblesFisicas, totalSalidasFisicas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
-            };
-
-            renderizarGraficaEstados(datosEstados);
-            
-            // Renderizar la gráfica Top 5 con el filtro por defecto ("TODOS")
-            window.actualizarGraficoTop5();
+            // Ejecutamos el filtro por primera vez para que todo cobre vida
+            window.actualizarReporteInteractivo();
         }
 
         async function cargarDatosSupabase() {
             try {
                 const { data, error } = await supabase.from('prendas').select('*');
                 if (error) throw error;
-                await procesarDatosEstadisticos(data);
+                await procesarDatosCargaInicial(data);
             } catch (error) {
                 console.error("Error al cargar datos:", error);
                 document.getElementById('mensajeCarga').textContent = "Error conectando con la base de datos.";

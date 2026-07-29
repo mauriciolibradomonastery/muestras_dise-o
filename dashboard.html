@@ -75,13 +75,24 @@
         .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
         .titulo-edicion { color: #ffc107 !important; }
         
-        /* ESTILO PARA EL SUBTOTAL */
+        /* ESTILO PARA EL SUBTOTAL Y ORDENAMIENTO */
         .barra-subtotales { background-color: #222; border: 1px solid #444; padding: 8px 15px; border-radius: 6px; font-size: 13px; color: #ffc107; font-weight: bold; display: inline-block; margin-bottom: 10px; }
         .barra-subtotales span { color: #fff; margin-left: 5px; margin-right: 15px; }
+        .th-sortable { cursor: pointer; user-select: none; transition: 0.2s; }
+        .th-sortable:hover { background-color: #444; color: #fff; }
     </style>
 </head>
 <body>
     <div class="contenedor">
+        <!-- BARRA SUPERIOR DE USUARIO -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
+            <div style="display: flex; align-items: center; gap: 10px; background-color: #222; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; font-size: 13px; color: #ccc;">
+                <span id="userEmail">Verificando usuario...</span>
+                <button onclick="cerrarSesion()" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
+            </div>
+        </div>
+
         <div class="barra-control">
             <div style="display: flex; align-items: center;">
                 <a href="menu.html" class="btn-volver">🔙 Menú</a>
@@ -110,7 +121,6 @@
             </div>
         </div>
         
-        <!-- BARRA DINÁMICA DE SUBTOTALES -->
         <div>
             <div id="subtotalesFiltro" class="barra-subtotales">📊 Calculando subtotales...</div>
         </div>
@@ -121,14 +131,14 @@
                     <tr>
                         <th style="width: 30px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodos" onclick="toggleSeleccionarTodos()" style="cursor: pointer; width: 16px; height: 16px;"></th>
                         <th>Foto</th>
-                        <th>Fecha Ingreso</th>
-                        <th>Código Precinto</th>
+                        <th class="th-sortable" onclick="ordenarTabla('fechaIngreso', this)">Fecha Ingreso ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('precinto', this)">Código Precinto ↕️</th>
                         <th>Descripción</th>
-                        <th>Referencia</th>
-                        <th>Línea</th>
-                        <th>Cant.</th>
-                        <th>Costo</th>
-                        <th>Ubicación</th>
+                        <th class="th-sortable" onclick="ordenarTabla('referencia', this)">Referencia ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('linea', this)">Línea ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('cantidad', this)">Cant. ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('precio', this)">Costo ↕️</th>
+                        <th class="th-sortable" onclick="ordenarTabla('ubicacionGeneral', this)">Ubicación ↕️</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -160,6 +170,7 @@
 
     <!-- MODAL DETALLES FICHA TÉCNICA -->
     <div id="modalDetalles" class="modal-fondo">
+        <!-- (El mismo contenido del modal detalles que ya tienes) -->
         <div class="modal-contenido-amplio">
             <div class="det-cabecera">
                 <img id="detFoto" class="det-foto-grande" src="logo.png">
@@ -202,9 +213,9 @@
 
     <!-- MODAL EDITAR INFORMACIÓN -->
     <div id="modalEditar" class="modal-fondo">
+        <!-- (El mismo contenido del modal de edición) -->
         <div class="modal-contenido-amplio">
             <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
-            
             <div class="cuadricula-detalles" style="margin-top:15px;">
                 <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
@@ -269,10 +280,68 @@
             auth: { storage: window.localStorage }
         });
 
+        // AUTENTICACIÓN Y SESIÓN
+        async function verificarSesion() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = "index.html";
+            } else {
+                document.getElementById('userEmail').textContent = "👤 " + session.user.email;
+            }
+        }
+        window.cerrarSesion = async function() {
+            await supabase.auth.signOut();
+            window.location.href = "index.html";
+        }
+        verificarSesion();
+
         const tabla = document.getElementById('cuerpoTabla');
         const mensajeCarga = document.getElementById('mensajeCarga');
         let datosParaExcel = [];
         let prendasAEliminarLocal = []; 
+        let datosActualesGlobales = []; // Guarda la info cruda para el ordenamiento
+
+        // ==========================================
+        // LÓGICA DE ORDENAMIENTO DE COLUMNAS
+        // ==========================================
+        let ordenActual = { columna: '', descendente: false };
+
+        window.ordenarTabla = function(columna, thElement) {
+            if (ordenActual.columna === columna) {
+                ordenActual.descendente = !ordenActual.descendente;
+            } else {
+                ordenActual.columna = columna;
+                ordenActual.descendente = false;
+            }
+
+            document.querySelectorAll('th.th-sortable').forEach(th => {
+                th.innerHTML = th.innerHTML.replace(' ⬆️', '').replace(' ⬇️', '').replace(' ↕️', '') + ' ↕️';
+            });
+
+            thElement.innerHTML = thElement.innerHTML.replace(' ↕️', '').replace(' ⬆️', '').replace(' ⬇️', '') + (ordenActual.descendente ? ' ⬇️' : ' ⬆️');
+
+            datosActualesGlobales.sort((a, b) => {
+                let valA = a[columna];
+                let valB = b[columna];
+
+                if (valA === null || valA === undefined) valA = '';
+                if (valB === null || valB === undefined) valB = '';
+
+                if (columna === 'cantidad' || columna === 'precio') {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                } else {
+                    valA = valA.toString().toLowerCase();
+                    valB = valB.toString().toLowerCase();
+                }
+
+                if (valA < valB) return ordenActual.descendente ? 1 : -1;
+                if (valA > valB) return ordenActual.descendente ? -1 : 1;
+                return 0;
+            });
+
+            renderTable(datosActualesGlobales);
+        }
 
         // ==========================================
         // LÓGICA DE SUBTOTALES DINÁMICOS
@@ -283,7 +352,6 @@
             let unidadesVisibles = 0;
 
             filas.forEach(fila => {
-                // Verificamos si la fila está visible y nos aseguramos de no sumar la fila de "Inventario vacío" (que tiene colspan)
                 if (fila.style.display !== 'none' && fila.cells.length > 1) {
                     registrosVisibles++;
                     unidadesVisibles += parseInt(fila.getAttribute('data-cantidad')) || 0;
@@ -294,9 +362,7 @@
                 `📊 Resultados Activos: <span>${registrosVisibles} Referencias</span> | Suma Total Físicas: <span>${unidadesVisibles} Unidades</span>`;
         }
 
-        // ==========================================
-        // LÓGICA DE CHECKBOXES Y ELIMINACIÓN MASIVA
-        // ==========================================
+        // Checkboxes y Eliminación masiva...
         window.toggleSeleccionarTodos = function() {
             const chkTodos = document.getElementById('chkSeleccionarTodos');
             const checkboxes = document.querySelectorAll('.chk-prenda');
@@ -330,17 +396,13 @@
             if (checkboxes.length === 0) return;
             
             if (confirm(`⚠️ Estás a punto de eliminar DEFINITIVAMENTE ${checkboxes.length} prendas de la base de datos.\n\n¿Estás completamente seguro de continuar?`)) {
-                
                 const btn = document.getElementById('btnEliminarSeleccionados');
                 btn.innerHTML = "⏳ Borrando...";
                 btn.disabled = true;
-
                 const idsAEliminar = Array.from(checkboxes).map(chk => chk.value);
-
                 try {
                     const { error } = await supabase.from('prendas').delete().in('id', idsAEliminar);
                     if (error) throw error;
-                    
                     alert(`✅ Se eliminaron ${idsAEliminar.length} prendas exitosamente.`);
                     document.getElementById('chkSeleccionarTodos').checked = false;
                     btn.style.display = 'none';
@@ -354,19 +416,13 @@
                 }
             }
         }
-        // ==========================================
 
-        window.toggleDropdown = function() {
-            document.getElementById("dropdownOpciones").classList.toggle("show");
-        }
-
+        window.toggleDropdown = function() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
             if (!event.target.matches('.btn-opciones')) {
                 const dropdowns = document.getElementsByClassName("dropdown-contenido");
                 for (let i = 0; i < dropdowns.length; i++) {
-                    if (dropdowns[i].classList.contains('show')) {
-                        dropdowns[i].classList.remove('show');
-                    }
+                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
                 }
             }
         }
@@ -379,19 +435,15 @@
                     .order('fechaServidor', { ascending: false });
 
                 if (error) throw error;
-                renderTable(data);
+                datosActualesGlobales = data; 
+                renderTable(datosActualesGlobales);
             } catch (error) {
                 console.error("Error al cargar prendas:", error);
                 mensajeCarga.textContent = "Error conectando con la base de datos.";
             }
         }
 
-        supabase
-            .channel('cambios-prendas')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                fetchPrendas(); 
-            })
-            .subscribe();
+        supabase.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => { fetchPrendas(); }).subscribe();
 
         function renderTable(data) {
             tabla.innerHTML = ""; 
@@ -401,13 +453,12 @@
             
             if(!data || data.length === 0) {
                 tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
-                window.calcularSubtotales(); // Actualiza a 0
+                window.calcularSubtotales(); 
                 return;
             }
 
             data.forEach((prenda) => {
                 let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                
                 if (!estadoDB.includes("disponible") && estadoDB !== "") return; 
                 if (prendasAEliminarLocal.includes(prenda.id)) return;
 
@@ -415,15 +466,12 @@
                 const urlFotoARenderizar = prenda.fotoUrl || 'logo.png'; 
                 const fila = document.createElement('tr');
                 
-                // GUARDAR CANTIDAD EN EL HTML PARA CALCULAR LOS SUBTOTALES FÁCILMENTE
                 fila.setAttribute('data-cantidad', prenda.cantidad || 1);
 
                 let estadoHTML = `<span class="estado-disponible">DISPONIBLE</span>`;
 
                 let costoVisual = "-";
-                if(prenda.precio) {
-                    costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`;
-                }
+                if(prenda.precio) { costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`; }
                 
                 const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                 const descripcionGenerada = partesDesc.join(" ");
@@ -481,13 +529,12 @@
             if (contadorDisponibles === 0) {
                 tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
             }
-
-            // SE EJECUTA EL CÁLCULO DE SUBTOTAL AL TERMINAR DE PINTAR LA TABLA
-            window.calcularSubtotales();
+            
+            // Re-aplicar el filtro de búsqueda si había algo escrito al re-ordenar
+            document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
         }
 
-        fetchPrendas();
-
+        // Código de importación y modales intacto...
         document.getElementById('btnExportarExcel').addEventListener('click', function() {
             if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
             const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
@@ -511,13 +558,11 @@
         document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
             const archivo = event.target.files[0];
             if (!archivo) return;
-
             const lector = new FileReader();
             lector.onload = async function(e) {
                 try {
                     mensajeCarga.textContent = "Procesando Excel masivo... ⏳";
                     mensajeCarga.style.display = "block";
-
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheetName = workbook.SheetNames[0];
@@ -531,7 +576,6 @@
                     }
 
                     if (confirm(`⚠️ Vas a importar ${excelData.length} prendas nuevas al inventario desde este Excel.\n\nNOTA: Asegúrate de que este Excel NO contenga las prendas que ya están en el sistema para no duplicarlas.\n\n¿Deseas continuar?`)) {
-                        
                         const registrosLimpios = excelData.map(fila => {
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
@@ -564,7 +608,6 @@
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
                         if (error) throw error;
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
-                        
                         fetchPrendas();
                     }
                 } catch (err) {
@@ -583,7 +626,7 @@
             const textoBusqueda = this.value.toLowerCase();
             const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
             filasTabla.forEach(fila => {
-                if(fila.cells.length === 1) return; // Se ignora la fila de "tabla vacía"
+                if(fila.cells.length === 1) return; 
                 const contenidoFila = fila.textContent.toLowerCase();
                 if (contenidoFila.includes(textoBusqueda)) { 
                     fila.style.display = ''; 
@@ -592,11 +635,8 @@
                 }
             });
             window.actualizarBotonEliminarMasivo();
-            // SE EJECUTA EL CÁLCULO CADA VEZ QUE ESCRIBES ALGO EN EL BUSCADOR
             window.calcularSubtotales();
         });
-
-        let idPrendaSeleccionada = null; 
 
         window.abrirModalSalida = function(idDocumento) {
             idPrendaSeleccionada = idDocumento; 
@@ -606,41 +646,26 @@
             document.getElementById('salidaTo').value = ''; 
             document.getElementById('modalSalida').style.display = 'flex';
         }
-        
-        window.cerrarModalSalida = function() { 
-            document.getElementById('modalSalida').style.display = 'none'; 
-            idPrendaSeleccionada = null; 
-        }
+        window.cerrarModalSalida = function() { document.getElementById('modalSalida').style.display = 'none'; idPrendaSeleccionada = null; }
 
         window.guardarSalida = async function() {
             const remision = document.getElementById('salidaRemision').value.trim();
             const fecha = document.getElementById('salidaFecha').value;
             const tipo = document.getElementById('salidaTipo').value;
             const toVal = document.getElementById('salidaTo').value.trim(); 
-            
             if (tipo === "") { alert("Por favor selecciona un 'Tipo de Salida'."); return; }
             const btn = document.getElementById('btnConfirmarSalida');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
-            const { error } = await supabase.from('prendas')
-                .update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal })
-                .eq('id', idPrendaSeleccionada);
-
-            if (error) {
-                alert("Error: " + error.message);
-            } else {
-                window.cerrarModalSalida();
-                fetchPrendas(); 
-            }
+            const { error } = await supabase.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idPrendaSeleccionada);
+            if (error) { alert("Error: " + error.message); } else { window.cerrarModalSalida(); fetchPrendas(); }
             btn.textContent = "Confirmar"; btn.disabled = false;
         }
 
         window.abrirModalEditar = async function(idDocumento) {
             idPrendaSeleccionada = idDocumento;
             document.getElementById('edFotoNueva').value = '';
-
             const { data, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
-
             if (data) {
                 const p = data;
                 document.getElementById('edPrecinto').value = p.precinto || '';
@@ -658,26 +683,21 @@
                 document.getElementById('edRemision').value = p.salidaRemision || '';
                 document.getElementById('edFechaSalida').value = p.salidaFecha || '';
                 document.getElementById('edTo').value = p.salidaTo || ''; 
-                
                 document.getElementById('edPrecio').value = p.precio || '';
                 document.getElementById('edMoneda').value = p.moneda || 'COP';
                 document.getElementById('edProveedor').value = p.proveedor || '';
                 document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
-                
                 const selectEstado = document.getElementById('edEstado');
                 if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
                 document.getElementById('modalEditar').style.display = 'flex';
             }
         }
-
         window.cerrarModalEditar = function() { document.getElementById('modalEditar').style.display = 'none'; idPrendaSeleccionada = null; }
 
         window.guardarEdicion = function() {
             const btn = document.getElementById('btnGuardarEdicion');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
-
             const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
-
             if (archivoFotoNueva) {
                 const reader = new FileReader();
                 reader.readAsDataURL(archivoFotoNueva);
@@ -688,17 +708,11 @@
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 600; const MAX_HEIGHT = 600;
                         let width = img.width; let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                        } else {
-                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                        }
-                        
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        
                         const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
                         ejecutarUpdateSupabase(fotoBase64); 
                     }
@@ -709,38 +723,20 @@
 
             async function ejecutarUpdateSupabase(nuevaFotoData) {
                 let datosActualizar = {
-                    precinto: document.getElementById('edPrecinto').value.trim(), 
-                    referencia: document.getElementById('edReferencia').value,
-                    coleccion: document.getElementById('edColeccion').value,
-                    fechaEntregaCI: document.getElementById('edFechaEntregaCI').value,
-                    tipo: document.getElementById('edTipo').value,
-                    linea: document.getElementById('edLinea').value,
-                    talla: document.getElementById('edTalla').value,
-                    genero: document.getElementById('edGenero').value,
-                    color: document.getElementById('edColor').value,
-                    ubicacionGeneral: document.getElementById('edUbiGeneral').value,
-                    ubicacionDiseno: document.getElementById('edUbiDiseno').value,
-                    observaciones: document.getElementById('edObservaciones').value,
-                    estado: document.getElementById('edEstado').value,
-                    salidaRemision: document.getElementById('edRemision').value, 
-                    salidaFecha: document.getElementById('edFechaSalida').value,
-                    salidaTo: document.getElementById('edTo').value,
-                    precio: parseFloat(document.getElementById('edPrecio').value) || null,
-                    moneda: document.getElementById('edMoneda').value,
-                    proveedor: document.getElementById('edProveedor').value,
-                    paisOrigen: document.getElementById('edPaisOrigen').value
+                    precinto: document.getElementById('edPrecinto').value.trim(), referencia: document.getElementById('edReferencia').value,
+                    coleccion: document.getElementById('edColeccion').value, fechaEntregaCI: document.getElementById('edFechaEntregaCI').value,
+                    tipo: document.getElementById('edTipo').value, linea: document.getElementById('edLinea').value,
+                    talla: document.getElementById('edTalla').value, genero: document.getElementById('edGenero').value,
+                    color: document.getElementById('edColor').value, ubicacionGeneral: document.getElementById('edUbiGeneral').value,
+                    ubicacionDiseno: document.getElementById('edUbiDiseno').value, observaciones: document.getElementById('edObservaciones').value,
+                    estado: document.getElementById('edEstado').value, salidaRemision: document.getElementById('edRemision').value, 
+                    salidaFecha: document.getElementById('edFechaSalida').value, salidaTo: document.getElementById('edTo').value,
+                    precio: parseFloat(document.getElementById('edPrecio').value) || null, moneda: document.getElementById('edMoneda').value,
+                    proveedor: document.getElementById('edProveedor').value, paisOrigen: document.getElementById('edPaisOrigen').value
                 };
-
                 if (nuevaFotoData !== null) { datosActualizar.fotoUrl = nuevaFotoData; }
-
                 const { error } = await supabase.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada);
-                
-                if (error) {
-                    alert("Error editando: " + error.message);
-                } else {
-                    window.cerrarModalEditar();
-                    fetchPrendas();
-                }
+                if (error) { alert("Error editando: " + error.message); } else { window.cerrarModalEditar(); fetchPrendas(); }
                 btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
             }
         }
@@ -785,37 +781,26 @@
                 const filaElemento = botonPresionado.closest('tr');
                 if (filaElemento) filaElemento.style.display = 'none';
                 document.getElementById('btnGuardarMasivo').style.display = 'flex';
-                // SE RECALCULA EL SUBTOTAL SI ESCONDES UNA PRENDA
                 window.calcularSubtotales();
             } 
         }
 
         window.guardarCambiosMasivos = async function() {
             if(prendasAEliminarLocal.length === 0) return;
-
             const btn = document.getElementById('btnGuardarMasivo');
             const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Eliminando...";
-            btn.disabled = true;
-
+            btn.innerHTML = "⏳ Eliminando..."; btn.disabled = true;
             try {
                 const { error } = await supabase.from('prendas').delete().in('id', prendasAEliminarLocal);
                 if (error) throw error;
-                prendasAEliminarLocal = []; 
-                btn.style.display = 'none';
+                prendasAEliminarLocal = []; btn.style.display = 'none';
                 alert("¡Base de datos actualizada! Las prendas fueron eliminadas.");
-            } catch (error) {
-                console.error("Error al eliminar masivamente:", error);
-                alert("Hubo un problema guardando los cambios.");
-            } finally {
-                btn.innerHTML = textoOriginal;
-                btn.disabled = false;
-            }
+            } catch (error) { console.error("Error al eliminar masivamente:", error); alert("Hubo un problema guardando los cambios.");
+            } finally { btn.innerHTML = textoOriginal; btn.disabled = false; }
         }
         
         const visor = document.getElementById('modalVisor');
         const imgAmpliada = document.getElementById('imagenAmpliada');
-        
         window.abrirVisor = function(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
         window.cerrarVisor = function() { visor.style.display = 'none'; imgAmpliada.src = ''; }
 
