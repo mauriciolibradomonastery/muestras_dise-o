@@ -170,7 +170,6 @@
 
     <!-- MODAL DETALLES FICHA TÉCNICA -->
     <div id="modalDetalles" class="modal-fondo">
-        <!-- (El mismo contenido del modal detalles que ya tienes) -->
         <div class="modal-contenido-amplio">
             <div class="det-cabecera">
                 <img id="detFoto" class="det-foto-grande" src="logo.png">
@@ -213,7 +212,6 @@
 
     <!-- MODAL EDITAR INFORMACIÓN -->
     <div id="modalEditar" class="modal-fondo">
-        <!-- (El mismo contenido del modal de edición) -->
         <div class="modal-contenido-amplio">
             <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
             <div class="cuadricula-detalles" style="margin-top:15px;">
@@ -362,7 +360,6 @@
                 `📊 Resultados Activos: <span>${registrosVisibles} Referencias</span> | Suma Total Físicas: <span>${unidadesVisibles} Unidades</span>`;
         }
 
-        // Checkboxes y Eliminación masiva...
         window.toggleSeleccionarTodos = function() {
             const chkTodos = document.getElementById('chkSeleccionarTodos');
             const checkboxes = document.querySelectorAll('.chk-prenda');
@@ -432,7 +429,7 @@
                 const { data, error } = await supabase
                     .from('prendas')
                     .select('*')
-                    .order('fechaServidor', { ascending: false });
+                    .order('id', { ascending: false });
 
                 if (error) throw error;
                 datosActualesGlobales = data; 
@@ -532,9 +529,14 @@
             
             // Re-aplicar el filtro de búsqueda si había algo escrito al re-ordenar
             document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
+            
+            // SE EJECUTA EL CÁLCULO DE SUBTOTAL AL TERMINAR DE PINTAR LA TABLA
+            window.calcularSubtotales();
         }
 
-        // Código de importación y modales intacto...
+        // ---> LÍNEA DE ARRANQUE INYECTADA AQUÍ <---
+        fetchPrendas();
+
         document.getElementById('btnExportarExcel').addEventListener('click', function() {
             if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
             const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
@@ -569,11 +571,7 @@
                     const worksheet = workbook.Sheets[firstSheetName];
                     const excelData = XLSX.utils.sheet_to_json(worksheet);
 
-                    if (excelData.length === 0) {
-                        alert("El archivo Excel está vacío o no tiene el formato correcto.");
-                        mensajeCarga.style.display = "none";
-                        return;
-                    }
+                    if (excelData.length === 0) { alert("El archivo Excel está vacío o no tiene el formato correcto."); mensajeCarga.style.display = "none"; return; }
 
                     if (confirm(`⚠️ Vas a importar ${excelData.length} prendas nuevas al inventario desde este Excel.\n\nNOTA: Asegúrate de que este Excel NO contenga las prendas que ya están en el sistema para no duplicarlas.\n\n¿Deseas continuar?`)) {
                         const registrosLimpios = excelData.map(fila => {
@@ -604,20 +602,14 @@
                                 salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
                             };
                         });
-
                         const { error } = await supabase.from('prendas').insert(registrosLimpios);
                         if (error) throw error;
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
                         fetchPrendas();
                     }
                 } catch (err) {
-                    console.error("Error al importar Excel:", err);
-                    alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
-                } finally {
-                    event.target.value = ''; 
-                    mensajeCarga.style.display = "none";
-                    document.getElementById('chkSeleccionarTodos').checked = false;
-                }
+                    console.error("Error al importar Excel:", err); alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
+                } finally { event.target.value = ''; mensajeCarga.style.display = "none"; document.getElementById('chkSeleccionarTodos').checked = false; }
             };
             lector.readAsArrayBuffer(archivo);
         });
@@ -628,11 +620,7 @@
             filasTabla.forEach(fila => {
                 if(fila.cells.length === 1) return; 
                 const contenidoFila = fila.textContent.toLowerCase();
-                if (contenidoFila.includes(textoBusqueda)) { 
-                    fila.style.display = ''; 
-                } else { 
-                    fila.style.display = 'none'; 
-                }
+                if (contenidoFila.includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
             });
             window.actualizarBotonEliminarMasivo();
             window.calcularSubtotales();
