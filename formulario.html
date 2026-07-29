@@ -141,13 +141,14 @@
 
     <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
-        // 1. Importar Supabase desde CDN
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // 2. Configurar las credenciales (¡Reemplaza estas dos líneas con tus datos reales!)
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        // CAMBIO CRUCIAL: Agregar la protección de la sesión aquí
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { storage: window.sessionStorage }
+        });
 
         const inputNumeroPrecinto = document.getElementById('numeroPrecinto');
         const btnGuardar = document.getElementById('btnGuardarSupabase');
@@ -171,7 +172,6 @@
             document.getElementById('fechaIngreso').value = hoyFormateado;
         }
 
-        // 3. Cargar sugeridos desde Supabase
         async function cargarTodosLosSugeridos() {
             try {
                 const { data, error } = await supabase
@@ -283,7 +283,6 @@
             btnGuardar.textContent = "Procesando y guardando... ⏳";
             btnGuardar.disabled = true;
 
-            // Logica de redimensionamiento de foto
             if(archivoFoto) {
                 const reader = new FileReader();
                 reader.readAsDataURL(archivoFoto);
@@ -316,9 +315,7 @@
                 guardarEnSupabase(null);
             }
 
-            // 4. Función de inserción en Supabase
             async function guardarEnSupabase(fotoData) {
-                // Parseamos los números para evitar errores en la base de datos
                 const cantidadVal = parseInt(document.getElementById('cantidad').value) || null;
                 const precioVal = parseFloat(document.getElementById('precio').value) || null;
 
@@ -334,7 +331,7 @@
                     genero: document.getElementById('genero').value,
                     talla: document.getElementById('talla').value,
                     color: document.getElementById('color').value.trim(),
-                    cantidad: cantidadVal, // Supabase prefiere números reales en columnas numéricas
+                    cantidad: cantidadVal, 
                     clasificacion: document.getElementById('clasificacion').value,
                     proveedor: document.getElementById('proveedor').value.trim(),
                     paisOrigen: document.getElementById('paisOrigen').value.trim(),

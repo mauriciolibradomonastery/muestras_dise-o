@@ -311,7 +311,13 @@
             }
 
             data.forEach((prenda) => {
-                if (prenda.estado && prenda.estado !== "Disponible en inventario") return; 
+                // FILTRO MÁS INTELIGENTE Y FLEXIBLE
+                let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+                
+                // Si la palabra "disponible" NO está en el estado, asumimos que se dio de baja y la ocultamos
+                if (!estadoDB.includes("disponible") && estadoDB !== "") return; 
+                
+                // Si está en la lista negra temporal de borrar, la ocultamos
                 if (prendasAEliminarLocal.includes(prenda.id)) return;
 
                 contadorDisponibles++;
@@ -325,7 +331,6 @@
                     costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`;
                 }
                 
-                // LÓGICA DE CONCATENACIÓN PARA LA DESCRIPCIÓN CON ESPACIOS
                 const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
                 const descripcionGenerada = partesDesc.join(" ");
 
@@ -459,7 +464,6 @@
             lector.readAsArrayBuffer(archivo);
         });
 
-        // BUSCADOR EN TIEMPO REAL
         document.getElementById('inputBuscador').addEventListener('input', function() {
             const textoBusqueda = this.value.toLowerCase();
             const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
@@ -469,9 +473,6 @@
             });
         });
 
-        // ==========================
-        // LÓGICA DE MODALES (SUPABASE)
-        // ==========================
         let idPrendaSeleccionada = null; 
 
         window.abrirModalSalida = function(idDocumento) {
