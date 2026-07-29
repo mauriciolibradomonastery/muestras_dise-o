@@ -111,7 +111,6 @@
                         <th>Foto</th>
                         <th>Fecha Ingreso</th>
                         <th>Código Precinto</th>
-                        <!-- NUEVA COLUMNA DE DESCRIPCIÓN AQUÍ -->
                         <th>Descripción</th>
                         <th>Referencia</th>
                         <th>Línea</th>
@@ -160,6 +159,7 @@
             <div class="cuadricula-detalles">
                 <div class="item-detalle"><div class="lbl-detalle">Registrado por</div><div class="val-detalle" id="detRegistradoPor">-</div></div>
                 <div class="item-detalle"><div class="lbl-detalle">Fecha de Ingreso</div><div class="val-detalle" id="detFechaIngreso">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha Entrega CI</div><div class="val-detalle" id="detFechaEntregaCI">-</div></div>
                 <div class="item-detalle"><div class="lbl-detalle">Código Precinto</div><div class="val-detalle" id="detPrecinto">-</div></div>
                 <div class="item-detalle"><div class="lbl-detalle">Referencia</div><div class="val-detalle" id="detReferencia">-</div></div>
                 <div class="item-detalle"><div class="lbl-detalle">Colección</div><div class="val-detalle" id="detColeccion">-</div></div>
@@ -197,6 +197,7 @@
                 <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Colección</label><input type="text" id="edColeccion" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Fecha Entrega CI</label><input type="date" id="edFechaEntregaCI" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Tipo</label><input type="text" id="edTipo" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Línea</label><input type="text" id="edLinea" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
@@ -350,6 +351,7 @@
                 `;
                 tabla.appendChild(fila);
 
+                // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final absoluto
                 datosParaExcel.push({
                     "Fecha Ingreso": prenda.fechaIngreso || "",
                     "Registrado Por": prenda.registradoPor || "",
@@ -374,7 +376,8 @@
                     "Colección": prenda.coleccion || "",
                     "Remisión de Salida": prenda.salidaRemision || "",
                     "Orden de Traslado (TO)": prenda.salidaTo || "", 
-                    "Estado Actual": prenda.estado || "Disponible en inventario"
+                    "Estado Actual": prenda.estado || "Disponible en inventario",
+                    "Fecha Entrega CI": prenda.fechaEntregaCI || ""
                 });
             });
 
@@ -421,6 +424,7 @@
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
                                 fechaIngreso: fila["Fecha Ingreso"] || fila["fechaIngreso"] || new Date().toLocaleDateString('en-CA'),
+                                fechaEntregaCI: fila["Fecha Entrega CI"] || fila["fechaEntregaCI"] || "",
                                 precinto: fila["Precinto"] || fila["precinto"] || "",
                                 referencia: fila["Referencia"] || fila["referencia"] || "",
                                 coleccion: fila["Colección"] || fila["coleccion"] || "",
@@ -503,7 +507,6 @@
                 alert("Error: " + error.message);
             } else {
                 window.cerrarModalSalida();
-                // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga de la tabla al instante
                 fetchPrendas(); 
             }
             btn.textContent = "Confirmar"; btn.disabled = false;
@@ -520,6 +523,7 @@
                 document.getElementById('edPrecinto').value = p.precinto || '';
                 document.getElementById('edReferencia').value = p.referencia || '';
                 document.getElementById('edColeccion').value = p.coleccion || '';
+                document.getElementById('edFechaEntregaCI').value = p.fechaEntregaCI || '';
                 document.getElementById('edTipo').value = p.tipo || '';
                 document.getElementById('edLinea').value = p.linea || '';
                 document.getElementById('edTalla').value = p.talla || '';
@@ -585,6 +589,7 @@
                     precinto: document.getElementById('edPrecinto').value.trim(), 
                     referencia: document.getElementById('edReferencia').value,
                     coleccion: document.getElementById('edColeccion').value,
+                    fechaEntregaCI: document.getElementById('edFechaEntregaCI').value,
                     tipo: document.getElementById('edTipo').value,
                     linea: document.getElementById('edLinea').value,
                     talla: document.getElementById('edTalla').value,
@@ -611,7 +616,6 @@
                     alert("Error editando: " + error.message);
                 } else {
                     window.cerrarModalEditar();
-                    // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga visual de la tabla al instante
                     fetchPrendas();
                 }
                 btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
@@ -625,6 +629,7 @@
                 document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
                 document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
                 document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
+                document.getElementById('detFechaEntregaCI').textContent = p.fechaEntregaCI || '-';
                 document.getElementById('detPrecinto').textContent = p.precinto || '-';
                 document.getElementById('detReferencia').textContent = p.referencia || '-';
                 document.getElementById('detColeccion').textContent = p.coleccion || '-';

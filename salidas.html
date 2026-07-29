@@ -143,7 +143,6 @@
             data.forEach((prenda) => {
                 let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
 
-                // CONDICIÓN: Solo muestra lo que NO está disponible (lo que se dio de baja)
                 if (!estadoDB.includes("disponible") && estadoDB !== "") {
                     contadorBajas++;
                     const urlFoto = prenda.fotoUrl || 'logo.png'; 
@@ -168,6 +167,7 @@
                     `;
                     tabla.appendChild(fila);
 
+                    // EXPORTACIÓN A EXCEL: Fecha Entrega CI al final absoluto
                     datosParaExcel.push({
                         "Fecha de Salida": prenda.salidaFecha || "",
                         "Remisión de Salida": prenda.salidaRemision || "",
@@ -192,7 +192,8 @@
                         "Ubicación Diseño": prenda.ubicacionDiseno || "",
                         "Tipo": prenda.tipo || "",
                         "Observaciones": prenda.observaciones || "",
-                        "Colección": prenda.coleccion || ""
+                        "Colección": prenda.coleccion || "",
+                        "Fecha Entrega CI": prenda.fechaEntregaCI || ""
                     });
                 }
             });
@@ -227,7 +228,6 @@
                     alert("Error al intentar retornar: " + error.message);
                 } else {
                     alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
-                    // 🔥 AQUÍ ESTÁ LA MAGIA: Forzamos la recarga de la tabla al instante
                     fetchBajas();
                 }
             }
@@ -269,6 +269,7 @@
                             return {
                                 registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
                                 fechaIngreso: fila["Fecha Ingreso Original"] || fila["Fecha Ingreso"] || new Date().toLocaleDateString('en-CA'),
+                                fechaEntregaCI: fila["Fecha Entrega CI"] || fila["fechaEntregaCI"] || "",
                                 precinto: fila["Precinto"] || fila["precinto"] || "",
                                 referencia: fila["Referencia"] || fila["referencia"] || "",
                                 coleccion: fila["Colección"] || fila["coleccion"] || "",
