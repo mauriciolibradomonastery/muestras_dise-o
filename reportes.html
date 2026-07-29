@@ -30,6 +30,10 @@
         .grafica-titulo { text-align: center; font-size: 16px; color: #ccc; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
         
         #mensajeCarga { text-align: center; color: #aaa; font-style: italic; margin-top: 50px; }
+        
+        /* ESTILO PARA EL SEGMENTADOR */
+        .select-segmentador { background-color: #222; color: #0078D4; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; outline: none; }
+        .select-segmentador:hover { border-color: #0078D4; }
     </style>
 </head>
 <body>
@@ -71,10 +75,21 @@
                     <h3 class="grafica-titulo">Distribución de Unidades por Estado</h3>
                     <canvas id="graficoEstados"></canvas>
                 </div>
+                
+                <!-- GRÁFICA TOP 5 CON SEGMENTADOR -->
                 <div class="tarjeta-grafica">
-                    <h3 class="grafica-titulo">Top 5: Unidades Reales por Línea</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 16px; color: #ccc;">Top 5: Unidades Disponibles</h3>
+                        <select id="filtroSegmento" class="select-segmentador" onchange="window.actualizarGraficoTop5()">
+                            <option value="TODOS">Ver Todas</option>
+                            <option value="ACCESORIOS">Solo Accesorios</option>
+                            <option value="MEN">Solo Men</option>
+                            <option value="WOMEN">Solo Women</option>
+                        </select>
+                    </div>
                     <canvas id="graficoLineas"></canvas>
                 </div>
+
             </div>
         </div>
     </div>
@@ -94,12 +109,12 @@
         let chartEstadosInstancia = null;
         let chartLineasInstancia = null;
 
-        // TRMs actuales por defecto (como plan B si la API histórica falla)
+        // Variables globales
         let trmUSD_Actual = 4000; 
         let trmEUR_Actual = 4300; 
         const cacheTRMHistorica = {};
+        let datosGlobales = []; // Aquí guardaremos la data para poder filtrarla sin recargar
 
-        // 1. OBTENER TRM ACTUAL (PLAN DE RESCATE)
         async function obtenerTrmActual() {
             try {
                 const resUSD = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
@@ -114,7 +129,6 @@
             }
         }
 
-        // 2. FUNCIÓN PARA OBTENER TRM HISTÓRICA POR FECHA DE INGRESO
         async function obtenerTrmHistorica(moneda, fecha) {
             if (moneda === 'COP') return 1;
             if (!fecha) fecha = new Date().toISOString().split('T')[0];
@@ -123,7 +137,6 @@
             if (cacheTRMHistorica[cacheKey]) return cacheTRMHistorica[cacheKey];
 
             try {
-                // API Pública e histórica de divisas (Fawaz Ahmed API)
                 const url = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${fecha}/v1/currencies/${moneda.toLowerCase()}.json`;
                 const respuesta = await fetch(url);
                 if (!respuesta.ok) throw new Error("Fecha no disponible en API");
@@ -133,24 +146,76 @@
                 cacheTRMHistorica[cacheKey] = valorTRM;
                 return valorTRM;
             } catch (error) {
-                // Si la fecha es del futuro o la API falla, usamos la TRM del día de hoy como rescate
                 const valorRescate = moneda === 'USD' ? trmUSD_Actual : trmEUR_Actual;
                 cacheTRMHistorica[cacheKey] = valorRescate;
                 return valorRescate;
             }
         }
 
-        // 3. FUNCIÓN DE CÁLCULO ESTADÍSTICO Y FINANCIERO
+        // ===============================================
+        // FUNCIÓN EXCLUSIVA PARA EL GRÁFICO TOP 5 (FILTRABLE)
+        // ===============================================
+        window.actualizarGraficoTop5 = function() {
+            const filtro = document.getElementById('filtroSegmento').value;
+            let conteoPorLinea = {};
+
+            datosGlobales.forEach((prenda) => {
+                let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+                const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
+
+                // REGLA 1: Solo sumar las que están DISPONIBLES
+                if (esDisponible) {
+                    let tipo = (prenda.tipo || "").toUpperCase();
+                    let genero = (prenda.genero || "").toUpperCase();
+                    let pasaFiltro = false;
+
+                    // REGLA 2: Aplicar el segmentador
+                    if (filtro === "TODOS") { pasaFiltro = true; }
+                    else if (filtro === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltro = true; }
+                    else if (filtro === "MEN" && genero === "MEN") { pasaFiltro = true; }
+                    else if (filtro === "WOMEN" && genero === "WOMEN") { pasaFiltro = true; }
+
+                    if (pasaFiltro) {
+                        let unidadesRegistro = parseInt(prenda.cantidad);
+                        if (isNaN(unidadesRegistro)) { unidadesRegistro = 0; }
+
+                        const linea = prenda.linea || "Sin Línea";
+                        if (conteoPorLinea[linea]) {
+                            conteoPorLinea[linea] += unidadesRegistro;
+                        } else {
+                            conteoPorLinea[linea] = unidadesRegistro;
+                        }
+                    }
+                }
+            });
+
+            // Ordenar de mayor a menor y tomar el Top 5
+            const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
+            const valoresLineas = lineasOrdenadas.map(item => item[1]);
+
+            const datosLineas = {
+                labels: etiquetasLineas,
+                datasets: [{ 
+                    label: 'Unidades Disponibles', 
+                    data: valoresLineas, 
+                    backgroundColor: '#0078D4', 
+                    borderRadius: 4 
+                }]
+            };
+
+            renderizarGraficaLineas(datosLineas);
+        }
+
         async function procesarDatosEstadisticos(data) {
+            datosGlobales = data; // Guardar en memoria global para el segmentador
+
             let totalUnidadesFisicas = 0;
             let totalDisponiblesFisicas = 0;
             let totalSalidasFisicas = 0;
             let valorTotalInventarioCOP = 0; 
-            let conteoPorLinea = {};
 
             if(data && data.length > 0) {
-                
-                // PASO 3.1: Pre-cargar todas las TRMs necesarias para no hacer lenta la página
                 const paresTRMRequeridos = new Set();
                 data.forEach(prenda => {
                     let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
@@ -163,21 +228,18 @@
                     }
                 });
 
-                // Descargar las TRMs en paralelo súper rápido
                 const promesasTRM = Array.from(paresTRMRequeridos).map(async (llave) => {
                     const [mon, fec] = llave.split('_');
                     await obtenerTrmHistorica(mon, fec);
                 });
                 await Promise.all(promesasTRM);
 
-                // PASO 3.2: Ahora sí, calcular matemáticas reales
                 data.forEach((prenda) => {
                     let unidadesRegistro = parseInt(prenda.cantidad);
                     if (isNaN(unidadesRegistro)) { unidadesRegistro = 0; }
                     
                     totalUnidadesFisicas += unidadesRegistro;
 
-                    // CORRECCIÓN: Filtro inteligente e insensible a mayúsculas
                     let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
                     const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
 
@@ -187,14 +249,6 @@
                         totalSalidasFisicas += unidadesRegistro;
                     }
 
-                    const linea = prenda.linea || "Sin Línea";
-                    if (conteoPorLinea[linea]) {
-                        conteoPorLinea[linea] += unidadesRegistro;
-                    } else {
-                        conteoPorLinea[linea] = unidadesRegistro;
-                    }
-
-                    // MATEMÁTICA FINANCIERA: Multiplicar Costo Unitario X Unidades Disponibles X TRM Histórica
                     if (esDisponible && unidadesRegistro > 0) {
                         let precioBase = parseFloat(prenda.precio) || 0;
                         let moneda = (prenda.moneda || 'COP').toUpperCase();
@@ -212,7 +266,6 @@
             document.getElementById('mensajeCarga').style.display = 'none';
             document.getElementById('contenidoReportes').style.display = 'block';
 
-            // Inyección de los KPI calculados en pantalla
             document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
             document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
             document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
@@ -223,26 +276,17 @@
                 maximumFractionDigits: 0 
             }).format(valorTotalInventarioCOP);
 
-            // CONFIGURACIÓN DE GRÁFICAS CORREGIDA POR VOLUMEN REAL
             const datosEstados = {
                 labels: ['Disponibles', 'En Salida'],
                 datasets: [{ data: [totalDisponiblesFisicas, totalSalidasFisicas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
             };
 
-            const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
-            const valoresLineas = lineasOrdenadas.map(item => item[1]);
-
-            const datosLineas = {
-                labels: etiquetasLineas,
-                datasets: [{ label: 'Unidades Reales', data: valoresLineas, backgroundColor: '#0078D4', borderRadius: 4 }]
-            };
-
             renderizarGraficaEstados(datosEstados);
-            renderizarGraficaLineas(datosLineas);
+            
+            // Renderizar la gráfica Top 5 con el filtro por defecto ("TODOS")
+            window.actualizarGraficoTop5();
         }
 
-        // 4. CONSULTA INICIAL A SUPABASE
         async function cargarDatosSupabase() {
             try {
                 const { data, error } = await supabase.from('prendas').select('*');
@@ -254,12 +298,10 @@
             }
         }
 
-        // 5. INICIALIZAR SISTEMA Y SUSCRIBIR A TIEMPO REAL
         async function iniciarReportes() {
             await obtenerTrmActual();
             await cargarDatosSupabase();
 
-            // Suscripción en Tiempo Real (Realtime de Supabase)
             supabase
                 .channel('cambios-reportes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
@@ -268,9 +310,6 @@
                 .subscribe();
         }
 
-        // ==========================
-        // FUNCIONES DE GRÁFICAS (Chart.js)
-        // ==========================
         function renderizarGraficaEstados(datos) {
             const ctx = document.getElementById('graficoEstados').getContext('2d');
             if (chartEstadosInstancia) { chartEstadosInstancia.destroy(); }
@@ -280,10 +319,20 @@
         function renderizarGraficaLineas(datos) {
             const ctx = document.getElementById('graficoLineas').getContext('2d');
             if (chartLineasInstancia) { chartLineasInstancia.destroy(); }
-            chartLineasInstancia = new Chart(ctx, { type: 'bar', data: datos, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, x: { ticks: { color: '#ccc' }, grid: { display: false } } } } });
+            chartLineasInstancia = new Chart(ctx, { 
+                type: 'bar', 
+                data: datos, 
+                options: { 
+                    responsive: true, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, 
+                        x: { ticks: { color: '#ccc' }, grid: { display: false } } 
+                    } 
+                } 
+            });
         }
 
-        // Arrancamos el reporte
         iniciarReportes();
     </script>
 </body>

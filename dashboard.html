@@ -7,7 +7,7 @@
     <style>
         body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
         .contenedor { background-color: #2d2d2d; max-width: 95%; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
-        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #444; padding-bottom: 15px; }
         .buscador { padding: 10px; width: 350px; border-radius: 6px; border: 1px solid #555; background-color: #1a1a1a; color: white; }
         .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; margin-right: 15px; font-weight: bold; }
         .contenedor-tabla { overflow-x: auto; }
@@ -74,6 +74,10 @@
         
         .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
         .titulo-edicion { color: #ffc107 !important; }
+        
+        /* ESTILO PARA EL SUBTOTAL */
+        .barra-subtotales { background-color: #222; border: 1px solid #444; padding: 8px 15px; border-radius: 6px; font-size: 13px; color: #ffc107; font-weight: bold; display: inline-block; margin-bottom: 10px; }
+        .barra-subtotales span { color: #fff; margin-left: 5px; margin-right: 15px; }
     </style>
 </head>
 <body>
@@ -87,7 +91,6 @@
             <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar por Precinto, Referencia, etc...">
             
             <div style="display: flex; gap: 10px; align-items: center;">
-                <!-- NUEVO BOTÓN DE ELIMINACIÓN MASIVA -->
                 <button id="btnEliminarSeleccionados" class="btn-opciones btn-borrar" style="display: none; background-color: #dc3545;" onclick="ejecutarEliminacionMasiva()">🗑️ Borrar (<span id="cantSeleccionada">0</span>)</button>
                 
                 <button id="btnGuardarMasivo" class="btn-opciones btn-guardar" style="display: none;" onclick="guardarCambiosMasivos()">💾 Guardar Cambios</button>
@@ -107,11 +110,15 @@
             </div>
         </div>
         
+        <!-- BARRA DINÁMICA DE SUBTOTALES -->
+        <div>
+            <div id="subtotalesFiltro" class="barra-subtotales">📊 Calculando subtotales...</div>
+        </div>
+
         <div class="contenedor-tabla">
             <table>
                 <thead>
                     <tr>
-                        <!-- CHECKBOX MAESTRO PARA SELECCIONAR TODO -->
                         <th style="width: 30px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodos" onclick="toggleSeleccionarTodos()" style="cursor: pointer; width: 16px; height: 16px;"></th>
                         <th>Foto</th>
                         <th>Fecha Ingreso</th>
@@ -268,6 +275,26 @@
         let prendasAEliminarLocal = []; 
 
         // ==========================================
+        // LÓGICA DE SUBTOTALES DINÁMICOS
+        // ==========================================
+        window.calcularSubtotales = function() {
+            const filas = document.querySelectorAll('#cuerpoTabla tr');
+            let registrosVisibles = 0;
+            let unidadesVisibles = 0;
+
+            filas.forEach(fila => {
+                // Verificamos si la fila está visible y nos aseguramos de no sumar la fila de "Inventario vacío" (que tiene colspan)
+                if (fila.style.display !== 'none' && fila.cells.length > 1) {
+                    registrosVisibles++;
+                    unidadesVisibles += parseInt(fila.getAttribute('data-cantidad')) || 0;
+                }
+            });
+
+            document.getElementById('subtotalesFiltro').innerHTML = 
+                `📊 Resultados Activos: <span>${registrosVisibles} Referencias</span> | Suma Total Físicas: <span>${unidadesVisibles} Unidades</span>`;
+        }
+
+        // ==========================================
         // LÓGICA DE CHECKBOXES Y ELIMINACIÓN MASIVA
         // ==========================================
         window.toggleSeleccionarTodos = function() {
@@ -374,6 +401,7 @@
             
             if(!data || data.length === 0) {
                 tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
+                window.calcularSubtotales(); // Actualiza a 0
                 return;
             }
 
@@ -387,6 +415,9 @@
                 const urlFotoARenderizar = prenda.fotoUrl || 'logo.png'; 
                 const fila = document.createElement('tr');
                 
+                // GUARDAR CANTIDAD EN EL HTML PARA CALCULAR LOS SUBTOTALES FÁCILMENTE
+                fila.setAttribute('data-cantidad', prenda.cantidad || 1);
+
                 let estadoHTML = `<span class="estado-disponible">DISPONIBLE</span>`;
 
                 let costoVisual = "-";
@@ -450,6 +481,9 @@
             if (contadorDisponibles === 0) {
                 tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
             }
+
+            // SE EJECUTA EL CÁLCULO DE SUBTOTAL AL TERMINAR DE PINTAR LA TABLA
+            window.calcularSubtotales();
         }
 
         fetchPrendas();
@@ -531,7 +565,6 @@
                         if (error) throw error;
                         alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
                         
-                        // RECARGA TURBO
                         fetchPrendas();
                     }
                 } catch (err) {
@@ -550,10 +583,17 @@
             const textoBusqueda = this.value.toLowerCase();
             const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
             filasTabla.forEach(fila => {
+                if(fila.cells.length === 1) return; // Se ignora la fila de "tabla vacía"
                 const contenidoFila = fila.textContent.toLowerCase();
-                if (contenidoFila.includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
+                if (contenidoFila.includes(textoBusqueda)) { 
+                    fila.style.display = ''; 
+                } else { 
+                    fila.style.display = 'none'; 
+                }
             });
             window.actualizarBotonEliminarMasivo();
+            // SE EJECUTA EL CÁLCULO CADA VEZ QUE ESCRIBES ALGO EN EL BUSCADOR
+            window.calcularSubtotales();
         });
 
         let idPrendaSeleccionada = null; 
@@ -745,6 +785,8 @@
                 const filaElemento = botonPresionado.closest('tr');
                 if (filaElemento) filaElemento.style.display = 'none';
                 document.getElementById('btnGuardarMasivo').style.display = 'flex';
+                // SE RECALCULA EL SUBTOTAL SI ESCONDES UNA PRENDA
+                window.calcularSubtotales();
             } 
         }
 
