@@ -43,7 +43,7 @@
             <a href="dashboard.html" class="btn-accion">📦 Ir al Dashboard</a>
         </div>
 
-        <div id="mensajeCarga">Obteniendo TRM actual y calculando estadísticas desde Supabase... ⏳</div>
+        <div id="mensajeCarga">Obteniendo TRM histórica y calculando estadísticas desde Supabase... ⏳</div>
 
         <div id="contenidoReportes" style="display: none;">
             <div class="grid-kpis">
@@ -62,7 +62,7 @@
                 <div class="tarjeta-kpi">
                     <div class="kpi-titulo">Valor Inv. Disponible (COP)</div>
                     <div class="kpi-valor valor-purpura" id="kpiValorTotal" style="font-size: 24px;">$0</div>
-                    <span class="kpi-sub" id="infoTRM">TRM actualizada.</span>
+                    <span class="kpi-sub" id="infoTRM">Cálculo con TRM de Fecha de Ingreso</span>
                 </div>
             </div>
 
@@ -85,60 +85,101 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-        // CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { storage: window.localStorage }
+        });
 
         let chartEstadosInstancia = null;
         let chartLineasInstancia = null;
 
-        let trmUSD = 4000; 
-        let trmEUR = 4300; 
+        // TRMs actuales por defecto (como plan B si la API histórica falla)
+        let trmUSD_Actual = 4000; 
+        let trmEUR_Actual = 4300; 
+        const cacheTRMHistorica = {};
 
-        // 1. OBTENER TRM ACTUAL
+        // 1. OBTENER TRM ACTUAL (PLAN DE RESCATE)
         async function obtenerTrmActual() {
             try {
                 const resUSD = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
                 const dataUSD = await resUSD.json();
-                trmUSD = dataUSD.rates.COP;
+                trmUSD_Actual = dataUSD.rates.COP;
 
                 const resEUR = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
                 const dataEUR = await resEUR.json();
-                trmEUR = dataEUR.rates.COP;
-
-                document.getElementById('infoTRM').textContent = `USD: $${trmUSD.toFixed(0)} | EUR: $${trmEUR.toFixed(0)}`;
+                trmEUR_Actual = dataEUR.rates.COP;
             } catch(error) {
-                console.error("Error consultando TRM, usando valores por defecto.", error);
-                document.getElementById('infoTRM').textContent = "TRM aproximada (Sin conexión API)";
+                console.error("Error consultando TRM actual.", error);
             }
         }
 
-        // 2. FUNCIÓN DE CÁLCULO ESTADÍSTICO
-        function procesarDatosEstadisticos(data) {
-            document.getElementById('mensajeCarga').style.display = 'none';
-            document.getElementById('contenidoReportes').style.display = 'block';
+        // 2. FUNCIÓN PARA OBTENER TRM HISTÓRICA POR FECHA DE INGRESO
+        async function obtenerTrmHistorica(moneda, fecha) {
+            if (moneda === 'COP') return 1;
+            if (!fecha) fecha = new Date().toISOString().split('T')[0];
 
+            const cacheKey = `${moneda}_${fecha}`;
+            if (cacheTRMHistorica[cacheKey]) return cacheTRMHistorica[cacheKey];
+
+            try {
+                // API Pública e histórica de divisas (Fawaz Ahmed API)
+                const url = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${fecha}/v1/currencies/${moneda.toLowerCase()}.json`;
+                const respuesta = await fetch(url);
+                if (!respuesta.ok) throw new Error("Fecha no disponible en API");
+                
+                const datos = await respuesta.json();
+                const valorTRM = datos[moneda.toLowerCase()].cop;
+                cacheTRMHistorica[cacheKey] = valorTRM;
+                return valorTRM;
+            } catch (error) {
+                // Si la fecha es del futuro o la API falla, usamos la TRM del día de hoy como rescate
+                const valorRescate = moneda === 'USD' ? trmUSD_Actual : trmEUR_Actual;
+                cacheTRMHistorica[cacheKey] = valorRescate;
+                return valorRescate;
+            }
+        }
+
+        // 3. FUNCIÓN DE CÁLCULO ESTADÍSTICO Y FINANCIERO
+        async function procesarDatosEstadisticos(data) {
             let totalUnidadesFisicas = 0;
             let totalDisponiblesFisicas = 0;
             let totalSalidasFisicas = 0;
             let valorTotalInventarioCOP = 0; 
-            
             let conteoPorLinea = {};
 
             if(data && data.length > 0) {
-                data.forEach((prenda) => {
-                    // VALIDACIÓN ESTRICTA DE UNIDADES: Si no es número o está vacío, se evalúa como 0
-                    let unidadesRegistro = parseInt(prenda.cantidad);
-                    if (isNaN(unidadesRegistro)) {
-                        unidadesRegistro = 0;
-                    }
+                
+                // PASO 3.1: Pre-cargar todas las TRMs necesarias para no hacer lenta la página
+                const paresTRMRequeridos = new Set();
+                data.forEach(prenda => {
+                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
+                    let moneda = (prenda.moneda || 'COP').toUpperCase();
                     
-                    // Sumatoria total global de piezas físicas
+                    if (esDisponible && moneda !== 'COP' && parseFloat(prenda.precio) > 0) {
+                        let fecha = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
+                        paresTRMRequeridos.add(`${moneda}_${fecha}`);
+                    }
+                });
+
+                // Descargar las TRMs en paralelo súper rápido
+                const promesasTRM = Array.from(paresTRMRequeridos).map(async (llave) => {
+                    const [mon, fec] = llave.split('_');
+                    await obtenerTrmHistorica(mon, fec);
+                });
+                await Promise.all(promesasTRM);
+
+                // PASO 3.2: Ahora sí, calcular matemáticas reales
+                data.forEach((prenda) => {
+                    let unidadesRegistro = parseInt(prenda.cantidad);
+                    if (isNaN(unidadesRegistro)) { unidadesRegistro = 0; }
+                    
                     totalUnidadesFisicas += unidadesRegistro;
 
-                    // CONDICIÓN ESTRICTA: Solo sumará como disponible si el texto coincide
-                    const esDisponible = prenda.estado === "Disponible en inventario";
+                    // CORRECCIÓN: Filtro inteligente e insensible a mayúsculas
+                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
+                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
 
                     if (esDisponible) {
                         totalDisponiblesFisicas += unidadesRegistro;
@@ -146,7 +187,6 @@
                         totalSalidasFisicas += unidadesRegistro;
                     }
 
-                    // Acumulador por Línea basándose en el volumen real de piezas
                     const linea = prenda.linea || "Sin Línea";
                     if (conteoPorLinea[linea]) {
                         conteoPorLinea[linea] += unidadesRegistro;
@@ -154,26 +194,25 @@
                         conteoPorLinea[linea] = unidadesRegistro;
                     }
 
-                    // MATEMÁTICA FINANCIERA PRECISA (CANTIDAD X COSTO CON TRM)
+                    // MATEMÁTICA FINANCIERA: Multiplicar Costo Unitario X Unidades Disponibles X TRM Histórica
                     if (esDisponible && unidadesRegistro > 0) {
                         let precioBase = parseFloat(prenda.precio) || 0;
-                        let moneda = prenda.moneda || 'COP';
-                        let precioConvertidoUnitario = 0;
+                        let moneda = (prenda.moneda || 'COP').toUpperCase();
+                        let fechaIngreso = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
+                        
+                        let trmAplicar = cacheTRMHistorica[`${moneda}_${fechaIngreso}`] || 1;
+                        if (moneda === 'COP') trmAplicar = 1;
 
-                        if (moneda === 'USD') {
-                            precioConvertidoUnitario = precioBase * trmUSD;
-                        } else if (moneda === 'EUR') {
-                            precioConvertidoUnitario = precioBase * trmEUR;
-                        } else {
-                            precioConvertidoUnitario = precioBase; 
-                        }
-
-                        valorTotalInventarioCOP += (precioConvertidoUnitario * unidadesRegistro);
+                        let costoTotalPrendaCOP = (precioBase * trmAplicar) * unidadesRegistro;
+                        valorTotalInventarioCOP += costoTotalPrendaCOP;
                     }
                 });
             }
 
-            // Inyección de los KPI reales calculados en pantalla
+            document.getElementById('mensajeCarga').style.display = 'none';
+            document.getElementById('contenidoReportes').style.display = 'block';
+
+            // Inyección de los KPI calculados en pantalla
             document.getElementById('kpiTotal').textContent = totalUnidadesFisicas;
             document.getElementById('kpiDisponibles').textContent = totalDisponiblesFisicas;
             document.getElementById('kpiSalidas').textContent = totalSalidasFisicas;
@@ -203,19 +242,19 @@
             renderizarGraficaLineas(datosLineas);
         }
 
-        // 3. CONSULTA INICIAL A SUPABASE
+        // 4. CONSULTA INICIAL A SUPABASE
         async function cargarDatosSupabase() {
             try {
                 const { data, error } = await supabase.from('prendas').select('*');
                 if (error) throw error;
-                procesarDatosEstadisticos(data);
+                await procesarDatosEstadisticos(data);
             } catch (error) {
                 console.error("Error al cargar datos:", error);
                 document.getElementById('mensajeCarga').textContent = "Error conectando con la base de datos.";
             }
         }
 
-        // 4. INICIALIZAR SISTEMA Y SUSCRIBIR A TIEMPO REAL
+        // 5. INICIALIZAR SISTEMA Y SUSCRIBIR A TIEMPO REAL
         async function iniciarReportes() {
             await obtenerTrmActual();
             await cargarDatosSupabase();
@@ -224,7 +263,6 @@
             supabase
                 .channel('cambios-reportes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                    // Si ocurre cualquier cambio en el inventario, recalculamos las gráficas
                     cargarDatosSupabase();
                 })
                 .subscribe();
