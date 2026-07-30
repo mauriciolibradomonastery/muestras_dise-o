@@ -8,16 +8,13 @@
         body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
         .contenedor { background-color: #2d2d2d; max-width: 1100px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
         
-        /* Barra Superior (ESTILO SEGUIMIENTO WIP) */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* ESTILO PARA PRESENCIA (AVATARES) */
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
         .avatars-group { display: flex; flex-direction: row-reverse; }
         .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
         .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
-        .avatar-circle:last-child { margin-left: 0; }
         .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
         
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
@@ -53,15 +50,12 @@
 <body>
 
     <div class="contenedor">
-        <!-- BARRA SUPERIOR Y PRESENCIA -->
         <div class="top-bar">
             <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
             <div style="display: flex; align-items: center;">
                 <div class="en-linea-container">
                     <span>En línea:</span>
-                    <div id="usuarios-activos" class="avatars-group">
-                        <!-- Avatares se llenan aquí -->
-                    </div>
+                    <div id="usuarios-activos" class="avatars-group"></div>
                 </div>
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
@@ -74,6 +68,11 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- SEGMENTADORES INTERACTIVOS -->
+                <select id="filtroAnio" class="select-segmentador" onchange="window.actualizarReporteInteractivo()">
+                    <option value="TODOS">Todos los Años de Ingreso</option>
+                </select>
+
                 <select id="filtroSegmento" class="select-segmentador" onchange="window.actualizarReporteInteractivo()">
                     <option value="TODOS">Ver Todas las Categorías</option>
                     <option value="ACCESORIOS">Filtro: Solo Accesorios</option>
@@ -85,7 +84,7 @@
             </div>
         </div>
 
-        <div id="mensajeCarga">Obteniendo TRM histórica y calculando estadísticas desde Supabase... ⏳</div>
+        <div id="mensajeCarga">Obteniendo TRM histórica y procesando inventario completo... ⏳</div>
 
         <div id="contenidoReportes" style="display: none;">
             <div class="grid-kpis">
@@ -129,15 +128,9 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey, {
-            auth: { storage: window.localStorage }
-        });
+        const supabase = createClient(supabaseUrl, supabaseKey, { auth: { storage: window.localStorage } });
 
-        // ==========================================
-        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
-        // ==========================================
-        let canalPresencia;
-
+        // PRESENCIA
         function generarColorHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
@@ -145,18 +138,14 @@
             return '#' + '00000'.substring(0, 6 - c.length) + c;
         }
 
-        function obtenerIniciales(email) {
-            return email.substring(0, 2).toUpperCase();
-        }
+        function obtenerIniciales(email) { return email.substring(0, 2).toUpperCase(); }
 
         async function configurarPresencia(emailUsuario) {
-            canalPresencia = supabase.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
-
+            const canalPresencia = supabase.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
             canalPresencia.on('presence', { event: 'sync' }, () => {
                 const state = canalPresencia.presenceState();
                 const container = document.getElementById('usuarios-activos');
                 container.innerHTML = '';
-                
                 Object.keys(state).forEach(email => {
                     const div = document.createElement('div');
                     div.className = 'avatar-circle';
@@ -166,28 +155,18 @@
                     container.appendChild(div);
                 });
             });
-
             canalPresencia.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
-                }
+                if (status === 'SUBSCRIBED') { await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() }); }
             });
         }
 
         async function verificarSesion() {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = "index.html";
-            } else {
-                configurarPresencia(session.user.email);
-            }
+            if (!session) { window.location.href = "index.html"; } 
+            else { configurarPresencia(session.user.email); }
         }
-        
-        window.cerrarSesion = async function() {
-            await supabase.auth.signOut();
-            window.location.href = "index.html";
-        }
-        
+
+        window.cerrarSesion = async function() { await supabase.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
         let chartEstadosInstancia = null;
@@ -207,9 +186,7 @@
                 const resEUR = await fetch('https://api.exchangerate-api.com/v4/latest/EUR');
                 const dataEUR = await resEUR.json();
                 trmEUR_Actual = dataEUR.rates.COP;
-            } catch(error) {
-                console.error("Error consultando TRM actual.", error);
-            }
+            } catch(error) { console.error("Error consultando TRM actual.", error); }
         }
 
         async function obtenerTrmHistorica(moneda, fecha) {
@@ -223,7 +200,6 @@
                 const url = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${fecha}/v1/currencies/${moneda.toLowerCase()}.json`;
                 const respuesta = await fetch(url);
                 if (!respuesta.ok) throw new Error("Fecha no disponible en API");
-                
                 const datos = await respuesta.json();
                 const valorTRM = datos[moneda.toLowerCase()].cop;
                 cacheTRMHistorica[cacheKey] = valorTRM;
@@ -236,7 +212,8 @@
         }
 
         window.actualizarReporteInteractivo = function() {
-            const filtro = document.getElementById('filtroSegmento').value;
+            const filtroCat = document.getElementById('filtroSegmento').value;
+            const filtroAnio = document.getElementById('filtroAnio').value;
             
             let conteoPorLinea = {};
             let totalIngresadasFiltradas = 0;
@@ -247,31 +224,34 @@
             datosGlobales.forEach((prenda) => {
                 let tipo = (prenda.tipo || "").toUpperCase();
                 let genero = (prenda.genero || "").toUpperCase();
-                let pasaFiltro = false;
+                let fechaIngresoStr = prenda.fechaIngreso || prenda.fecha_ingreso || prenda.created_at || "";
+                let anioIngreso = fechaIngresoStr.substring(0, 4);
 
-                if (filtro === "TODOS") { pasaFiltro = true; }
-                else if (filtro === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltro = true; }
-                else if (filtro === "MEN" && genero === "MEN") { pasaFiltro = true; }
-                else if (filtro === "WOMEN" && genero === "WOMEN") { pasaFiltro = true; }
+                let pasaFiltroCat = false;
+                if (filtroCat === "TODOS") { pasaFiltroCat = true; }
+                else if (filtroCat === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltroCat = true; }
+                else if (filtroCat === "MEN" && genero === "MEN") { pasaFiltroCat = true; }
+                else if (filtroCat === "WOMEN" && genero === "WOMEN") { pasaFiltroCat = true; }
 
-                if (pasaFiltro) {
+                let pasaFiltroAnio = false;
+                if (filtroAnio === "TODOS" || anioIngreso === filtroAnio) { pasaFiltroAnio = true; }
+
+                if (pasaFiltroCat && pasaFiltroAnio) {
                     let unidades = parseInt(prenda.cantidad);
                     if (isNaN(unidades)) { unidades = 0; }
                     
                     totalIngresadasFiltradas += unidades;
 
-                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
+                    // SI NO TIENE FECHA DE SALIDA -> ES DISPONIBLE
+                    let fechaSalidaStr = (prenda.salidaFecha || prenda.fechaSalida || prenda.fecha_salida || "").trim();
+                    const esDisponible = fechaSalidaStr === "";
 
                     if (esDisponible) {
                         totalDisponiblesFiltradas += unidades;
                         
                         const linea = prenda.linea || "Sin Línea";
-                        if (conteoPorLinea[linea]) {
-                            conteoPorLinea[linea] += unidades;
-                        } else {
-                            conteoPorLinea[linea] = unidades;
-                        }
+                        if (conteoPorLinea[linea]) { conteoPorLinea[linea] += unidades; } 
+                        else { conteoPorLinea[linea] = unidades; }
 
                         if (unidades > 0) {
                             let precioBase = parseFloat(prenda.precio) || 0;
@@ -292,12 +272,10 @@
             document.getElementById('kpiTotal').textContent = totalIngresadasFiltradas;
             document.getElementById('kpiDisponibles').textContent = totalDisponiblesFiltradas;
             document.getElementById('kpiSalidas').textContent = totalSalidasFiltradas;
-            document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { 
-                style: 'currency', currency: 'COP', maximumFractionDigits: 0 
-            }).format(valorTotalCOPFiltrado);
+            document.getElementById('kpiValorTotal').textContent = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valorTotalCOPFiltrado);
 
             const datosEstados = {
-                labels: ['Disponibles', 'En Salida'],
+                labels: ['Disponibles en Bodega', 'Con Fecha de Salida'],
                 datasets: [{ data: [totalDisponiblesFiltradas, totalSalidasFiltradas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
             };
 
@@ -307,12 +285,7 @@
 
             const datosLineas = {
                 labels: etiquetasLineas,
-                datasets: [{ 
-                    label: 'Unidades Disponibles', 
-                    data: valoresLineas, 
-                    backgroundColor: '#0078D4', 
-                    borderRadius: 4 
-                }]
+                datasets: [{ label: 'Unidades Disponibles', data: valoresLineas, backgroundColor: '#0078D4', borderRadius: 4 }]
             };
 
             renderizarGraficaEstados(datosEstados);
@@ -322,16 +295,30 @@
         async function procesarDatosCargaInicial(data) {
             datosGlobales = data; 
 
+            // Llenar el combo de Años de Ingreso dinámicamente
+            const comboAnio = document.getElementById('filtroAnio');
+            const anios = new Set();
+
             if(data && data.length > 0) {
                 const paresTRMRequeridos = new Set();
                 data.forEach(prenda => {
-                    let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                    const esDisponible = estadoDB.includes("disponible") || estadoDB === "";
+                    let fechaIngresoStr = prenda.fechaIngreso || prenda.fecha_ingreso || prenda.created_at || "";
+                    if (fechaIngresoStr.length >= 4) { anios.add(fechaIngresoStr.substring(0, 4)); }
+
+                    let fechaSalidaStr = (prenda.salidaFecha || prenda.fechaSalida || prenda.fecha_salida || "").trim();
+                    const esDisponible = fechaSalidaStr === "";
                     let moneda = (prenda.moneda || 'COP').toUpperCase();
+                    
                     if (esDisponible && moneda !== 'COP' && parseFloat(prenda.precio) > 0) {
                         let fecha = prenda.fechaIngreso || new Date().toISOString().split('T')[0];
                         paresTRMRequeridos.add(`${moneda}_${fecha}`);
                     }
+                });
+
+                Array.from(anios).sort().reverse().forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a; opt.textContent = "Año Ingreso: " + a;
+                    comboAnio.appendChild(opt);
                 });
 
                 const promesasTRM = Array.from(paresTRMRequeridos).map(async (llave) => {
@@ -349,9 +336,17 @@
 
         async function cargarDatosSupabase() {
             try {
-                const { data, error } = await supabase.from('prendas').select('*');
-                if (error) throw error;
-                await procesarDatosCargaInicial(data);
+                let todosLosDatos = [];
+                let desde = 0; let paso = 1000; let hayMas = true;
+
+                while (hayMas) {
+                    let res = await supabase.from('prendas').select('*').range(desde, desde + paso - 1);
+                    if (res.error) throw res.error;
+                    todosLosDatos = todosLosDatos.concat(res.data || []);
+                    if (res.data.length < paso) { hayMas = false; } else { desde += paso; }
+                }
+
+                await procesarDatosCargaInicial(todosLosDatos);
             } catch (error) {
                 console.error("Error al cargar datos:", error);
                 document.getElementById('mensajeCarga').textContent = "Error conectando con la base de datos.";
@@ -362,12 +357,7 @@
             await obtenerTrmActual();
             await cargarDatosSupabase();
 
-            supabase
-                .channel('cambios-reportes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => {
-                    cargarDatosSupabase();
-                })
-                .subscribe();
+            supabase.channel('cambios-reportes').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => { cargarDatosSupabase(); }).subscribe();
         }
 
         function renderizarGraficaEstados(datos) {
@@ -379,18 +369,7 @@
         function renderizarGraficaLineas(datos) {
             const ctx = document.getElementById('graficoLineas').getContext('2d');
             if (chartLineasInstancia) { chartLineasInstancia.destroy(); }
-            chartLineasInstancia = new Chart(ctx, { 
-                type: 'bar', 
-                data: datos, 
-                options: { 
-                    responsive: true, 
-                    plugins: { legend: { display: false } }, 
-                    scales: { 
-                        y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, 
-                        x: { ticks: { color: '#ccc' }, grid: { display: false } } 
-                    } 
-                } 
-            });
+            chartLineasInstancia = new Chart(ctx, { type: 'bar', data: datos, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#aaa', stepSize: 1 }, grid: { color: '#333' } }, x: { ticks: { color: '#ccc' }, grid: { display: false } } } } });
         }
 
         iniciarReportes();

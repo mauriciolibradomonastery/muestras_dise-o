@@ -11,7 +11,6 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
 
-        /* Barra Superior y Presencia */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
@@ -22,7 +21,6 @@
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
         .btn-logout:hover { background-color: #c82333; }
 
-        /* Controles Principales */
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
@@ -40,14 +38,12 @@
         .btn-green { background-color: #198754; }
         .btn-green:hover { background-color: #157347; }
 
-        /* Dropdown */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
         .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
         .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
         .show { display: block; }
 
-        /* Tabla y Subtotales */
         .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
         .stat-highlight-yellow { color: #ffc107; }
         .stat-highlight-white { color: #ffffff; }
@@ -74,7 +70,6 @@
         .btn-edit { background-color: #ffc107; }
         .btn-retornar { background-color: #198754; color: white; }
 
-        /* Modales */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
         .modal-content { background-color: #2b2b2b; padding: 25px; border-radius: 8px; width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto; color: #fff; border: 1px solid #444; }
         .modal-header { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -96,11 +91,11 @@
         
         .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
+        #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
     </style>
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR Y PRESENCIA -->
     <div class="top-bar">
         <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
         <div style="display: flex; align-items: center;">
@@ -112,7 +107,6 @@
         </div>
     </div>
 
-    <!-- CABECERA PRINCIPAL -->
     <div class="main-header">
         <div class="header-left">
             <button class="btn btn-menu" onclick="window.location.href='dashboard.html'">⬅ Menú</button>
@@ -162,10 +156,9 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tbody-salidas">
-                <!-- Se llena dinámicamente -->
-            </tbody>
+            <tbody id="tbody-salidas"></tbody>
         </table>
+        <div id="mensajeCarga" style="display: none;">Cargando inventario completo... ⏳</div>
     </div>
 
     <!-- MODAL DE VER DETALLE -->
@@ -254,13 +247,11 @@
     <script>
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        
-        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, {
-            auth: { storage: window.localStorage }
-        });
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
         let datosGlobalesSalidas = [];
         let estadoOrden = { columnaID: null, ascendente: true };
+        let idPrendaSeleccionada = null;
 
         // PRESENCIA
         function generarColorHash(str) {
@@ -288,9 +279,7 @@
                 });
             });
             canalPresencia.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
-                }
+                if (status === 'SUBSCRIBED') { await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() }); }
             });
         }
 
@@ -303,39 +292,46 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
-        client.channel('cambios-bajas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTablaSalidas(); }).subscribe();
+        client.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTablaSalidas(); }).subscribe();
 
         function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
-            if (!event.target.matches('.btn-blue')) {
+            if (!event.target.matches('.btn-blue') && !event.target.matches('.btn-opciones')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
-                }
+                for (var i = 0; i < dropdowns.length; i++) { if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show'); }
             }
         }
 
         // ==========================================
-        // LA REGLA DE ORO: SI TIENE FECHA DE SALIDA -> ES UNA SALIDA (AQUÍ)
+        // CÁLCULO DE PAGINACIÓN SIN LÍMITE DE 1.000 FILAS
         // ==========================================
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando registros...</td></tr>`;
 
             try {
-                let res = await client.from('prendas').select('*').order('id', { ascending: false });
-                if (res.error) throw res.error;
+                let todosLosDatos = [];
+                let desde = 0;
+                let paso = 1000;
+                let hayMas = true;
 
-                // FILTRO: Solo prendas cuya Fecha de Salida NO esté vacía
-                datosGlobalesSalidas = (res.data || []).filter(item => {
+                while (hayMas) {
+                    let res = await client.from('prendas').select('*').order('id', { ascending: false }).range(desde, desde + paso - 1);
+                    if (res.error) throw res.error;
+
+                    todosLosDatos = todosLosDatos.concat(res.data || []);
+                    if (res.data.length < paso) { hayMas = false; } else { desde += paso; }
+                }
+
+                // FILTRO SALIDAS: Fecha de Salida NO debe estar vacía
+                datosGlobalesSalidas = todosLosDatos.filter(item => {
                     let f = (item.salidaFecha || item.fechaSalida || item.fecha_salida || "").trim();
                     return f !== "";
                 });
 
                 renderizarTabla(datosGlobalesSalidas);
             } catch (err) {
-                console.error("Error:", err);
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
+                console.error("Error:", err); tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
             }
         }
 
@@ -344,9 +340,8 @@
             tbody.innerHTML = "";
 
             if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay registros de salidas disponibles.</td></tr>`;
-                actualizarSubtotales(0, 0);
-                return;
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay registros de salidas en el sistema.</td></tr>`;
+                actualizarSubtotales(0, 0); return;
             }
 
             lista.forEach(item => {
@@ -382,26 +377,19 @@
                 `;
                 tbody.appendChild(tr);
             });
-
             filtrarTabla();
         }
 
-        window.abrirVisor = function(url) {
-            document.getElementById('imagenAmpliada').src = url;
-            document.getElementById('modalVisor').style.display = 'flex';
-        }
+        window.abrirVisor = function(url) { document.getElementById('imagenAmpliada').src = url; document.getElementById('modalVisor').style.display = 'flex'; }
+        window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
 
         window.retornarAInventario = async function(idDocumento) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA? (Se borrará la fecha de salida)")) {
                 const { error } = await client.from('prendas')
                     .update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" })
                     .eq('precinto', idDocumento);
-                
-                if (error) {
-                    await client.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" }).eq('id', idDocumento);
-                }
-                
-                alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
+                if (error) { await client.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" }).eq('id', idDocumento); }
+                alert("¡Acción realizada! La prenda regresó al Dashboard (Bodega). 🟢");
                 cargarTablaSalidas();
             }
         }
@@ -420,11 +408,9 @@
                 if (valorA > valorB) return estadoOrden.ascendente ? 1 : -1;
                 return 0;
             });
-
             document.querySelectorAll('.icon-sort').forEach(icon => { icon.innerHTML = '↕'; icon.style.color = "#888"; });
             const iconoActivo = document.getElementById(idIconoHtml);
-            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️';
-            iconoActivo.style.color = "#fff";
+            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️'; iconoActivo.style.color = "#fff";
             renderizarTabla(datosGlobalesSalidas);
         }
 
@@ -458,9 +444,7 @@
         }
 
         function marcarTodos(source) {
-            document.querySelectorAll('.checkbox-item').forEach(cb => {
-                if(cb.closest('tr').style.display !== 'none') cb.checked = source.checked;
-            });
+            document.querySelectorAll('.checkbox-item').forEach(cb => { if(cb.closest('tr').style.display !== 'none') cb.checked = source.checked; });
             actualizarContadorBorrar();
         }
 
@@ -476,16 +460,14 @@
             try {
                 await client.from('prendas').delete().in('precinto', seleccionados);
                 await client.from('prendas').delete().in('id', seleccionados);
-                alert("✅ Registros eliminados con éxito.");
-                document.getElementById('check-all').checked = false;
-                cargarTablaSalidas();
-                actualizarContadorBorrar();
-            } catch (err) { console.error(err); alert("❌ Error al borrar los registros."); } 
+                alert("✅ Registros eliminados."); document.getElementById('check-all').checked = false; cargarTablaSalidas(); actualizarContadorBorrar();
+            } catch (err) { console.error(err); alert("❌ Error al borrar."); } 
             finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
         }
 
-        window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
-
+        // ==========================================
+        // MÓDULOS: VER DETALLES Y EDITAR PRENDA
+        // ==========================================
         function abrirModalVer(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
             const contenedor = document.getElementById('view-form-container');
@@ -503,11 +485,12 @@
                 { label: "Proveedor", val: item.proveedor }, { label: "País Origen", val: item.paisOrigen || item.pais_origen },
                 { label: "Precio / Costo", val: item.precio || item.costo }, { label: "Moneda", val: item.moneda },
                 { label: "Cantidad", val: item.cantidad || item.cant }, { label: "Clasificación", val: item.clasificacion },
-                { label: "Fecha de Salida", val: item.salidaFecha || item.fechaSalida || item.fecha_salida },
                 { label: "Ubicación General", val: item.ubicacionGeneral || item.ubicacion_general },
                 { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno }, { label: "Tipo", val: item.tipo },
-                { label: "Colección", val: item.coleccion }, { label: "Remisión de Salida", val: item.salidaRemision || item.remision || item.no_remision },
-                { label: "Orden de Traslado", val: item.salidaTo || item.ordenTraslado || item.to }, { label: "Estado Actual", val: item.estado },
+                { label: "Colección", val: item.coleccion }, { label: "Estado Actual", val: item.estado },
+                { label: "Remisión de Salida", val: item.salidaRemision || item.remision || item.no_remision || '-' },
+                { label: "Fecha de Salida", val: item.salidaFecha || item.fechaSalida || item.fecha_salida || '-' },
+                { label: "Orden de Traslado (TO)", val: item.salidaTo || item.to || item.ordenTraslado || '-' },
                 { label: "Fecha Entrega CI", val: item.fechaEntregaCI || item.fecha_entrega_ci },
                 { label: "Observaciones", val: item.observaciones || item.accionCorrectiva || item.accion_correctiva, full: true }
             ];
@@ -520,30 +503,31 @@
 
         function abrirModalEdicion(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            document.getElementById('edit-precinto').value = item.precinto || item.id || "";
-            document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || "";
-            document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || "";
-            document.getElementById('edit-referencia').value = item.referencia || "";
-            document.getElementById('edit-linea').value = item.linea || "";
-            document.getElementById('edit-color').value = item.color || "";
-            document.getElementById('edit-talla').value = item.talla || "";
-            document.getElementById('edit-genero').value = item.genero || "";
-            document.getElementById('edit-proveedor').value = item.proveedor || "";
-            document.getElementById('edit-paisOrigen').value = item.paisOrigen || item.pais_origen || "";
-            document.getElementById('edit-precio').value = item.precio || item.costo || "";
+            idPrendaSeleccionada = item.precinto || item.id;
+            
+            document.getElementById('edit-precinto').value = idPrendaSeleccionada;
+            document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || '';
+            document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || '';
+            document.getElementById('edit-referencia').value = item.referencia || '';
+            document.getElementById('edit-linea').value = item.linea || '';
+            document.getElementById('edit-color').value = item.color || '';
+            document.getElementById('edit-talla').value = item.talla || '';
+            document.getElementById('edit-genero').value = item.genero || '';
+            document.getElementById('edit-proveedor').value = item.proveedor || '';
+            document.getElementById('edit-paisOrigen').value = item.paisOrigen || item.pais_origen || '';
+            document.getElementById('edit-precio').value = item.precio || item.costo || '';
             document.getElementById('edit-moneda').value = item.moneda || "COP";
             document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
-            document.getElementById('edit-clasificacion').value = item.clasificacion || "";
+            document.getElementById('edit-clasificacion').value = item.clasificacion || '';
             
-            // Campo clave
-            document.getElementById('edit-fechaSalida').value = item.salidaFecha || item.fechaSalida || item.fecha_salida || ""; 
+            document.getElementById('edit-fechaSalida').value = item.salidaFecha || item.fechaSalida || item.fecha_salida || ''; 
             
-            document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || "";
-            document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || "";
-            document.getElementById('edit-tipo').value = item.tipo || "";
-            document.getElementById('edit-coleccion').value = item.coleccion || "";
-            document.getElementById('edit-remision').value = item.salidaRemision || item.remision || item.no_remision || "";
-            document.getElementById('edit-ordenTraslado').value = item.salidaTo || item.ordenTraslado || item.to || "";
+            document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || '';
+            document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || '';
+            document.getElementById('edit-tipo').value = item.tipo || '';
+            document.getElementById('edit-coleccion').value = item.coleccion || '';
+            document.getElementById('edit-remision').value = item.salidaRemision || item.remision || item.no_remision || '';
+            document.getElementById('edit-ordenTraslado').value = item.salidaTo || item.ordenTraslado || item.to || '';
             
             const selectEstado = document.getElementById('edit-estado');
             const estadoReal = (item.estado || "BAJA").trim();
@@ -552,10 +536,11 @@
             }
             selectEstado.value = estadoReal.toUpperCase().includes('DISPONIBLE') ? "Disponible en inventario" : estadoReal;
 
-            document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || "";
-            document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || "";
-            document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || "";
-            document.getElementById('edit-nueva-foto').value = "";
+            document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || '';
+            document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || '';
+            
+            document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || '';
+            document.getElementById('edit-nueva-foto').value = '';
             document.getElementById('modal-edicion').style.display = 'flex';
         }
 
@@ -588,7 +573,7 @@
                 let fechaSalidaRevisada = document.getElementById('edit-fechaSalida').value;
                 let estadoSeleccionado = document.getElementById('edit-estado').value;
 
-                const nuevaData = {
+                let datosActualizar = {
                     fechaIngreso: document.getElementById('edit-fechaIngreso').value, registradoPor: document.getElementById('edit-registradoPor').value,
                     referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
                     color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
@@ -596,7 +581,7 @@
                     paisOrigen: document.getElementById('edit-paisOrigen').value, precio: document.getElementById('edit-precio').value,
                     moneda: document.getElementById('edit-moneda').value, cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
                     clasificacion: document.getElementById('edit-clasificacion').value, 
-                    salidaFecha: fechaSalidaRevisada, // SE GUARDA AQUI
+                    salidaFecha: fechaSalidaRevisada, 
                     ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value, ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
                     tipo: document.getElementById('edit-tipo').value, coleccion: document.getElementById('edit-coleccion').value,
                     salidaRemision: document.getElementById('edit-remision').value, salidaTo: document.getElementById('edit-ordenTraslado').value,
@@ -604,18 +589,17 @@
                     observaciones: document.getElementById('edit-observaciones').value, fotoUrl: urlFotoFinal
                 };
 
-                const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
-                if (error) { await client.from('prendas').update(nuevaData).eq('id', precinto); }
-                
+                const { error } = await client.from('prendas').update(datosActualizar).eq('precinto', idPrendaSeleccionada);
+                if (error) { await client.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada); }
+
                 if (fechaSalidaRevisada === "") {
                     alert("✅ Prenda actualizada.\n\nComo le borraste la 'Fecha de Salida', esta prenda ha regresado al Dashboard (Bodega).");
                 } else {
                     alert("✅ Información actualizada correctamente.");
                 }
 
-                cerrarModal('modal-edicion');
-                cargarTablaSalidas();
-            } catch (err) { alert("❌ Error al guardar. Verifica consola."); console.error(err);
+                cerrarModal('modal-edicion'); cargarTablaSalidas();
+            } catch (err) { alert("❌ Error al guardar."); console.error(err);
             } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
         }
 
@@ -624,19 +608,16 @@
             const datosMapeados = datosGlobalesSalidas.map(item => {
                 const partesDesc = [item.referencia, item.linea, item.color, item.talla, item.clasificacion].filter(val => val && val.toString().trim() !== "");
                 return {
-                    "Fecha Ingreso Original": item.fechaIngreso || item.fecha_ingreso || item.created_at || "",
-                    "Registrado Por": item.registradoPor || item.registrado_por || "",
+                    "Fecha Ingreso": item.fechaIngreso || item.fecha_ingreso || item.created_at || "", "Registrado Por": item.registradoPor || item.registrado_por || "",
                     "Precinto": item.precinto || item.codigo_precinto || item.id || "", "Descripción": partesDesc.join(" ") || "",
-                    "Referencia": item.referencia || "", "Línea": item.linea || "", "Color": item.color || "",
-                    "Talla": item.talla || "", "Género": item.genero || "", "Proveedor": item.proveedor || "",
-                    "País Origen": item.paisOrigen || item.pais_origen || "", "Precio": item.precio || item.costo || "",
-                    "Moneda": item.moneda || "", "Cantidad": item.cantidad || item.cant || 1, "Clasificación": item.clasificacion || "",
-                    "Fecha de Salida": item.salidaFecha || item.fechaSalida || item.fecha_salida || "",
+                    "Referencia": item.referencia || "", "Línea": item.linea || "", "Color": item.color || "", "Talla": item.talla || "",
+                    "Género": item.genero || "", "Proveedor": item.proveedor || "", "País Origen": item.paisOrigen || item.pais_origen || "",
+                    "Precio": item.precio || item.costo || "", "Moneda": item.moneda || "", "Cantidad": item.cantidad || item.cant || 1,
+                    "Clasificación": item.clasificacion || "", "Fecha de Salida": item.salidaFecha || item.fechaSalida || item.fecha_salida || "",
                     "Ubicación General": item.ubicacionGeneral || item.ubicacion_general || "", "Ubicación Diseño": item.ubicacionDiseno || item.ubicacion_diseno || "",
-                    "Tipo": item.tipo || "", "Observaciones": item.observaciones || item.accionCorrectiva || item.accion_correctiva || "",
-                    "Colección": item.coleccion || "", "Remisión de Salida": item.salidaRemision || item.remision || item.no_remision || "",
-                    "Orden de Traslado (TO)": item.salidaTo || item.ordenTraslado || item.to || "", "Estado Actual": item.estado || "BAJA",
-                    "Fecha Entrega CI": item.fechaEntregaCI || item.fecha_entrega_ci || ""
+                    "Tipo": item.tipo || "", "Observaciones": item.observaciones || item.accionCorrectiva || "", "Colección": item.coleccion || "",
+                    "Remisión de Salida": item.salidaRemision || item.remision || "", "Orden de Traslado (TO)": item.salidaTo || item.to || "",
+                    "Estado Actual": item.estado || "SALIDA DEL INVENTARIO", "Fecha Entrega CI": item.fechaEntregaCI || ""
                 };
             });
             const worksheet = XLSX.utils.json_to_sheet(datosMapeados);
@@ -660,35 +641,49 @@
             const reader = new FileReader();
             reader.onload = async function(event) {
                 try {
+                    document.getElementById('mensajeCarga').style.display = "block";
                     const data = new Uint8Array(event.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    if (json.length === 0) return alert("El archivo de Excel está vacío.");
+                    
+                    const registrosValidos = json.filter(item => {
+                        return Object.values(item).some(val => val !== null && val !== undefined && val.toString().trim() !== "");
+                    });
 
-                    if (confirm(`⚠️ Vas a importar ${json.length} prendas al sistema.\n\n¿Deseas continuar?`)) {
-                        const registrosInsertar = json.map(item => ({
-                            fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
-                            registradoPor: item["Registrado Por"] || null, precinto: item["Precinto"] || null,
-                            referencia: item["Referencia"] || null, linea: item["Línea"] || null,
-                            color: item["Color"] || null, talla: item["Talla"] || null,
-                            genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
-                            paisOrigen: item["País Origen"] || null, precio: item["Precio"] || null,
-                            moneda: item["Moneda"] || null, cantidad: parseInt(item["Cantidad"]) || 1,
-                            clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"]) || null,
-                            ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
-                            tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
-                            salidaRemision: item["Remisión de Salida"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
-                            estado: item["Estado Actual"] || "SALIDA DEL INVENTARIO", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
-                            observaciones: item["Observaciones"] || null
-                        }));
+                    if (registrosValidos.length === 0) { alert("⚠️ El archivo de Excel está vacío."); return; }
 
-                        const { error } = await client.from('prendas').upsert(registrosInsertar, { onConflict: 'precinto' });
+                    if (confirm(`⚠️ Vas a importar ${registrosValidos.length} prendas al sistema.\n¿Deseas continuar?`)) {
+                        let contadorPendiente = Date.now();
+                        const registrosInsertar = registrosValidos.map(item => {
+                            let precintoVal = item["Precinto"] || item["Código Precinto"];
+                            if (!precintoVal || precintoVal.toString().trim() === "") {
+                                precintoVal = "PENDIENTE-" + (contadorPendiente++);
+                            }
+
+                            return {
+                                fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
+                                registradoPor: item["Registrado Por"] || null, 
+                                precinto: precintoVal,
+                                referencia: item["Referencia"] || null, linea: item["Línea"] || null,
+                                color: item["Color"] || null, talla: item["Talla"] || null,
+                                genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
+                                paisOrigen: item["País Origen"] || null, precio: parseFloat(item["Precio"] || item["Costo"]) || null,
+                                moneda: item["Moneda"] || "COP", cantidad: parseInt(item["Cantidad"]) || 1,
+                                clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"] || item["salidaFecha"]) || null,
+                                ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
+                                tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
+                                salidaRemision: item["Remisión de Salida"] || item["Remisión"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
+                                estado: item["Estado Actual"] || item["Tipo de Salida / Destino"] || "SALIDA DEL INVENTARIO", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
+                                observaciones: item["Observaciones"] || item["Acción Correctiva"] || null
+                            };
+                        });
+                        
+                        const { error } = await client.from('prendas').insert(registrosInsertar);
                         if (error) throw error;
-                        alert("✅ Importación exitosa. Se han cargado/actualizado los registros.");
-                        cargarTablaSalidas();
+                        alert("✅ Importación exitosa."); cargarTablaSalidas();
                     }
-                } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar los datos. Revisa la consola."); } 
-                finally { e.target.value = ""; }
+                } catch (error) { console.error("Error importando:", error); alert("❌ Error al importar: " + error.message); }
+                finally { e.target.value = ""; document.getElementById('mensajeCarga').style.display = "none"; }
             }; reader.readAsArrayBuffer(file);
         });
 

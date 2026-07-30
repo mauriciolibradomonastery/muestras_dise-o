@@ -11,8 +11,6 @@
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
-
-        /* Barra Superior y Presencia */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
@@ -23,7 +21,6 @@
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
         .btn-logout:hover { background-color: #c82333; }
 
-        /* Controles Principales */
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
@@ -41,16 +38,13 @@
         .btn-green { background-color: #198754; }
         .btn-green:hover { background-color: #157347; }
         .btn-orange { background-color: #fd7e14; }
-        .btn-orange:hover { background-color: #e86e04; }
 
-        /* Dropdown */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
         .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
         .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
         .show { display: block; }
 
-        /* Tabla y Subtotales */
         .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
         .stat-highlight-yellow { color: #ffc107; }
         .stat-highlight-white { color: #ffffff; }
@@ -77,25 +71,25 @@
         .btn-edit { background-color: #ffc107; }
         .btn-salida { background-color: #fd7e14; color: white; }
 
-        /* Modales */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-        .modal-content { background-color: #2b2b2b; padding: 25px; border-radius: 8px; width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto; color: #fff; border: 1px solid #444; }
-        .modal-header { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { margin: 0; font-size: 20px; }
-        
-        .grid-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .form-group { margin-bottom: 12px; }
-        .form-group.full-width { grid-column: span 3; }
-        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #0dcaf0; font-weight: bold;}
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background-color: #121212; color: #fff; box-sizing: border-box; }
-        .form-group input:disabled { background-color: #333; color: #888; }
-        
-        select#edit-estado { font-weight: bold; color: #fff; }
-        select#edit-estado option[value="DISPONIBLE"] { background-color: #198754; color: white; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #444; padding-top: 15px;}
-        
-        .view-photo-container { grid-column: span 3; text-align: center; margin-bottom: 15px; }
-        .view-photo-container img { max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #444; object-fit: contain; }
+        .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-contenido { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .modal-contenido h3 { color: #fd7e14; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .modal-contenido label { display: block; margin-top: 15px; font-size: 13px; color: #ccc; font-weight: bold; }
+        .modal-contenido input, .modal-contenido select { width: 100%; padding: 10px; margin-top: 5px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 6px; color: white; box-sizing: border-box; }
+        .modal-botones { display: flex; justify-content: space-between; margin-top: 25px; }
+        .btn-cancelar { background-color: #444; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-confirmar { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 48%; font-weight: bold; transition: 0.3s; }
+
+        #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
+
+        .modal-contenido-amplio { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 680px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .det-cabecera { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; }
+        .det-foto-grande { width: 110px; height: 110px; object-fit: cover; border-radius: 8px; border: 1px solid #555; }
+        .cuadricula-detalles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; margin-bottom: 20px; }
+        .item-detalle { border-bottom: 1px solid #3a3a3a; padding-bottom: 6px; }
+        .lbl-detalle { font-size: 11px; color: #0078D4; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .val-detalle { font-size: 14px; color: #fff; margin-top: 2px; font-weight: 500; }
+        .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
         
         .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
@@ -103,7 +97,6 @@
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR Y PRESENCIA -->
     <div class="top-bar">
         <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
         <div style="display: flex; align-items: center;">
@@ -115,7 +108,6 @@
         </div>
     </div>
 
-    <!-- CABECERA PRINCIPAL -->
     <div class="main-header">
         <div class="header-left">
             <button class="btn btn-menu" onclick="window.location.href='menu.html'">⬅ Menú</button>
@@ -167,122 +159,144 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tbody-datos">
-                <!-- Se llena dinámicamente -->
-            </tbody>
+            <tbody id="tbody-datos"></tbody>
         </table>
+        <div id="mensajeCarga" style="display: none;">Cargando inventario completo... ⏳</div>
     </div>
 
     <!-- MODAL DAR SALIDA -->
-    <div id="modal-salida" class="modal" style="z-index: 1500;">
-        <div class="modal-content" style="width: 400px;">
+    <div id="modal-salida" class="modal-fondo" style="z-index: 1500;">
+        <div class="modal-contenido" style="width: 400px;">
             <div class="modal-header">
                 <h3 style="color:#fd7e14;">📤 Registrar Salida</h3>
             </div>
             <input type="hidden" id="salida-precinto">
             
-            <div class="form-group"><label>Fecha de Salida (OBLIGATORIA):</label><input type="date" id="salidaFecha" required></div>
-            <div class="form-group">
-                <label>Tipo de Salida:</label>
-                <select id="salidaTipo">
-                    <option value="">Selecciona un tipo...</option><option>SALIDA DEL INVENTARIO</option><option>PARA FOTOS</option><option>PARA MERCADEO</option><option>PARA COMERCIAL</option><option>OBSEQUIO</option><option>PATRONAJE</option><option>PEDRO CASTELLANOS</option><option>DEVOLUCION A PROVEEDOR</option><option>ENVIO MUESTRA PROVEEDOR</option><option>PRUEBA DE USO</option><option>MUESTRAS DESTRUCCIÓN</option><option>GESTION HUMANA</option><option>DONACION</option>
-                </select>
-            </div>
-            <div class="form-group"><label>No. Factura / Remisión:</label><input type="text" id="salidaRemision" placeholder="Ej: REM-5023"></div>
-            <div class="form-group"><label>Orden de Traslado (TO):</label><input type="text" id="salidaTo" placeholder="Ej: TO-10254"></div>
+            <label>Fecha de Salida (OBLIGATORIA):</label><input type="date" id="salidaFecha" required>
+            <label>Tipo de Salida:</label>
+            <select id="salidaTipo">
+                <option value="">Selecciona un tipo...</option><option>SALIDA DEL INVENTARIO</option><option>PARA FOTOS</option><option>PARA MERCADEO</option><option>PARA COMERCIAL</option><option>OBSEQUIO</option><option>PATRONAJE</option><option>PEDRO CASTELLANOS</option><option>DEVOLUCION A PROVEEDOR</option><option>ENVIO MUESTRA PROVEEDOR</option><option>PRUEBA DE USO</option><option>MUESTRAS DESTRUCCIÓN</option><option>GESTION HUMANA</option><option>DONACION</option>
+            </select>
+            <label>No. Factura / Remisión:</label><input type="text" id="salidaRemision" placeholder="Ej: REM-5023">
+            <label>Orden de Traslado (TO):</label><input type="text" id="salidaTo" placeholder="Ej: TO-10254">
             
-            <div class="modal-actions">
-                <button class="btn btn-menu" onclick="cerrarModal('modal-salida')">❌ Cancelar</button>
-                <button class="btn btn-orange" id="btn-confirmar-salida" onclick="guardarSalida()">📤 Confirmar Salida</button>
+            <div class="modal-botones">
+                <button class="btn-cancelar" onclick="cerrarModalSalida()" style="width:48%">Cancelar</button>
+                <button class="btn-confirmar" id="btn-confirmar-salida" onclick="guardarSalida()" style="width:48%; background-color:#fd7e14;">📤 Confirmar</button>
             </div>
         </div>
     </div>
 
-    <!-- MODALES DE VER Y EDITAR (Iguales al de Salidas) -->
-    <div id="modal-ver" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>👁️ Detalles de la Muestra</h3>
-                <button class="btn btn-menu" onclick="cerrarModal('modal-ver')">❌ Cerrar</button>
+    <!-- MODAL DETALLES FICHA TÉCNICA -->
+    <div id="modalDetalles" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <div class="det-cabecera">
+                <img id="detFoto" class="det-foto-grande" src="logo.png">
+                <div>
+                    <h2 style="margin:0; color:#0078D4;">Ficha de la Prenda</h2>
+                    <p style="margin:5px 0 0 0; color:#aaa; font-size:14px;">Precinto No: <span id="detPrecintoTitulo" style="color:#fff; font-weight:bold;">-</span></p>
+                </div>
             </div>
-            <div class="grid-form" id="view-form-container"></div>
+            <div class="cuadricula-detalles">
+                <div class="item-detalle"><div class="lbl-detalle">Registrado por</div><div class="val-detalle" id="detRegistradoPor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Ingreso</div><div class="val-detalle" id="detFechaIngreso">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha Entrega CI</div><div class="val-detalle" id="detFechaEntregaCI">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Código Precinto</div><div class="val-detalle" id="detPrecinto">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Referencia</div><div class="val-detalle" id="detReferencia">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Colección</div><div class="val-detalle" id="detColeccion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Tipo</div><div class="val-detalle" id="detTipo">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Línea</div><div class="val-detalle" id="detLinea">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Género</div><div class="val-detalle" id="detGenero">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Talla</div><div class="val-detalle" id="detTalla">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Color / Descripción</div><div class="val-detalle" id="detColor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Cantidad</div><div class="val-detalle" id="detCantidad">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Clasificación</div><div class="val-detalle" id="detClasificacion">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Proveedor / Marca</div><div class="val-detalle" id="detProveedor">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">País de Origen</div><div class="val-detalle" id="detPais">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Precio / Costo</div><div class="val-detalle" id="detPrecio">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación General</div><div class="val-detalle" id="detUbiGeneral">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Ubicación en Diseño</div><div class="val-detalle" id="detUbiDiseno">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Estado actual</div><div class="val-detalle" id="detEstado">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Remisión / Factura</div><div class="val-detalle" id="detRemision">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Fecha de Salida</div><div class="val-detalle" id="detFechaSalida">-</div></div>
+                <div class="item-detalle"><div class="lbl-detalle">Orden de Traslado (TO)</div><div class="val-detalle" id="detTo">-</div></div>
+            </div>
+            <div style="border-top:1px solid #444; padding-top:10px; margin-bottom:20px;">
+                <div class="lbl-detalle">Observaciones / Notas</div>
+                <div class="val-detalle" id="detObservaciones" style="font-style:italic; color:#ccc;">-</div>
+            </div>
+            <button class="btn-cancelar" onclick="cerrarModalDetalles()">❌ Cerrar Vista</button>
         </div>
     </div>
 
-    <div id="modal-edicion" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>✏️ Editar Información (25 Campos)</h3>
-            </div>
-            <input type="hidden" id="edit-foto-actual">
-            <div class="grid-form">
-                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled></div>
-                <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="edit-fechaIngreso"></div>
-                <div class="form-group"><label>Registrado Por</label><input type="text" id="edit-registradoPor"></div>
-                <div class="form-group"><label>Referencia</label><input type="text" id="edit-referencia"></div>
-                <div class="form-group"><label>Línea</label><input type="text" id="edit-linea"></div>
-                <div class="form-group"><label>Color</label><input type="text" id="edit-color"></div>
-                <div class="form-group"><label>Talla</label><input type="text" id="edit-talla"></div>
-                <div class="form-group"><label>Género</label><input type="text" id="edit-genero"></div>
-                <div class="form-group"><label>Proveedor</label><input type="text" id="edit-proveedor"></div>
-                <div class="form-group"><label>País Origen</label><input type="text" id="edit-paisOrigen"></div>
-                <div class="form-group"><label>Precio / Costo</label><input type="number" step="0.01" id="edit-precio"></div>
-                <div class="form-group">
-                    <label>Moneda</label>
-                    <select id="edit-moneda" style="background-color: #1a1a1a;">
+    <!-- MODAL EDITAR INFORMACIÓN -->
+    <div id="modalEditar" class="modal-fondo">
+        <div class="modal-contenido-amplio">
+            <h2 style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px; color:#ffc107;">✏️ Editar Información de la Prenda</h2>
+            <div class="cuadricula-detalles" style="margin-top:15px;">
+                <div><label class="lbl-detalle">Precinto (ID)</label><input type="text" id="edPrecinto" class="input-edicion" disabled></div>
+                <div><label class="lbl-detalle">Fecha Ingreso</label><input type="date" id="edFechaIngreso" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Registrado Por</label><input type="text" id="edRegistradoPor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Línea</label><input type="text" id="edLinea" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Colección</label><input type="text" id="edColeccion" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Tipo</label><input type="text" id="edTipo" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Género</label><input type="text" id="edGenero" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Color</label><input type="text" id="edColor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación General</label><input type="text" id="edUbiGeneral" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Ubicación Diseño</label><input type="text" id="edUbiDiseno" class="input-edicion"></div>
+                
+                <div><label class="lbl-detalle">Precio / Costo</label><input type="number" id="edPrecio" class="input-edicion" step="0.01"></div>
+                <div>
+                    <label class="lbl-detalle">Moneda</label>
+                    <select id="edMoneda" class="input-edicion" style="background-color: #1a1a1a; height: 33px; margin-top: 4px;">
                         <option value="COP">COP (Pesos Colombianos)</option>
                         <option value="USD">USD (Dólares)</option>
                         <option value="EUR">EUR (Euros)</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Cantidad</label><input type="number" id="edit-cantidad"></div>
-                <div class="form-group"><label>Clasificación</label><input type="text" id="edit-clasificacion"></div>
-                <div class="form-group"><label>Fecha de Salida</label><input type="date" id="edit-fechaSalida" title="Si agregas una fecha aquí, la prenda se moverá a la página de Salidas automáticamente."></div>
-                <div class="form-group"><label>Ubicación General</label><input type="text" id="edit-ubicacionGeneral"></div>
-                <div class="form-group"><label>Ubicación Diseño</label><input type="text" id="edit-ubicacionDiseno"></div>
-                <div class="form-group"><label>Tipo</label><input type="text" id="edit-tipo"></div>
-                <div class="form-group"><label>Colección</label><input type="text" id="edit-coleccion"></div>
-                <div class="form-group"><label>Remisión de Salida</label><input type="text" id="edit-remision"></div>
-                <div class="form-group"><label>Orden de Traslado (TO)</label><input type="text" id="edit-ordenTraslado"></div>
-                
-                <div class="form-group">
-                    <label>Estado Actual</label>
-                    <select id="edit-estado">
+                <div><label class="lbl-detalle">Proveedor / Marca</label><input type="text" id="edProveedor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">País de Origen</label><input type="text" id="edPaisOrigen" class="input-edicion"></div>
+
+                <div style="grid-column: span 2;">
+                    <label class="lbl-detalle" style="color:#ffc107;">Modificar Estado Actual de la Prenda</label>
+                    <select id="edEstado" class="input-edicion" style="background-color: #222; font-weight: bold;">
                         <option value="Disponible en inventario">🟢 Disponible en inventario</option>
                         <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option><option value="PARA FOTOS">PARA FOTOS</option><option value="PARA MERCADEO">PARA MERCADEO</option><option value="PARA COMERCIAL">PARA COMERCIAL</option><option value="OBSEQUIO">OBSEQUIO</option><option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option>
                     </select>
                 </div>
+                <div><label class="lbl-detalle">Remisión / Factura</label><input type="text" id="edRemision" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Fecha de Salida (Ojo: Mueve a Bajas)</label><input type="date" id="edFechaSalida" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Orden de Traslado (TO)</label><input type="text" id="edTo" class="input-edicion"></div>
                 
-                <div class="form-group"><label>Fecha Entrega CI</label><input type="date" id="edit-fechaEntregaCI"></div>
-                <div class="form-group full-width"><label>Observaciones / Acción Correctiva</label><input type="text" id="edit-observaciones"></div>
-                
-                <div class="form-group full-width" style="background-color: #222; padding: 15px; border-radius: 6px; border: 1px dashed #555;">
-                    <label style="color: #fd7e14;">📷 Subir o Reemplazar Foto (Opcional)</label>
-                    <input type="file" id="edit-nueva-foto" accept="image/*" style="border: none; padding: 0;">
+                <div><label class="lbl-detalle">Fecha Entrega CI</label><input type="date" id="edFechaEntregaCI" class="input-edicion"></div>
+                <div style="grid-column: span 2;"><label class="lbl-detalle">Observaciones</label><input type="text" id="edObservaciones" class="input-edicion"></div>
+
+                <div style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px; margin-top: 5px;">
+                    <label class="lbl-detalle" style="color: #0078D4;">📸 Actualizar Fotografía (Opcional)</label>
+                    <input type="file" id="edFotoNueva" accept="image/*" class="input-edicion" style="cursor: pointer; background-color: #222; padding: 6px;">
                 </div>
             </div>
             
-            <div class="modal-actions">
-                <button class="btn btn-menu" onclick="cerrarModal('modal-edicion')">❌ Cancelar</button>
-                <button id="btn-guardar-edicion" class="btn btn-green" onclick="guardarEdicion()">💾 Guardar Cambios</button>
+            <div class="modal-botones">
+                <button class="btn-cancelar" onclick="cerrarModalEditar()" style="width:48%">Cancelar</button>
+                <button class="btn-confirmar" id="btnGuardarEdicion" onclick="guardarEdicion()" style="width:48%; background-color:#ffc107; color:black;">💾 Guardar Cambios</button>
             </div>
         </div>
     </div>
 
     <!-- VISOR DE IMAGEN AMPLIADA -->
-    <div id="modalVisor" class="modal-visor" onclick="cerrarModal('modalVisor')">
-        <img id="imagenAmpliada" class="visor-imagen">
-    </div>
+    <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
 
     <script>
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, {
-            auth: { storage: window.localStorage }
-        });
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
         let datosGlobales = [];
         let estadoOrden = { columnaID: null, ascendente: true };
+        let idPrendaSeleccionada = null;
 
         // PRESENCIA
         function generarColorHash(str) {
@@ -310,14 +324,12 @@
                 });
             });
             canalPresencia.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
-                }
+                if (status === 'SUBSCRIBED') { await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() }); }
             });
         }
 
         async function verificarSesion() {
-            const { data: { session } } = await client.auth.getSession();
+            const { data: { session }, error } = await client.auth.getSession();
             if (!session) { window.location.href = "index.html"; } 
             else { configurarPresencia(session.user.email); }
         }
@@ -329,35 +341,42 @@
 
         function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
-            if (!event.target.matches('.btn-blue')) {
+            if (!event.target.matches('.btn-blue') && !event.target.matches('.btn-opciones')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
-                }
+                for (var i = 0; i < dropdowns.length; i++) { if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show'); }
             }
         }
 
         // ==========================================
-        // LA REGLA DE ORO: SI NO TIENE FECHA DE SALIDA -> ES DISPONIBLE (DASHBOARD)
+        // CÁLCULO DE PAGINACIÓN SIN LÍMITE DE 1.000 FILAS
         // ==========================================
         async function cargarTabla() {
             const tbody = document.getElementById("tbody-datos");
-            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando inventario...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando inventario completo...</td></tr>`;
 
             try {
-                let res = await client.from('prendas').select('*').order('id', { ascending: false });
-                if (res.error) throw res.error;
+                let todosLosDatos = [];
+                let desde = 0;
+                let paso = 1000;
+                let hayMas = true;
 
-                // FILTRO: Solo prendas cuya Fecha de Salida esté VACÍA
-                datosGlobales = (res.data || []).filter(item => {
+                while (hayMas) {
+                    let res = await client.from('prendas').select('*').order('id', { ascending: false }).range(desde, desde + paso - 1);
+                    if (res.error) throw res.error;
+
+                    todosLosDatos = todosLosDatos.concat(res.data || []);
+                    if (res.data.length < paso) { hayMas = false; } else { desde += paso; }
+                }
+
+                // FILTRO BODEGA: Fecha de Salida debe estar VACÍA
+                datosGlobales = todosLosDatos.filter(item => {
                     let f = (item.salidaFecha || item.fechaSalida || item.fecha_salida || "").trim();
                     return f === "";
                 });
 
                 renderizarTabla(datosGlobales);
             } catch (err) {
-                console.error("Error:", err);
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
+                console.error("Error:", err); tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
             }
         }
 
@@ -367,8 +386,7 @@
 
             if (lista.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">El inventario está vacío.</td></tr>`;
-                actualizarSubtotales(0, 0);
-                return;
+                actualizarSubtotales(0, 0); return;
             }
 
             lista.forEach(item => {
@@ -399,22 +417,19 @@
                     <td><span class="badge-estado">DISPONIBLE</span></td>
                     <td>
                         <div class="action-btns">
-                            <button class="btn-action btn-view" title="Ver Detalles" onclick="abrirModalVer('${jsonItem}')">👁️</button>
-                            <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
+                            <button class="btn-action btn-view" title="Ver Detalles" onclick="verDetalles('${jsonItem}')">👁️</button>
+                            <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEditar('${jsonItem}')">✏️</button>
                             <button class="btn-action btn-salida" title="Dar Salida" onclick="abrirModalDarSalida('${codigoPrecinto}')">📤</button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-
             filtrarTabla();
         }
 
-        window.abrirVisor = function(url) {
-            document.getElementById('imagenAmpliada').src = url;
-            document.getElementById('modalVisor').style.display = 'flex';
-        }
+        window.abrirVisor = function(url) { document.getElementById('imagenAmpliada').src = url; document.getElementById('modalVisor').style.display = 'flex'; }
+        window.cerrarVisor = function() { document.getElementById('modalVisor').style.display = 'none'; }
 
         function ordenarTabla(clavesAcceso, idIconoHtml) {
             if (estadoOrden.columnaID === idIconoHtml) { estadoOrden.ascendente = !estadoOrden.ascendente; } 
@@ -430,11 +445,9 @@
                 if (valorA > valorB) return estadoOrden.ascendente ? 1 : -1;
                 return 0;
             });
-
             document.querySelectorAll('.icon-sort').forEach(icon => { icon.innerHTML = '↕'; icon.style.color = "#888"; });
             const iconoActivo = document.getElementById(idIconoHtml);
-            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️';
-            iconoActivo.style.color = "#fff";
+            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️'; iconoActivo.style.color = "#fff";
             renderizarTabla(datosGlobales);
         }
 
@@ -468,9 +481,7 @@
         }
 
         function marcarTodos(source) {
-            document.querySelectorAll('.checkbox-item').forEach(cb => {
-                if(cb.closest('tr').style.display !== 'none') cb.checked = source.checked;
-            });
+            document.querySelectorAll('.checkbox-item').forEach(cb => { if(cb.closest('tr').style.display !== 'none') cb.checked = source.checked; });
             actualizarContadorBorrar();
         }
 
@@ -486,28 +497,24 @@
             try {
                 await client.from('prendas').delete().in('precinto', seleccionados);
                 await client.from('prendas').delete().in('id', seleccionados);
-                alert("✅ Registros eliminados.");
-                document.getElementById('check-all').checked = false;
-                cargarTabla();
-                actualizarContadorBorrar();
+                alert("✅ Registros eliminados."); document.getElementById('check-all').checked = false; cargarTabla(); actualizarContadorBorrar();
             } catch (err) { console.error(err); alert("❌ Error al borrar."); } 
             finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
         }
 
-        window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
-
-        // MÓDULO: DAR SALIDA (Desde Dashboard)
+        // MÓDULO: DAR SALIDA
         window.abrirModalDarSalida = function(precinto) {
-            document.getElementById('salida-precinto').value = precinto;
-            document.getElementById('salidaFecha').value = new Date().toISOString().split('T')[0]; // Fecha de hoy automática
+            idPrendaSeleccionada = precinto;
+            document.getElementById('salidaFecha').value = new Date().toISOString().split('T')[0];
             document.getElementById('salidaRemision').value = '';
             document.getElementById('salidaTipo').value = '';
             document.getElementById('salidaTo').value = ''; 
             document.getElementById('modal-salida').style.display = 'flex';
         }
 
+        window.cerrarModalSalida = function() { document.getElementById('modal-salida').style.display = 'none'; idPrendaSeleccionada = null; }
+
         window.guardarSalida = async function() {
-            const precinto = document.getElementById('salida-precinto').value;
             const fecha = document.getElementById('salidaFecha').value;
             const tipo = document.getElementById('salidaTipo').value;
             const remision = document.getElementById('salidaRemision').value.trim();
@@ -519,99 +526,94 @@
             const btn = document.getElementById('btn-confirmar-salida');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
-            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('precinto', precinto);
-            if (error) { await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', precinto); }
+            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('precinto', idPrendaSeleccionada);
+            if (error) { await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idPrendaSeleccionada); }
             
-            cerrarModal('modal-salida');
-            cargarTabla(); 
-            btn.textContent = "📤 Confirmar Salida"; btn.disabled = false;
+            alert("✅ Salida registrada exitosamente.\n\nLa prenda se ha movido al historial de Bajas/Salidas.");
+            cerrarModalSalida(); cargarTabla(); 
+            btn.textContent = "📤 Confirmar"; btn.disabled = false;
         }
 
         // MÓDULOS: VER Y EDITAR
-        function abrirModalVer(jsonEncoded) {
+        window.verDetalles = function(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            const contenedor = document.getElementById('view-form-container');
-            const fotoActual = item.fotoUrl || item.foto_url || item.foto || "";
-            let htmlDetalles = "";
-            if (fotoActual && fotoActual !== "logo.png") {
-                htmlDetalles += `<div class="view-photo-container"><img src="${fotoActual}" alt="Foto"></div>`;
-            }
-
-            const camposRelevantes = [
-                { label: "Precinto (ID)", val: item.precinto || item.id }, { label: "Referencia", val: item.referencia },
-                { label: "Descripción", val: item.descripcion }, { label: "Fecha Ingreso", val: item.fechaIngreso || item.fecha_ingreso },
-                { label: "Registrado Por", val: item.registradoPor || item.registrado_por }, { label: "Línea", val: item.linea },
-                { label: "Color", val: item.color }, { label: "Talla", val: item.talla }, { label: "Género", val: item.genero },
-                { label: "Proveedor", val: item.proveedor }, { label: "País Origen", val: item.paisOrigen || item.pais_origen },
-                { label: "Precio / Costo", val: item.precio || item.costo }, { label: "Moneda", val: item.moneda },
-                { label: "Cantidad", val: item.cantidad || item.cant }, { label: "Clasificación", val: item.clasificacion },
-                { label: "Ubicación General", val: item.ubicacionGeneral || item.ubicacion_general },
-                { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno }, { label: "Tipo", val: item.tipo },
-                { label: "Colección", val: item.coleccion }, { label: "Estado Actual", val: item.estado || 'Disponible' },
-                { label: "Fecha Entrega CI", val: item.fechaEntregaCI || item.fecha_entrega_ci },
-                { label: "Observaciones", val: item.observaciones || item.accionCorrectiva || item.accion_correctiva, full: true }
-            ];
-
-            camposRelevantes.forEach(c => {
-                htmlDetalles += `<div class="form-group ${c.full ? "full-width" : ""}"><label>${c.label}</label><input type="text" value="${c.val || '-'}" disabled></div>`;
-            });
-
-            contenedor.innerHTML = htmlDetalles;
-            document.getElementById('modal-ver').style.display = 'flex';
+            document.getElementById('detFoto').src = item.fotoUrl || item.foto_url || item.foto || 'logo.png';
+            document.getElementById('detPrecintoTitulo').textContent = item.precinto || item.id || '-';
+            document.getElementById('detRegistradoPor').textContent = item.registradoPor || item.registrado_por || '-';
+            document.getElementById('detFechaIngreso').textContent = item.fechaIngreso || item.fecha_ingreso || '-';
+            document.getElementById('detFechaEntregaCI').textContent = item.fechaEntregaCI || item.fecha_entrega_ci || '-';
+            document.getElementById('detPrecinto').textContent = item.precinto || item.id || '-';
+            document.getElementById('detReferencia').textContent = item.referencia || '-';
+            document.getElementById('detColeccion').textContent = item.coleccion || '-';
+            document.getElementById('detTipo').textContent = item.tipo || '-';
+            document.getElementById('detLinea').textContent = item.linea || '-';
+            document.getElementById('detGenero').textContent = item.genero || '-';
+            document.getElementById('detTalla').textContent = item.talla || '-';
+            document.getElementById('detColor').textContent = item.color || '-';
+            document.getElementById('detCantidad').textContent = item.cantidad || item.cant || '-';
+            document.getElementById('detClasificacion').textContent = item.clasificacion || '-';
+            document.getElementById('detProveedor').textContent = item.proveedor || '-';
+            document.getElementById('detPais').textContent = item.paisOrigen || item.pais_origen || '-';
+            document.getElementById('detPrecio').textContent = (item.precio || item.costo || '-') + ' ' + (item.moneda || '');
+            document.getElementById('detUbiGeneral').textContent = item.ubicacionGeneral || item.ubicacion_general || '-';
+            document.getElementById('detUbiDiseno').textContent = item.ubicacionDiseno || item.ubicacion_diseno || '-';
+            document.getElementById('detEstado').textContent = item.estado || 'Disponible en inventario';
+            document.getElementById('detRemision').textContent = item.salidaRemision || item.remision || item.no_remision || '-';
+            document.getElementById('detFechaSalida').textContent = item.salidaFecha || item.fechaSalida || item.fecha_salida || '-';
+            document.getElementById('detTo').textContent = item.salidaTo || item.to || item.ordenTraslado || '-'; 
+            document.getElementById('detObservaciones').textContent = item.observaciones || item.accionCorrectiva || '-';
+            document.getElementById('modalDetalles').style.display = 'flex';
         }
+        window.cerrarModalDetalles = function() { document.getElementById('modalDetalles').style.display = 'none'; }
 
-        function abrirModalEdicion(jsonEncoded) {
+        window.abrirModalEditar = function(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
+            idPrendaSeleccionada = item.precinto || item.id;
             
-            document.getElementById('edit-precinto').value = item.precinto || item.id || "";
-            document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || "";
-            document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || "";
-            document.getElementById('edit-referencia').value = item.referencia || "";
-            document.getElementById('edit-linea').value = item.linea || "";
-            document.getElementById('edit-color').value = item.color || "";
-            document.getElementById('edit-talla').value = item.talla || "";
-            document.getElementById('edit-genero').value = item.genero || "";
-            document.getElementById('edit-proveedor').value = item.proveedor || "";
-            document.getElementById('edit-paisOrigen').value = item.paisOrigen || item.pais_origen || "";
-            document.getElementById('edit-precio').value = item.precio || item.costo || "";
-            document.getElementById('edit-moneda').value = item.moneda || "COP";
-            document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
-            document.getElementById('edit-clasificacion').value = item.clasificacion || "";
+            document.getElementById('edPrecinto').value = idPrendaSeleccionada;
+            document.getElementById('edFechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || '';
+            document.getElementById('edRegistradoPor').value = item.registradoPor || item.registrado_por || '';
+            document.getElementById('edReferencia').value = item.referencia || '';
+            document.getElementById('edColeccion').value = item.coleccion || '';
+            document.getElementById('edFechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || '';
+            document.getElementById('edTipo').value = item.tipo || '';
+            document.getElementById('edLinea').value = item.linea || '';
+            document.getElementById('edTalla').value = item.talla || '';
+            document.getElementById('edGenero').value = item.genero || '';
+            document.getElementById('edColor').value = item.color || '';
+            document.getElementById('edUbiGeneral').value = item.ubicacionGeneral || item.ubicacion_general || '';
+            document.getElementById('edUbiDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || '';
+            document.getElementById('edObservaciones').value = item.observaciones || item.accionCorrectiva || '';
+            document.getElementById('edRemision').value = item.salidaRemision || item.remision || item.no_remision || '';
+            document.getElementById('edFechaSalida').value = item.salidaFecha || item.fechaSalida || item.fecha_salida || '';
+            document.getElementById('edTo').value = item.salidaTo || item.to || item.ordenTraslado || ''; 
+            document.getElementById('edPrecio').value = item.precio || item.costo || '';
+            document.getElementById('edMoneda').value = item.moneda || 'COP';
+            document.getElementById('edProveedor').value = item.proveedor || '';
+            document.getElementById('edPaisOrigen').value = item.paisOrigen || item.pais_origen || '';
             
-            // Si el usuario llena esta fecha, la prenda viaja a la página de salidas.
-            document.getElementById('edit-fechaSalida').value = item.fechaSalida || item.salidaFecha || item.fecha_salida || ""; 
-            
-            document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || "";
-            document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || "";
-            document.getElementById('edit-tipo').value = item.tipo || "";
-            document.getElementById('edit-coleccion').value = item.coleccion || "";
-            document.getElementById('edit-remision').value = item.salidaRemision || item.remision || item.no_remision || "";
-            document.getElementById('edit-ordenTraslado').value = item.salidaTo || item.ordenTraslado || item.to || "";
-            
-            const selectEstado = document.getElementById('edit-estado');
+            const selectEstado = document.getElementById('edEstado');
             const estadoReal = (item.estado || "Disponible en inventario").trim();
             if (!Array.from(selectEstado.options).some(opt => opt.value === estadoReal) && !estadoReal.toUpperCase().includes('DISPONIBLE')) {
                 const nuevaOpcion = document.createElement("option"); nuevaOpcion.value = estadoReal; nuevaOpcion.text = estadoReal; selectEstado.add(nuevaOpcion);
             }
             selectEstado.value = estadoReal.toUpperCase().includes('DISPONIBLE') ? "Disponible en inventario" : estadoReal;
 
-            document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || "";
-            document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || "";
-            document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || "";
-            document.getElementById('edit-nueva-foto').value = "";
-            document.getElementById('modal-edicion').style.display = 'flex';
+            document.getElementById('edFotoNueva').value = ''; 
+            window.fotoActualEdit = item.fotoUrl || item.foto_url || item.foto || null;
+            document.getElementById('modalEditar').style.display = 'flex';
         }
 
-        async function guardarEdicion() {
-            const precinto = document.getElementById('edit-precinto').value;
-            const btnGuardar = document.getElementById('btn-guardar-edicion');
-            btnGuardar.disabled = true; btnGuardar.innerHTML = "⏳ Guardando...";
+        window.cerrarModalEditar = function() { document.getElementById('modalEditar').style.display = 'none'; }
+
+        window.guardarEdicion = async function() {
+            const btn = document.getElementById('btnGuardarEdicion');
+            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
+            const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
+            let urlFotoFinal = window.fotoActualEdit;
 
             try {
-                let urlFotoFinal = document.getElementById('edit-foto-actual').value;
-                const fileInput = document.getElementById('edit-nueva-foto');
-                
-                if (fileInput.files && fileInput.files.length > 0) {
+                if (archivoFotoNueva) {
                     const reader = new FileReader();
                     urlFotoFinal = await new Promise((resolve) => {
                         reader.onload = function(event) {
@@ -624,45 +626,40 @@
                                 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                                 resolve(canvas.toDataURL('image/jpeg', 0.6));
                             }
-                        }; reader.readAsDataURL(fileInput.files[0]);
+                        }; reader.readAsDataURL(archivoFotoNueva);
                     });
                 }
 
-                let fechaSalidaRevisada = document.getElementById('edit-fechaSalida').value;
+                let fechaSalidaRevisada = document.getElementById('edFechaSalida').value;
+                let estadoSeleccionado = document.getElementById('edEstado').value;
 
-                const nuevaData = {
-                    fechaIngreso: document.getElementById('edit-fechaIngreso').value, registradoPor: document.getElementById('edit-registradoPor').value,
-                    referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
-                    color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
-                    genero: document.getElementById('edit-genero').value, proveedor: document.getElementById('edit-proveedor').value,
-                    paisOrigen: document.getElementById('edit-paisOrigen').value, precio: document.getElementById('edit-precio').value,
-                    moneda: document.getElementById('edit-moneda').value, cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
-                    clasificacion: document.getElementById('edit-clasificacion').value, 
-                    salidaFecha: fechaSalidaRevisada, // AQUI SE GUARDA LA FECHA DE SALIDA EDITADA
-                    ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value, ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
-                    tipo: document.getElementById('edit-tipo').value, coleccion: document.getElementById('edit-coleccion').value,
-                    salidaRemision: document.getElementById('edit-remision').value, salidaTo: document.getElementById('edit-ordenTraslado').value,
-                    estado: document.getElementById('edit-estado').value, fechaEntregaCI: document.getElementById('edit-fechaEntregaCI').value,
-                    observaciones: document.getElementById('edit-observaciones').value, fotoUrl: urlFotoFinal
+                let datosActualizar = {
+                    fechaIngreso: document.getElementById('edFechaIngreso').value, registradoPor: document.getElementById('edRegistradoPor').value,
+                    referencia: document.getElementById('edReferencia').value, coleccion: document.getElementById('edColeccion').value,
+                    fechaEntregaCI: document.getElementById('edFechaEntregaCI').value, tipo: document.getElementById('edTipo').value,
+                    linea: document.getElementById('edLinea').value, talla: document.getElementById('edTalla').value,
+                    genero: document.getElementById('edGenero').value, color: document.getElementById('edColor').value,
+                    ubicacionGeneral: document.getElementById('edUbiGeneral').value, ubicacionDiseno: document.getElementById('edUbiDiseno').value,
+                    observaciones: document.getElementById('edObservaciones').value, estado: estadoSeleccionado,
+                    salidaRemision: document.getElementById('edRemision').value, salidaFecha: fechaSalidaRevisada,
+                    salidaTo: document.getElementById('edTo').value, precio: parseFloat(document.getElementById('edPrecio').value) || null,
+                    moneda: document.getElementById('edMoneda').value, proveedor: document.getElementById('edProveedor').value,
+                    paisOrigen: document.getElementById('edPaisOrigen').value, fotoUrl: urlFotoFinal
                 };
 
-                const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
-                if (error) { await client.from('prendas').update(nuevaData).eq('id', precinto); }
-                
-                if (fechaSalidaRevisada !== "") {
-                    alert("✅ Prenda actualizada.\n\nComo le asignaste una 'Fecha de Salida', esta prenda se ha movido al Historial de Salidas/Bajas.");
-                } else {
-                    alert("✅ Información actualizada correctamente.");
-                }
+                const { error } = await client.from('prendas').update(datosActualizar).eq('precinto', idPrendaSeleccionada);
+                if (error) { await client.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada); }
 
-                cerrarModal('modal-edicion');
-                cargarTabla();
-            } catch (err) { alert("❌ Error al guardar. Verifica consola."); console.error(err);
-            } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
+                if (fechaSalidaRevisada !== "") { alert("✅ Prenda actualizada.\n\nComo le asignaste una 'Fecha de Salida', esta prenda se ha movido al Historial de Salidas."); } 
+                else { alert("✅ Información actualizada correctamente."); }
+                
+                window.cerrarModalEditar(); cargarTabla();
+            } catch(e) { alert("❌ Error al guardar."); console.error(e); } 
+            finally { btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; }
         }
 
         // ==========================================
-        // EXPORTAR E IMPORTAR EXCEL
+        // EXPORTAR E IMPORTAR EXCEL (CON FILTRO ANTIBASURA Y GENERADOR DE PRECINTO PENDIENTE)
         // ==========================================
         function exportarExcel() {
             if (datosGlobales.length === 0) return alert("No hay datos para exportar.");
@@ -702,33 +699,54 @@
             const reader = new FileReader();
             reader.onload = async function(event) {
                 try {
+                    document.getElementById('mensajeCarga').style.display = "block";
                     const data = new Uint8Array(event.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    if (json.length === 0) return alert("Excel vacío.");
+                    
+                    // FILTRO DE SEGURIDAD: Descarta filas totalmente vacías del final de Excel
+                    const registrosValidos = json.filter(item => {
+                        return Object.values(item).some(val => val !== null && val !== undefined && val.toString().trim() !== "");
+                    });
 
-                    if (confirm(`⚠️ Vas a importar ${json.length} prendas al sistema.\n¿Deseas continuar?`)) {
-                        const registrosLimpios = json.map(item => ({
-                            fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
-                            registradoPor: item["Registrado Por"] || null, precinto: item["Precinto"] || null,
-                            referencia: item["Referencia"] || null, linea: item["Línea"] || null,
-                            color: item["Color"] || null, talla: item["Talla"] || null,
-                            genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
-                            paisOrigen: item["País Origen"] || null, precio: item["Precio"] || null,
-                            moneda: item["Moneda"] || null, cantidad: parseInt(item["Cantidad"]) || 1,
-                            clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"]) || null,
-                            ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
-                            tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
-                            salidaRemision: item["Remisión de Salida"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
-                            estado: item["Estado Actual"] || "Disponible en inventario", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
-                            observaciones: item["Observaciones"] || null
-                        }));
-                        const { error } = await client.from('prendas').upsert(registrosInsertar, { onConflict: 'precinto' });
+                    if (registrosValidos.length === 0) { 
+                        alert("⚠️ El archivo de Excel está vacío o no contiene datos válidos."); 
+                        return; 
+                    }
+
+                    if (confirm(`⚠️ Vas a importar ${registrosValidos.length} prendas al sistema.\n¿Deseas continuar?`)) {
+                        let contadorPendiente = Date.now();
+                        const registrosInsertar = registrosValidos.map(item => {
+                            // GENERADOR DE PRECINTO PENDIENTE SI VIENE VACÍO
+                            let precintoVal = item["Precinto"] || item["Código Precinto"];
+                            if (!precintoVal || precintoVal.toString().trim() === "") {
+                                precintoVal = "PENDIENTE-" + (contadorPendiente++);
+                            }
+
+                            return {
+                                fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
+                                registradoPor: item["Registrado Por"] || null, 
+                                precinto: precintoVal,
+                                referencia: item["Referencia"] || null, linea: item["Línea"] || null,
+                                color: item["Color"] || null, talla: item["Talla"] || null,
+                                genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
+                                paisOrigen: item["País Origen"] || null, precio: parseFloat(item["Precio"] || item["Costo"]) || null,
+                                moneda: item["Moneda"] || "COP", cantidad: parseInt(item["Cantidad"]) || 1,
+                                clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"] || item["salidaFecha"]) || null,
+                                ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
+                                tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
+                                salidaRemision: item["Remisión de Salida"] || item["Remisión"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
+                                estado: item["Estado Actual"] || item["Tipo de Salida / Destino"] || "Disponible en inventario", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
+                                observaciones: item["Observaciones"] || item["Acción Correctiva"] || null
+                            };
+                        });
+                        
+                        const { error } = await client.from('prendas').insert(registrosInsertar);
                         if (error) throw error;
                         alert("✅ Importación exitosa."); cargarTabla();
                     }
-                } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar."); }
-                finally { e.target.value = ""; }
+                } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar: " + error.message); }
+                finally { e.target.value = ""; document.getElementById('mensajeCarga').style.display = "none"; }
             }; reader.readAsArrayBuffer(file);
         });
 
