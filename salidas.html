@@ -97,6 +97,7 @@
         .btn-blue { background-color: #0d6efd; }
         .btn-blue:hover { background-color: #0b5ed7; }
         .btn-green { background-color: #198754; }
+        .btn-green:hover { background-color: #157347; }
 
         /* Banner de Subtotales */
         .stats-banner {
@@ -137,11 +138,25 @@
             background-color: #2b2b2b;
             text-transform: capitalize;
         }
+        /* Estilos para encabezados ordenables */
+        .sortable-col {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .sortable-col:hover {
+            background-color: #3d3d3d;
+        }
+        .icon-sort {
+            font-size: 10px;
+            margin-left: 4px;
+            color: #888;
+        }
+
         tr:nth-child(even) { background-color: #262626; }
         tr:hover { background-color: #333; }
 
         .img-thumb {
-            width: 35px; height: 35px;
+            width: 40px; height: 40px;
             object-fit: cover;
             border-radius: 4px;
             background-color: #fff;
@@ -171,26 +186,49 @@
         }
         .btn-view { background-color: #0dcaf0; }
         .btn-edit { background-color: #ffc107; }
-        .btn-upload { background-color: #fd7e14; color: #fff;}
-        .btn-delete { background-color: #dc3545; color: #fff;}
 
-        /* Modal Edición */
+        /* Modales */
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
             justify-content: center; align-items: center;
         }
         .modal-content {
-            background-color: #2b2b2b; padding: 20px; border-radius: 8px;
-            width: 400px; color: #fff; border: 1px solid #444;
+            background-color: #2b2b2b; padding: 25px; border-radius: 8px;
+            width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+            color: #fff; border: 1px solid #444;
+        }
+        .modal-header {
+            margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h3 { margin: 0; font-size: 20px; }
+        
+        .grid-form {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
         .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #aaa;}
-        .form-group input, .form-group select {
+        .form-group.full-width { grid-column: span 3; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #0dcaf0; font-weight: bold;}
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444;
             background-color: #121212; color: #fff; box-sizing: border-box;
         }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        .form-group input:disabled { background-color: #333; color: #888; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #444; padding-top: 15px;}
+        
+        /* Contenedor Foto Visualización */
+        .view-photo-container {
+            grid-column: span 3;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .view-photo-container img {
+            max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #444; object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -217,7 +255,7 @@
 
         <div class="header-right">
             <button id="btn-borrar-masivo" class="btn btn-red" onclick="eliminarSeleccionadosSalidas()">🗑️ Borrar ( 0 )</button>
-            <button class="btn btn-blue" onclick="exportarExcelSalidas()">⚙️ Opciones ▼</button>
+            <button class="btn btn-blue" onclick="exportarExcelSalidas()">⚙️ Exportar ▼</button>
         </div>
     </div>
 
@@ -228,21 +266,21 @@
         Suma Total Físicas: <span id="subtotal-unidades" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Unidades</span>
     </div>
 
-    <!-- TABLA DE DATOS -->
+    <!-- TABLA DE DATOS CON ENCABEZADOS ORDENABLES -->
     <div class="table-container">
         <table id="tabla-salidas">
             <thead>
                 <tr>
                     <th><input type="checkbox" id="check-all" onclick="marcarTodos(this)"></th>
                     <th>Foto</th>
-                    <th>Fecha Ingreso ↕</th>
-                    <th>Código Precinto ↕</th>
+                    <th class="sortable-col" onclick="ordenarTabla(['fechaIngreso', 'fecha_ingreso', 'created_at'], 'sort-fecha')">Fecha Ingreso <span id="sort-fecha" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['precinto', 'codigo_precinto', 'id'], 'sort-precinto')">Código Precinto <span id="sort-precinto" class="icon-sort">↕</span></th>
                     <th>Descripción</th>
-                    <th>Referencia ↕</th>
-                    <th>Línea ↕</th>
-                    <th>Cant. ↕</th>
-                    <th>Tipo de Salida ↕</th>
-                    <th>Remisión ↕</th>
+                    <th class="sortable-col" onclick="ordenarTabla(['referencia'], 'sort-ref')">Referencia <span id="sort-ref" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['linea'], 'sort-linea')">Línea <span id="sort-linea" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['cantidad', 'cant'], 'sort-cant')">Cant. <span id="sort-cant" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['estado', 'tipo_salida'], 'sort-tipo')">Tipo de Salida <span id="sort-tipo" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['remision', 'no_remision'], 'sort-rem')">Remisión <span id="sort-rem" class="icon-sort">↕</span></th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -253,54 +291,87 @@
         </table>
     </div>
 
-    <!-- MODAL DE EDICIÓN -->
-    <div id="modal-edicion" class="modal">
+    <!-- MODAL DE VER DETALLE (Ojo Azul) -->
+    <div id="modal-ver" class="modal">
         <div class="modal-content">
-            <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">✏️ Editar Registro</h3>
-            <input type="hidden" id="edit-id-original">
-            
-            <div class="form-group">
-                <label>Código Precinto</label>
-                <input type="text" id="edit-precinto" disabled>
-            </div>
-            <div class="form-group">
-                <label>Referencia</label>
-                <input type="text" id="edit-referencia">
-            </div>
-            <div class="form-group">
-                <label>Línea</label>
-                <input type="text" id="edit-linea">
-            </div>
-            <div class="form-group">
-                <label>Descripción</label>
-                <input type="text" id="edit-descripcion">
-            </div>
-            <div class="form-group">
-                <label>Cantidad</label>
-                <input type="number" id="edit-cantidad">
+            <div class="modal-header">
+                <h3>👁️ Detalles de la Muestra</h3>
+                <button class="btn btn-menu" onclick="cerrarModal('modal-ver')">❌ Cerrar</button>
             </div>
             
-            <div class="modal-actions">
-                <button class="btn btn-menu" onclick="cerrarModal()">Cancelar</button>
-                <button class="btn btn-green" onclick="guardarEdicion()">Guardar Cambios</button>
+            <div class="grid-form" id="view-form-container">
+                <!-- Se llena dinámicamente al hacer clic -->
             </div>
         </div>
     </div>
 
-    <!-- INPUT OCULTO PARA SUBIR FOTO -->
-    <input type="file" id="input-foto" style="display: none;" accept="image/*">
+    <!-- MODAL DE EDICIÓN (Lápiz Amarillo) -->
+    <div id="modal-edicion" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Editar Información (25 Campos)</h3>
+            </div>
+            
+            <input type="hidden" id="edit-foto-actual">
+            
+            <div class="grid-form">
+                <!-- Columna Obligatoria (Fija) -->
+                <div class="form-group">
+                    <label>Código Precinto (ID)</label>
+                    <input type="text" id="edit-precinto" disabled title="El precinto no se puede modificar">
+                </div>
+                
+                <!-- Campos Plantilla -->
+                <div class="form-group"><label>Fecha Ingreso</label><input type="text" id="edit-fechaIngreso"></div>
+                <div class="form-group"><label>Registrado Por</label><input type="text" id="edit-registradoPor"></div>
+                <div class="form-group"><label>Referencia</label><input type="text" id="edit-referencia"></div>
+                <div class="form-group"><label>Línea</label><input type="text" id="edit-linea"></div>
+                <div class="form-group"><label>Descripción</label><input type="text" id="edit-descripcion"></div>
+                <div class="form-group"><label>Color</label><input type="text" id="edit-color"></div>
+                <div class="form-group"><label>Talla</label><input type="text" id="edit-talla"></div>
+                <div class="form-group"><label>Género</label><input type="text" id="edit-genero"></div>
+                <div class="form-group"><label>Proveedor</label><input type="text" id="edit-proveedor"></div>
+                <div class="form-group"><label>País Origen</label><input type="text" id="edit-paisOrigen"></div>
+                <div class="form-group"><label>Precio / Costo</label><input type="text" id="edit-precio"></div>
+                <div class="form-group"><label>Moneda</label><input type="text" id="edit-moneda"></div>
+                <div class="form-group"><label>Cantidad</label><input type="number" id="edit-cantidad"></div>
+                <div class="form-group"><label>Clasificación</label><input type="text" id="edit-clasificacion"></div>
+                <div class="form-group"><label>Fecha de Salida</label><input type="text" id="edit-fechaSalida"></div>
+                <div class="form-group"><label>Ubicación General</label><input type="text" id="edit-ubicacionGeneral"></div>
+                <div class="form-group"><label>Ubicación Diseño</label><input type="text" id="edit-ubicacionDiseno"></div>
+                <div class="form-group"><label>Tipo</label><input type="text" id="edit-tipo"></div>
+                <div class="form-group"><label>Colección</label><input type="text" id="edit-coleccion"></div>
+                <div class="form-group"><label>Remisión de Salida</label><input type="text" id="edit-remision"></div>
+                <div class="form-group"><label>Orden de Traslado (TO)</label><input type="text" id="edit-ordenTraslado"></div>
+                <div class="form-group"><label>Estado Actual</label><input type="text" id="edit-estado"></div>
+                <div class="form-group"><label>Fecha Entrega CI</label><input type="text" id="edit-fechaEntregaCI"></div>
+                <div class="form-group full-width"><label>Observaciones / Acción Correctiva</label><input type="text" id="edit-observaciones"></div>
+                
+                <!-- ZONA DE FOTO -->
+                <div class="form-group full-width" style="background-color: #222; padding: 15px; border-radius: 6px; border: 1px dashed #555;">
+                    <label style="color: #fd7e14;">📷 Subir o Reemplazar Foto (Opcional)</label>
+                    <input type="file" id="edit-nueva-foto" accept="image/*" style="border: none; padding: 0;">
+                    <small style="color: #888;">Si no seleccionas ninguna foto, se conservará la que ya está guardada.</small>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-menu" onclick="cerrarModal('modal-edicion')">❌ Cancelar</button>
+                <button id="btn-guardar-edicion" class="btn btn-green" onclick="guardarEdicion()">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ==========================================
-        // 1. CONFIGURACIÓN SUPABASE
+        // 1. CONFIGURACIÓN SUPABASE Y VARIABLES
         // ==========================================
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
         
-        const LOGO_POR_DEFECTO = "https://placehold.co/40x40/ffffff/000000?text=M";
         let datosGlobalesSalidas = [];
-        let precintoEnFocoParaFoto = null; 
+        let estadoOrden = { columnaID: null, ascendente: true };
 
         // ==========================================
         // 2. CARGAR Y RENDERIZAR TABLA
@@ -334,14 +405,18 @@
             lista.forEach(item => {
                 const tr = document.createElement("tr");
                 const codigoPrecinto = item.precinto || item.codigo_precinto || item.id || "";
-                const fotoFinal = item.fotoUrl || item.foto_url || item.foto || LOGO_POR_DEFECTO;
-                
-                // Limpieza de datos para el modal
                 const jsonItem = encodeURIComponent(JSON.stringify(item));
+                
+                let celdaFotoHTML = "";
+                if (item.fotoUrl || item.foto_url || item.foto) {
+                    celdaFotoHTML = `<img src="${item.fotoUrl || item.foto_url || item.foto}" class="img-thumb" alt="foto">`;
+                } else {
+                    celdaFotoHTML = `<button class="btn btn-menu" style="font-size: 10px; padding: 4px; width: 100%;" onclick="abrirModalEdicion('${jsonItem}')">📷 Adjuntar</button>`;
+                }
 
                 tr.innerHTML = `
                     <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
-                    <td><img src="${fotoFinal}" class="img-thumb" alt="foto"></td>
+                    <td>${celdaFotoHTML}</td>
                     <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
                     <td><strong>${codigoPrecinto}</strong></td>
                     <td>${item.descripcion || '-'}</td>
@@ -353,10 +428,8 @@
                     <td><span class="badge-estado">BAJA</span></td>
                     <td>
                         <div class="action-btns">
-                            <button class="btn-action btn-view" title="Ver detalle">👁️</button>
-                            <button class="btn-action btn-edit" title="Editar Información" onclick="abrirModal('${jsonItem}')">✏️</button>
-                            <button class="btn-action btn-upload" title="Cambiar/Subir Foto" onclick="triggerSubirFoto('${codigoPrecinto}')">📤</button>
-                            <button class="btn-action btn-delete" title="Eliminar este registro" onclick="eliminarFilaUnica('${codigoPrecinto}')">🗑️</button>
+                            <button class="btn-action btn-view" title="Ver toda la información" onclick="abrirModalVer('${jsonItem}')">👁️</button>
+                            <button class="btn-action btn-edit" title="Editar Información o Adjuntar Foto" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
                         </div>
                     </td>
                 `;
@@ -367,7 +440,53 @@
         }
 
         // ==========================================
-        // 3. SUBTOTALES Y FILTROS
+        // 3. ORDENAMIENTO (NUEVO)
+        // ==========================================
+        function ordenarTabla(clavesAcceso, idIconoHtml) {
+            // Determinar si cambiamos dirección o si es una columna nueva
+            if (estadoOrden.columnaID === idIconoHtml) {
+                estadoOrden.ascendente = !estadoOrden.ascendente;
+            } else {
+                estadoOrden.columnaID = idIconoHtml;
+                estadoOrden.ascendente = true;
+            }
+
+            datosGlobalesSalidas.sort((a, b) => {
+                let valorA = "";
+                let valorB = "";
+
+                // Busca el dato dentro del objeto usando las posibles claves de la BD
+                for(let clave of clavesAcceso) { if(a[clave] !== undefined && a[clave] !== null) { valorA = a[clave]; break; } }
+                for(let clave of clavesAcceso) { if(b[clave] !== undefined && b[clave] !== null) { valorB = b[clave]; break; } }
+
+                // Comparación Numérica (para cantidades)
+                if (typeof valorA === 'number' && typeof valorB === 'number') {
+                    return estadoOrden.ascendente ? valorA - valorB : valorB - valorA;
+                }
+
+                // Comparación de Textos (Alfabética)
+                valorA = valorA.toString().toLowerCase();
+                valorB = valorB.toString().toLowerCase();
+
+                if (valorA < valorB) return estadoOrden.ascendente ? -1 : 1;
+                if (valorA > valorB) return estadoOrden.ascendente ? 1 : -1;
+                return 0;
+            });
+
+            // Restaurar todos los iconos a su estado normal (↕)
+            document.querySelectorAll('.icon-sort').forEach(icon => { icon.innerHTML = '↕'; icon.style.color = "#888"; });
+            
+            // Pintar el icono actual que se está usando
+            const iconoActivo = document.getElementById(idIconoHtml);
+            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️';
+            iconoActivo.style.color = "#fff";
+
+            // Volver a dibujar la tabla
+            renderizarTabla(datosGlobalesSalidas);
+        }
+
+        // ==========================================
+        // 4. SUBTOTALES Y FILTROS
         // ==========================================
         function filtrarTabla() {
             const filtro = document.getElementById("input-busqueda").value.toLowerCase();
@@ -406,111 +525,190 @@
         }
 
         // ==========================================
-        // 4. FUNCIONES DE ELIMINAR (Masiva e Individual)
+        // 5. FUNCIONES DE ELIMINAR (MASIVO)
         // ==========================================
         async function eliminarSeleccionadosSalidas() {
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
-            if (seleccionados.length === 0) return alert("Selecciona registros para borrar.");
-            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s)?`)) return;
+            if (seleccionados.length === 0) return alert("Selecciona registros en las casillas para borrar.");
+            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s) permanentemente?`)) return;
 
             try {
                 await client.from('prendas').delete().in('precinto', seleccionados);
-                alert("Eliminados con éxito.");
+                alert("Registros eliminados con éxito.");
                 cargarTablaSalidas();
                 actualizarContadorBorrar();
             } catch (err) { alert("Error al borrar."); }
         }
 
-        async function eliminarFilaUnica(precinto) {
-            if (!confirm(`¿Eliminar el registro ${precinto}?`)) return;
-            try {
-                await client.from('prendas').delete().eq('precinto', precinto);
-                cargarTablaSalidas();
-            } catch (err) { alert("Error al borrar."); }
+        // ==========================================
+        // 6. MODALES (VER Y EDITAR)
+        // ==========================================
+        function cerrarModal(idModal) {
+            document.getElementById(idModal).style.display = 'none';
         }
 
-        // ==========================================
-        // 5. EDICIÓN DE INFORMACIÓN (MODAL)
-        // ==========================================
-        function abrirModal(jsonEncoded) {
+        // A. Modal Ojo Azul (Ver Detalle Completo)
+        function abrirModalVer(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            document.getElementById('edit-id-original').value = item.precinto || item.id;
-            document.getElementById('edit-precinto').value = item.precinto || item.id;
+            const contenedor = document.getElementById('view-form-container');
+            
+            const fotoActual = item.fotoUrl || item.foto_url || item.foto || "";
+            let htmlDetalles = "";
+            
+            if (fotoActual) {
+                htmlDetalles += `
+                    <div class="view-photo-container">
+                        <img src="${fotoActual}" alt="Foto Muestra">
+                    </div>`;
+            }
+
+            const camposRelevantes = [
+                { label: "Precinto (ID)", val: item.precinto || item.id },
+                { label: "Referencia", val: item.referencia },
+                { label: "Descripción", val: item.descripcion },
+                { label: "Fecha Ingreso", val: item.fechaIngreso || item.fecha_ingreso },
+                { label: "Registrado Por", val: item.registradoPor || item.registrado_por },
+                { label: "Línea", val: item.linea },
+                { label: "Color", val: item.color },
+                { label: "Talla", val: item.talla },
+                { label: "Género", val: item.genero },
+                { label: "Proveedor", val: item.proveedor },
+                { label: "País Origen", val: item.paisOrigen || item.pais_origen },
+                { label: "Precio / Costo", val: item.precio || item.costo },
+                { label: "Moneda", val: item.moneda },
+                { label: "Cantidad", val: item.cantidad || item.cant },
+                { label: "Clasificación", val: item.clasificacion },
+                { label: "Fecha de Salida", val: item.fechaSalida || item.fecha_salida },
+                { label: "Ubicación General", val: item.ubicacionGeneral || item.ubicacion_general },
+                { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno },
+                { label: "Tipo", val: item.tipo },
+                { label: "Colección", val: item.coleccion },
+                { label: "Remisión de Salida", val: item.remision || item.no_remision },
+                { label: "Orden de Traslado", val: item.ordenTraslado || item.to },
+                { label: "Estado Actual", val: item.estado },
+                { label: "Fecha Entrega CI", val: item.fechaEntregaCI || item.fecha_entrega_ci },
+                { label: "Observaciones", val: item.observaciones || item.accionCorrectiva || item.accion_correctiva, full: true }
+            ];
+
+            camposRelevantes.forEach(c => {
+                const claseFull = c.full ? "full-width" : "";
+                htmlDetalles += `
+                    <div class="form-group ${claseFull}">
+                        <label>${c.label}</label>
+                        <input type="text" value="${c.val || '-'}" disabled>
+                    </div>`;
+            });
+
+            contenedor.innerHTML = htmlDetalles;
+            document.getElementById('modal-ver').style.display = 'flex';
+        }
+
+        // B. Modal Lápiz Amarillo (Editar y Subir Foto)
+        function abrirModalEdicion(jsonEncoded) {
+            const item = JSON.parse(decodeURIComponent(jsonEncoded));
+            
+            document.getElementById('edit-precinto').value = item.precinto || item.id || "";
+            document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || "";
+            document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || "";
             document.getElementById('edit-referencia').value = item.referencia || "";
             document.getElementById('edit-linea').value = item.linea || "";
             document.getElementById('edit-descripcion').value = item.descripcion || "";
+            document.getElementById('edit-color').value = item.color || "";
+            document.getElementById('edit-talla').value = item.talla || "";
+            document.getElementById('edit-genero').value = item.genero || "";
+            document.getElementById('edit-proveedor').value = item.proveedor || "";
+            document.getElementById('edit-paisOrigen').value = item.paisOrigen || item.pais_origen || "";
+            document.getElementById('edit-precio').value = item.precio || item.costo || "";
+            document.getElementById('edit-moneda').value = item.moneda || "";
             document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
+            document.getElementById('edit-clasificacion').value = item.clasificacion || "";
+            document.getElementById('edit-fechaSalida').value = item.fechaSalida || item.fecha_salida || "";
+            document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || "";
+            document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || "";
+            document.getElementById('edit-tipo').value = item.tipo || "";
+            document.getElementById('edit-coleccion').value = item.coleccion || "";
+            document.getElementById('edit-remision').value = item.remision || item.no_remision || "";
+            document.getElementById('edit-ordenTraslado').value = item.ordenTraslado || item.to || "";
+            document.getElementById('edit-estado').value = item.estado || "";
+            document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || "";
+            document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || "";
+            
+            document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || "";
+            document.getElementById('edit-nueva-foto').value = "";
             
             document.getElementById('modal-edicion').style.display = 'flex';
         }
 
-        function cerrarModal() {
-            document.getElementById('modal-edicion').style.display = 'none';
-        }
-
         async function guardarEdicion() {
-            const precinto = document.getElementById('edit-id-original').value;
-            const nuevaData = {
-                referencia: document.getElementById('edit-referencia').value,
-                linea: document.getElementById('edit-linea').value,
-                descripcion: document.getElementById('edit-descripcion').value,
-                cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1
-            };
+            const precinto = document.getElementById('edit-precinto').value;
+            const btnGuardar = document.getElementById('btn-guardar-edicion');
+            
+            btnGuardar.disabled = true;
+            btnGuardar.innerHTML = "⏳ Guardando (Puede tardar si hay foto)...";
 
             try {
+                let urlFotoFinal = document.getElementById('edit-foto-actual').value;
+                const fileInput = document.getElementById('edit-nueva-foto');
+                
+                if (fileInput.files && fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${precinto}-${Date.now()}.${fileExt}`;
+                    const filePath = `fotos_prendas/${fileName}`;
+                    
+                    const { error: uploadError } = await client.storage.from('imagenes').upload(filePath, file);
+                    if (uploadError) throw uploadError;
+
+                    const { data: publicUrlData } = client.storage.from('imagenes').getPublicUrl(filePath);
+                    urlFotoFinal = publicUrlData.publicUrl;
+                }
+
+                const nuevaData = {
+                    fechaIngreso: document.getElementById('edit-fechaIngreso').value,
+                    registradoPor: document.getElementById('edit-registradoPor').value,
+                    referencia: document.getElementById('edit-referencia').value,
+                    linea: document.getElementById('edit-linea').value,
+                    descripcion: document.getElementById('edit-descripcion').value,
+                    color: document.getElementById('edit-color').value,
+                    talla: document.getElementById('edit-talla').value,
+                    genero: document.getElementById('edit-genero').value,
+                    proveedor: document.getElementById('edit-proveedor').value,
+                    paisOrigen: document.getElementById('edit-paisOrigen').value,
+                    precio: document.getElementById('edit-precio').value,
+                    moneda: document.getElementById('edit-moneda').value,
+                    cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
+                    clasificacion: document.getElementById('edit-clasificacion').value,
+                    fechaSalida: document.getElementById('edit-fechaSalida').value,
+                    ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value,
+                    ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
+                    tipo: document.getElementById('edit-tipo').value,
+                    coleccion: document.getElementById('edit-coleccion').value,
+                    remision: document.getElementById('edit-remision').value,
+                    ordenTraslado: document.getElementById('edit-ordenTraslado').value,
+                    estado: document.getElementById('edit-estado').value,
+                    fechaEntregaCI: document.getElementById('edit-fechaEntregaCI').value,
+                    observaciones: document.getElementById('edit-observaciones').value,
+                    fotoUrl: urlFotoFinal
+                };
+
                 const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
                 if (error) throw error;
                 
                 alert("✅ Información actualizada correctamente.");
-                cerrarModal();
+                cerrarModal('modal-edicion');
                 cargarTablaSalidas();
+
             } catch (err) {
-                alert("❌ Error al guardar cambios.");
-                console.error(err);
-            }
-        }
-
-        // ==========================================
-        // 6. SUBIR/CAMBIAR FOTO (BOTÓN NARANJA)
-        // ==========================================
-        function triggerSubirFoto(precinto) {
-            precintoEnFocoParaFoto = precinto;
-            document.getElementById('input-foto').click();
-        }
-
-        document.getElementById('input-foto').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file || !precintoEnFocoParaFoto) return;
-
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${precintoEnFocoParaFoto}-${Date.now()}.${fileExt}`;
-            const filePath = `fotos_prendas/${fileName}`;
-
-            alert("⏳ Subiendo foto... Por favor espera.");
-
-            try {
-                const { error: uploadError } = await client.storage.from('imagenes').upload(filePath, file);
-                if (uploadError) throw uploadError;
-
-                const { data: publicUrlData } = client.storage.from('imagenes').getPublicUrl(filePath);
-                const urlFoto = publicUrlData.publicUrl;
-
-                const { error: updateError } = await client.from('prendas').update({ fotoUrl: urlFoto }).eq('precinto', precintoEnFocoParaFoto);
-                if (updateError) throw updateError;
-
-                alert("✅ Foto actualizada con éxito.");
-                cargarTablaSalidas();
-                
-            } catch (err) {
-                alert("❌ Error al subir la foto.");
+                alert("❌ Error al guardar. Verifica la consola para más detalles.");
                 console.error(err);
             } finally {
-                e.target.value = '';
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = "💾 Guardar Cambios";
             }
-        });
+        }
 
         // ==========================================
-        // 7. EXPORTAR A EXCEL (CON PLANTILLA EXACTA)
+        // 7. EXPORTAR A EXCEL (PLANTILLA EXACTA)
         // ==========================================
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) return alert("No hay datos para exportar.");
