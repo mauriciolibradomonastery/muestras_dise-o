@@ -11,6 +11,8 @@
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
+
+        /* Barra Superior y Presencia */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
@@ -21,6 +23,7 @@
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
         .btn-logout:hover { background-color: #c82333; }
 
+        /* Controles Principales */
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
@@ -38,13 +41,16 @@
         .btn-green { background-color: #198754; }
         .btn-green:hover { background-color: #157347; }
         .btn-orange { background-color: #fd7e14; }
+        .btn-orange:hover { background-color: #e86e04; }
 
+        /* Dropdown */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
         .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
         .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
         .show { display: block; }
 
+        /* Tabla y Subtotales */
         .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
         .stat-highlight-yellow { color: #ffc107; }
         .stat-highlight-white { color: #ffffff; }
@@ -71,6 +77,7 @@
         .btn-edit { background-color: #ffc107; }
         .btn-salida { background-color: #fd7e14; color: white; }
 
+        /* Modales */
         .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
         .modal-contenido { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         .modal-contenido h3 { color: #fd7e14; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
@@ -286,7 +293,6 @@
         </div>
     </div>
 
-    <!-- VISOR DE IMAGEN AMPLIADA -->
     <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
 
     <script>
@@ -298,7 +304,6 @@
         let estadoOrden = { columnaID: null, ascendente: true };
         let idPrendaSeleccionada = null;
 
-        // PRESENCIA
         function generarColorHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
@@ -347,9 +352,6 @@
             }
         }
 
-        // ==========================================
-        // CÁLCULO DE PAGINACIÓN SIN LÍMITE DE 1.000 FILAS
-        // ==========================================
         async function cargarTabla() {
             const tbody = document.getElementById("tbody-datos");
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando inventario completo...</td></tr>`;
@@ -368,7 +370,6 @@
                     if (res.data.length < paso) { hayMas = false; } else { desde += paso; }
                 }
 
-                // FILTRO BODEGA: Fecha de Salida debe estar VACÍA
                 datosGlobales = todosLosDatos.filter(item => {
                     let f = (item.salidaFecha || item.fechaSalida || item.fecha_salida || "").trim();
                     return f === "";
@@ -485,21 +486,43 @@
             actualizarContadorBorrar();
         }
 
+        // ==========================================
+        // BORRADO MASIVO POR LOTES (SOLUCIÓN PARA 3.500+ REGISTROS)
+        // ==========================================
         async function eliminarSeleccionados() {
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
             if (seleccionados.length === 0) return;
-            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s) permanentemente?`)) return;
+            if (!confirm(`⚠️ Vas a eliminar ${seleccionados.length} registro(s) permanentemente de la base de datos.\n\n¿Estás seguro de continuar?`)) return;
 
             const btnBorrar = document.getElementById("btn-borrar-masivo");
             const textoOriginal = btnBorrar.textContent;
-            btnBorrar.textContent = "⏳ Borrando..."; btnBorrar.disabled = true;
+            btnBorrar.disabled = true;
 
             try {
-                await client.from('prendas').delete().in('precinto', seleccionados);
-                await client.from('prendas').delete().in('id', seleccionados);
-                alert("✅ Registros eliminados."); document.getElementById('check-all').checked = false; cargarTabla(); actualizarContadorBorrar();
-            } catch (err) { console.error(err); alert("❌ Error al borrar."); } 
-            finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
+                const tamañoLote = 500;
+                let procesados = 0;
+
+                for (let i = 0; i < seleccionados.length; i += tamañoLote) {
+                    const lote = seleccionados.slice(i, i + tamañoLote);
+                    btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
+
+                    await client.from('prendas').delete().in('precinto', lote);
+                    await client.from('prendas').delete().in('id', lote);
+
+                    procesados += lote.length;
+                }
+
+                alert(`✅ Se eliminaron con éxito los ${seleccionados.length} registros.`);
+                document.getElementById('check-all').checked = false;
+                cargarTabla();
+                actualizarContadorBorrar();
+            } catch (err) { 
+                console.error("Error al borrar:", err); 
+                alert("❌ Ocurrió un error al intentar eliminar los registros. Revisa la consola."); 
+            } finally { 
+                btnBorrar.textContent = textoOriginal; 
+                btnBorrar.disabled = false; 
+            }
         }
 
         // MÓDULO: DAR SALIDA
@@ -658,9 +681,6 @@
             finally { btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; }
         }
 
-        // ==========================================
-        // EXPORTAR E IMPORTAR EXCEL (CON FILTRO ANTIBASURA Y GENERADOR DE PRECINTO PENDIENTE)
-        // ==========================================
         function exportarExcel() {
             if (datosGlobales.length === 0) return alert("No hay datos para exportar.");
             const datosMapeados = datosGlobales.map(item => {
@@ -704,7 +724,6 @@
                     const workbook = XLSX.read(data, {type: 'array'});
                     const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                     
-                    // FILTRO DE SEGURIDAD: Descarta filas totalmente vacías del final de Excel
                     const registrosValidos = json.filter(item => {
                         return Object.values(item).some(val => val !== null && val !== undefined && val.toString().trim() !== "");
                     });
@@ -717,7 +736,6 @@
                     if (confirm(`⚠️ Vas a importar ${registrosValidos.length} prendas al sistema.\n¿Deseas continuar?`)) {
                         let contadorPendiente = Date.now();
                         const registrosInsertar = registrosValidos.map(item => {
-                            // GENERADOR DE PRECINTO PENDIENTE SI VIENE VACÍO
                             let precintoVal = item["Precinto"] || item["Código Precinto"];
                             if (!precintoVal || precintoVal.toString().trim() === "") {
                                 precintoVal = "PENDIENTE-" + (contadorPendiente++);
