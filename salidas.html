@@ -197,8 +197,8 @@
             if (window._supabase) return window._supabase;
             
             // Reemplaza estas dos comillas con la URL y KEY reales de tu Supabase si no existen variables globales:
-            const URL_PROYECTO = window.SUPABASE_URL || "https://TU_PROYECTO_REAL.supabase.co"; 
-            const KEY_PROYECTO = window.SUPABASE_KEY || "TU_ANON_KEY_REAL";
+            const URL_PROYECTO = window.SUPABASE_URL || 'https://emljzsxypeqecevffmwr.supabase.co'; 
+            const KEY_PROYECTO = window.SUPABASE_KEY || 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
 
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 return window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
