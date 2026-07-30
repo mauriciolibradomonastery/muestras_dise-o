@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Bajas y Salidas - Inventario</title>
     
-    <!-- Librerías externas -->
+    <!-- Librerías JS Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
@@ -160,7 +160,7 @@
     <!-- Filtros y Acciones -->
     <div class="controls-row">
         <input type="text" id="input-busqueda" class="search-input" placeholder="Buscar baja por precinto, remisión, referencia..." onkeyup="filtrarTabla()">
-        <button class="btn btn-danger" onclick="eliminarSeleccionadosSalidas()">⌛ Borrando Selección</button>
+        <button class="btn btn-danger" onclick="eliminarSeleccionadosSalidas()">⏳ Borrando Selección</button>
     </div>
 
     <!-- Tabla -->
@@ -182,7 +182,7 @@
                 </tr>
             </thead>
             <tbody id="tbody-salidas">
-                <!-- Carga dinámica -->
+                <!-- Carga dinámica por JavaScript -->
             </tbody>
         </table>
     </div>
@@ -190,16 +190,17 @@
     <script>
         // -------------------------------------------------------------
         // INICIALIZACIÓN DE SUPABASE
-        // Detecta automáticamente las credenciales existentes de tu proyecto
+        // Usa la conexión del Dashboard o tus llaves directas
         // -------------------------------------------------------------
-        let client = null;
-
         function obtenerClienteSupabase() {
             if (window.supabaseClient) return window.supabaseClient;
+            if (window._supabase) return window._supabase;
+            
+            // Reemplaza estas dos comillas con la URL y KEY reales de tu Supabase si no existen variables globales:
+            const URL_PROYECTO = window.SUPABASE_URL || "https://TU_PROYECTO_REAL.supabase.co"; 
+            const KEY_PROYECTO = window.SUPABASE_KEY || "TU_ANON_KEY_REAL";
+
             if (window.supabase && typeof window.supabase.createClient === 'function') {
-                // Reemplazar si tienes tus llaves en variables de entorno o archivo config
-                const URL_PROYECTO = window.SUPABASE_URL || "https://tu-proyecto.supabase.co"; 
-                const KEY_PROYECTO = window.SUPABASE_KEY || "tu-anon-key";
                 return window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
             }
             return null;
@@ -214,18 +215,20 @@
 
             tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Cargando registros...</td></tr>`;
 
-            client = obtenerClienteSupabase();
+            const client = obtenerClienteSupabase();
 
             if (!client) {
-                console.warn("Cliente Supabase no detectado directamente, intentando lectura fallback...");
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
+                    Error: No se encontró la conexión a Supabase. Verifica la URL y la Key en el script.
+                </td></tr>`;
+                return;
             }
 
             try {
-                // Intentamos consultar la tabla de bajas / salidas
+                // Consultar la tabla 'bajas' o 'salidas'
                 let res = await client.from('bajas').select('*');
                 
-                // Si la tabla se llama 'salidas' en tu Supabase en vez de 'bajas'
-                if (res.error && res.error.code === '42P01') {
+                if (res.error && (res.error.code === '42P01' || res.error.message.includes('not found'))) {
                     res = await client.from('salidas').select('*');
                 }
 
@@ -237,7 +240,7 @@
             } catch (err) {
                 console.error("Error al cargar salidas:", err);
                 tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
-                    Error al cargar datos (${err.message || 'Error de conexión'}). Revisa la consola (F12).
+                    Error al cargar datos (${err.message || 'Error de red'}). Revisa la consola (F12).
                 </td></tr>`;
             }
         }
@@ -286,7 +289,7 @@
             let sumaUnidades = 0;
 
             filas.forEach(fila => {
-                if (fila.cells.length > 2) { // Evita filas de mensajes de error o carga
+                if (fila.cells.length > 2) {
                     const texto = fila.textContent.toLowerCase();
                     if (texto.includes(filtro)) {
                         fila.style.display = "";
@@ -312,7 +315,7 @@
             if (elUnd) elUnd.textContent = unidades.toLocaleString() + " unds";
         }
 
-        // 4. ELIMINAR REGISTROS (Resuelve "Bad Request")
+        // 4. ELIMINAR REGISTROS (Corregido Bad Request)
         async function eliminarSeleccionadosSalidas() {
             const checkboxes = document.querySelectorAll('.checkbox-item:checked');
             const seleccionados = Array.from(checkboxes).map(cb => cb.value);
@@ -326,15 +329,15 @@
                 return;
             }
 
+            const client = obtenerClienteSupabase();
+
             try {
-                // Probamos eliminar por codigo_precinto o id
                 let { error } = await client
                     .from('bajas')
                     .delete()
                     .in('codigo_precinto', seleccionados);
 
                 if (error) {
-                    // Reintento alternativo si la columna clave primaria es 'id'
                     const reintento = await client
                         .from('bajas')
                         .delete()
@@ -352,7 +355,7 @@
             }
         }
 
-        // 5. EXPORTAR A EXCEL UNIFICADO (Columnas estructuradas como el Dashboard)
+        // 5. EXPORTAR A EXCEL UNIFICADO (Mismas columnas que el Dashboard)
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) {
                 alert("No hay datos para exportar.");
