@@ -5,110 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consolidado de Bajas y Salidas - Inventario</title>
     
-    <!-- Librerías JS Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e1e1e;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
 
-        /* Barra Superior y Usuario (ESTILO SEGUIMIENTO WIP) */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .titulo-bodega {
-            font-size: 14px;
-            font-weight: bold;
-            color: #a0a0a0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background-color: #2b2b2b;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            color: #fff;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        .btn-logout {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 13px;
-            transition: 0.2s;
-        }
-        .btn-logout:hover {
-            background-color: #c82333;
-        }
-
-        /* Cabecera Principal */
-        .main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
+        /* Barra Superior (ESTILO SEGUIMIENTO WIP) */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         
-        .header-center {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-        }
-        .search-input {
-            width: 100%;
-            max-width: 450px;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background-color: #121212;
-            color: #fff;
-        }
+        /* ESTILO PARA PRESENCIA (AVATARES) */
+        .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
+        .avatars-group { display: flex; flex-direction: row-reverse; }
+        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
+        .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
+        .avatar-circle:last-child { margin-left: 0; }
+        .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
+        
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
+        .btn-logout:hover { background-color: #c82333; }
 
-        .header-right {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
+        .header-center { flex-grow: 1; display: flex; justify-content: center; }
+        .search-input { width: 100%; max-width: 450px; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background-color: #121212; color: #fff; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
 
-        /* Botones Generales */
-        .btn {
-            padding: 8px 15px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            color: #fff;
-            transition: 0.2s;
-        }
+        .btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #fff; transition: 0.2s; }
         .btn-menu { background-color: #333; border: 1px solid #444; }
         .btn-menu:hover { background-color: #444; }
         .btn-red { background-color: #dc3545; }
@@ -118,200 +43,77 @@
         .btn-green { background-color: #198754; }
         .btn-green:hover { background-color: #157347; }
 
-        /* Estilos del Dropdown (Menú Opciones) */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            background-color: #2b2b2b;
-            min-width: 170px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
-            z-index: 100;
-            border-radius: 6px;
-            border: 1px solid #444;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-        .dropdown-content a, .dropdown-content label {
-            color: white;
-            padding: 10px 15px;
-            text-decoration: none;
-            display: block;
-            font-size: 13px;
-            cursor: pointer;
-        }
-        .dropdown-content a:hover, .dropdown-content label:hover {
-            background-color: #3d3d3d;
-        }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
+        .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
+        .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
         .show { display: block; }
 
-        /* Banner de Subtotales */
-        .stats-banner {
-            display: inline-flex;
-            background-color: #121212;
-            border: 1px solid #333;
-            padding: 8px 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            font-weight: bold;
-        }
+        .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
         .stat-highlight-yellow { color: #ffc107; }
         .stat-highlight-white { color: #ffffff; }
         .stat-divider { margin: 0 10px; color: #555; }
 
-        /* Tabla */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 6px;
-            border: 1px solid #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            background-color: #222;
-        }
-        th, td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #333;
-            text-align: left;
-            vertical-align: middle;
-        }
-        th {
-            color: #0dcaf0;
-            font-weight: bold;
-            background-color: #2b2b2b;
-            text-transform: capitalize;
-        }
-        .sortable-col {
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.2s;
-        }
-        .sortable-col:hover {
-            background-color: #3d3d3d;
-        }
-        .icon-sort {
-            font-size: 10px;
-            margin-left: 4px;
-            color: #888;
-        }
-
+        .table-container { overflow-x: auto; border-radius: 6px; border: 1px solid #333; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #222; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #333; text-align: left; vertical-align: middle; }
+        th { color: #0dcaf0; font-weight: bold; background-color: #2b2b2b; text-transform: capitalize; }
+        .sortable-col { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .sortable-col:hover { background-color: #3d3d3d; }
+        .icon-sort { font-size: 10px; margin-left: 4px; color: #888; }
         tr:nth-child(even) { background-color: #262626; }
         tr:hover { background-color: #333; }
 
-        .img-thumb {
-            width: 40px; height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-            background-color: #fff;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+        .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background-color: #fff; cursor: pointer; transition: 0.2s; }
         .img-thumb:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .badge-estado { background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
 
-        .badge-estado {
-            background-color: #dc3545;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 11px;
-        }
-
-        /* Botones de Acciones Fila */
         .action-btns { display: flex; gap: 5px; }
-        .btn-action {
-            width: 28px; height: 28px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: #000;
-            transition: 0.2s;
-        }
+        .btn-action { width: 28px; height: 28px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #000; transition: 0.2s; }
         .btn-action:hover { opacity: 0.8; }
         .btn-view { background-color: #0dcaf0; }
         .btn-edit { background-color: #ffc107; }
         .btn-retornar { background-color: #198754; color: white; }
 
-        /* Modales */
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background-color: #2b2b2b; padding: 25px; border-radius: 8px;
-            width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
-            color: #fff; border: 1px solid #444;
-        }
-        .modal-header {
-            margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+        .modal-content { background-color: #2b2b2b; padding: 25px; border-radius: 8px; width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto; color: #fff; border: 1px solid #444; }
+        .modal-header { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .modal-header h3 { margin: 0; font-size: 20px; }
         
-        .grid-form {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
+        .grid-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
         .form-group { margin-bottom: 12px; }
         .form-group.full-width { grid-column: span 3; }
         .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #0dcaf0; font-weight: bold;}
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444;
-            background-color: #121212; color: #fff; box-sizing: border-box;
-        }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background-color: #121212; color: #fff; box-sizing: border-box; }
         .form-group input:disabled { background-color: #333; color: #888; }
         
-        select#edit-estado {
-            font-weight: bold;
-            color: #fff;
-        }
-        select#edit-estado option[value="DISPONIBLE"] {
-            background-color: #198754;
-            color: white;
-        }
-
+        select#edit-estado { font-weight: bold; color: #fff; }
+        select#edit-estado option[value="DISPONIBLE"] { background-color: #198754; color: white; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #444; padding-top: 15px;}
         
-        /* Contenedor Foto Visualización */
-        .view-photo-container {
-            grid-column: span 3;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .view-photo-container img {
-            max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #444; object-fit: contain;
-        }
+        .view-photo-container { grid-column: span 3; text-align: center; margin-bottom: 15px; }
+        .view-photo-container img { max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #444; object-fit: contain; }
         
-        /* Visor Imagen Ampliada */
         .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
     </style>
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR (Usuario Estilo WIP) -->
+    <!-- BARRA SUPERIOR Y PRESENCIA -->
     <div class="top-bar">
         <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
-        <div class="user-info">
-            <span id="userEmailInfo">🥷 Verificando usuario... ⏳</span> 
+        <div style="display: flex; align-items: center;">
+            <div class="en-linea-container">
+                <span>En línea:</span>
+                <div id="usuarios-activos" class="avatars-group">
+                    <!-- Avatares se llenan aquí -->
+                </div>
+            </div>
             <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
 
-    <!-- CABECERA PRINCIPAL -->
     <div class="main-header">
         <div class="header-left">
             <button class="btn btn-menu" onclick="window.location.href='dashboard.html'">⬅ Menú</button>
@@ -325,7 +127,6 @@
         <div class="header-right">
             <button id="btn-borrar-masivo" class="btn btn-red" style="display: none;" onclick="eliminarSeleccionadosSalidas()">🗑️ Borrar ( 0 )</button>
             
-            <!-- MENÚ DESPLEGABLE DE OPCIONES -->
             <div class="dropdown">
                 <button onclick="toggleDropdown()" class="btn btn-blue" id="btn-opciones">⚙️ Opciones ▼</button>
                 <div id="dropdownOpciones" class="dropdown-content">
@@ -336,17 +137,14 @@
         </div>
     </div>
 
-    <!-- INPUT OCULTO PARA IMPORTAR EXCEL -->
     <input type="file" id="input-importar" style="display: none;" accept=".xlsx, .xls">
 
-    <!-- BANNER DE SUBTOTALES -->
     <div class="stats-banner">
         📊 Resultados Activos: <span id="subtotal-registros" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Referencias de Salida</span>
         <span class="stat-divider">|</span>
         Suma Total Físicas: <span id="subtotal-unidades" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Unidades Dadas de Baja</span>
     </div>
 
-    <!-- TABLA DE DATOS -->
     <div class="table-container">
         <table id="tabla-salidas">
             <thead>
@@ -365,13 +163,11 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tbody-salidas">
-                <!-- Se llena dinámicamente -->
-            </tbody>
+            <tbody id="tbody-salidas"></tbody>
         </table>
     </div>
 
-    <!-- MODAL DE VER DETALLE (Ojo Azul) -->
+    <!-- MODAL DE VER DETALLE -->
     <div id="modal-ver" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -382,15 +178,13 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDICIÓN (Lápiz Amarillo) -->
+    <!-- MODAL DE EDICIÓN -->
     <div id="modal-edicion" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>✏️ Editar Información (25 Campos)</h3>
             </div>
-            
             <input type="hidden" id="edit-foto-actual">
-            
             <div class="grid-form">
                 <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled title="El precinto no se puede modificar"></div>
                 <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="edit-fechaIngreso"></div>
@@ -421,7 +215,6 @@
                 <div class="form-group"><label>Remisión de Salida</label><input type="text" id="edit-remision"></div>
                 <div class="form-group"><label>Orden de Traslado (TO)</label><input type="text" id="edit-ordenTraslado"></div>
                 
-                <!-- Lista desplegable para retornar a bodega -->
                 <div class="form-group">
                     <label>Estado Actual</label>
                     <select id="edit-estado">
@@ -456,13 +249,9 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. CONFIGURACIÓN SUPABASE Y AUTENTICACIÓN
-        // ==========================================
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         
-        // ¡LA CLAVE ESTABA AQUÍ! Agregamos el storage para que reconozca la sesión activa.
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, {
             auth: { storage: window.localStorage }
         });
@@ -470,17 +259,56 @@
         let datosGlobalesSalidas = [];
         let estadoOrden = { columnaID: null, ascendente: true };
 
-        // Función para validar quién está conectado
+        // ==========================================
+        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
+        // ==========================================
+        let canalPresencia;
+
+        function generarColorHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + '00000'.substring(0, 6 - c.length) + c;
+        }
+
+        function obtenerIniciales(email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+
+        async function configurarPresencia(emailUsuario) {
+            canalPresencia = client.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
+
+            canalPresencia.on('presence', { event: 'sync' }, () => {
+                const state = canalPresencia.presenceState();
+                const container = document.getElementById('usuarios-activos');
+                container.innerHTML = '';
+                
+                Object.keys(state).forEach(email => {
+                    const div = document.createElement('div');
+                    div.className = 'avatar-circle';
+                    div.style.backgroundColor = generarColorHash(email);
+                    div.setAttribute('data-name', email.split('@')[0]);
+                    div.innerText = obtenerIniciales(email);
+                    container.appendChild(div);
+                });
+            });
+
+            canalPresencia.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
+                }
+            });
+        }
+
         async function verificarSesion() {
             const { data: { session }, error } = await client.auth.getSession();
             if (!session) { 
                 window.location.href = "index.html"; 
             } else { 
-                document.getElementById('userEmailInfo').textContent = "🥷 " + session.user.email; 
+                configurarPresencia(session.user.email);
             }
         }
 
-        // Función del botón rojo "Cerrar Sesión"
         window.cerrarSesion = async function() { 
             await client.auth.signOut(); 
             window.location.href = "index.html"; 
@@ -488,14 +316,10 @@
         
         verificarSesion();
 
-        // Escuchar cambios en tiempo real
         client.channel('cambios-bajas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => {
             cargarTablaSalidas();
         }).subscribe();
 
-        // ==========================================
-        // FUNCIONALIDAD DEL DROPDOWN (MENÚ OPCIONES)
-        // ==========================================
         function toggleDropdown() {
             document.getElementById("dropdownOpciones").classList.toggle("show");
         }
@@ -510,15 +334,11 @@
             }
         }
 
-        // ==========================================
-        // 2. CARGAR Y RENDERIZAR TABLA (CONCATENACIÓN)
-        // ==========================================
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando registros...</td></tr>`;
 
             try {
-                // Buscamos todas las que no digan "Disponible en inventario"
                 let res = await client.from('prendas').select('*').neq('estado', 'Disponible en inventario');
                 if (res.error) throw res.error;
 
@@ -548,7 +368,6 @@
                 let urlFoto = item.fotoUrl || item.foto_url || item.foto || "logo.png";
                 let celdaFotoHTML = `<img src="${urlFoto}" class="img-thumb" alt="foto" onclick="abrirVisor('${urlFoto}')">`;
 
-                // LA DESCRIPCIÓN CONCATENADA MÁGICA
                 const partesDesc = [item.referencia, item.linea, item.color, item.talla, item.clasificacion].filter(val => val && val.toString().trim() !== "");
                 const descripcionGenerada = partesDesc.join(" ") || "-";
 
@@ -598,9 +417,6 @@
             }
         }
 
-        // ==========================================
-        // 3. ORDENAMIENTO DE TABLA
-        // ==========================================
         function ordenarTabla(clavesAcceso, idIconoHtml) {
             if (estadoOrden.columnaID === idIconoHtml) {
                 estadoOrden.ascendente = !estadoOrden.ascendente;
@@ -636,9 +452,6 @@
             renderizarTabla(datosGlobalesSalidas);
         }
 
-        // ==========================================
-        // 4. SUBTOTALES Y FILTROS
-        // ==========================================
         function filtrarTabla() {
             const filtro = document.getElementById("input-busqueda").value.toLowerCase();
             const filas = document.querySelectorAll("#tbody-salidas tr");
@@ -679,9 +492,6 @@
             actualizarContadorBorrar();
         }
 
-        // ==========================================
-        // 5. FUNCIONES DE ELIMINAR (MASIVO Y SEGURO)
-        // ==========================================
         async function eliminarSeleccionadosSalidas() {
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
             if (seleccionados.length === 0) return alert("Selecciona registros en las casillas para borrar.");
@@ -709,9 +519,6 @@
             }
         }
 
-        // ==========================================
-        // 6. MODALES (VER Y EDITAR)
-        // ==========================================
         window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
 
         function abrirModalVer(jsonEncoded) {
@@ -901,9 +708,6 @@
             }
         }
 
-        // ==========================================
-        // 7. EXPORTAR / IMPORTAR EXCEL
-        // ==========================================
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) return alert("No hay datos para exportar.");
             

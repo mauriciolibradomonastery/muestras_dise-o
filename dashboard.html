@@ -47,6 +47,17 @@
         
         .show { display: block; }
 
+        /* ESTILO PARA PRESENCIA (AVATARES) */
+        .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
+        .avatars-group { display: flex; flex-direction: row-reverse; }
+        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
+        .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
+        .avatar-circle:last-child { margin-left: 0; }
+        .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
+        
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
+        .btn-logout:hover { background-color: #c82333; }
+
         /* MODALES */
         .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
         .modal-contenido { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
@@ -84,12 +95,17 @@
 </head>
 <body>
     <div class="contenedor">
-        <!-- BARRA SUPERIOR DE USUARIO -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <!-- BARRA SUPERIOR DE USUARIO Y PRESENCIA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
             <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
-            <div style="display: flex; align-items: center; gap: 10px; background-color: #222; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; font-size: 13px; color: #ccc;">
-                <span id="userEmail">Verificando usuario...</span>
-                <button onclick="cerrarSesion()" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
+            <div style="display: flex; align-items: center;">
+                <div class="en-linea-container">
+                    <span>En línea:</span>
+                    <div id="usuarios-activos" class="avatars-group">
+                        <!-- Avatares se llenan aquí -->
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
         </div>
 
@@ -214,6 +230,7 @@
     <div id="modalEditar" class="modal-fondo">
         <div class="modal-contenido-amplio">
             <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
+            
             <div class="cuadricula-detalles" style="margin-top:15px;">
                 <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
@@ -278,19 +295,61 @@
             auth: { storage: window.localStorage }
         });
 
-        // AUTENTICACIÓN Y SESIÓN
+        // ==========================================
+        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
+        // ==========================================
+        let canalPresencia;
+
+        function generarColorHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + '00000'.substring(0, 6 - c.length) + c;
+        }
+
+        function obtenerIniciales(email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+
+        async function configurarPresencia(emailUsuario) {
+            canalPresencia = supabase.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
+
+            canalPresencia.on('presence', { event: 'sync' }, () => {
+                const state = canalPresencia.presenceState();
+                const container = document.getElementById('usuarios-activos');
+                container.innerHTML = '';
+                
+                Object.keys(state).forEach(email => {
+                    const div = document.createElement('div');
+                    div.className = 'avatar-circle';
+                    div.style.backgroundColor = generarColorHash(email);
+                    div.setAttribute('data-name', email.split('@')[0]);
+                    div.innerText = obtenerIniciales(email);
+                    container.appendChild(div);
+                });
+            });
+
+            canalPresencia.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
+                }
+            });
+        }
+
         async function verificarSesion() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 window.location.href = "index.html";
             } else {
-                document.getElementById('userEmail').textContent = "👤 " + session.user.email;
+                configurarPresencia(session.user.email);
             }
         }
+        
         window.cerrarSesion = async function() {
             await supabase.auth.signOut();
             window.location.href = "index.html";
         }
+        
         verificarSesion();
 
         const tabla = document.getElementById('cuerpoTabla');
@@ -527,14 +586,10 @@
                 tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
             }
             
-            // Re-aplicar el filtro de búsqueda si había algo escrito al re-ordenar
             document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
-            
-            // SE EJECUTA EL CÁLCULO DE SUBTOTAL AL TERMINAR DE PINTAR LA TABLA
             window.calcularSubtotales();
         }
 
-        // ---> LÍNEA DE ARRANQUE INYECTADA AQUÍ <---
         fetchPrendas();
 
         document.getElementById('btnExportarExcel').addEventListener('click', function() {

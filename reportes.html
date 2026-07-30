@@ -8,7 +8,22 @@
         body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
         .contenedor { background-color: #2d2d2d; max-width: 1100px; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
         
-        .barra-control { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; margin-bottom: 30px; }
+        /* Barra Superior (ESTILO SEGUIMIENTO WIP) */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* ESTILO PARA PRESENCIA (AVATARES) */
+        .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
+        .avatars-group { display: flex; flex-direction: row-reverse; }
+        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
+        .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
+        .avatar-circle:last-child { margin-left: 0; }
+        .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
+        
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
+        .btn-logout:hover { background-color: #c82333; }
+
+        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; transition: 0.3s; }
         .btn-volver:hover { background-color: #555; }
         .btn-accion { background-color: #0078D4; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; transition: 0.3s; }
@@ -31,7 +46,6 @@
         
         #mensajeCarga { text-align: center; color: #aaa; font-style: italic; margin-top: 50px; }
         
-        /* ESTILO PARA EL SEGMENTADOR */
         .select-segmentador { background-color: #222; color: #0078D4; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; outline: none; transition: 0.3s; }
         .select-segmentador:hover { border-color: #0078D4; }
     </style>
@@ -39,12 +53,17 @@
 <body>
 
     <div class="contenedor">
-        <!-- BARRA SUPERIOR DE USUARIO -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
-            <div style="display: flex; align-items: center; gap: 10px; background-color: #222; padding: 6px 12px; border-radius: 6px; border: 1px solid #444; font-size: 13px; color: #ccc;">
-                <span id="userEmail">Verificando usuario...</span>
-                <button onclick="cerrarSesion()" style="background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
+        <!-- BARRA SUPERIOR Y PRESENCIA -->
+        <div class="top-bar">
+            <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
+            <div style="display: flex; align-items: center;">
+                <div class="en-linea-container">
+                    <span>En línea:</span>
+                    <div id="usuarios-activos" class="avatars-group">
+                        <!-- Avatares se llenan aquí -->
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
         </div>
 
@@ -55,7 +74,6 @@
             </div>
             
             <div style="display: flex; align-items: center; gap: 15px;">
-                <!-- SEGMENTADOR GLOBAL -->
                 <select id="filtroSegmento" class="select-segmentador" onchange="window.actualizarReporteInteractivo()">
                     <option value="TODOS">Ver Todas las Categorías</option>
                     <option value="ACCESORIOS">Filtro: Solo Accesorios</option>
@@ -106,7 +124,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- SCRIPT TIPO MÓDULO PARA SUPABASE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
@@ -116,13 +133,61 @@
             auth: { storage: window.localStorage }
         });
 
-        // AUTENTICACIÓN Y SESIÓN
+        // ==========================================
+        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
+        // ==========================================
+        let canalPresencia;
+
+        function generarColorHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + '00000'.substring(0, 6 - c.length) + c;
+        }
+
+        function obtenerIniciales(email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+
+        async function configurarPresencia(emailUsuario) {
+            canalPresencia = supabase.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
+
+            canalPresencia.on('presence', { event: 'sync' }, () => {
+                const state = canalPresencia.presenceState();
+                const container = document.getElementById('usuarios-activos');
+                container.innerHTML = '';
+                
+                Object.keys(state).forEach(email => {
+                    const div = document.createElement('div');
+                    div.className = 'avatar-circle';
+                    div.style.backgroundColor = generarColorHash(email);
+                    div.setAttribute('data-name', email.split('@')[0]);
+                    div.innerText = obtenerIniciales(email);
+                    container.appendChild(div);
+                });
+            });
+
+            canalPresencia.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
+                }
+            });
+        }
+
         async function verificarSesion() {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { window.location.href = "index.html"; } 
-            else { document.getElementById('userEmail').textContent = "👤 " + session.user.email; }
+            if (!session) {
+                window.location.href = "index.html";
+            } else {
+                configurarPresencia(session.user.email);
+            }
         }
-        window.cerrarSesion = async function() { await supabase.auth.signOut(); window.location.href = "index.html"; }
+        
+        window.cerrarSesion = async function() {
+            await supabase.auth.signOut();
+            window.location.href = "index.html";
+        }
+        
         verificarSesion();
 
         let chartEstadosInstancia = null;
@@ -170,9 +235,6 @@
             }
         }
 
-        // ===============================================
-        // FUNCIÓN GLOBAL E INTERACTIVA (FILTRA TODO: KPIs y GRÁFICAS)
-        // ===============================================
         window.actualizarReporteInteractivo = function() {
             const filtro = document.getElementById('filtroSegmento').value;
             
@@ -187,7 +249,6 @@
                 let genero = (prenda.genero || "").toUpperCase();
                 let pasaFiltro = false;
 
-                // REGLA: ¿Entra en la categoría que elegiste arriba?
                 if (filtro === "TODOS") { pasaFiltro = true; }
                 else if (filtro === "ACCESORIOS" && tipo === "ACCESORIOS") { pasaFiltro = true; }
                 else if (filtro === "MEN" && genero === "MEN") { pasaFiltro = true; }
@@ -205,7 +266,6 @@
                     if (esDisponible) {
                         totalDisponiblesFiltradas += unidades;
                         
-                        // Solo graficamos las líneas de las prendas que SÍ están en la bodega
                         const linea = prenda.linea || "Sin Línea";
                         if (conteoPorLinea[linea]) {
                             conteoPorLinea[linea] += unidades;
@@ -213,7 +273,6 @@
                             conteoPorLinea[linea] = unidades;
                         }
 
-                        // Cálculo financiero
                         if (unidades > 0) {
                             let precioBase = parseFloat(prenda.precio) || 0;
                             let moneda = (prenda.moneda || 'COP').toUpperCase();
@@ -230,7 +289,6 @@
                 }
             });
 
-            // Inyectamos los números interactivos a los 4 cuadros (KPIs)
             document.getElementById('kpiTotal').textContent = totalIngresadasFiltradas;
             document.getElementById('kpiDisponibles').textContent = totalDisponiblesFiltradas;
             document.getElementById('kpiSalidas').textContent = totalSalidasFiltradas;
@@ -238,13 +296,11 @@
                 style: 'currency', currency: 'COP', maximumFractionDigits: 0 
             }).format(valorTotalCOPFiltrado);
 
-            // Refrescamos gráfica circular (Doughnut)
             const datosEstados = {
                 labels: ['Disponibles', 'En Salida'],
                 datasets: [{ data: [totalDisponiblesFiltradas, totalSalidasFiltradas], backgroundColor: ['#28a745', '#fd7e14'], borderColor: '#1e1e1e', borderWidth: 2 }]
             };
 
-            // Refrescamos gráfica de barras (Todas las líneas de mayor a menor, sin límite de Top 5)
             const lineasOrdenadas = Object.entries(conteoPorLinea).sort((a, b) => b[1] - a[1]);
             const etiquetasLineas = lineasOrdenadas.map(item => item[0]);
             const valoresLineas = lineasOrdenadas.map(item => item[1]);
@@ -267,7 +323,6 @@
             datosGlobales = data; 
 
             if(data && data.length > 0) {
-                // Descargamos las TRMs necesarias primero de forma silenciosa
                 const paresTRMRequeridos = new Set();
                 data.forEach(prenda => {
                     let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
@@ -289,7 +344,6 @@
             document.getElementById('mensajeCarga').style.display = 'none';
             document.getElementById('contenidoReportes').style.display = 'block';
 
-            // Ejecutamos el filtro por primera vez para que todo cobre vida
             window.actualizarReporteInteractivo();
         }
 
