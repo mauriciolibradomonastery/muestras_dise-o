@@ -461,21 +461,41 @@
             actualizarContadorBorrar();
         }
 
+        // ELIMINACIÓN MASIVA POR LOTES (SOLUCIÓN DE SEGURIDAD PARA MÁS DE 3.000 FILAS)
         async function eliminarSeleccionadosSalidas() {
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
             if (seleccionados.length === 0) return;
-            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s) permanentemente?`)) return;
+            if (!confirm(`⚠️ Vas a eliminar ${seleccionados.length} registro(s) permanentemente de la base de datos.\n\n¿Estás seguro de continuar?`)) return;
 
             const btnBorrar = document.getElementById("btn-borrar-masivo");
             const textoOriginal = btnBorrar.textContent;
-            btnBorrar.textContent = "⏳ Borrando..."; btnBorrar.disabled = true;
+            btnBorrar.disabled = true;
 
             try {
-                await client.from('prendas').delete().in('precinto', seleccionados);
-                await client.from('prendas').delete().in('id', seleccionados);
-                alert("✅ Registros eliminados con éxito."); document.getElementById('check-all').checked = false; cargarTablaSalidas(); actualizarContadorBorrar();
-            } catch (err) { console.error(err); alert("❌ Error al borrar los registros."); } 
-            finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
+                const tamañoLote = 500;
+                let procesados = 0;
+
+                for (let i = 0; i < seleccionados.length; i += tamañoLote) {
+                    const lote = seleccionados.slice(i, i + tamañoLote);
+                    btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
+
+                    await client.from('prendas').delete().in('precinto', lote);
+                    await client.from('prendas').delete().in('id', lote);
+
+                    procesados += lote.length;
+                }
+
+                alert(`✅ Se eliminaron con éxito los ${seleccionados.length} registros.`);
+                document.getElementById('check-all').checked = false;
+                cargarTablaSalidas();
+                actualizarContadorBorrar();
+            } catch (err) { 
+                console.error("Error al borrar:", err); 
+                alert("❌ Ocurrió un error al intentar eliminar los registros."); 
+            } finally { 
+                btnBorrar.textContent = textoOriginal; 
+                btnBorrar.disabled = false; 
+            }
         }
 
         // ==========================================
