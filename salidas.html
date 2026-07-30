@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial de Bajas y Salidas - Inventario</title>
+    <title>Consolidado de Bajas y Salidas - Inventario</title>
     
     <!-- Librerías JS Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,242 +12,321 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
+            background-color: #1e1e1e;
             color: #ffffff;
             margin: 0;
             padding: 20px;
         }
 
-        .header-container {
+        /* Barra Superior */
+        .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #a0a0a0;
+            text-transform: uppercase;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #2b2b2b;
+            padding: 5px 15px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            color: #ccc;
+            text-transform: none;
+            font-weight: normal;
         }
 
-        .btn {
-            padding: 8px 16px;
+        /* Cabecera Principal */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
+        
+        .header-center {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+        }
+        .search-input {
+            width: 100%;
+            max-width: 450px;
+            padding: 8px 12px;
             border-radius: 6px;
+            border: 1px solid #444;
+            background-color: #121212;
+            color: #fff;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Botones Generales */
+        .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
             border: none;
             cursor: pointer;
             font-weight: bold;
+            font-size: 13px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .btn-secondary { background-color: #333; color: #fff; }
-        .btn-secondary:hover { background-color: #444; }
-
-        .btn-danger { background-color: #b71c1c; color: #fff; }
-        .btn-danger:hover { background-color: #d32f2f; }
-
-        .btn-excel { background-color: #1b5e20; color: #fff; }
-        .btn-excel:hover { background-color: #2e7d32; }
-
-        /* Banner de Subtotales */
-        .subtotales-banner {
-            display: flex;
-            gap: 20px;
-            background-color: #1e1e1e;
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #333;
-        }
-
-        .subtotal-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .subtotal-label {
-            font-size: 12px;
-            color: #a0a0a0;
-        }
-
-        .subtotal-value {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .controls-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            gap: 15px;
-        }
-
-        .search-input {
-            width: 100%;
-            max-width: 400px;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            background-color: #1e1e1e;
+            justify-content: center;
+            gap: 6px;
             color: #fff;
         }
+        .btn-menu { background-color: #333; border: 1px solid #444; }
+        .btn-menu:hover { background-color: #444; }
+        .btn-red { background-color: #dc3545; }
+        .btn-red:hover { background-color: #c82333; }
+        .btn-blue { background-color: #0d6efd; }
+        .btn-blue:hover { background-color: #0b5ed7; }
+        .btn-green { background-color: #198754; }
 
+        /* Banner de Subtotales */
+        .stats-banner {
+            display: inline-flex;
+            background-color: #121212;
+            border: 1px solid #333;
+            padding: 8px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .stat-highlight-yellow { color: #ffc107; }
+        .stat-highlight-white { color: #ffffff; }
+        .stat-divider { margin: 0 10px; color: #555; }
+
+        /* Tabla */
         .table-container {
             overflow-x: auto;
-            background-color: #1e1e1e;
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid #333;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: left;
-            font-size: 13px;
+            font-size: 12px;
+            background-color: #222;
         }
-
         th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #2a2a2a;
+            padding: 12px 10px;
+            border-bottom: 1px solid #333;
+            text-align: left;
+            vertical-align: middle;
         }
-
         th {
-            background-color: #252525;
-            color: #ff9800;
-            font-weight: 600;
-        }
-
-        tr:hover {
-            background-color: #2a2a2a;
-        }
-
-        .badge-salida {
-            background-color: #e65100;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+            color: #0dcaf0;
             font-weight: bold;
+            background-color: #2b2b2b;
+            text-transform: capitalize;
         }
+        tr:nth-child(even) { background-color: #262626; }
+        tr:hover { background-color: #333; }
 
         .img-thumb {
-            width: 40px;
-            height: 40px;
+            width: 35px; height: 35px;
             object-fit: cover;
             border-radius: 4px;
+            background-color: #fff;
         }
+
+        .badge-estado {
+            background-color: #198754;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        /* Botones de Acciones Fila */
+        .action-btns { display: flex; gap: 5px; }
+        .btn-action {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #000;
+        }
+        .btn-view { background-color: #0dcaf0; }
+        .btn-edit { background-color: #ffc107; }
+        .btn-upload { background-color: #fd7e14; color: #fff;}
+        .btn-delete { background-color: #dc3545; color: #fff;}
+
+        /* Modal Edición */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: #2b2b2b; padding: 20px; border-radius: 8px;
+            width: 400px; color: #fff; border: 1px solid #444;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #aaa;}
+        .form-group input, .form-group select {
+            width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444;
+            background-color: #121212; color: #fff; box-sizing: border-box;
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <!-- Encabezado Principal -->
-    <div class="header-container">
-        <a href="dashboard.html" class="btn btn-secondary">📁 Volver al Dashboard</a>
-        <h2>📋 Consolidado de Bajas y Salidas</h2>
-        <button class="btn btn-excel" onclick="exportarExcelSalidas()">📥 Exportar Excel</button>
-    </div>
-
-    <!-- Banner con Subtotales Dinámicos -->
-    <div class="subtotales-banner">
-        <div class="subtotal-item">
-            <span class="subtotal-label">Items Visibles:</span>
-            <span class="subtotal-value" id="subtotal-registros" style="color: #00d2ff;">0</span>
-        </div>
-        <div class="subtotal-item" style="border-left: 1px solid #444; padding-left: 20px;">
-            <span class="subtotal-label">Total Unidades (Cant.):</span>
-            <span class="subtotal-value" id="subtotal-unidades" style="color: #00ff88;">0 unds</span>
+    <!-- BARRA SUPERIOR -->
+    <div class="top-bar">
+        <div>GESTIÓN DE BODEGA</div>
+        <div class="user-info">
+            👤 admin@monastery.com.co 
+            <button class="btn btn-red" style="padding: 4px 8px; font-size: 11px;">Cerrar Sesión</button>
         </div>
     </div>
 
-    <!-- Filtros y Acciones -->
-    <div class="controls-row">
-        <input type="text" id="input-busqueda" class="search-input" placeholder="Buscar baja por precinto, remisión, referencia..." onkeyup="filtrarTabla()">
-        <button class="btn btn-danger" onclick="eliminarSeleccionadosSalidas()">⏳ Borrando Selección</button>
+    <!-- CABECERA PRINCIPAL -->
+    <div class="main-header">
+        <div class="header-left">
+            <button class="btn btn-menu" onclick="window.location.href='dashboard.html'">⬅ Menú</button>
+            <h2>📋 Consolidado de Salidas</h2>
+        </div>
+        
+        <div class="header-center">
+            <input type="text" id="input-busqueda" class="search-input" placeholder="🔍 Buscar por Precinto, Referencia, etc..." onkeyup="filtrarTabla()">
+        </div>
+
+        <div class="header-right">
+            <button id="btn-borrar-masivo" class="btn btn-red" onclick="eliminarSeleccionadosSalidas()">🗑️ Borrar ( 0 )</button>
+            <button class="btn btn-blue" onclick="exportarExcelSalidas()">⚙️ Opciones ▼</button>
+        </div>
     </div>
 
-    <!-- Tabla -->
+    <!-- BANNER DE SUBTOTALES -->
+    <div class="stats-banner">
+        📊 Resultados Activos: <span id="subtotal-registros" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Referencias</span>
+        <span class="stat-divider">|</span>
+        Suma Total Físicas: <span id="subtotal-unidades" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Unidades</span>
+    </div>
+
+    <!-- TABLA DE DATOS -->
     <div class="table-container">
         <table id="tabla-salidas">
             <thead>
                 <tr>
                     <th><input type="checkbox" id="check-all" onclick="marcarTodos(this)"></th>
                     <th>Foto</th>
-                    <th>Fecha Ingreso/Salida</th>
-                    <th>Código Precinto</th>
+                    <th>Fecha Ingreso ↕</th>
+                    <th>Código Precinto ↕</th>
                     <th>Descripción</th>
-                    <th>Referencia</th>
-                    <th>Línea</th>
-                    <th>Cant.</th>
-                    <th>Tipo de Salida</th>
-                    <th>No. Remisión</th>
-                    <th>Acción Correctiva</th>
+                    <th>Referencia ↕</th>
+                    <th>Línea ↕</th>
+                    <th>Cant. ↕</th>
+                    <th>Tipo de Salida ↕</th>
+                    <th>Remisión ↕</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="tbody-salidas">
-                <!-- Carga dinámica por JavaScript -->
+                <!-- Se llena dinámicamente -->
             </tbody>
         </table>
     </div>
 
+    <!-- MODAL DE EDICIÓN -->
+    <div id="modal-edicion" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px;">✏️ Editar Registro</h3>
+            <input type="hidden" id="edit-id-original">
+            
+            <div class="form-group">
+                <label>Código Precinto</label>
+                <input type="text" id="edit-precinto" disabled>
+            </div>
+            <div class="form-group">
+                <label>Referencia</label>
+                <input type="text" id="edit-referencia">
+            </div>
+            <div class="form-group">
+                <label>Línea</label>
+                <input type="text" id="edit-linea">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" id="edit-descripcion">
+            </div>
+            <div class="form-group">
+                <label>Cantidad</label>
+                <input type="number" id="edit-cantidad">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-menu" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-green" onclick="guardarEdicion()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INPUT OCULTO PARA SUBIR FOTO -->
+    <input type="file" id="input-foto" style="display: none;" accept="image/*">
+
     <script>
-        // -------------------------------------------------------------
-        // INICIALIZACIÓN DE SUPABASE (CON TUS LLAVES REALES)
-        // -------------------------------------------------------------
+        // ==========================================
+        // 1. CONFIGURACIÓN SUPABASE
+        // ==========================================
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-
-        function obtenerClienteSupabase() {
-            if (window.supabaseClient) return window.supabaseClient;
-            if (window._supabase) return window._supabase;
-            
-            if (window.supabase && typeof window.supabase.createClient === 'function') {
-                return window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
-            }
-            return null;
-        }
-
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
+        
+        const LOGO_POR_DEFECTO = "https://placehold.co/40x40/ffffff/000000?text=M";
         let datosGlobalesSalidas = [];
+        let precintoEnFocoParaFoto = null; 
 
-        // 1. CARGAR REGISTROS DESDE LA TABLA 'prendas'
+        // ==========================================
+        // 2. CARGAR Y RENDERIZAR TABLA
+        // ==========================================
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
-            if (!tbody) return;
-
-            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Cargando registros...</td></tr>`;
-
-            const client = obtenerClienteSupabase();
-
-            if (!client) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
-                    Error: No se encontró la conexión a Supabase.
-                </td></tr>`;
-                return;
-            }
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando registros...</td></tr>`;
 
             try {
-                // Selecciona los datos de tu tabla prendas
-                // Si quieres que solo salgan las prendas con estado "BAJA", descomenta la línea de abajo y borra la que está activa
-                // let res = await client.from('prendas').select('*').eq('estado', 'BAJA');
                 let res = await client.from('prendas').select('*');
-
                 if (res.error) throw res.error;
 
                 datosGlobalesSalidas = res.data || [];
                 renderizarTabla(datosGlobalesSalidas);
-
             } catch (err) {
-                console.error("Error al cargar salidas:", err);
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
-                    Error al cargar datos (${err.message || 'Error de red'}). Revisa la consola (F12).
-                </td></tr>`;
+                console.error("Error:", err);
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error al cargar datos de Supabase.</td></tr>`;
             }
         }
 
-        // 2. RENDERIZAR TABLA EN HTML (Usando los nombres exactos de tus columnas en Supabase)
         function renderizarTabla(lista) {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = "";
 
             if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">No hay registros disponibles.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">No hay registros disponibles.</td></tr>`;
                 actualizarSubtotales(0, 0);
                 return;
             }
@@ -255,19 +334,31 @@
             lista.forEach(item => {
                 const tr = document.createElement("tr");
                 const codigoPrecinto = item.precinto || item.codigo_precinto || item.id || "";
+                const fotoFinal = item.fotoUrl || item.foto_url || item.foto || LOGO_POR_DEFECTO;
+                
+                // Limpieza de datos para el modal
+                const jsonItem = encodeURIComponent(JSON.stringify(item));
 
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}"></td>
-                    <td><img src="${item.fotoUrl || item.foto_url || item.foto || 'https://via.placeholder.com/40'}" class="img-thumb" alt="foto"></td>
+                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
+                    <td><img src="${fotoFinal}" class="img-thumb" alt="foto"></td>
                     <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
                     <td><strong>${codigoPrecinto}</strong></td>
                     <td>${item.descripcion || '-'}</td>
                     <td>${item.referencia || '-'}</td>
                     <td>${item.linea || '-'}</td>
                     <td class="col-cantidad">${item.cantidad || item.cant || 1}</td>
-                    <td><span class="badge-salida">${item.estado || item.tipo_salida || 'SALIDA'}</span></td>
+                    <td>${item.estado || item.tipo_salida || 'SALIDA'}</td>
                     <td>${item.remision || item.no_remision || '-'}</td>
-                    <td>${item.accionCorrectiva || item.accion_correctiva || '-'}</td>
+                    <td><span class="badge-estado">BAJA</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-action btn-view" title="Ver detalle">👁️</button>
+                            <button class="btn-action btn-edit" title="Editar Información" onclick="abrirModal('${jsonItem}')">✏️</button>
+                            <button class="btn-action btn-upload" title="Cambiar/Subir Foto" onclick="triggerSubirFoto('${codigoPrecinto}')">📤</button>
+                            <button class="btn-action btn-delete" title="Eliminar este registro" onclick="eliminarFilaUnica('${codigoPrecinto}')">🗑️</button>
+                        </div>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -275,14 +366,13 @@
             filtrarTabla();
         }
 
-        // 3. FILTRO EN TIEMPO REAL Y SUBTOTALES
+        // ==========================================
+        // 3. SUBTOTALES Y FILTROS
+        // ==========================================
         function filtrarTabla() {
-            const inputBusqueda = document.getElementById("input-busqueda");
-            const filtro = inputBusqueda ? inputBusqueda.value.toLowerCase() : "";
+            const filtro = document.getElementById("input-busqueda").value.toLowerCase();
             const filas = document.querySelectorAll("#tbody-salidas tr");
-            
-            let registrosVisibles = 0;
-            let sumaUnidades = 0;
+            let registrosVisibles = 0, sumaUnidades = 0;
 
             filas.forEach(fila => {
                 if (fila.cells.length > 2) {
@@ -290,100 +380,175 @@
                     if (texto.includes(filtro)) {
                         fila.style.display = "";
                         registrosVisibles++;
-                        
                         const celdaCant = fila.querySelector(".col-cantidad");
-                        if (celdaCant) {
-                            sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
-                        }
+                        if (celdaCant) sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
                     } else {
                         fila.style.display = "none";
                     }
                 }
             });
-
             actualizarSubtotales(registrosVisibles, sumaUnidades);
         }
 
         function actualizarSubtotales(registros, unidades) {
-            const elReg = document.getElementById("subtotal-registros");
-            const elUnd = document.getElementById("subtotal-unidades");
-            if (elReg) elReg.textContent = registros;
-            if (elUnd) elUnd.textContent = unidades.toLocaleString() + " unds";
+            document.getElementById("subtotal-registros").textContent = registros;
+            document.getElementById("subtotal-unidades").textContent = unidades;
         }
 
-        // 4. ELIMINAR REGISTROS MASIVOS DE LA TABLA 'prendas'
+        function actualizarContadorBorrar() {
+            const seleccionados = document.querySelectorAll('.checkbox-item:checked').length;
+            document.getElementById("btn-borrar-masivo").textContent = `🗑️ Borrar ( ${seleccionados} )`;
+        }
+
+        function marcarTodos(source) {
+            document.querySelectorAll('.checkbox-item').forEach(cb => cb.checked = source.checked);
+            actualizarContadorBorrar();
+        }
+
+        // ==========================================
+        // 4. FUNCIONES DE ELIMINAR (Masiva e Individual)
+        // ==========================================
         async function eliminarSeleccionadosSalidas() {
-            const checkboxes = document.querySelectorAll('.checkbox-item:checked');
-            const seleccionados = Array.from(checkboxes).map(cb => cb.value);
-
-            if (seleccionados.length === 0) {
-                alert("Por favor selecciona al menos un registro para eliminar.");
-                return;
-            }
-
-            if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente ${seleccionados.length} registro(s)?`)) {
-                return;
-            }
-
-            const client = obtenerClienteSupabase();
+            const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
+            if (seleccionados.length === 0) return alert("Selecciona registros para borrar.");
+            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s)?`)) return;
 
             try {
-                // Borrando directamente en tu tabla prendas basándonos en la columna precinto
-                let { error } = await client
-                    .from('prendas')
-                    .delete()
-                    .in('precinto', seleccionados);
-
-                if (error) {
-                    const reintento = await client
-                        .from('prendas')
-                        .delete()
-                        .in('id', seleccionados);
-
-                    if (reintento.error) throw reintento.error;
-                }
-
-                alert("Registros eliminados con éxito.");
+                await client.from('prendas').delete().in('precinto', seleccionados);
+                alert("Eliminados con éxito.");
                 cargarTablaSalidas();
+                actualizarContadorBorrar();
+            } catch (err) { alert("Error al borrar."); }
+        }
 
+        async function eliminarFilaUnica(precinto) {
+            if (!confirm(`¿Eliminar el registro ${precinto}?`)) return;
+            try {
+                await client.from('prendas').delete().eq('precinto', precinto);
+                cargarTablaSalidas();
+            } catch (err) { alert("Error al borrar."); }
+        }
+
+        // ==========================================
+        // 5. EDICIÓN DE INFORMACIÓN (MODAL)
+        // ==========================================
+        function abrirModal(jsonEncoded) {
+            const item = JSON.parse(decodeURIComponent(jsonEncoded));
+            document.getElementById('edit-id-original').value = item.precinto || item.id;
+            document.getElementById('edit-precinto').value = item.precinto || item.id;
+            document.getElementById('edit-referencia').value = item.referencia || "";
+            document.getElementById('edit-linea').value = item.linea || "";
+            document.getElementById('edit-descripcion').value = item.descripcion || "";
+            document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
+            
+            document.getElementById('modal-edicion').style.display = 'flex';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-edicion').style.display = 'none';
+        }
+
+        async function guardarEdicion() {
+            const precinto = document.getElementById('edit-id-original').value;
+            const nuevaData = {
+                referencia: document.getElementById('edit-referencia').value,
+                linea: document.getElementById('edit-linea').value,
+                descripcion: document.getElementById('edit-descripcion').value,
+                cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1
+            };
+
+            try {
+                const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
+                if (error) throw error;
+                
+                alert("✅ Información actualizada correctamente.");
+                cerrarModal();
+                cargarTablaSalidas();
             } catch (err) {
-                console.error("Error al borrar:", err);
-                alert("Error al intentar eliminar los registros: " + (err.message || "Bad Request"));
+                alert("❌ Error al guardar cambios.");
+                console.error(err);
             }
         }
 
-        // 5. EXPORTAR A EXCEL UNIFICADO
-        function exportarExcelSalidas() {
-            if (datosGlobalesSalidas.length === 0) {
-                alert("No hay datos para exportar.");
-                return;
-            }
+        // ==========================================
+        // 6. SUBIR/CAMBIAR FOTO (BOTÓN NARANJA)
+        // ==========================================
+        function triggerSubirFoto(precinto) {
+            precintoEnFocoParaFoto = precinto;
+            document.getElementById('input-foto').click();
+        }
 
+        document.getElementById('input-foto').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file || !precintoEnFocoParaFoto) return;
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${precintoEnFocoParaFoto}-${Date.now()}.${fileExt}`;
+            const filePath = `fotos_prendas/${fileName}`;
+
+            alert("⏳ Subiendo foto... Por favor espera.");
+
+            try {
+                const { error: uploadError } = await client.storage.from('imagenes').upload(filePath, file);
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = client.storage.from('imagenes').getPublicUrl(filePath);
+                const urlFoto = publicUrlData.publicUrl;
+
+                const { error: updateError } = await client.from('prendas').update({ fotoUrl: urlFoto }).eq('precinto', precintoEnFocoParaFoto);
+                if (updateError) throw updateError;
+
+                alert("✅ Foto actualizada con éxito.");
+                cargarTablaSalidas();
+                
+            } catch (err) {
+                alert("❌ Error al subir la foto.");
+                console.error(err);
+            } finally {
+                e.target.value = '';
+            }
+        });
+
+        // ==========================================
+        // 7. EXPORTAR A EXCEL (CON PLANTILLA EXACTA)
+        // ==========================================
+        function exportarExcelSalidas() {
+            if (datosGlobalesSalidas.length === 0) return alert("No hay datos para exportar.");
+            
             const datosMapeados = datosGlobalesSalidas.map(item => ({
-                "Fecha Ingreso/Salida": item.fechaIngreso || item.fecha_ingreso || item.created_at || "",
-                "Código Precinto": item.precinto || item.codigo_precinto || item.id || "",
+                "Fecha Ingreso": item.fechaIngreso || item.fecha_ingreso || item.created_at || "",
+                "Registrado Por": item.registradoPor || item.registrado_por || "",
+                "Precinto": item.precinto || item.codigo_precinto || item.id || "",
                 "Descripción": item.descripcion || "",
                 "Referencia": item.referencia || "",
                 "Línea": item.linea || "",
-                "Cant.": item.cantidad || item.cant || 1,
-                "Costo": item.costo ? `${item.costo} ${item.moneda || 'USD'}` : "",
-                "Estado/Tipo Salida": item.estado || item.tipo_salida || "SALIDA",
-                "No. Remisión": item.remision || item.no_remision || "-",
-                "Ubicación": item.ubicacion || "",
-                "Acción Correctiva": item.accionCorrectiva || item.accion_correctiva || ""
+                "Color": item.color || "",
+                "Talla": item.talla || "",
+                "Género": item.genero || "",
+                "Proveedor": item.proveedor || "",
+                "País Origen": item.paisOrigen || item.pais_origen || "",
+                "Precio": item.precio || item.costo || "",
+                "Moneda": item.moneda || "",
+                "Cantidad": item.cantidad || item.cant || 1,
+                "Clasificación": item.clasificacion || "",
+                "Fecha de Salida": item.fechaSalida || item.fecha_salida || "",
+                "Ubicación General": item.ubicacionGeneral || item.ubicacion_general || "",
+                "Ubicación Diseño": item.ubicacionDiseno || item.ubicacion_diseno || "",
+                "Tipo": item.tipo || "",
+                "Observaciones": item.observaciones || item.accionCorrectiva || item.accion_correctiva || "",
+                "Colección": item.coleccion || "",
+                "Remisión de Salida": item.remision || item.no_remision || "",
+                "Orden de Traslado (TO)": item.ordenTraslado || item.to || "",
+                "Estado Actual": item.estado || "BAJA",
+                "Fecha Entrega CI": item.fechaEntregaCI || item.fecha_entrega_ci || ""
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(datosMapeados);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Historial_Prendas");
-
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Salidas");
+            
             const fechaStr = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(workbook, `Reporte_Prendas_Inventario_${fechaStr}.xlsx`);
-        }
-
-        function marcarTodos(source) {
-            const checkboxes = document.querySelectorAll('.checkbox-item');
-            checkboxes.forEach(cb => cb.checked = source.checked);
+            XLSX.writeFile(workbook, `Reporte_Salidas_Plantilla_${fechaStr}.xlsx`);
         }
 
         document.addEventListener("DOMContentLoaded", cargarTablaSalidas);
