@@ -11,21 +11,18 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
 
-        /* Barra Superior (ESTILO SEGUIMIENTO WIP) */
+        /* Barra Superior y Presencia */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
-        
-        /* ESTILO PARA PRESENCIA (AVATARES) */
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
         .avatars-group { display: flex; flex-direction: row-reverse; }
         .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
         .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
-        .avatar-circle:last-child { margin-left: 0; }
         .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
-        
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
         .btn-logout:hover { background-color: #c82333; }
 
+        /* Controles Principales */
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-left { display: flex; align-items: center; gap: 15px; }
         .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
@@ -43,12 +40,14 @@
         .btn-green { background-color: #198754; }
         .btn-green:hover { background-color: #157347; }
 
+        /* Dropdown */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
         .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
         .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
         .show { display: block; }
 
+        /* Tabla y Subtotales */
         .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
         .stat-highlight-yellow { color: #ffc107; }
         .stat-highlight-white { color: #ffffff; }
@@ -75,6 +74,7 @@
         .btn-edit { background-color: #ffc107; }
         .btn-retornar { background-color: #198754; color: white; }
 
+        /* Modales */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
         .modal-content { background-color: #2b2b2b; padding: 25px; border-radius: 8px; width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto; color: #fff; border: 1px solid #444; }
         .modal-header { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -106,14 +106,13 @@
         <div style="display: flex; align-items: center;">
             <div class="en-linea-container">
                 <span>En línea:</span>
-                <div id="usuarios-activos" class="avatars-group">
-                    <!-- Avatares se llenan aquí -->
-                </div>
+                <div id="usuarios-activos" class="avatars-group"></div>
             </div>
             <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
 
+    <!-- CABECERA PRINCIPAL -->
     <div class="main-header">
         <div class="header-left">
             <button class="btn btn-menu" onclick="window.location.href='dashboard.html'">⬅ Menú</button>
@@ -130,8 +129,8 @@
             <div class="dropdown">
                 <button onclick="toggleDropdown()" class="btn btn-blue" id="btn-opciones">⚙️ Opciones ▼</button>
                 <div id="dropdownOpciones" class="dropdown-content">
-                    <a onclick="exportarExcelSalidas()">📥 Exportar a Excel</a>
                     <label for="input-importar">📤 Importar de Excel</label>
+                    <a onclick="exportarExcelSalidas()">📥 Exportar a Excel</a>
                 </div>
             </div>
         </div>
@@ -151,19 +150,21 @@
                 <tr>
                     <th><input type="checkbox" id="check-all" onclick="marcarTodos(this)"></th>
                     <th>Foto</th>
-                    <th class="sortable-col" onclick="ordenarTabla(['fechaIngreso', 'fecha_ingreso', 'created_at'], 'sort-fecha')">Fecha Ingreso <span id="sort-fecha" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['salidaFecha', 'fechaSalida', 'fecha_salida'], 'sort-fecha')">Fecha Salida <span id="sort-fecha" class="icon-sort">↕</span></th>
                     <th class="sortable-col" onclick="ordenarTabla(['precinto', 'codigo_precinto', 'id'], 'sort-precinto')">Código Precinto <span id="sort-precinto" class="icon-sort">↕</span></th>
                     <th>Descripción</th>
                     <th class="sortable-col" onclick="ordenarTabla(['referencia'], 'sort-ref')">Referencia <span id="sort-ref" class="icon-sort">↕</span></th>
                     <th class="sortable-col" onclick="ordenarTabla(['linea'], 'sort-linea')">Línea <span id="sort-linea" class="icon-sort">↕</span></th>
                     <th class="sortable-col" onclick="ordenarTabla(['cantidad', 'cant'], 'sort-cant')">Cant. <span id="sort-cant" class="icon-sort">↕</span></th>
                     <th class="sortable-col" onclick="ordenarTabla(['estado', 'tipo_salida'], 'sort-tipo')">Tipo de Salida <span id="sort-tipo" class="icon-sort">↕</span></th>
-                    <th class="sortable-col" onclick="ordenarTabla(['remision', 'no_remision'], 'sort-rem')">Remisión <span id="sort-rem" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['salidaRemision', 'remision', 'no_remision'], 'sort-rem')">Remisión <span id="sort-rem" class="icon-sort">↕</span></th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="tbody-salidas"></tbody>
+            <tbody id="tbody-salidas">
+                <!-- Se llena dinámicamente -->
+            </tbody>
         </table>
     </div>
 
@@ -186,7 +187,7 @@
             </div>
             <input type="hidden" id="edit-foto-actual">
             <div class="grid-form">
-                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled title="El precinto no se puede modificar"></div>
+                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled></div>
                 <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="edit-fechaIngreso"></div>
                 <div class="form-group"><label>Registrado Por</label><input type="text" id="edit-registradoPor"></div>
                 <div class="form-group"><label>Referencia</label><input type="text" id="edit-referencia"></div>
@@ -207,7 +208,7 @@
                 </div>
                 <div class="form-group"><label>Cantidad</label><input type="number" id="edit-cantidad"></div>
                 <div class="form-group"><label>Clasificación</label><input type="text" id="edit-clasificacion"></div>
-                <div class="form-group"><label>Fecha de Salida</label><input type="date" id="edit-fechaSalida"></div>
+                <div class="form-group"><label>Fecha de Salida</label><input type="date" id="edit-fechaSalida" title="Si borras esta fecha, la prenda volverá automáticamente al Dashboard (Bodega)."></div>
                 <div class="form-group"><label>Ubicación General</label><input type="text" id="edit-ubicacionGeneral"></div>
                 <div class="form-group"><label>Ubicación Diseño</label><input type="text" id="edit-ubicacionDiseno"></div>
                 <div class="form-group"><label>Tipo</label><input type="text" id="edit-tipo"></div>
@@ -219,10 +220,13 @@
                     <label>Estado Actual</label>
                     <select id="edit-estado">
                         <option value="BAJA">BAJA</option>
-                        <option value="SALIDA">SALIDA</option>
-                        <option value="VENDIDO">VENDIDO</option>
-                        <option value="OBSOLETO">OBSOLETO</option>
-                        <option value="DISPONIBLE">♻️ Disponible en inventario (Devolver)</option>
+                        <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option>
+                        <option value="PARA FOTOS">PARA FOTOS</option>
+                        <option value="PARA MERCADEO">PARA MERCADEO</option>
+                        <option value="PARA COMERCIAL">PARA COMERCIAL</option>
+                        <option value="OBSEQUIO">OBSEQUIO</option>
+                        <option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option>
+                        <option value="Disponible en inventario">♻️ Disponible en inventario (Devolver)</option>
                     </select>
                 </div>
                 
@@ -232,7 +236,6 @@
                 <div class="form-group full-width" style="background-color: #222; padding: 15px; border-radius: 6px; border: 1px dashed #555;">
                     <label style="color: #fd7e14;">📷 Subir o Reemplazar Foto (Opcional)</label>
                     <input type="file" id="edit-nueva-foto" accept="image/*" style="border: none; padding: 0;">
-                    <small style="color: #888;">Si no seleccionas ninguna foto, se conservará la que ya está guardada.</small>
                 </div>
             </div>
             
@@ -259,11 +262,7 @@
         let datosGlobalesSalidas = [];
         let estadoOrden = { columnaID: null, ascendente: true };
 
-        // ==========================================
-        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
-        // ==========================================
-        let canalPresencia;
-
+        // PRESENCIA
         function generarColorHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
@@ -271,18 +270,14 @@
             return '#' + '00000'.substring(0, 6 - c.length) + c;
         }
 
-        function obtenerIniciales(email) {
-            return email.substring(0, 2).toUpperCase();
-        }
+        function obtenerIniciales(email) { return email.substring(0, 2).toUpperCase(); }
 
         async function configurarPresencia(emailUsuario) {
-            canalPresencia = client.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
-
+            const canalPresencia = client.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
             canalPresencia.on('presence', { event: 'sync' }, () => {
                 const state = canalPresencia.presenceState();
                 const container = document.getElementById('usuarios-activos');
                 container.innerHTML = '';
-                
                 Object.keys(state).forEach(email => {
                     const div = document.createElement('div');
                     div.className = 'avatar-circle';
@@ -292,7 +287,6 @@
                     container.appendChild(div);
                 });
             });
-
             canalPresencia.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
                     await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
@@ -302,51 +296,46 @@
 
         async function verificarSesion() {
             const { data: { session }, error } = await client.auth.getSession();
-            if (!session) { 
-                window.location.href = "index.html"; 
-            } else { 
-                configurarPresencia(session.user.email);
-            }
+            if (!session) { window.location.href = "index.html"; } 
+            else { configurarPresencia(session.user.email); }
         }
 
-        window.cerrarSesion = async function() { 
-            await client.auth.signOut(); 
-            window.location.href = "index.html"; 
-        }
-        
+        window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
-        client.channel('cambios-bajas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => {
-            cargarTablaSalidas();
-        }).subscribe();
+        client.channel('cambios-bajas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTablaSalidas(); }).subscribe();
 
-        function toggleDropdown() {
-            document.getElementById("dropdownOpciones").classList.toggle("show");
-        }
-        
+        function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
             if (!event.target.matches('.btn-blue')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
                 for (var i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) openDropdown.classList.remove('show');
+                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
                 }
             }
         }
 
+        // ==========================================
+        // LA REGLA DE ORO: SI TIENE FECHA DE SALIDA -> ES UNA SALIDA (AQUÍ)
+        // ==========================================
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando registros...</td></tr>`;
 
             try {
-                let res = await client.from('prendas').select('*').neq('estado', 'Disponible en inventario');
+                let res = await client.from('prendas').select('*').order('id', { ascending: false });
                 if (res.error) throw res.error;
 
-                datosGlobalesSalidas = res.data || [];
+                // FILTRO: Solo prendas cuya Fecha de Salida NO esté vacía
+                datosGlobalesSalidas = (res.data || []).filter(item => {
+                    let f = (item.salidaFecha || item.fechaSalida || item.fecha_salida || "").trim();
+                    return f !== "";
+                });
+
                 renderizarTabla(datosGlobalesSalidas);
             } catch (err) {
                 console.error("Error:", err);
-                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error al cargar datos de Supabase.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
             }
         }
 
@@ -372,9 +361,9 @@
                 const descripcionGenerada = partesDesc.join(" ") || "-";
 
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
+                    <td style="text-align: center;"><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
                     <td>${celdaFotoHTML}</td>
-                    <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
+                    <td>${item.salidaFecha || item.fechaSalida || item.fecha_salida || '-'}</td>
                     <td><strong>${codigoPrecinto}</strong></td>
                     <td style="color:#ccc; font-size:11px;">${descripcionGenerada}</td>
                     <td>${item.referencia || '-'}</td>
@@ -385,8 +374,8 @@
                     <td><span class="badge-estado">${item.estado || 'BAJA'}</span></td>
                     <td>
                         <div class="action-btns">
-                            <button class="btn-action btn-view" title="Ver toda la información" onclick="abrirModalVer('${jsonItem}')">👁️</button>
-                            <button class="btn-action btn-edit" title="Editar Información o Adjuntar Foto" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
+                            <button class="btn-action btn-view" title="Ver Detalles" onclick="abrirModalVer('${jsonItem}')">👁️</button>
+                            <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
                             <button class="btn-action btn-retornar" title="Retornar a Bodega" onclick="retornarAInventario('${codigoPrecinto}')">↩️</button>
                         </div>
                     </td>
@@ -403,13 +392,13 @@
         }
 
         window.retornarAInventario = async function(idDocumento) {
-            if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA?")) {
+            if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA? (Se borrará la fecha de salida)")) {
                 const { error } = await client.from('prendas')
-                    .update({ estado: "Disponible en inventario", salidaRemision: "", fechaSalida: "", salidaTo: "" })
+                    .update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" })
                     .eq('precinto', idDocumento);
                 
                 if (error) {
-                    await client.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", fechaSalida: "", salidaTo: "" }).eq('id', idDocumento);
+                    await client.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" }).eq('id', idDocumento);
                 }
                 
                 alert("¡Acción realizada! La prenda regresó al inventario disponible. 🟢");
@@ -418,37 +407,24 @@
         }
 
         function ordenarTabla(clavesAcceso, idIconoHtml) {
-            if (estadoOrden.columnaID === idIconoHtml) {
-                estadoOrden.ascendente = !estadoOrden.ascendente;
-            } else {
-                estadoOrden.columnaID = idIconoHtml;
-                estadoOrden.ascendente = true;
-            }
+            if (estadoOrden.columnaID === idIconoHtml) { estadoOrden.ascendente = !estadoOrden.ascendente; } 
+            else { estadoOrden.columnaID = idIconoHtml; estadoOrden.ascendente = true; }
 
             datosGlobalesSalidas.sort((a, b) => {
                 let valorA = ""; let valorB = "";
-
                 for(let clave of clavesAcceso) { if(a[clave] !== undefined && a[clave] !== null) { valorA = a[clave]; break; } }
                 for(let clave of clavesAcceso) { if(b[clave] !== undefined && b[clave] !== null) { valorB = b[clave]; break; } }
-
-                if (typeof valorA === 'number' && typeof valorB === 'number') {
-                    return estadoOrden.ascendente ? valorA - valorB : valorB - valorA;
-                }
-
-                valorA = valorA.toString().toLowerCase();
-                valorB = valorB.toString().toLowerCase();
-
+                if (typeof valorA === 'number' && typeof valorB === 'number') { return estadoOrden.ascendente ? valorA - valorB : valorB - valorA; }
+                valorA = valorA.toString().toLowerCase(); valorB = valorB.toString().toLowerCase();
                 if (valorA < valorB) return estadoOrden.ascendente ? -1 : 1;
                 if (valorA > valorB) return estadoOrden.ascendente ? 1 : -1;
                 return 0;
             });
 
             document.querySelectorAll('.icon-sort').forEach(icon => { icon.innerHTML = '↕'; icon.style.color = "#888"; });
-            
             const iconoActivo = document.getElementById(idIconoHtml);
             iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️';
             iconoActivo.style.color = "#fff";
-
             renderizarTabla(datosGlobalesSalidas);
         }
 
@@ -456,18 +432,14 @@
             const filtro = document.getElementById("input-busqueda").value.toLowerCase();
             const filas = document.querySelectorAll("#tbody-salidas tr");
             let registrosVisibles = 0, sumaUnidades = 0;
-
             filas.forEach(fila => {
                 if (fila.cells.length > 2) {
                     const texto = fila.textContent.toLowerCase();
                     if (texto.includes(filtro)) {
-                        fila.style.display = "";
-                        registrosVisibles++;
+                        fila.style.display = ""; registrosVisibles++;
                         const celdaCant = fila.querySelector(".col-cantidad");
                         if (celdaCant) sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
-                    } else {
-                        fila.style.display = "none";
-                    }
+                    } else { fila.style.display = "none"; }
                 }
             });
             actualizarSubtotales(registrosVisibles, sumaUnidades);
@@ -494,29 +466,22 @@
 
         async function eliminarSeleccionadosSalidas() {
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
-            if (seleccionados.length === 0) return alert("Selecciona registros en las casillas para borrar.");
+            if (seleccionados.length === 0) return;
             if (!confirm(`¿Eliminar ${seleccionados.length} registro(s) permanentemente?`)) return;
 
             const btnBorrar = document.getElementById("btn-borrar-masivo");
             const textoOriginal = btnBorrar.textContent;
-            btnBorrar.textContent = "⏳ Borrando...";
-            btnBorrar.disabled = true;
+            btnBorrar.textContent = "⏳ Borrando..."; btnBorrar.disabled = true;
 
             try {
                 await client.from('prendas').delete().in('precinto', seleccionados);
                 await client.from('prendas').delete().in('id', seleccionados);
-                
                 alert("✅ Registros eliminados con éxito.");
                 document.getElementById('check-all').checked = false;
                 cargarTablaSalidas();
                 actualizarContadorBorrar();
-            } catch (err) { 
-                console.error(err);
-                alert("❌ Error al borrar los registros."); 
-            } finally {
-                btnBorrar.textContent = textoOriginal;
-                btnBorrar.disabled = false;
-            }
+            } catch (err) { console.error(err); alert("❌ Error al borrar los registros."); } 
+            finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
         }
 
         window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
@@ -524,61 +489,37 @@
         function abrirModalVer(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
             const contenedor = document.getElementById('view-form-container');
-            
             const fotoActual = item.fotoUrl || item.foto_url || item.foto || "";
             let htmlDetalles = "";
-            
             if (fotoActual && fotoActual !== "logo.png") {
-                htmlDetalles += `
-                    <div class="view-photo-container">
-                        <img src="${fotoActual}" alt="Foto Muestra">
-                    </div>`;
+                htmlDetalles += `<div class="view-photo-container"><img src="${fotoActual}" alt="Foto Muestra"></div>`;
             }
 
             const camposRelevantes = [
-                { label: "Precinto (ID)", val: item.precinto || item.id },
-                { label: "Referencia", val: item.referencia },
-                { label: "Descripción", val: item.descripcion },
-                { label: "Fecha Ingreso", val: item.fechaIngreso || item.fecha_ingreso },
-                { label: "Registrado Por", val: item.registradoPor || item.registrado_por },
-                { label: "Línea", val: item.linea },
-                { label: "Color", val: item.color },
-                { label: "Talla", val: item.talla },
-                { label: "Género", val: item.genero },
-                { label: "Proveedor", val: item.proveedor },
-                { label: "País Origen", val: item.paisOrigen || item.pais_origen },
-                { label: "Precio / Costo", val: item.precio || item.costo },
-                { label: "Moneda", val: item.moneda },
-                { label: "Cantidad", val: item.cantidad || item.cant },
-                { label: "Clasificación", val: item.clasificacion },
-                { label: "Fecha de Salida", val: item.fechaSalida || item.fecha_salida },
+                { label: "Precinto (ID)", val: item.precinto || item.id }, { label: "Referencia", val: item.referencia },
+                { label: "Descripción", val: item.descripcion }, { label: "Fecha Ingreso", val: item.fechaIngreso || item.fecha_ingreso },
+                { label: "Registrado Por", val: item.registradoPor || item.registrado_por }, { label: "Línea", val: item.linea },
+                { label: "Color", val: item.color }, { label: "Talla", val: item.talla }, { label: "Género", val: item.genero },
+                { label: "Proveedor", val: item.proveedor }, { label: "País Origen", val: item.paisOrigen || item.pais_origen },
+                { label: "Precio / Costo", val: item.precio || item.costo }, { label: "Moneda", val: item.moneda },
+                { label: "Cantidad", val: item.cantidad || item.cant }, { label: "Clasificación", val: item.clasificacion },
+                { label: "Fecha de Salida", val: item.salidaFecha || item.fechaSalida || item.fecha_salida },
                 { label: "Ubicación General", val: item.ubicacionGeneral || item.ubicacion_general },
-                { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno },
-                { label: "Tipo", val: item.tipo },
-                { label: "Colección", val: item.coleccion },
-                { label: "Remisión de Salida", val: item.salidaRemision || item.remision || item.no_remision },
-                { label: "Orden de Traslado", val: item.salidaTo || item.ordenTraslado || item.to },
-                { label: "Estado Actual", val: item.estado },
+                { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno }, { label: "Tipo", val: item.tipo },
+                { label: "Colección", val: item.coleccion }, { label: "Remisión de Salida", val: item.salidaRemision || item.remision || item.no_remision },
+                { label: "Orden de Traslado", val: item.salidaTo || item.ordenTraslado || item.to }, { label: "Estado Actual", val: item.estado },
                 { label: "Fecha Entrega CI", val: item.fechaEntregaCI || item.fecha_entrega_ci },
                 { label: "Observaciones", val: item.observaciones || item.accionCorrectiva || item.accion_correctiva, full: true }
             ];
 
             camposRelevantes.forEach(c => {
-                const claseFull = c.full ? "full-width" : "";
-                htmlDetalles += `
-                    <div class="form-group ${claseFull}">
-                        <label>${c.label}</label>
-                        <input type="text" value="${c.val || '-'}" disabled>
-                    </div>`;
+                htmlDetalles += `<div class="form-group ${c.full ? "full-width" : ""}"><label>${c.label}</label><input type="text" value="${c.val || '-'}" disabled></div>`;
             });
-
-            contenedor.innerHTML = htmlDetalles;
-            document.getElementById('modal-ver').style.display = 'flex';
+            contenedor.innerHTML = htmlDetalles; document.getElementById('modal-ver').style.display = 'flex';
         }
 
         function abrirModalEdicion(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            
             document.getElementById('edit-precinto').value = item.precinto || item.id || "";
             document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || "";
             document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || "";
@@ -593,7 +534,10 @@
             document.getElementById('edit-moneda').value = item.moneda || "COP";
             document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
             document.getElementById('edit-clasificacion').value = item.clasificacion || "";
-            document.getElementById('edit-fechaSalida').value = item.fechaSalida || item.fecha_salida || "";
+            
+            // Campo clave
+            document.getElementById('edit-fechaSalida').value = item.salidaFecha || item.fechaSalida || item.fecha_salida || ""; 
+            
             document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || "";
             document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || "";
             document.getElementById('edit-tipo').value = item.tipo || "";
@@ -602,31 +546,23 @@
             document.getElementById('edit-ordenTraslado').value = item.salidaTo || item.ordenTraslado || item.to || "";
             
             const selectEstado = document.getElementById('edit-estado');
-            const estadoReal = (item.estado || "BAJA").toUpperCase().trim();
-            
-            if (!Array.from(selectEstado.options).some(opt => opt.value === estadoReal) && !estadoReal.includes('DISPONIBLE')) {
-                const nuevaOpcion = document.createElement("option");
-                nuevaOpcion.value = estadoReal;
-                nuevaOpcion.text = estadoReal;
-                selectEstado.add(nuevaOpcion);
+            const estadoReal = (item.estado || "BAJA").trim();
+            if (!Array.from(selectEstado.options).some(opt => opt.value === estadoReal) && !estadoReal.toUpperCase().includes('DISPONIBLE')) {
+                const nuevaOpcion = document.createElement("option"); nuevaOpcion.value = estadoReal; nuevaOpcion.text = estadoReal; selectEstado.add(nuevaOpcion);
             }
-            selectEstado.value = estadoReal.includes('DISPONIBLE') ? "DISPONIBLE" : estadoReal;
+            selectEstado.value = estadoReal.toUpperCase().includes('DISPONIBLE') ? "Disponible en inventario" : estadoReal;
 
             document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || "";
             document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || "";
-            
             document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || "";
             document.getElementById('edit-nueva-foto').value = "";
-            
             document.getElementById('modal-edicion').style.display = 'flex';
         }
 
         async function guardarEdicion() {
             const precinto = document.getElementById('edit-precinto').value;
             const btnGuardar = document.getElementById('btn-guardar-edicion');
-            
-            btnGuardar.disabled = true;
-            btnGuardar.innerHTML = "⏳ Guardando...";
+            btnGuardar.disabled = true; btnGuardar.innerHTML = "⏳ Guardando...";
 
             try {
                 let urlFotoFinal = document.getElementById('edit-foto-actual').value;
@@ -636,118 +572,77 @@
                     const reader = new FileReader();
                     urlFotoFinal = await new Promise((resolve) => {
                         reader.onload = function(event) {
-                            const img = new Image();
-                            img.src = event.target.result;
+                            const img = new Image(); img.src = event.target.result;
                             img.onload = function() {
                                 const canvas = document.createElement('canvas');
-                                const MAX_WIDTH = 600; const MAX_HEIGHT = 600;
                                 let width = img.width; let height = img.height;
-                                if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                                } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                                if (width > height) { if (width > 600) { height *= 600 / width; width = 600; } } else { if (height > 600) { width *= 600 / height; height = 600; } }
                                 canvas.width = width; canvas.height = height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0, width, height);
+                                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
                                 resolve(canvas.toDataURL('image/jpeg', 0.6));
                             }
-                        };
-                        reader.readAsDataURL(fileInput.files[0]);
+                        }; reader.readAsDataURL(fileInput.files[0]);
                     });
                 }
 
+                let fechaSalidaRevisada = document.getElementById('edit-fechaSalida').value;
                 let estadoSeleccionado = document.getElementById('edit-estado').value;
-                if(estadoSeleccionado === "DISPONIBLE") estadoSeleccionado = "Disponible en inventario";
 
                 const nuevaData = {
-                    fechaIngreso: document.getElementById('edit-fechaIngreso').value,
-                    registradoPor: document.getElementById('edit-registradoPor').value,
-                    referencia: document.getElementById('edit-referencia').value,
-                    linea: document.getElementById('edit-linea').value,
-                    color: document.getElementById('edit-color').value,
-                    talla: document.getElementById('edit-talla').value,
-                    genero: document.getElementById('edit-genero').value,
-                    proveedor: document.getElementById('edit-proveedor').value,
-                    paisOrigen: document.getElementById('edit-paisOrigen').value,
-                    precio: document.getElementById('edit-precio').value,
-                    moneda: document.getElementById('edit-moneda').value,
-                    cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
-                    clasificacion: document.getElementById('edit-clasificacion').value,
-                    fechaSalida: document.getElementById('edit-fechaSalida').value,
-                    ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value,
-                    ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
-                    tipo: document.getElementById('edit-tipo').value,
-                    coleccion: document.getElementById('edit-coleccion').value,
-                    salidaRemision: document.getElementById('edit-remision').value,
-                    salidaTo: document.getElementById('edit-ordenTraslado').value,
-                    estado: estadoSeleccionado,
-                    fechaEntregaCI: document.getElementById('edit-fechaEntregaCI').value,
-                    observaciones: document.getElementById('edit-observaciones').value,
-                    fotoUrl: urlFotoFinal
+                    fechaIngreso: document.getElementById('edit-fechaIngreso').value, registradoPor: document.getElementById('edit-registradoPor').value,
+                    referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
+                    color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
+                    genero: document.getElementById('edit-genero').value, proveedor: document.getElementById('edit-proveedor').value,
+                    paisOrigen: document.getElementById('edit-paisOrigen').value, precio: document.getElementById('edit-precio').value,
+                    moneda: document.getElementById('edit-moneda').value, cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
+                    clasificacion: document.getElementById('edit-clasificacion').value, 
+                    salidaFecha: fechaSalidaRevisada, // SE GUARDA AQUI
+                    ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value, ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
+                    tipo: document.getElementById('edit-tipo').value, coleccion: document.getElementById('edit-coleccion').value,
+                    salidaRemision: document.getElementById('edit-remision').value, salidaTo: document.getElementById('edit-ordenTraslado').value,
+                    estado: estadoSeleccionado, fechaEntregaCI: document.getElementById('edit-fechaEntregaCI').value,
+                    observaciones: document.getElementById('edit-observaciones').value, fotoUrl: urlFotoFinal
                 };
 
                 const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
-                if (error) {
-                    const reintento = await client.from('prendas').update(nuevaData).eq('id', precinto);
-                    if (reintento.error) throw reintento.error;
-                }
+                if (error) { await client.from('prendas').update(nuevaData).eq('id', precinto); }
                 
-                if (estadoSeleccionado === "Disponible en inventario") {
-                    alert("✅ Prenda actualizada exitosamente.\n\nLa prenda ha regresado al Dashboard como DISPONIBLE.");
+                if (fechaSalidaRevisada === "") {
+                    alert("✅ Prenda actualizada.\n\nComo le borraste la 'Fecha de Salida', esta prenda ha regresado al Dashboard (Bodega).");
                 } else {
                     alert("✅ Información actualizada correctamente.");
                 }
 
                 cerrarModal('modal-edicion');
                 cargarTablaSalidas();
-
-            } catch (err) {
-                alert("❌ Error al guardar. Verifica la consola para más detalles.");
-                console.error(err);
-            } finally {
-                btnGuardar.disabled = false;
-                btnGuardar.innerHTML = "💾 Guardar Cambios";
-            }
+            } catch (err) { alert("❌ Error al guardar. Verifica consola."); console.error(err);
+            } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
         }
 
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) return alert("No hay datos para exportar.");
-            
             const datosMapeados = datosGlobalesSalidas.map(item => {
                 const partesDesc = [item.referencia, item.linea, item.color, item.talla, item.clasificacion].filter(val => val && val.toString().trim() !== "");
                 return {
                     "Fecha Ingreso Original": item.fechaIngreso || item.fecha_ingreso || item.created_at || "",
                     "Registrado Por": item.registradoPor || item.registrado_por || "",
-                    "Precinto": item.precinto || item.codigo_precinto || item.id || "",
-                    "Descripción": partesDesc.join(" ") || "",
-                    "Referencia": item.referencia || "",
-                    "Línea": item.linea || "",
-                    "Color": item.color || "",
-                    "Talla": item.talla || "",
-                    "Género": item.genero || "",
-                    "Proveedor": item.proveedor || "",
-                    "País Origen": item.paisOrigen || item.pais_origen || "",
-                    "Precio": item.precio || item.costo || "",
-                    "Moneda": item.moneda || "",
-                    "Cantidad": item.cantidad || item.cant || 1,
-                    "Clasificación": item.clasificacion || "",
-                    "Fecha de Salida": item.fechaSalida || item.fecha_salida || "",
-                    "Ubicación General": item.ubicacionGeneral || item.ubicacion_general || "",
-                    "Ubicación Diseño": item.ubicacionDiseno || item.ubicacion_diseno || "",
-                    "Tipo": item.tipo || "",
-                    "Observaciones": item.observaciones || item.accionCorrectiva || item.accion_correctiva || "",
-                    "Colección": item.coleccion || "",
-                    "Remisión de Salida": item.salidaRemision || item.remision || item.no_remision || "",
-                    "Orden de Traslado (TO)": item.salidaTo || item.ordenTraslado || item.to || "",
-                    "Estado Actual": item.estado || "BAJA",
+                    "Precinto": item.precinto || item.codigo_precinto || item.id || "", "Descripción": partesDesc.join(" ") || "",
+                    "Referencia": item.referencia || "", "Línea": item.linea || "", "Color": item.color || "",
+                    "Talla": item.talla || "", "Género": item.genero || "", "Proveedor": item.proveedor || "",
+                    "País Origen": item.paisOrigen || item.pais_origen || "", "Precio": item.precio || item.costo || "",
+                    "Moneda": item.moneda || "", "Cantidad": item.cantidad || item.cant || 1, "Clasificación": item.clasificacion || "",
+                    "Fecha de Salida": item.salidaFecha || item.fechaSalida || item.fecha_salida || "",
+                    "Ubicación General": item.ubicacionGeneral || item.ubicacion_general || "", "Ubicación Diseño": item.ubicacionDiseno || item.ubicacion_diseno || "",
+                    "Tipo": item.tipo || "", "Observaciones": item.observaciones || item.accionCorrectiva || item.accion_correctiva || "",
+                    "Colección": item.coleccion || "", "Remisión de Salida": item.salidaRemision || item.remision || item.no_remision || "",
+                    "Orden de Traslado (TO)": item.salidaTo || item.ordenTraslado || item.to || "", "Estado Actual": item.estado || "BAJA",
                     "Fecha Entrega CI": item.fechaEntregaCI || item.fecha_entrega_ci || ""
                 };
             });
-
             const worksheet = XLSX.utils.json_to_sheet(datosMapeados);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Salidas");
-            
-            const fechaStr = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(workbook, `Reporte_Salidas_Plantilla_${fechaStr}.xlsx`);
+            XLSX.writeFile(workbook, `Reporte_Salidas_Plantilla_${new Date().toISOString().slice(0, 10)}.xlsx`);
         }
 
         function formatearFechaExcel(fechaStrONum) {
@@ -756,86 +651,45 @@
             if (typeof fechaStrONum === 'number') {
                 const fechaUnix = Math.round((fechaStrONum - 25569) * 86400 * 1000);
                 const fechaPura = new Date(fechaUnix);
-                const fechaAjustada = new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000));
-                return fechaAjustada.toISOString().split('T')[0];
-            }
-            return "";
+                return new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            } return "";
         }
 
         document.getElementById('input-importar').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            alert("⏳ Leyendo archivo de Excel...");
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = async function(event) {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-
-                if (json.length === 0) {
-                    alert("El archivo de Excel está vacío.");
-                    return;
-                }
-
-                const registrosValidos = json.filter(item => {
-                    const estadoExcel = (item["Estado Actual"] || "").toString().toUpperCase().trim();
-                    return item["Precinto"] && !estadoExcel.includes("DISPONIBLE");
-                });
-
-                if (registrosValidos.length === 0) {
-                    alert("⚠️ El Excel no contiene registros válidos para Salidas.\n(Verifica que tengan 'Precinto' y que el Estado no sea 'DISPONIBLE').");
-                    e.target.value = "";
-                    return;
-                }
-
-                if (!confirm(`Se encontraron ${registrosValidos.length} registros de Salidas/Bajas. ¿Deseas importarlos a la base de datos?`)) {
-                    e.target.value = ""; return;
-                }
-
                 try {
-                    const registrosInsertar = registrosValidos.map(item => ({
-                        fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
-                        registradoPor: item["Registrado Por"] || null,
-                        precinto: item["Precinto"] || null,
-                        referencia: item["Referencia"] || null,
-                        linea: item["Línea"] || null,
-                        color: item["Color"] || null,
-                        talla: item["Talla"] || null,
-                        genero: item["Género"] || null,
-                        proveedor: item["Proveedor"] || null,
-                        paisOrigen: item["País Origen"] || null,
-                        precio: item["Precio"] || null,
-                        moneda: item["Moneda"] || null,
-                        cantidad: parseInt(item["Cantidad"]) || 1,
-                        clasificacion: item["Clasificación"] || null,
-                        fechaSalida: formatearFechaExcel(item["Fecha de Salida"]) || null,
-                        ubicacionGeneral: item["Ubicación General"] || null,
-                        ubicacionDiseno: item["Ubicación Diseño"] || null,
-                        tipo: item["Tipo"] || null,
-                        coleccion: item["Colección"] || null,
-                        salidaRemision: item["Remisión de Salida"] || null,
-                        salidaTo: item["Orden de Traslado (TO)"] || null,
-                        estado: item["Tipo de Salida / Destino"] || item["Estado Actual"] || "SALIDA DEL INVENTARIO",
-                        fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
-                        observaciones: item["Observaciones"] || null
-                    }));
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    if (json.length === 0) return alert("El archivo de Excel está vacío.");
 
-                    const { error } = await client.from('prendas').upsert(registrosInsertar, { onConflict: 'precinto' });
-                    if (error) throw error;
-                    
-                    alert("✅ Importación exitosa. Se han cargado/actualizado los registros.");
-                    cargarTablaSalidas();
-                } catch (error) {
-                    console.error("Error importando Excel:", error);
-                    alert("❌ Error al importar los datos. Revisa la consola.");
-                } finally {
-                    e.target.value = ""; 
-                }
-            };
-            reader.readAsArrayBuffer(file);
+                    if (confirm(`⚠️ Vas a importar ${json.length} prendas al sistema.\n\n¿Deseas continuar?`)) {
+                        const registrosInsertar = json.map(item => ({
+                            fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
+                            registradoPor: item["Registrado Por"] || null, precinto: item["Precinto"] || null,
+                            referencia: item["Referencia"] || null, linea: item["Línea"] || null,
+                            color: item["Color"] || null, talla: item["Talla"] || null,
+                            genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
+                            paisOrigen: item["País Origen"] || null, precio: item["Precio"] || null,
+                            moneda: item["Moneda"] || null, cantidad: parseInt(item["Cantidad"]) || 1,
+                            clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"]) || null,
+                            ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
+                            tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
+                            salidaRemision: item["Remisión de Salida"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
+                            estado: item["Estado Actual"] || "SALIDA DEL INVENTARIO", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
+                            observaciones: item["Observaciones"] || null
+                        }));
+
+                        const { error } = await client.from('prendas').upsert(registrosInsertar, { onConflict: 'precinto' });
+                        if (error) throw error;
+                        alert("✅ Importación exitosa. Se han cargado/actualizado los registros.");
+                        cargarTablaSalidas();
+                    }
+                } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar los datos. Revisa la consola."); } 
+                finally { e.target.value = ""; }
+            }; reader.readAsArrayBuffer(file);
         });
 
         document.addEventListener("DOMContentLoaded", cargarTablaSalidas);

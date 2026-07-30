@@ -2,304 +2,289 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Inventario Muestras</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <style>
-        body { background-color: #1e1e1e; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
-        .contenedor { background-color: #2d2d2d; max-width: 95%; margin: 0 auto; padding: 30px; border-radius: 12px; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.5); }
-        .barra-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #444; padding-bottom: 15px; }
-        .buscador { padding: 10px; width: 350px; border-radius: 6px; border: 1px solid #555; background-color: #1a1a1a; color: white; }
-        .btn-volver { background-color: #444; color: white; text-decoration: none; padding: 10px 15px; border-radius: 6px; margin-right: 15px; font-weight: bold; }
-        .contenedor-tabla { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th { color: #0078D4; text-align: left; padding: 12px; border-bottom: 2px solid #555; white-space: nowrap; }
-        td { padding: 12px; border-bottom: 1px solid #444; vertical-align: middle; }
-        tr:hover { background-color: #3d3d3d; }
-        
-        .foto-miniatura { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; border: 1px solid #444; transition: 0.2s; cursor: pointer; }
-        .foto-miniatura:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #ffffff; margin: 0; padding: 20px; }
 
-        .estado-disponible { background-color: #198754; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        .btn-accion { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 4px; transition: 0.2s; }
-        
-        .btn-ver { background-color: #17a2b8; color: white; }
-        .btn-editar { background-color: #ffc107; color: black; }
-        .btn-salida { background-color: #fd7e14; color: white; } 
-        .btn-borrar { background-color: #dc3545; color: white; }
-        .btn-accion:hover { opacity: 0.8; }
-        
-        /* ESTILOS DEL MENÚ DESPLEGABLE "OPCIONES" */
-        .dropdown { position: relative; display: inline-block; }
-        .btn-opciones { background-color: #0078D4; color: white; border: none; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
-        .btn-opciones:hover { background-color: #005a9e; }
-        .btn-guardar { background-color: #10b981; } 
-        .btn-guardar:hover { background-color: #059669; }
-
-        .dropdown-contenido { display: none; position: absolute; right: 0; background-color: #222222; min-width: 250px; box-shadow: 0px 8px 24px rgba(0,0,0,0.7); border: 1px solid #444; border-radius: 8px; z-index: 100; margin-top: 6px; overflow: hidden; }
-        
-        .dropdown-item { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; text-align: left; background: none; border: none; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; box-sizing: border-box; transition: 0.2s; font-weight: 500; }
-        .dropdown-item:hover { background-color: #333333; }
-        
-        .item-excel { border-left: 4px solid #28a745; }
-        .item-bajas { border-left: 4px solid #fd7e14; }
-        .item-agregar { border-left: 4px solid #0078D4; }
-        .item-importar { border-left: 4px solid #17a2b8; } 
-        
-        .show { display: block; }
-
-        /* ESTILO PARA PRESENCIA (AVATARES) */
+        /* Barra Superior y Presencia */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .titulo-bodega { font-size: 14px; font-weight: bold; color: #a0a0a0; text-transform: uppercase; letter-spacing: 1px; }
         .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #a0a0a0; font-weight: 500; }
         .avatars-group { display: flex; flex-direction: row-reverse; }
         .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #2d2d2d; margin-left: -12px; position: relative; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s; }
         .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
-        .avatar-circle:last-child { margin-left: 0; }
         .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #111; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; border: 1px solid #444; color: #fff; text-transform: capitalize; }
-        
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; margin-left: 15px;}
         .btn-logout:hover { background-color: #c82333; }
 
-        /* MODALES */
-        .modal-fondo { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-contenido { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        .modal-contenido h3 { color: #fd7e14; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
-        .modal-contenido label { display: block; margin-top: 15px; font-size: 13px; color: #ccc; font-weight: bold; }
-        .modal-contenido input, .modal-contenido select { width: 100%; padding: 10px; margin-top: 5px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 6px; color: white; box-sizing: border-box; }
-        
-        .modal-botones { display: flex; justify-content: space-between; margin-top: 25px; }
-        .btn-cancelar { background-color: #444; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
-        .btn-confirmar { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; width: 48%; font-weight: bold; transition: 0.3s; }
-        .btn-confirmar:hover { background-color: #218838; }
-        #mensajeCarga { text-align: center; color: #aaa; padding: 20px; font-style: italic; }
+        /* Controles Principales */
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-left h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;}
+        .header-center { flex-grow: 1; display: flex; justify-content: center; }
+        .search-input { width: 100%; max-width: 450px; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background-color: #121212; color: #fff; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
 
+        .btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #fff; transition: 0.2s; }
+        .btn-menu { background-color: #333; border: 1px solid #444; }
+        .btn-menu:hover { background-color: #444; }
+        .btn-red { background-color: #dc3545; }
+        .btn-red:hover { background-color: #c82333; }
+        .btn-blue { background-color: #0d6efd; }
+        .btn-blue:hover { background-color: #0b5ed7; }
+        .btn-green { background-color: #198754; }
+        .btn-green:hover { background-color: #157347; }
+        .btn-orange { background-color: #fd7e14; }
+        .btn-orange:hover { background-color: #e86e04; }
+
+        /* Dropdown */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: #2b2b2b; min-width: 170px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border-radius: 6px; border: 1px solid #444; overflow: hidden; margin-top: 5px; }
+        .dropdown-content a, .dropdown-content label { color: white; padding: 10px 15px; text-decoration: none; display: block; font-size: 13px; cursor: pointer; }
+        .dropdown-content a:hover, .dropdown-content label:hover { background-color: #3d3d3d; }
+        .show { display: block; }
+
+        /* Tabla y Subtotales */
+        .stats-banner { display: inline-flex; background-color: #121212; border: 1px solid #333; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: bold; }
+        .stat-highlight-yellow { color: #ffc107; }
+        .stat-highlight-white { color: #ffffff; }
+        .stat-divider { margin: 0 10px; color: #555; }
+
+        .table-container { overflow-x: auto; border-radius: 6px; border: 1px solid #333; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background-color: #222; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #333; text-align: left; vertical-align: middle; }
+        th { color: #0dcaf0; font-weight: bold; background-color: #2b2b2b; text-transform: capitalize; }
+        .sortable-col { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .sortable-col:hover { background-color: #3d3d3d; }
+        .icon-sort { font-size: 10px; margin-left: 4px; color: #888; }
+        tr:nth-child(even) { background-color: #262626; }
+        tr:hover { background-color: #333; }
+
+        .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background-color: #fff; cursor: pointer; transition: 0.2s; }
+        .img-thumb:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .badge-estado { background-color: #198754; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+
+        .action-btns { display: flex; gap: 5px; }
+        .btn-action { width: 28px; height: 28px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #000; transition: 0.2s; }
+        .btn-action:hover { opacity: 0.8; }
+        .btn-view { background-color: #0dcaf0; }
+        .btn-edit { background-color: #ffc107; }
+        .btn-salida { background-color: #fd7e14; color: white; }
+
+        /* Modales */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+        .modal-content { background-color: #2b2b2b; padding: 25px; border-radius: 8px; width: 850px; max-width: 95vw; max-height: 90vh; overflow-y: auto; color: #fff; border: 1px solid #444; }
+        .modal-header { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; font-size: 20px; }
+        
+        .grid-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group.full-width { grid-column: span 3; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #0dcaf0; font-weight: bold;}
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #444; background-color: #121212; color: #fff; box-sizing: border-box; }
+        .form-group input:disabled { background-color: #333; color: #888; }
+        
+        select#edit-estado { font-weight: bold; color: #fff; }
+        select#edit-estado option[value="DISPONIBLE"] { background-color: #198754; color: white; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; border-top: 1px solid #444; padding-top: 15px;}
+        
+        .view-photo-container { grid-column: span 3; text-align: center; margin-bottom: 15px; }
+        .view-photo-container img { max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #444; object-fit: contain; }
+        
         .modal-visor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         .visor-imagen { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
-
-        /* MODALES AMPLIOS */
-        .modal-contenido-amplio { background-color: #2d2d2d; padding: 30px; border-radius: 12px; width: 680px; max-width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        .det-cabecera { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid #444; padding-bottom: 15px; }
-        .det-foto-grande { width: 110px; height: 110px; object-fit: cover; border-radius: 8px; border: 1px solid #555; }
-        .cuadricula-detalles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; margin-bottom: 20px; }
-        .item-detalle { border-bottom: 1px solid #3a3a3a; padding-bottom: 6px; }
-        .lbl-detalle { font-size: 11px; color: #0078D4; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-        .val-detalle { font-size: 14px; color: #fff; margin-top: 2px; font-weight: 500; }
-        
-        .input-edicion { width: 100%; padding: 8px; background-color: #1a1a1a; border: 1px solid #555; border-radius: 4px; color: white; font-size: 13px; margin-top: 4px; box-sizing: border-box; }
-        .titulo-edicion { color: #ffc107 !important; }
-        
-        /* ESTILO PARA EL SUBTOTAL Y ORDENAMIENTO */
-        .barra-subtotales { background-color: #222; border: 1px solid #444; padding: 8px 15px; border-radius: 6px; font-size: 13px; color: #ffc107; font-weight: bold; display: inline-block; margin-bottom: 10px; }
-        .barra-subtotales span { color: #fff; margin-left: 5px; margin-right: 15px; }
-        .th-sortable { cursor: pointer; user-select: none; transition: 0.2s; }
-        .th-sortable:hover { background-color: #444; color: #fff; }
     </style>
 </head>
 <body>
-    <div class="contenedor">
-        <!-- BARRA SUPERIOR DE USUARIO Y PRESENCIA -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-            <h2 style="margin: 0; color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Gestión de Bodega</h2>
-            <div style="display: flex; align-items: center;">
-                <div class="en-linea-container">
-                    <span>En línea:</span>
-                    <div id="usuarios-activos" class="avatars-group">
-                        <!-- Avatares se llenan aquí -->
-                    </div>
-                </div>
-                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+
+    <!-- BARRA SUPERIOR Y PRESENCIA -->
+    <div class="top-bar">
+        <div class="titulo-bodega">GESTIÓN DE BODEGA</div>
+        <div style="display: flex; align-items: center;">
+            <div class="en-linea-container">
+                <span>En línea:</span>
+                <div id="usuarios-activos" class="avatars-group"></div>
             </div>
+            <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
+    </div>
 
-        <div class="barra-control">
-            <div style="display: flex; align-items: center;">
-                <a href="menu.html" class="btn-volver">🔙 Menú</a>
-                <h2 style="margin: 0;">📦 Inventario Activo (Bodega)</h2>
-            </div>
-            
-            <input type="text" id="inputBuscador" class="buscador" placeholder="🔍 Buscar por Precinto, Referencia, etc...">
-            
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button id="btnEliminarSeleccionados" class="btn-opciones btn-borrar" style="display: none; background-color: #dc3545;" onclick="ejecutarEliminacionMasiva()">🗑️ Borrar (<span id="cantSeleccionada">0</span>)</button>
-                
-                <button id="btnGuardarMasivo" class="btn-opciones btn-guardar" style="display: none;" onclick="guardarCambiosMasivos()">💾 Guardar Cambios</button>
-
-                <div class="dropdown">
-                    <button class="btn-opciones" onclick="toggleDropdown()">⚙️ Opciones ▼</button>
-                    <div id="dropdownOpciones" class="dropdown-content dropdown-contenido">
-                        <input type="file" id="inputImportarExcel" accept=".xlsx, .xls, .csv" style="display: none;">
-                        <button class="dropdown-item item-importar" onclick="document.getElementById('inputImportarExcel').click()">⬆️ Importar desde Excel</button>
-                        
-                        <button class="dropdown-item item-excel" id="btnExportarExcel">📥 Exportar Excel</button>
-                        
-                        <a href="salidas.html" class="dropdown-item item-bajas">📋 Ver Bajas / Salidas</a>
-                        <a href="formulario.html" class="dropdown-item item-agregar">➕ Agregar Prenda</a>
-                    </div>
-                </div>
-            </div>
+    <!-- CABECERA PRINCIPAL -->
+    <div class="main-header">
+        <div class="header-left">
+            <button class="btn btn-menu" onclick="window.location.href='menu.html'">⬅ Menú</button>
+            <h2>📦 Inventario Activo (Bodega)</h2>
         </div>
         
-        <div>
-            <div id="subtotalesFiltro" class="barra-subtotales">📊 Calculando subtotales...</div>
+        <div class="header-center">
+            <input type="text" id="input-busqueda" class="search-input" placeholder="🔍 Buscar por Precinto, Referencia, etc..." onkeyup="filtrarTabla()">
         </div>
 
-        <div class="contenedor-tabla">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 30px; text-align: center;"><input type="checkbox" id="chkSeleccionarTodos" onclick="toggleSeleccionarTodos()" style="cursor: pointer; width: 16px; height: 16px;"></th>
-                        <th>Foto</th>
-                        <th class="th-sortable" onclick="ordenarTabla('fechaIngreso', this)">Fecha Ingreso ↕️</th>
-                        <th class="th-sortable" onclick="ordenarTabla('precinto', this)">Código Precinto ↕️</th>
-                        <th>Descripción</th>
-                        <th class="th-sortable" onclick="ordenarTabla('referencia', this)">Referencia ↕️</th>
-                        <th class="th-sortable" onclick="ordenarTabla('linea', this)">Línea ↕️</th>
-                        <th class="th-sortable" onclick="ordenarTabla('cantidad', this)">Cant. ↕️</th>
-                        <th class="th-sortable" onclick="ordenarTabla('precio', this)">Costo ↕️</th>
-                        <th class="th-sortable" onclick="ordenarTabla('ubicacionGeneral', this)">Ubicación ↕️</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="cuerpoTabla"></tbody>
-            </table>
-            <div id="mensajeCarga">Conectando con Supabase... ⏳</div>
-        </div>
-    </div>
-
-    <!-- MODAL REGISTRAR SALIDA -->
-    <div id="modalSalida" class="modal-fondo">
-        <div class="modal-contenido">
-            <h3>📤 Registrar Salida</h3>
-            <label>No. Factura / Remisión:</label><input type="text" id="salidaRemision" placeholder="Ej: REM-5023">
-            <label>Fecha de Salida:</label><input type="date" id="salidaFecha">
-            <label>Tipo de Salida:</label>
-            <select id="salidaTipo">
-                <option value="">Selecciona un tipo...</option><option>SALIDA DEL INVENTARIO</option><option>PARA FOTOS</option><option>PARA MERCADEO</option><option>PARA COMERCIAL</option><option>OBSEQUIO</option><option>BODEGA</option><option>PATRONAJE</option><option>PEDRO CASTELLANOS</option><option>DEVOLUCION A PROVEEDOR</option><option>ENVIO MUESTRA PROVEEDOR</option><option>PRUEBA DE USO</option><option>MUESTRAS DESTRUCCIÓN</option><option>GESTION HUMANA</option><option>DONACION</option>
-            </select>
-            <label>Orden de Traslado (TO):</label><input type="text" id="salidaTo" placeholder="Ej: TO-10254">
+        <div class="header-right">
+            <button id="btn-borrar-masivo" class="btn btn-red" style="display: none;" onclick="eliminarSeleccionados()">🗑️ Borrar ( 0 )</button>
             
-            <div class="modal-botones">
-                <button class="btn-cancelar" onclick="cerrarModalSalida()" style="width:48%">Cancelar</button>
-                <button class="btn-confirmar" id="btnConfirmarSalida" onclick="guardarSalida()" style="width:48%">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DETALLES FICHA TÉCNICA -->
-    <div id="modalDetalles" class="modal-fondo">
-        <div class="modal-contenido-amplio">
-            <div class="det-cabecera">
-                <img id="detFoto" class="det-foto-grande" src="logo.png">
-                <div>
-                    <h2 style="margin:0; color:#0078D4;">Ficha de la Prenda</h2>
-                    <p style="margin:5px 0 0 0; color:#aaa; font-size:14px;">Precinto No: <span id="detPrecintoTitulo" style="color:#fff; font-weight:bold;">-</span></p>
+            <div class="dropdown">
+                <button onclick="toggleDropdown()" class="btn btn-blue" id="btn-opciones">⚙️ Opciones ▼</button>
+                <div id="dropdownOpciones" class="dropdown-content">
+                    <label for="input-importar">📤 Importar de Excel</label>
+                    <a onclick="exportarExcel()">📥 Exportar a Excel</a>
+                    <a href="salidas.html">📋 Ver Bajas / Salidas</a>
+                    <a href="formulario.html">➕ Agregar Prenda</a>
                 </div>
             </div>
-            <div class="cuadricula-detalles">
-                <div class="item-detalle"><div class="lbl-detalle">Registrado por</div><div class="val-detalle" id="detRegistradoPor">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Fecha de Ingreso</div><div class="val-detalle" id="detFechaIngreso">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Fecha Entrega CI</div><div class="val-detalle" id="detFechaEntregaCI">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Código Precinto</div><div class="val-detalle" id="detPrecinto">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Referencia</div><div class="val-detalle" id="detReferencia">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Colección</div><div class="val-detalle" id="detColeccion">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Tipo</div><div class="val-detalle" id="detTipo">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Línea</div><div class="val-detalle" id="detLinea">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Género</div><div class="val-detalle" id="detGenero">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Talla</div><div class="val-detalle" id="detTalla">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Color / Descripción</div><div class="val-detalle" id="detColor">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Cantidad</div><div class="val-detalle" id="detCantidad">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Clasificación</div><div class="val-detalle" id="detClasificacion">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Proveedor / Marca</div><div class="val-detalle" id="detProveedor">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">País de Origen</div><div class="val-detalle" id="detPais">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Precio / Costo</div><div class="val-detalle" id="detPrecio">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Ubicación General</div><div class="val-detalle" id="detUbiGeneral">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Ubicación en Diseño</div><div class="val-detalle" id="detUbiDiseno">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Estado actual</div><div class="val-detalle" id="detEstado">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Remisión / Factura</div><div class="val-detalle" id="detRemision">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Fecha de Salida</div><div class="val-detalle" id="detFechaSalida">-</div></div>
-                <div class="item-detalle"><div class="lbl-detalle">Orden de Traslado (TO)</div><div class="val-detalle" id="detTo">-</div></div>
-            </div>
-            <div style="border-top:1px solid #444; padding-top:10px; margin-bottom:20px;">
-                <div class="lbl-detalle">Observaciones / Notas</div>
-                <div class="val-detalle" id="detObservaciones" style="font-style:italic; color:#ccc;">-</div>
-            </div>
-            <button class="btn-cancelar" onclick="cerrarModalDetalles()">❌ Cerrar Vista</button>
         </div>
     </div>
 
-    <!-- MODAL EDITAR INFORMACIÓN -->
-    <div id="modalEditar" class="modal-fondo">
-        <div class="modal-contenido-amplio">
-            <h2 class="titulo-edicion" style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px;">✏️ Editar Información de la Prenda</h2>
+    <input type="file" id="input-importar" style="display: none;" accept=".xlsx, .xls">
+
+    <div class="stats-banner">
+        📊 Resultados Activos: <span id="subtotal-registros" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Referencias</span>
+        <span class="stat-divider">|</span>
+        Suma Total Físicas: <span id="subtotal-unidades" class="stat-highlight-white">0</span> <span class="stat-highlight-yellow">Unidades en Bodega</span>
+    </div>
+
+    <div class="table-container">
+        <table id="tabla-datos">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="check-all" onclick="marcarTodos(this)"></th>
+                    <th>Foto</th>
+                    <th class="sortable-col" onclick="ordenarTabla(['fechaIngreso', 'fecha_ingreso', 'created_at'], 'sort-fecha')">Fecha Ingreso <span id="sort-fecha" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['precinto', 'codigo_precinto', 'id'], 'sort-precinto')">Código Precinto <span id="sort-precinto" class="icon-sort">↕</span></th>
+                    <th>Descripción</th>
+                    <th class="sortable-col" onclick="ordenarTabla(['referencia'], 'sort-ref')">Referencia <span id="sort-ref" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['linea'], 'sort-linea')">Línea <span id="sort-linea" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['cantidad', 'cant'], 'sort-cant')">Cant. <span id="sort-cant" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['precio', 'costo'], 'sort-precio')">Costo <span id="sort-precio" class="icon-sort">↕</span></th>
+                    <th class="sortable-col" onclick="ordenarTabla(['ubicacionGeneral', 'ubicacion_general'], 'sort-ubi')">Ubicación <span id="sort-ubi" class="icon-sort">↕</span></th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-datos">
+                <!-- Se llena dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MODAL DAR SALIDA -->
+    <div id="modal-salida" class="modal" style="z-index: 1500;">
+        <div class="modal-content" style="width: 400px;">
+            <div class="modal-header">
+                <h3 style="color:#fd7e14;">📤 Registrar Salida</h3>
+            </div>
+            <input type="hidden" id="salida-precinto">
             
-            <div class="cuadricula-detalles" style="margin-top:15px;">
-                <div><label class="lbl-detalle">Precinto</label><input type="text" id="edPrecinto" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Colección</label><input type="text" id="edColeccion" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Fecha Entrega CI</label><input type="date" id="edFechaEntregaCI" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Tipo</label><input type="text" id="edTipo" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Línea</label><input type="text" id="edLinea" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Género</label><input type="text" id="edGenero" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Color</label><input type="text" id="edColor" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Ubicación General</label><input type="text" id="edUbiGeneral" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Ubicación Diseño</label><input type="text" id="edUbiDiseno" class="input-edicion"></div>
-                
-                <div><label class="lbl-detalle">Precio / Costo</label><input type="number" id="edPrecio" class="input-edicion" step="0.01"></div>
-                <div>
-                    <label class="lbl-detalle">Moneda</label>
-                    <select id="edMoneda" class="input-edicion" style="background-color: #1a1a1a; height: 33px; margin-top: 4px;">
+            <div class="form-group"><label>Fecha de Salida (OBLIGATORIA):</label><input type="date" id="salidaFecha" required></div>
+            <div class="form-group">
+                <label>Tipo de Salida:</label>
+                <select id="salidaTipo">
+                    <option value="">Selecciona un tipo...</option><option>SALIDA DEL INVENTARIO</option><option>PARA FOTOS</option><option>PARA MERCADEO</option><option>PARA COMERCIAL</option><option>OBSEQUIO</option><option>PATRONAJE</option><option>PEDRO CASTELLANOS</option><option>DEVOLUCION A PROVEEDOR</option><option>ENVIO MUESTRA PROVEEDOR</option><option>PRUEBA DE USO</option><option>MUESTRAS DESTRUCCIÓN</option><option>GESTION HUMANA</option><option>DONACION</option>
+                </select>
+            </div>
+            <div class="form-group"><label>No. Factura / Remisión:</label><input type="text" id="salidaRemision" placeholder="Ej: REM-5023"></div>
+            <div class="form-group"><label>Orden de Traslado (TO):</label><input type="text" id="salidaTo" placeholder="Ej: TO-10254"></div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-menu" onclick="cerrarModal('modal-salida')">❌ Cancelar</button>
+                <button class="btn btn-orange" id="btn-confirmar-salida" onclick="guardarSalida()">📤 Confirmar Salida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALES DE VER Y EDITAR (Iguales al de Salidas) -->
+    <div id="modal-ver" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>👁️ Detalles de la Muestra</h3>
+                <button class="btn btn-menu" onclick="cerrarModal('modal-ver')">❌ Cerrar</button>
+            </div>
+            <div class="grid-form" id="view-form-container"></div>
+        </div>
+    </div>
+
+    <div id="modal-edicion" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Editar Información (25 Campos)</h3>
+            </div>
+            <input type="hidden" id="edit-foto-actual">
+            <div class="grid-form">
+                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled></div>
+                <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="edit-fechaIngreso"></div>
+                <div class="form-group"><label>Registrado Por</label><input type="text" id="edit-registradoPor"></div>
+                <div class="form-group"><label>Referencia</label><input type="text" id="edit-referencia"></div>
+                <div class="form-group"><label>Línea</label><input type="text" id="edit-linea"></div>
+                <div class="form-group"><label>Color</label><input type="text" id="edit-color"></div>
+                <div class="form-group"><label>Talla</label><input type="text" id="edit-talla"></div>
+                <div class="form-group"><label>Género</label><input type="text" id="edit-genero"></div>
+                <div class="form-group"><label>Proveedor</label><input type="text" id="edit-proveedor"></div>
+                <div class="form-group"><label>País Origen</label><input type="text" id="edit-paisOrigen"></div>
+                <div class="form-group"><label>Precio / Costo</label><input type="number" step="0.01" id="edit-precio"></div>
+                <div class="form-group">
+                    <label>Moneda</label>
+                    <select id="edit-moneda" style="background-color: #1a1a1a;">
                         <option value="COP">COP (Pesos Colombianos)</option>
                         <option value="USD">USD (Dólares)</option>
                         <option value="EUR">EUR (Euros)</option>
                     </select>
                 </div>
-                <div><label class="lbl-detalle">Proveedor / Marca</label><input type="text" id="edProveedor" class="input-edicion"></div>
-                <div><label class="lbl-detalle">País de Origen</label><input type="text" id="edPaisOrigen" class="input-edicion"></div>
-
-                <div style="grid-column: span 2;">
-                    <label class="lbl-detalle" style="color:#ffc107;">Modificar Estado Actual de la Prenda</label>
-                    <select id="edEstado" class="input-edicion" style="background-color: #222; font-weight: bold;">
-                        <option value="Disponible en inventario">🟢 Disponible en inventario (Regresar a bodega)</option>
-                        <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option><option value="PARA FOTOS">PARA FOTOS</option><option value="PARA MERCADEO">PARA MERCADEO</option><option value="PARA COMERCIAL">PARA COMERCIAL</option><option value="OBSEQUIO">OBSEQUIO</option><option value="BODEGA">BODEGA</option><option value="PATRONAJE</option><option value="SALE DE INVENTARIO PARA JENNY">SALE DE INVENTARIO PARA JENNY</option><option value="GERENCIA">GERENCIA</option><option value="PEDRO CASTELLANOS">PEDRO CASTELLANOS</option><option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option><option value="ENVIO MUESTRA PROVEEDOR">ENVIO MUESTRA PROVEEDOR</option><option value="PRUEBA DE USO">PRUEBA DE USO</option><option value="PROVEEDOR">PROVEEDOR</option><option value="PRESENTAR EN EL PROJECT DE LAS VEGAS">PRESENTAR EN EL PROJECT DE LAS VEGAS</option><option value="PROVEEDOR PANAMA">PROVEEDOR PANAMA</option><option value="MUESTRAS SALIENTES">MUESTRAS SALIENTES</option><option value="DOTACION/PEDRO">DOTACION/PEDRO</option><option value="ANTHONY PRODUCCIÓN">ANTHONY PRODUCCIÓN</option><option value="GESTION HUMANA">GESTION HUMANA</option><option value="DONACION">DONACION</option>
+                <div class="form-group"><label>Cantidad</label><input type="number" id="edit-cantidad"></div>
+                <div class="form-group"><label>Clasificación</label><input type="text" id="edit-clasificacion"></div>
+                <div class="form-group"><label>Fecha de Salida</label><input type="date" id="edit-fechaSalida" title="Si agregas una fecha aquí, la prenda se moverá a la página de Salidas automáticamente."></div>
+                <div class="form-group"><label>Ubicación General</label><input type="text" id="edit-ubicacionGeneral"></div>
+                <div class="form-group"><label>Ubicación Diseño</label><input type="text" id="edit-ubicacionDiseno"></div>
+                <div class="form-group"><label>Tipo</label><input type="text" id="edit-tipo"></div>
+                <div class="form-group"><label>Colección</label><input type="text" id="edit-coleccion"></div>
+                <div class="form-group"><label>Remisión de Salida</label><input type="text" id="edit-remision"></div>
+                <div class="form-group"><label>Orden de Traslado (TO)</label><input type="text" id="edit-ordenTraslado"></div>
+                
+                <div class="form-group">
+                    <label>Estado Actual</label>
+                    <select id="edit-estado">
+                        <option value="Disponible en inventario">🟢 Disponible en inventario</option>
+                        <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option><option value="PARA FOTOS">PARA FOTOS</option><option value="PARA MERCADEO">PARA MERCADEO</option><option value="PARA COMERCIAL">PARA COMERCIAL</option><option value="OBSEQUIO">OBSEQUIO</option><option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option>
                     </select>
                 </div>
-                <div><label class="lbl-detalle">Remisión / Factura</label><input type="text" id="edRemision" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Fecha de Salida</label><input type="date" id="edFechaSalida" class="input-edicion"></div>
-                <div><label class="lbl-detalle">Orden de Traslado (TO)</label><input type="text" id="edTo" class="input-edicion"></div>
                 
-                <div style="grid-column: span 2;"><label class="lbl-detalle">Observaciones</label><input type="text" id="edObservaciones" class="input-edicion"></div>
-
-                <div style="grid-column: span 2; border-top: 1px solid #444; padding-top: 15px; margin-top: 5px;">
-                    <label class="lbl-detalle" style="color: #0078D4;">📸 Actualizar Fotografía (Opcional)</label>
-                    <input type="file" id="edFotoNueva" accept="image/*" class="input-edicion" style="cursor: pointer; background-color: #222; padding: 6px;">
-                    <span style="font-size: 11px; color: #888; display: block; margin-top: 5px;">*Si no seleccionas ningún archivo, el sistema mantendrá la foto actual de la prenda.</span>
+                <div class="form-group"><label>Fecha Entrega CI</label><input type="date" id="edit-fechaEntregaCI"></div>
+                <div class="form-group full-width"><label>Observaciones / Acción Correctiva</label><input type="text" id="edit-observaciones"></div>
+                
+                <div class="form-group full-width" style="background-color: #222; padding: 15px; border-radius: 6px; border: 1px dashed #555;">
+                    <label style="color: #fd7e14;">📷 Subir o Reemplazar Foto (Opcional)</label>
+                    <input type="file" id="edit-nueva-foto" accept="image/*" style="border: none; padding: 0;">
                 </div>
             </div>
-
-            <div class="modal-botones">
-                <button class="btn-cancelar" onclick="cerrarModalEditar()" style="width:48%">Cancelar</button>
-                <button class="btn-confirmar" id="btnGuardarEdicion" onclick="guardarEdicion()" style="width:48%; background-color:#ffc107; color:black;">💾 Guardar Cambios</button>
+            
+            <div class="modal-actions">
+                <button class="btn btn-menu" onclick="cerrarModal('modal-edicion')">❌ Cancelar</button>
+                <button id="btn-guardar-edicion" class="btn btn-green" onclick="guardarEdicion()">💾 Guardar Cambios</button>
             </div>
         </div>
     </div>
 
-    <div id="modalVisor" class="modal-visor" onclick="cerrarVisor()"><img id="imagenAmpliada" class="visor-imagen"></div>
+    <!-- VISOR DE IMAGEN AMPLIADA -->
+    <div id="modalVisor" class="modal-visor" onclick="cerrarModal('modalVisor')">
+        <img id="imagenAmpliada" class="visor-imagen">
+    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
-        const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co'; 
-        const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W'; 
-        const supabase = createClient(supabaseUrl, supabaseKey, {
+    <script>
+        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
+        const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, {
             auth: { storage: window.localStorage }
         });
+        
+        let datosGlobales = [];
+        let estadoOrden = { columnaID: null, ascendente: true };
 
-        // ==========================================
-        // LÓGICA DE PRESENCIA (AVATARES Y SESIÓN)
-        // ==========================================
-        let canalPresencia;
-
+        // PRESENCIA
         function generarColorHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
@@ -307,18 +292,14 @@
             return '#' + '00000'.substring(0, 6 - c.length) + c;
         }
 
-        function obtenerIniciales(email) {
-            return email.substring(0, 2).toUpperCase();
-        }
+        function obtenerIniciales(email) { return email.substring(0, 2).toUpperCase(); }
 
         async function configurarPresencia(emailUsuario) {
-            canalPresencia = supabase.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
-
+            const canalPresencia = client.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
             canalPresencia.on('presence', { event: 'sync' }, () => {
                 const state = canalPresencia.presenceState();
                 const container = document.getElementById('usuarios-activos');
                 container.innerHTML = '';
-                
                 Object.keys(state).forEach(email => {
                     const div = document.createElement('div');
                     div.className = 'avatar-circle';
@@ -328,7 +309,6 @@
                     container.appendChild(div);
                 });
             });
-
             canalPresencia.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
                     await canalPresencia.track({ user_email: emailUsuario, online_at: new Date().toISOString() });
@@ -337,268 +317,375 @@
         }
 
         async function verificarSesion() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = "index.html";
-            } else {
-                configurarPresencia(session.user.email);
-            }
+            const { data: { session } } = await client.auth.getSession();
+            if (!session) { window.location.href = "index.html"; } 
+            else { configurarPresencia(session.user.email); }
         }
-        
-        window.cerrarSesion = async function() {
-            await supabase.auth.signOut();
-            window.location.href = "index.html";
-        }
-        
+
+        window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
-        const tabla = document.getElementById('cuerpoTabla');
-        const mensajeCarga = document.getElementById('mensajeCarga');
-        let datosParaExcel = [];
-        let prendasAEliminarLocal = []; 
-        let datosActualesGlobales = []; // Guarda la info cruda para el ordenamiento
+        client.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTabla(); }).subscribe();
 
-        // ==========================================
-        // LÓGICA DE ORDENAMIENTO DE COLUMNAS
-        // ==========================================
-        let ordenActual = { columna: '', descendente: false };
-
-        window.ordenarTabla = function(columna, thElement) {
-            if (ordenActual.columna === columna) {
-                ordenActual.descendente = !ordenActual.descendente;
-            } else {
-                ordenActual.columna = columna;
-                ordenActual.descendente = false;
-            }
-
-            document.querySelectorAll('th.th-sortable').forEach(th => {
-                th.innerHTML = th.innerHTML.replace(' ⬆️', '').replace(' ⬇️', '').replace(' ↕️', '') + ' ↕️';
-            });
-
-            thElement.innerHTML = thElement.innerHTML.replace(' ↕️', '').replace(' ⬆️', '').replace(' ⬇️', '') + (ordenActual.descendente ? ' ⬇️' : ' ⬆️');
-
-            datosActualesGlobales.sort((a, b) => {
-                let valA = a[columna];
-                let valB = b[columna];
-
-                if (valA === null || valA === undefined) valA = '';
-                if (valB === null || valB === undefined) valB = '';
-
-                if (columna === 'cantidad' || columna === 'precio') {
-                    valA = parseFloat(valA) || 0;
-                    valB = parseFloat(valB) || 0;
-                } else {
-                    valA = valA.toString().toLowerCase();
-                    valB = valB.toString().toLowerCase();
-                }
-
-                if (valA < valB) return ordenActual.descendente ? 1 : -1;
-                if (valA > valB) return ordenActual.descendente ? -1 : 1;
-                return 0;
-            });
-
-            renderTable(datosActualesGlobales);
-        }
-
-        // ==========================================
-        // LÓGICA DE SUBTOTALES DINÁMICOS
-        // ==========================================
-        window.calcularSubtotales = function() {
-            const filas = document.querySelectorAll('#cuerpoTabla tr');
-            let registrosVisibles = 0;
-            let unidadesVisibles = 0;
-
-            filas.forEach(fila => {
-                if (fila.style.display !== 'none' && fila.cells.length > 1) {
-                    registrosVisibles++;
-                    unidadesVisibles += parseInt(fila.getAttribute('data-cantidad')) || 0;
-                }
-            });
-
-            document.getElementById('subtotalesFiltro').innerHTML = 
-                `📊 Resultados Activos: <span>${registrosVisibles} Referencias</span> | Suma Total Físicas: <span>${unidadesVisibles} Unidades</span>`;
-        }
-
-        window.toggleSeleccionarTodos = function() {
-            const chkTodos = document.getElementById('chkSeleccionarTodos');
-            const checkboxes = document.querySelectorAll('.chk-prenda');
-            checkboxes.forEach(chk => {
-                if (chk.closest('tr').style.display !== 'none') {
-                    chk.checked = chkTodos.checked;
-                }
-            });
-            window.actualizarBotonEliminarMasivo();
-        }
-
-        window.actualizarBotonEliminarMasivo = function() {
-            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
-            const btnEliminar = document.getElementById('btnEliminarSeleccionados');
-            const spanCant = document.getElementById('cantSeleccionada');
-            
-            if (checkboxes.length > 0) {
-                spanCant.textContent = checkboxes.length;
-                btnEliminar.style.display = 'flex';
-            } else {
-                btnEliminar.style.display = 'none';
-            }
-            
-            const checkboxesVisibles = Array.from(document.querySelectorAll('.chk-prenda')).filter(chk => chk.closest('tr').style.display !== 'none');
-            const todosSeleccionados = checkboxesVisibles.length > 0 && checkboxesVisibles.every(chk => chk.checked);
-            document.getElementById('chkSeleccionarTodos').checked = todosSeleccionados;
-        }
-
-        window.ejecutarEliminacionMasiva = async function() {
-            const checkboxes = document.querySelectorAll('.chk-prenda:checked');
-            if (checkboxes.length === 0) return;
-            
-            if (confirm(`⚠️ Estás a punto de eliminar DEFINITIVAMENTE ${checkboxes.length} prendas de la base de datos.\n\n¿Estás completamente seguro de continuar?`)) {
-                const btn = document.getElementById('btnEliminarSeleccionados');
-                btn.innerHTML = "⏳ Borrando...";
-                btn.disabled = true;
-                const idsAEliminar = Array.from(checkboxes).map(chk => chk.value);
-                try {
-                    const { error } = await supabase.from('prendas').delete().in('id', idsAEliminar);
-                    if (error) throw error;
-                    alert(`✅ Se eliminaron ${idsAEliminar.length} prendas exitosamente.`);
-                    document.getElementById('chkSeleccionarTodos').checked = false;
-                    btn.style.display = 'none';
-                    fetchPrendas();
-                } catch (err) {
-                    console.error("Error eliminando:", err);
-                    alert("Error al intentar eliminar las prendas: " + err.message);
-                } finally {
-                    btn.innerHTML = `🗑️ Borrar (<span id="cantSeleccionada">0</span>)`;
-                    btn.disabled = false;
-                }
-            }
-        }
-
-        window.toggleDropdown = function() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
+        function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
-            if (!event.target.matches('.btn-opciones')) {
-                const dropdowns = document.getElementsByClassName("dropdown-contenido");
-                for (let i = 0; i < dropdowns.length; i++) {
+            if (!event.target.matches('.btn-blue')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
                     if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
                 }
             }
         }
 
-        async function fetchPrendas() {
-            try {
-                const { data, error } = await supabase
-                    .from('prendas')
-                    .select('*')
-                    .order('id', { ascending: false });
+        // ==========================================
+        // LA REGLA DE ORO: SI NO TIENE FECHA DE SALIDA -> ES DISPONIBLE (DASHBOARD)
+        // ==========================================
+        async function cargarTabla() {
+            const tbody = document.getElementById("tbody-datos");
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando inventario...</td></tr>`;
 
-                if (error) throw error;
-                datosActualesGlobales = data; 
-                renderTable(datosActualesGlobales);
-            } catch (error) {
-                console.error("Error al cargar prendas:", error);
-                mensajeCarga.textContent = "Error conectando con la base de datos.";
+            try {
+                let res = await client.from('prendas').select('*').order('id', { ascending: false });
+                if (res.error) throw res.error;
+
+                // FILTRO: Solo prendas cuya Fecha de Salida esté VACÍA
+                datosGlobales = (res.data || []).filter(item => {
+                    let f = (item.salidaFecha || item.fechaSalida || item.fecha_salida || "").trim();
+                    return f === "";
+                });
+
+                renderizarTabla(datosGlobales);
+            } catch (err) {
+                console.error("Error:", err);
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ff5252;">Error de conexión.</td></tr>`;
             }
         }
 
-        supabase.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, payload => { fetchPrendas(); }).subscribe();
+        function renderizarTabla(lista) {
+            const tbody = document.getElementById("tbody-datos");
+            tbody.innerHTML = "";
 
-        function renderTable(data) {
-            tabla.innerHTML = ""; 
-            mensajeCarga.style.display = "none";
-            datosParaExcel = []; 
-            let contadorDisponibles = 0;
-            
-            if(!data || data.length === 0) {
-                tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>Inventario vacío.</td></tr>";
-                window.calcularSubtotales(); 
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">El inventario está vacío.</td></tr>`;
+                actualizarSubtotales(0, 0);
                 return;
             }
 
-            data.forEach((prenda) => {
-                let estadoDB = (prenda.estado || "Disponible en inventario").trim().toLowerCase();
-                if (!estadoDB.includes("disponible") && estadoDB !== "") return; 
-                if (prendasAEliminarLocal.includes(prenda.id)) return;
-
-                contadorDisponibles++;
-                const urlFotoARenderizar = prenda.fotoUrl || 'logo.png'; 
-                const fila = document.createElement('tr');
+            lista.forEach(item => {
+                const tr = document.createElement("tr");
+                const codigoPrecinto = item.precinto || item.codigo_precinto || item.id || "";
+                const jsonItem = encodeURIComponent(JSON.stringify(item));
                 
-                fila.setAttribute('data-cantidad', prenda.cantidad || 1);
+                let urlFoto = item.fotoUrl || item.foto_url || item.foto || "logo.png";
+                let celdaFotoHTML = `<img src="${urlFoto}" class="img-thumb" alt="foto" onclick="abrirVisor('${urlFoto}')">`;
 
-                let estadoHTML = `<span class="estado-disponible">DISPONIBLE</span>`;
-
+                const partesDesc = [item.referencia, item.linea, item.color, item.talla, item.clasificacion].filter(val => val && val.toString().trim() !== "");
+                const descripcionGenerada = partesDesc.join(" ") || "-";
+                
                 let costoVisual = "-";
-                if(prenda.precio) { costoVisual = `$${prenda.precio} ${prenda.moneda || 'COP'}`; }
-                
-                const partesDesc = [prenda.referencia, prenda.linea, prenda.color, prenda.talla, prenda.clasificacion].filter(val => val && val.toString().trim() !== "");
-                const descripcionGenerada = partesDesc.join(" ");
+                if(item.precio || item.costo) { costoVisual = `$${item.precio || item.costo} ${item.moneda || 'COP'}`; }
 
-                fila.innerHTML = `
-                    <td style="text-align: center;"><input type="checkbox" class="chk-prenda" value="${prenda.id}" onclick="window.actualizarBotonEliminarMasivo()" style="cursor: pointer; width: 16px; height: 16px;"></td>
-                    <td><img src="${urlFotoARenderizar}" class="foto-miniatura" alt="Foto" onclick="abrirVisor('${urlFotoARenderizar}')" title="Clic para ampliar"></td>
-                    <td>${prenda.fechaIngreso || 'N/A'}</td>
-                    <td style="font-weight: bold; color: #fff;">${prenda.precinto || '-'}</td>
-                    <td style="color: #ccc; font-size: 13px;">${descripcionGenerada || '-'}</td>
-                    <td>${prenda.referencia || '-'}</td>
-                    <td>${prenda.linea || '-'}</td>
-                    <td style="font-weight: bold; color: #0078D4;">${prenda.cantidad || '1'}</td> 
-                    <td style="white-space: nowrap;">${costoVisual}</td> 
-                    <td>${prenda.ubicacionGeneral || '-'}</td>
-                    <td>${estadoHTML}</td>
-                    <td style="white-space: nowrap;">
-                        <button class="btn-accion btn-ver" title="Ver Detalles" onclick="verDetalles('${prenda.id}')">👁️</button>
-                        <button class="btn-accion btn-editar" title="Editar Prenda" onclick="abrirModalEditar('${prenda.id}')">✏️</button>
-                        <button class="btn-accion btn-salida" title="Dar Salida" onclick="abrirModalSalida('${prenda.id}')">📤</button>
-                        <button class="btn-accion btn-borrar" title="Eliminar Individual" onclick="eliminarPrenda('${prenda.id}', this)">🗑️</button>
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
+                    <td>${celdaFotoHTML}</td>
+                    <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
+                    <td><strong>${codigoPrecinto}</strong></td>
+                    <td style="color:#ccc; font-size:11px;">${descripcionGenerada}</td>
+                    <td>${item.referencia || '-'}</td>
+                    <td>${item.linea || '-'}</td>
+                    <td class="col-cantidad" style="color:#0078D4; font-weight:bold;">${item.cantidad || item.cant || 1}</td>
+                    <td style="white-space:nowrap;">${costoVisual}</td>
+                    <td>${item.ubicacionGeneral || item.ubicacion_general || '-'}</td>
+                    <td><span class="badge-estado">DISPONIBLE</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-action btn-view" title="Ver Detalles" onclick="abrirModalVer('${jsonItem}')">👁️</button>
+                            <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
+                            <button class="btn-action btn-salida" title="Dar Salida" onclick="abrirModalDarSalida('${codigoPrecinto}')">📤</button>
+                        </div>
                     </td>
                 `;
-                tabla.appendChild(fila);
-
-                datosParaExcel.push({
-                    "Fecha Ingreso": prenda.fechaIngreso || "",
-                    "Registrado Por": prenda.registradoPor || "",
-                    "Precinto": prenda.precinto || "",
-                    "Descripción": descripcionGenerada,
-                    "Referencia": prenda.referencia || "",
-                    "Línea": prenda.linea || "",
-                    "Color": prenda.color || "",
-                    "Talla": prenda.talla || "",
-                    "Género": prenda.genero || "",
-                    "Proveedor": prenda.proveedor || "",
-                    "País Origen": prenda.paisOrigen || "",
-                    "Precio": prenda.precio || "",
-                    "Moneda": prenda.moneda || "",
-                    "Cantidad": prenda.cantidad || "",
-                    "Clasificación": prenda.clasificacion || "",
-                    "Fecha de Salida": prenda.salidaFecha || "",
-                    "Ubicación General": prenda.ubicacionGeneral || "",
-                    "Ubicación Diseño": prenda.ubicacionDiseno || "",
-                    "Tipo": prenda.tipo || "",
-                    "Observaciones": prenda.observaciones || "",
-                    "Colección": prenda.coleccion || "",
-                    "Remisión de Salida": prenda.salidaRemision || "",
-                    "Orden de Traslado (TO)": prenda.salidaTo || "", 
-                    "Estado Actual": prenda.estado || "Disponible en inventario",
-                    "Fecha Entrega CI": prenda.fechaEntregaCI || ""
-                });
+                tbody.appendChild(tr);
             });
 
-            if (contadorDisponibles === 0) {
-                tabla.innerHTML = "<tr><td colspan='12' style='text-align:center; padding: 20px; color:#aaa;'>No hay prendas disponibles en bodega activa.</td></tr>";
-            }
-            
-            document.getElementById('inputBuscador').dispatchEvent(new Event('input'));
-            window.calcularSubtotales();
+            filtrarTabla();
         }
 
-        fetchPrendas();
+        window.abrirVisor = function(url) {
+            document.getElementById('imagenAmpliada').src = url;
+            document.getElementById('modalVisor').style.display = 'flex';
+        }
 
-        document.getElementById('btnExportarExcel').addEventListener('click', function() {
-            if(datosParaExcel.length === 0) { alert("El inventario disponible está vacío."); return; }
-            const hojaTrabajo = XLSX.utils.json_to_sheet(datosParaExcel);
-            const libroExcel = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(libroExcel, hojaTrabajo, "Inventario Monastery");
-            XLSX.writeFile(libroExcel, "Inventario_Muestras_Monastery.xlsx");
-        });
+        function ordenarTabla(clavesAcceso, idIconoHtml) {
+            if (estadoOrden.columnaID === idIconoHtml) { estadoOrden.ascendente = !estadoOrden.ascendente; } 
+            else { estadoOrden.columnaID = idIconoHtml; estadoOrden.ascendente = true; }
+
+            datosGlobales.sort((a, b) => {
+                let valorA = ""; let valorB = "";
+                for(let clave of clavesAcceso) { if(a[clave] !== undefined && a[clave] !== null) { valorA = a[clave]; break; } }
+                for(let clave of clavesAcceso) { if(b[clave] !== undefined && b[clave] !== null) { valorB = b[clave]; break; } }
+                if (typeof valorA === 'number' && typeof valorB === 'number') { return estadoOrden.ascendente ? valorA - valorB : valorB - valorA; }
+                valorA = valorA.toString().toLowerCase(); valorB = valorB.toString().toLowerCase();
+                if (valorA < valorB) return estadoOrden.ascendente ? -1 : 1;
+                if (valorA > valorB) return estadoOrden.ascendente ? 1 : -1;
+                return 0;
+            });
+
+            document.querySelectorAll('.icon-sort').forEach(icon => { icon.innerHTML = '↕'; icon.style.color = "#888"; });
+            const iconoActivo = document.getElementById(idIconoHtml);
+            iconoActivo.innerHTML = estadoOrden.ascendente ? '⬆️' : '⬇️';
+            iconoActivo.style.color = "#fff";
+            renderizarTabla(datosGlobales);
+        }
+
+        function filtrarTabla() {
+            const filtro = document.getElementById("input-busqueda").value.toLowerCase();
+            const filas = document.querySelectorAll("#tbody-datos tr");
+            let registrosVisibles = 0, sumaUnidades = 0;
+            filas.forEach(fila => {
+                if (fila.cells.length > 2) {
+                    const texto = fila.textContent.toLowerCase();
+                    if (texto.includes(filtro)) {
+                        fila.style.display = ""; registrosVisibles++;
+                        const celdaCant = fila.querySelector(".col-cantidad");
+                        if (celdaCant) sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
+                    } else { fila.style.display = "none"; }
+                }
+            });
+            actualizarSubtotales(registrosVisibles, sumaUnidades);
+        }
+
+        function actualizarSubtotales(registros, unidades) {
+            document.getElementById("subtotal-registros").textContent = registros;
+            document.getElementById("subtotal-unidades").textContent = unidades;
+        }
+
+        function actualizarContadorBorrar() {
+            const seleccionados = document.querySelectorAll('.checkbox-item:checked').length;
+            const btn = document.getElementById("btn-borrar-masivo");
+            btn.textContent = `🗑️ Borrar ( ${seleccionados} )`;
+            btn.style.display = seleccionados > 0 ? "inline-flex" : "none";
+        }
+
+        function marcarTodos(source) {
+            document.querySelectorAll('.checkbox-item').forEach(cb => {
+                if(cb.closest('tr').style.display !== 'none') cb.checked = source.checked;
+            });
+            actualizarContadorBorrar();
+        }
+
+        async function eliminarSeleccionados() {
+            const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
+            if (seleccionados.length === 0) return;
+            if (!confirm(`¿Eliminar ${seleccionados.length} registro(s) permanentemente?`)) return;
+
+            const btnBorrar = document.getElementById("btn-borrar-masivo");
+            const textoOriginal = btnBorrar.textContent;
+            btnBorrar.textContent = "⏳ Borrando..."; btnBorrar.disabled = true;
+
+            try {
+                await client.from('prendas').delete().in('precinto', seleccionados);
+                await client.from('prendas').delete().in('id', seleccionados);
+                alert("✅ Registros eliminados.");
+                document.getElementById('check-all').checked = false;
+                cargarTabla();
+                actualizarContadorBorrar();
+            } catch (err) { console.error(err); alert("❌ Error al borrar."); } 
+            finally { btnBorrar.textContent = textoOriginal; btnBorrar.disabled = false; }
+        }
+
+        window.cerrarModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
+
+        // MÓDULO: DAR SALIDA (Desde Dashboard)
+        window.abrirModalDarSalida = function(precinto) {
+            document.getElementById('salida-precinto').value = precinto;
+            document.getElementById('salidaFecha').value = new Date().toISOString().split('T')[0]; // Fecha de hoy automática
+            document.getElementById('salidaRemision').value = '';
+            document.getElementById('salidaTipo').value = '';
+            document.getElementById('salidaTo').value = ''; 
+            document.getElementById('modal-salida').style.display = 'flex';
+        }
+
+        window.guardarSalida = async function() {
+            const precinto = document.getElementById('salida-precinto').value;
+            const fecha = document.getElementById('salidaFecha').value;
+            const tipo = document.getElementById('salidaTipo').value;
+            const remision = document.getElementById('salidaRemision').value.trim();
+            const toVal = document.getElementById('salidaTo').value.trim(); 
+            
+            if (fecha === "") return alert("La fecha de salida es obligatoria.");
+            if (tipo === "") return alert("Selecciona un Tipo de Salida.");
+
+            const btn = document.getElementById('btn-confirmar-salida');
+            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
+
+            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('precinto', precinto);
+            if (error) { await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', precinto); }
+            
+            cerrarModal('modal-salida');
+            cargarTabla(); 
+            btn.textContent = "📤 Confirmar Salida"; btn.disabled = false;
+        }
+
+        // MÓDULOS: VER Y EDITAR
+        function abrirModalVer(jsonEncoded) {
+            const item = JSON.parse(decodeURIComponent(jsonEncoded));
+            const contenedor = document.getElementById('view-form-container');
+            const fotoActual = item.fotoUrl || item.foto_url || item.foto || "";
+            let htmlDetalles = "";
+            if (fotoActual && fotoActual !== "logo.png") {
+                htmlDetalles += `<div class="view-photo-container"><img src="${fotoActual}" alt="Foto"></div>`;
+            }
+
+            const camposRelevantes = [
+                { label: "Precinto (ID)", val: item.precinto || item.id }, { label: "Referencia", val: item.referencia },
+                { label: "Descripción", val: item.descripcion }, { label: "Fecha Ingreso", val: item.fechaIngreso || item.fecha_ingreso },
+                { label: "Registrado Por", val: item.registradoPor || item.registrado_por }, { label: "Línea", val: item.linea },
+                { label: "Color", val: item.color }, { label: "Talla", val: item.talla }, { label: "Género", val: item.genero },
+                { label: "Proveedor", val: item.proveedor }, { label: "País Origen", val: item.paisOrigen || item.pais_origen },
+                { label: "Precio / Costo", val: item.precio || item.costo }, { label: "Moneda", val: item.moneda },
+                { label: "Cantidad", val: item.cantidad || item.cant }, { label: "Clasificación", val: item.clasificacion },
+                { label: "Ubicación General", val: item.ubicacionGeneral || item.ubicacion_general },
+                { label: "Ubicación Diseño", val: item.ubicacionDiseno || item.ubicacion_diseno }, { label: "Tipo", val: item.tipo },
+                { label: "Colección", val: item.coleccion }, { label: "Estado Actual", val: item.estado || 'Disponible' },
+                { label: "Fecha Entrega CI", val: item.fechaEntregaCI || item.fecha_entrega_ci },
+                { label: "Observaciones", val: item.observaciones || item.accionCorrectiva || item.accion_correctiva, full: true }
+            ];
+
+            camposRelevantes.forEach(c => {
+                htmlDetalles += `<div class="form-group ${c.full ? "full-width" : ""}"><label>${c.label}</label><input type="text" value="${c.val || '-'}" disabled></div>`;
+            });
+
+            contenedor.innerHTML = htmlDetalles;
+            document.getElementById('modal-ver').style.display = 'flex';
+        }
+
+        function abrirModalEdicion(jsonEncoded) {
+            const item = JSON.parse(decodeURIComponent(jsonEncoded));
+            
+            document.getElementById('edit-precinto').value = item.precinto || item.id || "";
+            document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || "";
+            document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || "";
+            document.getElementById('edit-referencia').value = item.referencia || "";
+            document.getElementById('edit-linea').value = item.linea || "";
+            document.getElementById('edit-color').value = item.color || "";
+            document.getElementById('edit-talla').value = item.talla || "";
+            document.getElementById('edit-genero').value = item.genero || "";
+            document.getElementById('edit-proveedor').value = item.proveedor || "";
+            document.getElementById('edit-paisOrigen').value = item.paisOrigen || item.pais_origen || "";
+            document.getElementById('edit-precio').value = item.precio || item.costo || "";
+            document.getElementById('edit-moneda').value = item.moneda || "COP";
+            document.getElementById('edit-cantidad').value = item.cantidad || item.cant || 1;
+            document.getElementById('edit-clasificacion').value = item.clasificacion || "";
+            
+            // Si el usuario llena esta fecha, la prenda viaja a la página de salidas.
+            document.getElementById('edit-fechaSalida').value = item.fechaSalida || item.salidaFecha || item.fecha_salida || ""; 
+            
+            document.getElementById('edit-ubicacionGeneral').value = item.ubicacionGeneral || item.ubicacion_general || "";
+            document.getElementById('edit-ubicacionDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || "";
+            document.getElementById('edit-tipo').value = item.tipo || "";
+            document.getElementById('edit-coleccion').value = item.coleccion || "";
+            document.getElementById('edit-remision').value = item.salidaRemision || item.remision || item.no_remision || "";
+            document.getElementById('edit-ordenTraslado').value = item.salidaTo || item.ordenTraslado || item.to || "";
+            
+            const selectEstado = document.getElementById('edit-estado');
+            const estadoReal = (item.estado || "Disponible en inventario").trim();
+            if (!Array.from(selectEstado.options).some(opt => opt.value === estadoReal) && !estadoReal.toUpperCase().includes('DISPONIBLE')) {
+                const nuevaOpcion = document.createElement("option"); nuevaOpcion.value = estadoReal; nuevaOpcion.text = estadoReal; selectEstado.add(nuevaOpcion);
+            }
+            selectEstado.value = estadoReal.toUpperCase().includes('DISPONIBLE') ? "Disponible en inventario" : estadoReal;
+
+            document.getElementById('edit-fechaEntregaCI').value = item.fechaEntregaCI || item.fecha_entrega_ci || "";
+            document.getElementById('edit-observaciones').value = item.observaciones || item.accionCorrectiva || item.accion_correctiva || "";
+            document.getElementById('edit-foto-actual').value = item.fotoUrl || item.foto_url || item.foto || "";
+            document.getElementById('edit-nueva-foto').value = "";
+            document.getElementById('modal-edicion').style.display = 'flex';
+        }
+
+        async function guardarEdicion() {
+            const precinto = document.getElementById('edit-precinto').value;
+            const btnGuardar = document.getElementById('btn-guardar-edicion');
+            btnGuardar.disabled = true; btnGuardar.innerHTML = "⏳ Guardando...";
+
+            try {
+                let urlFotoFinal = document.getElementById('edit-foto-actual').value;
+                const fileInput = document.getElementById('edit-nueva-foto');
+                
+                if (fileInput.files && fileInput.files.length > 0) {
+                    const reader = new FileReader();
+                    urlFotoFinal = await new Promise((resolve) => {
+                        reader.onload = function(event) {
+                            const img = new Image(); img.src = event.target.result;
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width; let height = img.height;
+                                if (width > height) { if (width > 600) { height *= 600 / width; width = 600; } } else { if (height > 600) { width *= 600 / height; height = 600; } }
+                                canvas.width = width; canvas.height = height;
+                                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            }
+                        }; reader.readAsDataURL(fileInput.files[0]);
+                    });
+                }
+
+                let fechaSalidaRevisada = document.getElementById('edit-fechaSalida').value;
+
+                const nuevaData = {
+                    fechaIngreso: document.getElementById('edit-fechaIngreso').value, registradoPor: document.getElementById('edit-registradoPor').value,
+                    referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
+                    color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
+                    genero: document.getElementById('edit-genero').value, proveedor: document.getElementById('edit-proveedor').value,
+                    paisOrigen: document.getElementById('edit-paisOrigen').value, precio: document.getElementById('edit-precio').value,
+                    moneda: document.getElementById('edit-moneda').value, cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
+                    clasificacion: document.getElementById('edit-clasificacion').value, 
+                    salidaFecha: fechaSalidaRevisada, // AQUI SE GUARDA LA FECHA DE SALIDA EDITADA
+                    ubicacionGeneral: document.getElementById('edit-ubicacionGeneral').value, ubicacionDiseno: document.getElementById('edit-ubicacionDiseno').value,
+                    tipo: document.getElementById('edit-tipo').value, coleccion: document.getElementById('edit-coleccion').value,
+                    salidaRemision: document.getElementById('edit-remision').value, salidaTo: document.getElementById('edit-ordenTraslado').value,
+                    estado: document.getElementById('edit-estado').value, fechaEntregaCI: document.getElementById('edit-fechaEntregaCI').value,
+                    observaciones: document.getElementById('edit-observaciones').value, fotoUrl: urlFotoFinal
+                };
+
+                const { error } = await client.from('prendas').update(nuevaData).eq('precinto', precinto);
+                if (error) { await client.from('prendas').update(nuevaData).eq('id', precinto); }
+                
+                if (fechaSalidaRevisada !== "") {
+                    alert("✅ Prenda actualizada.\n\nComo le asignaste una 'Fecha de Salida', esta prenda se ha movido al Historial de Salidas/Bajas.");
+                } else {
+                    alert("✅ Información actualizada correctamente.");
+                }
+
+                cerrarModal('modal-edicion');
+                cargarTabla();
+            } catch (err) { alert("❌ Error al guardar. Verifica consola."); console.error(err);
+            } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
+        }
+
+        // ==========================================
+        // EXPORTAR E IMPORTAR EXCEL
+        // ==========================================
+        function exportarExcel() {
+            if (datosGlobales.length === 0) return alert("No hay datos para exportar.");
+            const datosMapeados = datosGlobales.map(item => {
+                const partesDesc = [item.referencia, item.linea, item.color, item.talla, item.clasificacion].filter(val => val && val.toString().trim() !== "");
+                return {
+                    "Fecha Ingreso": item.fechaIngreso || item.fecha_ingreso || item.created_at || "", "Registrado Por": item.registradoPor || item.registrado_por || "",
+                    "Precinto": item.precinto || item.codigo_precinto || item.id || "", "Descripción": partesDesc.join(" ") || "",
+                    "Referencia": item.referencia || "", "Línea": item.linea || "", "Color": item.color || "", "Talla": item.talla || "",
+                    "Género": item.genero || "", "Proveedor": item.proveedor || "", "País Origen": item.paisOrigen || item.pais_origen || "",
+                    "Precio": item.precio || item.costo || "", "Moneda": item.moneda || "", "Cantidad": item.cantidad || item.cant || 1,
+                    "Clasificación": item.clasificacion || "", "Fecha de Salida": item.fechaSalida || item.salidaFecha || "",
+                    "Ubicación General": item.ubicacionGeneral || item.ubicacion_general || "", "Ubicación Diseño": item.ubicacionDiseno || item.ubicacion_diseno || "",
+                    "Tipo": item.tipo || "", "Observaciones": item.observaciones || item.accionCorrectiva || "", "Colección": item.coleccion || "",
+                    "Remisión de Salida": item.salidaRemision || item.remision || "", "Orden de Traslado (TO)": item.salidaTo || item.to || "",
+                    "Estado Actual": item.estado || "Disponible en inventario", "Fecha Entrega CI": item.fechaEntregaCI || ""
+                };
+            });
+            const worksheet = XLSX.utils.json_to_sheet(datosMapeados);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario");
+            XLSX.writeFile(workbook, `Inventario_Bodega_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
 
         function formatearFechaExcel(fechaStrONum) {
             if (!fechaStrONum) return "";
@@ -606,252 +693,46 @@
             if (typeof fechaStrONum === 'number') {
                 const fechaUnix = Math.round((fechaStrONum - 25569) * 86400 * 1000);
                 const fechaPura = new Date(fechaUnix);
-                const fechaAjustada = new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000));
-                return fechaAjustada.toISOString().split('T')[0];
-            }
-            return "";
+                return new Date(fechaPura.getTime() + Math.abs(fechaPura.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            } return "";
         }
 
-        document.getElementById('inputImportarExcel').addEventListener('change', async function(event) {
-            const archivo = event.target.files[0];
-            if (!archivo) return;
-            const lector = new FileReader();
-            lector.onload = async function(e) {
+        document.getElementById('input-importar').addEventListener('change', async function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(event) {
                 try {
-                    mensajeCarga.textContent = "Procesando Excel masivo... ⏳";
-                    mensajeCarga.style.display = "block";
-                    const data = new Uint8Array(e.target.result);
+                    const data = new Uint8Array(event.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const excelData = XLSX.utils.sheet_to_json(worksheet);
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    if (json.length === 0) return alert("Excel vacío.");
 
-                    if (excelData.length === 0) { alert("El archivo Excel está vacío o no tiene el formato correcto."); mensajeCarga.style.display = "none"; return; }
-
-                    if (confirm(`⚠️ Vas a importar ${excelData.length} prendas nuevas al inventario desde este Excel.\n\nNOTA: Asegúrate de que este Excel NO contenga las prendas que ya están en el sistema para no duplicarlas.\n\n¿Deseas continuar?`)) {
-                        const registrosLimpios = excelData.map(fila => {
-                            return {
-                                registradoPor: fila["Registrado Por"] || fila["registradoPor"] || "",
-                                fechaIngreso: formatearFechaExcel(fila["Fecha Ingreso"] || fila["fechaIngreso"]) || new Date().toLocaleDateString('en-CA'),
-                                fechaEntregaCI: formatearFechaExcel(fila["Fecha Entrega CI"] || fila["fechaEntregaCI"]),
-                                precinto: fila["Precinto"] || fila["precinto"] || "",
-                                referencia: fila["Referencia"] || fila["referencia"] || "",
-                                coleccion: fila["Colección"] || fila["coleccion"] || "",
-                                tipo: fila["Tipo"] || fila["tipo"] || "",
-                                linea: fila["Línea"] || fila["linea"] || "",
-                                talla: fila["Talla"] || fila["talla"] || "",
-                                genero: fila["Género"] || fila["genero"] || "",
-                                color: fila["Color"] || fila["color"] || "",
-                                cantidad: parseInt(fila["Cantidad"] || fila["cantidad"]) || 1,
-                                clasificacion: fila["Clasificación"] || fila["clasificacion"] || "",
-                                proveedor: fila["Proveedor"] || fila["proveedor"] || "",
-                                paisOrigen: fila["País Origen"] || fila["paisOrigen"] || "",
-                                precio: parseFloat(fila["Precio"] || fila["precio"]) || null,
-                                moneda: fila["Moneda"] || fila["moneda"] || "COP",
-                                ubicacionGeneral: fila["Ubicación General"] || fila["ubicacionGeneral"] || "",
-                                ubicacionDiseno: fila["Ubicación Diseño"] || fila["ubicacionDiseno"] || "",
-                                observaciones: fila["Observaciones"] || fila["observaciones"] || "",
-                                estado: fila["Estado Actual"] || fila["estado"] || "Disponible en inventario",
-                                salidaRemision: fila["Remisión de Salida"] || fila["salidaRemision"] || "",
-                                salidaFecha: formatearFechaExcel(fila["Fecha de Salida"] || fila["salidaFecha"]),
-                                salidaTo: fila["Orden de Traslado (TO)"] || fila["salidaTo"] || ""
-                            };
-                        });
-                        const { error } = await supabase.from('prendas').insert(registrosLimpios);
+                    if (confirm(`⚠️ Vas a importar ${json.length} prendas al sistema.\n¿Deseas continuar?`)) {
+                        const registrosLimpios = json.map(item => ({
+                            fechaIngreso: formatearFechaExcel(item["Fecha Ingreso Original"] || item["Fecha Ingreso"]) || null,
+                            registradoPor: item["Registrado Por"] || null, precinto: item["Precinto"] || null,
+                            referencia: item["Referencia"] || null, linea: item["Línea"] || null,
+                            color: item["Color"] || null, talla: item["Talla"] || null,
+                            genero: item["Género"] || null, proveedor: item["Proveedor"] || null,
+                            paisOrigen: item["País Origen"] || null, precio: item["Precio"] || null,
+                            moneda: item["Moneda"] || null, cantidad: parseInt(item["Cantidad"]) || 1,
+                            clasificacion: item["Clasificación"] || null, salidaFecha: formatearFechaExcel(item["Fecha de Salida"]) || null,
+                            ubicacionGeneral: item["Ubicación General"] || null, ubicacionDiseno: item["Ubicación Diseño"] || null,
+                            tipo: item["Tipo"] || null, coleccion: item["Colección"] || null,
+                            salidaRemision: item["Remisión de Salida"] || null, salidaTo: item["Orden de Traslado (TO)"] || null,
+                            estado: item["Estado Actual"] || "Disponible en inventario", fechaEntregaCI: formatearFechaExcel(item["Fecha Entrega CI"]) || null,
+                            observaciones: item["Observaciones"] || null
+                        }));
+                        const { error } = await client.from('prendas').upsert(registrosInsertar, { onConflict: 'precinto' });
                         if (error) throw error;
-                        alert(`🎉 ¡Importación Masiva Exitosa! Se añadieron ${registrosLimpios.length} prendas al sistema.`);
-                        fetchPrendas();
+                        alert("✅ Importación exitosa."); cargarTabla();
                     }
-                } catch (err) {
-                    console.error("Error al importar Excel:", err); alert("Ocurrió un error leyendo el Excel. Revisa que el formato de columnas sea el correcto.\n" + err.message);
-                } finally { event.target.value = ''; mensajeCarga.style.display = "none"; document.getElementById('chkSeleccionarTodos').checked = false; }
-            };
-            lector.readAsArrayBuffer(archivo);
+                } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar."); }
+                finally { e.target.value = ""; }
+            }; reader.readAsArrayBuffer(file);
         });
 
-        document.getElementById('inputBuscador').addEventListener('input', function() {
-            const textoBusqueda = this.value.toLowerCase();
-            const filasTabla = document.querySelectorAll('#cuerpoTabla tr');
-            filasTabla.forEach(fila => {
-                if(fila.cells.length === 1) return; 
-                const contenidoFila = fila.textContent.toLowerCase();
-                if (contenidoFila.includes(textoBusqueda)) { fila.style.display = ''; } else { fila.style.display = 'none'; }
-            });
-            window.actualizarBotonEliminarMasivo();
-            window.calcularSubtotales();
-        });
-
-        window.abrirModalSalida = function(idDocumento) {
-            idPrendaSeleccionada = idDocumento; 
-            document.getElementById('salidaRemision').value = '';
-            document.getElementById('salidaFecha').value = '';
-            document.getElementById('salidaTipo').value = '';
-            document.getElementById('salidaTo').value = ''; 
-            document.getElementById('modalSalida').style.display = 'flex';
-        }
-        window.cerrarModalSalida = function() { document.getElementById('modalSalida').style.display = 'none'; idPrendaSeleccionada = null; }
-
-        window.guardarSalida = async function() {
-            const remision = document.getElementById('salidaRemision').value.trim();
-            const fecha = document.getElementById('salidaFecha').value;
-            const tipo = document.getElementById('salidaTipo').value;
-            const toVal = document.getElementById('salidaTo').value.trim(); 
-            if (tipo === "") { alert("Por favor selecciona un 'Tipo de Salida'."); return; }
-            const btn = document.getElementById('btnConfirmarSalida');
-            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
-
-            const { error } = await supabase.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idPrendaSeleccionada);
-            if (error) { alert("Error: " + error.message); } else { window.cerrarModalSalida(); fetchPrendas(); }
-            btn.textContent = "Confirmar"; btn.disabled = false;
-        }
-
-        window.abrirModalEditar = async function(idDocumento) {
-            idPrendaSeleccionada = idDocumento;
-            document.getElementById('edFotoNueva').value = '';
-            const { data, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
-            if (data) {
-                const p = data;
-                document.getElementById('edPrecinto').value = p.precinto || '';
-                document.getElementById('edReferencia').value = p.referencia || '';
-                document.getElementById('edColeccion').value = p.coleccion || '';
-                document.getElementById('edFechaEntregaCI').value = p.fechaEntregaCI || '';
-                document.getElementById('edTipo').value = p.tipo || '';
-                document.getElementById('edLinea').value = p.linea || '';
-                document.getElementById('edTalla').value = p.talla || '';
-                document.getElementById('edGenero').value = p.genero || '';
-                document.getElementById('edColor').value = p.color || '';
-                document.getElementById('edUbiGeneral').value = p.ubicacionGeneral || '';
-                document.getElementById('edUbiDiseno').value = p.ubicacionDiseno || '';
-                document.getElementById('edObservaciones').value = p.observaciones || '';
-                document.getElementById('edRemision').value = p.salidaRemision || '';
-                document.getElementById('edFechaSalida').value = p.salidaFecha || '';
-                document.getElementById('edTo').value = p.salidaTo || ''; 
-                document.getElementById('edPrecio').value = p.precio || '';
-                document.getElementById('edMoneda').value = p.moneda || 'COP';
-                document.getElementById('edProveedor').value = p.proveedor || '';
-                document.getElementById('edPaisOrigen').value = p.paisOrigen || '';
-                const selectEstado = document.getElementById('edEstado');
-                if(p.estado) { selectEstado.value = p.estado; } else { selectEstado.value = "Disponible en inventario"; }
-                document.getElementById('modalEditar').style.display = 'flex';
-            }
-        }
-        window.cerrarModalEditar = function() { document.getElementById('modalEditar').style.display = 'none'; idPrendaSeleccionada = null; }
-
-        window.guardarEdicion = function() {
-            const btn = document.getElementById('btnGuardarEdicion');
-            btn.textContent = "Guardando... ⏳"; btn.disabled = true;
-            const archivoFotoNueva = document.getElementById('edFotoNueva').files[0];
-            if (archivoFotoNueva) {
-                const reader = new FileReader();
-                reader.readAsDataURL(archivoFotoNueva);
-                reader.onload = function(event) {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; const MAX_HEIGHT = 600;
-                        let width = img.width; let height = img.height;
-                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                        } else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        const fotoBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                        ejecutarUpdateSupabase(fotoBase64); 
-                    }
-                }
-            } else {
-                ejecutarUpdateSupabase(null);
-            }
-
-            async function ejecutarUpdateSupabase(nuevaFotoData) {
-                let datosActualizar = {
-                    precinto: document.getElementById('edPrecinto').value.trim(), referencia: document.getElementById('edReferencia').value,
-                    coleccion: document.getElementById('edColeccion').value, fechaEntregaCI: document.getElementById('edFechaEntregaCI').value,
-                    tipo: document.getElementById('edTipo').value, linea: document.getElementById('edLinea').value,
-                    talla: document.getElementById('edTalla').value, genero: document.getElementById('edGenero').value,
-                    color: document.getElementById('edColor').value, ubicacionGeneral: document.getElementById('edUbiGeneral').value,
-                    ubicacionDiseno: document.getElementById('edUbiDiseno').value, observaciones: document.getElementById('edObservaciones').value,
-                    estado: document.getElementById('edEstado').value, salidaRemision: document.getElementById('edRemision').value, 
-                    salidaFecha: document.getElementById('edFechaSalida').value, salidaTo: document.getElementById('edTo').value,
-                    precio: parseFloat(document.getElementById('edPrecio').value) || null, moneda: document.getElementById('edMoneda').value,
-                    proveedor: document.getElementById('edProveedor').value, paisOrigen: document.getElementById('edPaisOrigen').value
-                };
-                if (nuevaFotoData !== null) { datosActualizar.fotoUrl = nuevaFotoData; }
-                const { error } = await supabase.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada);
-                if (error) { alert("Error editando: " + error.message); } else { window.cerrarModalEditar(); fetchPrendas(); }
-                btn.textContent = "💾 Guardar Cambios"; btn.disabled = false;
-            }
-        }
-
-        window.verDetalles = async function(idDocumento) {
-            const { data: p, error } = await supabase.from('prendas').select('*').eq('id', idDocumento).single();
-            if (p) {
-                document.getElementById('detFoto').src = p.fotoUrl || 'logo.png';
-                document.getElementById('detPrecintoTitulo').textContent = p.precinto || '-';
-                document.getElementById('detRegistradoPor').textContent = p.registradoPor || 'N/A';
-                document.getElementById('detFechaIngreso').textContent = p.fechaIngreso || 'N/A';
-                document.getElementById('detFechaEntregaCI').textContent = p.fechaEntregaCI || '-';
-                document.getElementById('detPrecinto').textContent = p.precinto || '-';
-                document.getElementById('detReferencia').textContent = p.referencia || '-';
-                document.getElementById('detColeccion').textContent = p.coleccion || '-';
-                document.getElementById('detTipo').textContent = p.tipo || '-';
-                document.getElementById('detLinea').textContent = p.linea || '-';
-                document.getElementById('detGenero').textContent = p.genero || '-';
-                document.getElementById('detTalla').textContent = p.talla || '-';
-                document.getElementById('detColor').textContent = p.color || '-';
-                document.getElementById('detCantidad').textContent = p.cantidad || '-';
-                document.getElementById('detClasificacion').textContent = p.clasificacion || '-';
-                document.getElementById('detProveedor').textContent = p.proveedor || '-';
-                document.getElementById('detPais').textContent = p.paisOrigen || '-';
-                document.getElementById('detPrecio').textContent = (p.precio || '-') + ' ' + (p.moneda || '');
-                document.getElementById('detUbiGeneral').textContent = p.ubicacionGeneral || '-';
-                document.getElementById('detUbiDiseno').textContent = p.ubicacionDiseno || '-';
-                document.getElementById('detEstado').textContent = p.estado || 'Disponible en inventario';
-                document.getElementById('detRemision').textContent = p.salidaRemision || '-';
-                document.getElementById('detFechaSalida').textContent = p.salidaFecha || '-';
-                document.getElementById('detTo').textContent = p.salidaTo || '-'; 
-                document.getElementById('detObservaciones').textContent = p.observaciones || 'Sin observaciones.';
-                document.getElementById('modalDetalles').style.display = 'flex';
-            }
-        }
-        
-        window.cerrarModalDetalles = function() { document.getElementById('modalDetalles').style.display = 'none'; }
-        
-        window.eliminarPrenda = function(idDocumento, botonPresionado) { 
-            if(confirm("¿Quitar esta prenda de la vista para eliminarla?\n\n(Recuerda presionar el botón verde 'Guardar Cambios' para borrarla definitivamente).")) { 
-                prendasAEliminarLocal.push(idDocumento);
-                const filaElemento = botonPresionado.closest('tr');
-                if (filaElemento) filaElemento.style.display = 'none';
-                document.getElementById('btnGuardarMasivo').style.display = 'flex';
-                window.calcularSubtotales();
-            } 
-        }
-
-        window.guardarCambiosMasivos = async function() {
-            if(prendasAEliminarLocal.length === 0) return;
-            const btn = document.getElementById('btnGuardarMasivo');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Eliminando..."; btn.disabled = true;
-            try {
-                const { error } = await supabase.from('prendas').delete().in('id', prendasAEliminarLocal);
-                if (error) throw error;
-                prendasAEliminarLocal = []; btn.style.display = 'none';
-                alert("¡Base de datos actualizada! Las prendas fueron eliminadas.");
-            } catch (error) { console.error("Error al eliminar masivamente:", error); alert("Hubo un problema guardando los cambios.");
-            } finally { btn.innerHTML = textoOriginal; btn.disabled = false; }
-        }
-        
-        const visor = document.getElementById('modalVisor');
-        const imgAmpliada = document.getElementById('imagenAmpliada');
-        window.abrirVisor = function(url) { visor.style.display = 'flex'; imgAmpliada.src = url; }
-        window.cerrarVisor = function() { visor.style.display = 'none'; imgAmpliada.src = ''; }
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape" || event.keyCode === 27) {
-                window.cerrarVisor(); window.cerrarModalSalida(); window.cerrarModalDetalles(); window.cerrarModalEditar();
-            }
-        });
+        document.addEventListener("DOMContentLoaded", cargarTabla);
     </script>
 </body>
 </html>
