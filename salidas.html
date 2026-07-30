@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Bajas y Salidas - Inventario</title>
     
-    <!-- Supabase JS CDN -->
+    <!-- Librerías externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS CDN para exportar a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
@@ -36,6 +35,7 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
+            font-size: 14px;
         }
 
         .btn-secondary { background-color: #333; color: #fff; }
@@ -47,7 +47,7 @@
         .btn-excel { background-color: #1b5e20; color: #fff; }
         .btn-excel:hover { background-color: #2e7d32; }
 
-        /* Contenedor de Subtotales */
+        /* Banner de Subtotales */
         .subtotales-banner {
             display: flex;
             gap: 20px;
@@ -90,7 +90,6 @@
             color: #fff;
         }
 
-        /* Tabla de Salidas */
         .table-container {
             overflow-x: auto;
             background-color: #1e1e1e;
@@ -102,7 +101,7 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         th, td {
@@ -139,14 +138,14 @@
 </head>
 <body>
 
-    <!-- Encabezado -->
+    <!-- Encabezado Principal -->
     <div class="header-container">
         <a href="dashboard.html" class="btn btn-secondary">📁 Volver al Dashboard</a>
         <h2>📋 Consolidado de Bajas y Salidas</h2>
         <button class="btn btn-excel" onclick="exportarExcelSalidas()">📥 Exportar Excel</button>
     </div>
 
-    <!-- Banner de Subtotales Dinámicos -->
+    <!-- Banner con Subtotales Dinámicos -->
     <div class="subtotales-banner">
         <div class="subtotal-item">
             <span class="subtotal-label">Items Visibles:</span>
@@ -158,13 +157,13 @@
         </div>
     </div>
 
-    <!-- Fila de Controles y Búsqueda -->
+    <!-- Filtros y Acciones -->
     <div class="controls-row">
         <input type="text" id="input-busqueda" class="search-input" placeholder="Buscar baja por precinto, remisión, referencia..." onkeyup="filtrarTabla()">
-        <button class="btn btn-danger" onclick="eliminarSeleccionadosSalidas()">⏳ Borrando Selección</button>
+        <button class="btn btn-danger" onclick="eliminarSeleccionadosSalidas()">⌛ Borrando Selección</button>
     </div>
 
-    <!-- Tabla de Salidas -->
+    <!-- Tabla -->
     <div class="table-container">
         <table id="tabla-salidas">
             <thead>
@@ -183,43 +182,67 @@
                 </tr>
             </thead>
             <tbody id="tbody-salidas">
-                <!-- Se llena dinámicamente con JS -->
+                <!-- Carga dinámica -->
             </tbody>
         </table>
     </div>
 
     <script>
-        // 1. CONFIGURACIÓN DE SUPABASE (Reemplaza con tus llaves reales si es necesario)
-        const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-        const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY";
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // -------------------------------------------------------------
+        // INICIALIZACIÓN DE SUPABASE
+        // Detecta automáticamente las credenciales existentes de tu proyecto
+        // -------------------------------------------------------------
+        let client = null;
 
-        let datosGlobalesSalidas = []; // Guardará la data original para exportar
+        function obtenerClienteSupabase() {
+            if (window.supabaseClient) return window.supabaseClient;
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                // Reemplazar si tienes tus llaves en variables de entorno o archivo config
+                const URL_PROYECTO = window.SUPABASE_URL || "https://tu-proyecto.supabase.co"; 
+                const KEY_PROYECTO = window.SUPABASE_KEY || "tu-anon-key";
+                return window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
+            }
+            return null;
+        }
 
-        // 2. CARGAR TABLA DE SALIDAS
+        let datosGlobalesSalidas = [];
+
+        // 1. CARGAR REGISTROS
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
+            if (!tbody) return;
+
             tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Cargando registros...</td></tr>`;
 
+            client = obtenerClienteSupabase();
+
+            if (!client) {
+                console.warn("Cliente Supabase no detectado directamente, intentando lectura fallback...");
+            }
+
             try {
-                // Consultamos la tabla de bajas/salidas
-                const { data, error } = await supabaseClient
-                    .from('bajas') 
-                    .select('*')
-                    .order('fecha_salida', { ascending: false });
+                // Intentamos consultar la tabla de bajas / salidas
+                let res = await client.from('bajas').select('*');
+                
+                // Si la tabla se llama 'salidas' en tu Supabase en vez de 'bajas'
+                if (res.error && res.error.code === '42P01') {
+                    res = await client.from('salidas').select('*');
+                }
 
-                if (error) throw error;
+                if (res.error) throw res.error;
 
-                datosGlobalesSalidas = data || [];
+                datosGlobalesSalidas = res.data || [];
                 renderizarTabla(datosGlobalesSalidas);
 
             } catch (err) {
                 console.error("Error al cargar salidas:", err);
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252;">Error al cargar datos. Verificar consola.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
+                    Error al cargar datos (${err.message || 'Error de conexión'}). Revisa la consola (F12).
+                </td></tr>`;
             }
         }
 
-        // 3. RENDERIZAR TABLA EN HTML
+        // 2. RENDERIZAR TABLA EN HTML
         function renderizarTabla(lista) {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = "";
@@ -232,17 +255,17 @@
 
             lista.forEach(item => {
                 const tr = document.createElement("tr");
-                const precinto = item.codigo_precinto || item.id || "";
+                const precinto = item.codigo_precinto || item.precinto || item.id || "";
 
                 tr.innerHTML = `
                     <td><input type="checkbox" class="checkbox-item" value="${precinto}"></td>
-                    <td><img src="${item.foto_url || 'https://via.placeholder.com/40'}" class="img-thumb" alt="foto"></td>
-                    <td>${item.fecha_salida || item.created_at || '-'}</td>
+                    <td><img src="${item.foto_url || item.foto || 'https://via.placeholder.com/40'}" class="img-thumb" alt="foto"></td>
+                    <td>${item.fecha_salida || item.fecha || item.created_at || '-'}</td>
                     <td><strong>${precinto}</strong></td>
                     <td>${item.descripcion || '-'}</td>
                     <td>${item.referencia || '-'}</td>
                     <td>${item.linea || '-'}</td>
-                    <td class="col-cantidad">${item.cantidad || 1}</td>
+                    <td class="col-cantidad">${item.cantidad || item.cant || 1}</td>
                     <td><span class="badge-salida">${item.tipo_salida || 'SALIDA DEL INVENTARIO'}</span></td>
                     <td>${item.no_remision || item.remision || '-'}</td>
                     <td>${item.accion_correctiva || '-'}</td>
@@ -250,31 +273,32 @@
                 tbody.appendChild(tr);
             });
 
-            // Recalcular los subtotales con los ítems renderizados
             filtrarTabla();
         }
 
-        // 4. FILTRAR TABLA Y ACTUALIZAR SUBTOTALES
+        // 3. FILTRO EN TIEMPO REAL Y SUBTOTALES
         function filtrarTabla() {
-            const filtro = document.getElementById("input-busqueda").value.toLowerCase();
+            const inputBusqueda = document.getElementById("input-busqueda");
+            const filtro = inputBusqueda ? inputBusqueda.value.toLowerCase() : "";
             const filas = document.querySelectorAll("#tbody-salidas tr");
             
             let registrosVisibles = 0;
             let sumaUnidades = 0;
 
             filas.forEach(fila => {
-                const texto = fila.textContent.toLowerCase();
-                if (texto.includes(filtro)) {
-                    fila.style.display = "";
-                    registrosVisibles++;
-                    
-                    // Extraer cantidad de la celda correspondiente
-                    const celdaCant = fila.querySelector(".col-cantidad");
-                    if (celdaCant) {
-                        sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
+                if (fila.cells.length > 2) { // Evita filas de mensajes de error o carga
+                    const texto = fila.textContent.toLowerCase();
+                    if (texto.includes(filtro)) {
+                        fila.style.display = "";
+                        registrosVisibles++;
+                        
+                        const celdaCant = fila.querySelector(".col-cantidad");
+                        if (celdaCant) {
+                            sumaUnidades += parseInt(celdaCant.textContent.trim()) || 0;
+                        }
+                    } else {
+                        fila.style.display = "none";
                     }
-                } else {
-                    fila.style.display = "none";
                 }
             });
 
@@ -282,11 +306,13 @@
         }
 
         function actualizarSubtotales(registros, unidades) {
-            document.getElementById("subtotal-registros").textContent = registros;
-            document.getElementById("subtotal-unidades").textContent = unidades.toLocaleString() + " unds";
+            const elReg = document.getElementById("subtotal-registros");
+            const elUnd = document.getElementById("subtotal-unidades");
+            if (elReg) elReg.textContent = registros;
+            if (elUnd) elUnd.textContent = unidades.toLocaleString() + " unds";
         }
 
-        // 5. ELIMINAR REGISTROS SELECCIONADOS (Corregido "Bad Request")
+        // 4. ELIMINAR REGISTROS (Resuelve "Bad Request")
         async function eliminarSeleccionadosSalidas() {
             const checkboxes = document.querySelectorAll('.checkbox-item:checked');
             const seleccionados = Array.from(checkboxes).map(cb => cb.value);
@@ -301,40 +327,45 @@
             }
 
             try {
-                // DELETE en Supabase usando .in() con el campo clave correcto
-                const { error } = await supabaseClient
+                // Probamos eliminar por codigo_precinto o id
+                let { error } = await client
                     .from('bajas')
                     .delete()
-                    .in('codigo_precinto', seleccionados); // Reemplaza 'codigo_precinto' por 'id' si tu llave primaria se llama 'id'
+                    .in('codigo_precinto', seleccionados);
 
                 if (error) {
-                    console.error("Detalle del error de Supabase:", error);
-                    throw error;
+                    // Reintento alternativo si la columna clave primaria es 'id'
+                    const reintento = await client
+                        .from('bajas')
+                        .delete()
+                        .in('id', seleccionados);
+
+                    if (reintento.error) throw reintento.error;
                 }
 
                 alert("Registros eliminados con éxito.");
-                cargarTablaSalidas(); // Recargar la tabla
+                cargarTablaSalidas();
 
             } catch (err) {
+                console.error("Error al borrar:", err);
                 alert("Error al intentar eliminar los registros: " + (err.message || "Bad Request"));
             }
         }
 
-        // 6. EXPORTAR A EXCEL UNIFICADO (Misma estructura del Dashboard)
+        // 5. EXPORTAR A EXCEL UNIFICADO (Columnas estructuradas como el Dashboard)
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) {
                 alert("No hay datos para exportar.");
                 return;
             }
 
-            // Mapeamos exactamente con los mismos nombres de columnas que el Dashboard
             const datosMapeados = datosGlobalesSalidas.map(item => ({
-                "Fecha Salida": item.fecha_salida || item.created_at || "",
-                "Código Precinto": item.codigo_precinto || item.id || "",
+                "Fecha Salida": item.fecha_salida || item.fecha || item.created_at || "",
+                "Código Precinto": item.codigo_precinto || item.precinto || item.id || "",
                 "Descripción": item.descripcion || "",
                 "Referencia": item.referencia || "",
                 "Línea": item.linea || "",
-                "Cant.": item.cantidad || 1,
+                "Cant.": item.cantidad || item.cant || 1,
                 "Costo": item.costo ? `${item.costo} ${item.moneda || 'USD'}` : "",
                 "Tipo de Salida": item.tipo_salida || "SALIDA DEL INVENTARIO",
                 "No. Remisión": item.no_remision || item.remision || "-",
@@ -347,19 +378,16 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Historial_Salidas");
 
-            // Descargar el archivo Excel con marca de tiempo
             const fechaStr = new Date().toISOString().slice(0, 10);
             XLSX.writeFile(workbook, `Reporte_Salidas_Inventario_${fechaStr}.xlsx`);
         }
 
-        // Helper para marcar todos los checkboxes
         function marcarTodos(source) {
             const checkboxes = document.querySelectorAll('.checkbox-item');
             checkboxes.forEach(cb => cb.checked = source.checked);
         }
 
-        // Cargar datos al iniciar la página
-        window.onload = cargarTablaSalidas;
+        document.addEventListener("DOMContentLoaded", cargarTablaSalidas);
     </script>
 </body>
 </html>
