@@ -170,7 +170,7 @@
                 <tr>
                     <th><input type="checkbox" id="check-all" onclick="marcarTodos(this)"></th>
                     <th>Foto</th>
-                    <th>Fecha Salida</th>
+                    <th>Fecha Ingreso/Salida</th>
                     <th>Código Precinto</th>
                     <th>Descripción</th>
                     <th>Referencia</th>
@@ -189,17 +189,15 @@
 
     <script>
         // -------------------------------------------------------------
-        // INICIALIZACIÓN DE SUPABASE
-        // Usa la conexión del Dashboard o tus llaves directas
+        // INICIALIZACIÓN DE SUPABASE (CON TUS LLAVES REALES)
         // -------------------------------------------------------------
+        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
+        const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+
         function obtenerClienteSupabase() {
             if (window.supabaseClient) return window.supabaseClient;
             if (window._supabase) return window._supabase;
             
-            // Reemplaza estas dos comillas con la URL y KEY reales de tu Supabase si no existen variables globales:
-            const URL_PROYECTO = window.SUPABASE_URL || 'https://emljzsxypeqecevffmwr.supabase.co'; 
-            const KEY_PROYECTO = window.SUPABASE_KEY || 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 return window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
             }
@@ -208,7 +206,7 @@
 
         let datosGlobalesSalidas = [];
 
-        // 1. CARGAR REGISTROS
+        // 1. CARGAR REGISTROS DESDE LA TABLA 'prendas'
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
             if (!tbody) return;
@@ -219,18 +217,16 @@
 
             if (!client) {
                 tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#ff5252; font-weight:bold;">
-                    Error: No se encontró la conexión a Supabase. Verifica la URL y la Key en el script.
+                    Error: No se encontró la conexión a Supabase.
                 </td></tr>`;
                 return;
             }
 
             try {
-                // Consultar la tabla 'bajas' o 'salidas'
-                let res = await client.from('bajas').select('*');
-                
-                if (res.error && (res.error.code === '42P01' || res.error.message.includes('not found'))) {
-                    res = await client.from('salidas').select('*');
-                }
+                // Selecciona los datos de tu tabla prendas
+                // Si quieres que solo salgan las prendas con estado "BAJA", descomenta la línea de abajo y borra la que está activa
+                // let res = await client.from('prendas').select('*').eq('estado', 'BAJA');
+                let res = await client.from('prendas').select('*');
 
                 if (res.error) throw res.error;
 
@@ -245,33 +241,33 @@
             }
         }
 
-        // 2. RENDERIZAR TABLA EN HTML
+        // 2. RENDERIZAR TABLA EN HTML (Usando los nombres exactos de tus columnas en Supabase)
         function renderizarTabla(lista) {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = "";
 
             if (lista.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">No hay registros de salidas disponibles.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">No hay registros disponibles.</td></tr>`;
                 actualizarSubtotales(0, 0);
                 return;
             }
 
             lista.forEach(item => {
                 const tr = document.createElement("tr");
-                const precinto = item.codigo_precinto || item.precinto || item.id || "";
+                const codigoPrecinto = item.precinto || item.codigo_precinto || item.id || "";
 
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="checkbox-item" value="${precinto}"></td>
-                    <td><img src="${item.foto_url || item.foto || 'https://via.placeholder.com/40'}" class="img-thumb" alt="foto"></td>
-                    <td>${item.fecha_salida || item.fecha || item.created_at || '-'}</td>
-                    <td><strong>${precinto}</strong></td>
+                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}"></td>
+                    <td><img src="${item.fotoUrl || item.foto_url || item.foto || 'https://via.placeholder.com/40'}" class="img-thumb" alt="foto"></td>
+                    <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
+                    <td><strong>${codigoPrecinto}</strong></td>
                     <td>${item.descripcion || '-'}</td>
                     <td>${item.referencia || '-'}</td>
                     <td>${item.linea || '-'}</td>
                     <td class="col-cantidad">${item.cantidad || item.cant || 1}</td>
-                    <td><span class="badge-salida">${item.tipo_salida || 'SALIDA DEL INVENTARIO'}</span></td>
-                    <td>${item.no_remision || item.remision || '-'}</td>
-                    <td>${item.accion_correctiva || '-'}</td>
+                    <td><span class="badge-salida">${item.estado || item.tipo_salida || 'SALIDA'}</span></td>
+                    <td>${item.remision || item.no_remision || '-'}</td>
+                    <td>${item.accionCorrectiva || item.accion_correctiva || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -315,7 +311,7 @@
             if (elUnd) elUnd.textContent = unidades.toLocaleString() + " unds";
         }
 
-        // 4. ELIMINAR REGISTROS (Corregido Bad Request)
+        // 4. ELIMINAR REGISTROS MASIVOS DE LA TABLA 'prendas'
         async function eliminarSeleccionadosSalidas() {
             const checkboxes = document.querySelectorAll('.checkbox-item:checked');
             const seleccionados = Array.from(checkboxes).map(cb => cb.value);
@@ -332,14 +328,15 @@
             const client = obtenerClienteSupabase();
 
             try {
+                // Borrando directamente en tu tabla prendas basándonos en la columna precinto
                 let { error } = await client
-                    .from('bajas')
+                    .from('prendas')
                     .delete()
-                    .in('codigo_precinto', seleccionados);
+                    .in('precinto', seleccionados);
 
                 if (error) {
                     const reintento = await client
-                        .from('bajas')
+                        .from('prendas')
                         .delete()
                         .in('id', seleccionados);
 
@@ -355,7 +352,7 @@
             }
         }
 
-        // 5. EXPORTAR A EXCEL UNIFICADO (Mismas columnas que el Dashboard)
+        // 5. EXPORTAR A EXCEL UNIFICADO
         function exportarExcelSalidas() {
             if (datosGlobalesSalidas.length === 0) {
                 alert("No hay datos para exportar.");
@@ -363,26 +360,25 @@
             }
 
             const datosMapeados = datosGlobalesSalidas.map(item => ({
-                "Fecha Salida": item.fecha_salida || item.fecha || item.created_at || "",
-                "Código Precinto": item.codigo_precinto || item.precinto || item.id || "",
+                "Fecha Ingreso/Salida": item.fechaIngreso || item.fecha_ingreso || item.created_at || "",
+                "Código Precinto": item.precinto || item.codigo_precinto || item.id || "",
                 "Descripción": item.descripcion || "",
                 "Referencia": item.referencia || "",
                 "Línea": item.linea || "",
                 "Cant.": item.cantidad || item.cant || 1,
                 "Costo": item.costo ? `${item.costo} ${item.moneda || 'USD'}` : "",
-                "Tipo de Salida": item.tipo_salida || "SALIDA DEL INVENTARIO",
-                "No. Remisión": item.no_remision || item.remision || "-",
+                "Estado/Tipo Salida": item.estado || item.tipo_salida || "SALIDA",
+                "No. Remisión": item.remision || item.no_remision || "-",
                 "Ubicación": item.ubicacion || "",
-                "Estado": item.estado || "BAJA",
-                "Acción Correctiva": item.accion_correctiva || ""
+                "Acción Correctiva": item.accionCorrectiva || item.accion_correctiva || ""
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(datosMapeados);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Historial_Salidas");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Historial_Prendas");
 
             const fechaStr = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(workbook, `Reporte_Salidas_Inventario_${fechaStr}.xlsx`);
+            XLSX.writeFile(workbook, `Reporte_Prendas_Inventario_${fechaStr}.xlsx`);
         }
 
         function marcarTodos(source) {
