@@ -142,7 +142,7 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // LAS 33 COLUMNAS (Se añadió PDF al final)
+        // LAS 33 COLUMNAS EXACTAS
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -241,7 +241,7 @@
             let count = 0; let current = new Date(start);
             while (current <= end) {
                 let dayOfWeek = current.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; }
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; } // Ignora Sabado y Domingo
                 current.setDate(current.getDate() + 1);
             } return count.toString();
         }
@@ -322,6 +322,7 @@
 
             allCols.forEach((colName, index) => {
                 const td = document.createElement('td'); const valorRaw = datos[index] || '';
+                const valorLower = valorRaw.toLowerCase();
 
                 if(colName === 'FOTO') { 
                     td.contentEditable = "false"; td.style.textAlign = "center";
@@ -348,6 +349,16 @@
                     }
                 }
                 else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorRaw}</strong>`; } 
+                else if (colName === 'NIVEL DE PRIORIDAD:') {
+                    td.contentEditable = "false";
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
+                        <option value=""></option>
+                        <option value="Urgente" ${valorLower === 'urgente' ? 'selected' : ''}>Urgente</option>
+                        <option value="Alto" ${valorLower === 'alto' ? 'selected' : ''}>Alto</option>
+                        <option value="Medio" ${valorLower === 'medio' ? 'selected' : ''}>Medio</option>
+                        <option value="Bajo" ${valorLower === 'bajo' ? 'selected' : ''}>Bajo</option>
+                    </select>`;
+                }
                 else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
                     td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
@@ -360,7 +371,7 @@
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;">${generarOpcionesMotivo(valorRaw)}</select>`;
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">${generarOpcionesMotivo(valorRaw)}</select>`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
                     td.contentEditable = "false"; 
@@ -388,10 +399,10 @@
                     const img = celdas[i].querySelector('.img-foto-prenda'); datosFila.push((img && !img.src.includes('logo.png')) ? img.src : "");
                 } else if (colName === 'PDF AUDITORÍA') {
                     const pdfInput = celdas[i].querySelector('.pdf-data'); datosFila.push(pdfInput ? pdfInput.value : "");
-                } else if (colName === 'RESULTADO' || colName.includes('MOTIVO')) { 
-                    const select = celdas[i].querySelector('select'); datosFila.push(select ? select.value : "");
-                } else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
-                    const dateInp = celdas[i].querySelector('input[type="date"]'); datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
+                } else if (celdas[i].querySelector('select')) { 
+                    datosFila.push(celdas[i].querySelector('select').value);
+                } else if (celdas[i].querySelector('input[type="date"]')) { 
+                    datosFila.push(celdas[i].querySelector('input[type="date"]').value);
                 } else { 
                     datosFila.push(celdas[i].innerText.trim());
                 }
