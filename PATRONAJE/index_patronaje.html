@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Dpto. Técnico y Patronaje</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .login-container { background-color: #1e1e1e; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 100%; max-width: 400px; text-align: center; border: 1px solid #333; }
+        .login-container img { width: 80px; margin-bottom: 20px; }
+        .login-container h2 { margin: 0 0 5px 0; color: #0dcaf0; }
+        .login-container p { color: #888; font-size: 14px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; color: #ccc; font-weight: bold; margin-bottom: 8px; }
+        .form-group input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background-color: #2b2b2b; color: #fff; box-sizing: border-box; font-size: 14px; transition: 0.3s; }
+        .form-group input:focus { border-color: #0dcaf0; outline: none; }
+        .btn-login { width: 100%; background-color: #198754; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; }
+        .btn-login:hover { background-color: #157347; }
+        #mensajeError { color: #dc3545; font-size: 13px; margin-top: 15px; display: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <!-- Reemplaza logo.png por la ruta de tu logo si es necesario -->
+        <img src="logo.png" alt="Logo">
+        <h2>Área de Patronaje</h2>
+        <p>Portal exclusivo del Departamento Técnico</p>
+
+        <div class="form-group">
+            <label>Correo Electrónico</label>
+            <input type="email" id="email" placeholder="usuario@monastery.com.co" required>
+        </div>
+        <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        
+        <button class="btn-login" id="btnIngresar" onclick="iniciarSesion()">Ingresar al Sistema</button>
+        <div id="mensajeError"></div>
+    </div>
+
+    <script>
+        // CONEXIÓN A TU BASE DE DATOS
+        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
+        const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
+
+        // VERIFICAR SI YA ESTÁ LOGUEADO
+        async function comprobarSesion() {
+            const { data: { session } } = await client.auth.getSession();
+            if (session) {
+                // Si ya tiene sesión, lo mandamos directo a patronaje
+                window.location.href = "patronaje.html";
+            }
+        }
+        comprobarSesion();
+
+        // FUNCIÓN DE LOGIN
+        window.iniciarSesion = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btnIngresar');
+            const errorDiv = document.getElementById('mensajeError');
+
+            if (!email || !password) {
+                errorDiv.textContent = "Por favor, completa ambos campos.";
+                errorDiv.style.display = "block";
+                return;
+            }
+
+            btn.textContent = "Verificando... ⏳";
+            btn.disabled = true;
+            errorDiv.style.display = "none";
+
+            const { data, error } = await client.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
+                errorDiv.textContent = "Credenciales incorrectas. Intenta de nuevo.";
+                errorDiv.style.display = "block";
+                btn.textContent = "Ingresar al Sistema";
+                btn.disabled = false;
+            } else {
+                // REDIRECCIÓN EXCLUSIVA A PATRONAJE
+                window.location.href = "patronaje.html";
+            }
+        }
+
+        // Permitir enter para iniciar sesión
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { iniciarSesion(); }
+        });
+    </script>
+</body>
+</html>
