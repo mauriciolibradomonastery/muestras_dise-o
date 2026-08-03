@@ -10,19 +10,15 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        :root { --w-col-0: 60px; --w-col-1: 120px; --w-col-6: 150px; }
+        :root { --w-col-0: 60px; --w-col-1: 100px; --w-col-6: 150px; }
 
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
             padding: 25px; 
             background-image: linear-gradient(rgba(245, 247, 250, 0.88), rgba(230, 235, 242, 0.92)), url('fondo.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            color: #1f2937; 
-            min-height: 100vh;
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #1f2937; min-height: 100vh;
         }
 
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); padding-bottom: 15px; }
@@ -41,12 +37,12 @@
         .btn:hover { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
         
         .btn-save { background-color: #10b981; color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); } 
-        .btn-save:hover { background-color: #059669; color: white; border: none; transform: translateY(-1px); }
+        .btn-save:hover { background-color: #059669; color: white; transform: translateY(-1px); }
         
         .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; display: none; }
         .btn-bulk-delete:hover { background-color: #fecdd3; color: #9f1239; }
 
-        .search-input { width: 320px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d1d5db; background-color: #ffffff; color: #111827; outline: none; font-size: 13px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
+        .search-input { width: 320px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d1d5db; background-color: #ffffff; color: #111827; outline: none; font-size: 13px; }
         .search-input:focus { border-color: #3b82f6; }
 
         /* TABLA ESTILO EXCEL CLARO */
@@ -68,15 +64,13 @@
         .resizer { position: absolute; top: 0; right: 0; width: 6px; cursor: col-resize; user-select: none; height: 100%; z-index: 25; }
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; }
 
+        .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
+
         /* MODALES */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
-        
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         #imagenAmpliada { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
-
-        /* Estilo para celdas calculadas (solo lectura) */
-        .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
@@ -85,7 +79,7 @@
         const styleEl = document.createElement('style');
         let cssRules = "";
         for(let i=0; i<=35; i++) {
-            cssRules += `th:nth-child(${i+1}), td:nth-child(${i+1}) { width: var(--w-col-${i}, 130px) !important; min-width: var(--w-col-${i}, 130px) !important; max-width: var(--w-col-${i}, 400px) !important; }\n`;
+            cssRules += `th:nth-child(${i+1}), td:nth-child(${i+1}) { width: var(--w-col-${i}, 140px) !important; min-width: var(--w-col-${i}, 140px) !important; max-width: var(--w-col-${i}, 400px) !important; }\n`;
         }
         styleEl.innerHTML = cssRules; document.head.appendChild(styleEl);
     </script>
@@ -102,7 +96,7 @@
         <div class="acciones-izq">
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
-            <button class="btn" onclick="abrirBuscadorDiseno()">➕ Importar desde Diseño</button>
+            <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
@@ -127,15 +121,15 @@
     <!-- MODAL: IMPORTAR DE DISEÑO -->
     <div id="modal-agregar" class="modal">
         <div class="modal-content">
-            <h3 style="color: #10b981; margin-top: 0; font-size: 20px;">➕ Importar desde Diseño</h3>
-            <label style="color:#6b7280; font-size: 13px;">Escribe el Precinto de la muestra entregada por Diseño para crear su fila técnica:</label>
+            <h3 style="color: #2563eb; margin-top: 0; font-size: 20px;">➕ Importar Prenda a Patronaje</h3>
+            <label style="color:#6b7280; font-size: 13px;">Escribe el Precinto entregado por Diseño para crear su ficha técnica:</label>
             <div style="display:flex; gap: 10px; margin-top: 15px;">
                 <input type="text" id="inputBuscarPrecinto" placeholder="Ej: MST-10293" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #111827; outline: none;">
-                <button class="btn" style="background-color: #2563eb; color: white; border: none;" onclick="buscarPrecintoEnDiseno(event)">🔍 Buscar</button>
+                <button class="btn" style="background-color: #1f2937; color: white; border: none;" onclick="buscarPrecintoEnDiseno(event)">🔍 Buscar</button>
             </div>
             <div id="resultadoBusqueda" style="margin-top: 25px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db;"></div>
             <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <button class="btn" onclick="cerrarModal('modal-agregar')">Cerrar</button>
+                <button class="btn" onclick="cerrarModal('modal-agregar')">Cancelar</button>
             </div>
         </div>
     </div>
@@ -148,14 +142,14 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // COLUMNAS ACTUALIZADAS
+        // LAS 33 COLUMNAS (Se añadió PDF al final)
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
             'SILUETA', 'DISEÑO', 'NIVEL DE PRIORIDAD:', 'MEDICIÓN:', 'HOJA MEDIDAS:', 'FECHA ENVIO:',
-            'FECHA RECIBIDO:', 'FECHA ENTREGA', 'AUDITOR:', 'LEAD TIME AUD',
+            'FECHA RECIBIDO:', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 'LEAD TIME AUD',
             'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA2', 'AUDITOR.',
-            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO'
+            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO', 'PDF AUDITORÍA'
         ];
 
         const listaMotivos = [
@@ -173,11 +167,11 @@
             "SIZE SET PP SAMPLE": "DESARROLLO", "SIZE SET PHOTO SAMPLE": "PRODUCCION", "2DA PHOTO SAMPLE": "PRODUCCION",
             "3RA PHOTO SAMPLE": "PRODUCCION", "4TA PHOTO SAMPLE": "PRODUCCION", "SHIPPING SAMPLE": "PRODUCCION",
             "2DA PP SAMPLE": "DESARROLLO", "2DO SIZE SET PP SAMPLE": "DESARROLLO", "3RA PP SAMPLE": "DESARROLLO",
-            "4TA PP SAMPLE": "DESARROLLO", "5TA PP SAMPLE": "DESARROLLO", "2 Pp Sample": "DESARROLLO",
-            "Muestra Original": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
+            "4TA PP SAMPLE": "DESARROLLO", "5TA PP SAMPLE": "DESARROLLO", "2 PP SAMPLE": "DESARROLLO",
+            "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
         };
 
-        // --- PRESENCIA ---
+        // --- PRESENCIA Y SESIÓN ---
         function generarColorHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash); const c = (hash & 0x00FFFFFF).toString(16).toUpperCase(); return '#' + '00000'.substring(0, 6 - c.length) + c; }
         function obtenerIniciales(email) { return email.substring(0, 2).toUpperCase(); }
 
@@ -199,127 +193,119 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index_patronaje.html"; }
         verificarSesion();
 
-        // --- CÁLCULOS FECHAS ---
+        // --- MANEJO DE ARCHIVOS Y FOTOS ---
+        window.cambiarFotoFila = function(input) {
+            if(input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = input.closest('td').querySelector('.img-foto-prenda');
+                    img.src = e.target.result;
+                    recalcularFila(input.closest('tr')); 
+                }; reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        window.subirPdfFila = function(input) {
+            if(input.files && input.files[0]) {
+                const file = input.files[0];
+                if(file.size > 2.5 * 1024 * 1024) { return alert("El PDF es muy pesado. Sube un archivo menor a 2.5MB."); }
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    const td = input.closest('td'); const base64 = e.target.result;
+                    td.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <a href="${base64}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <input type="hidden" value="${base64}" class="pdf-data">
+                        </div>`;
+                    recalcularFila(td.closest('tr'));
+                }; reader.readAsDataURL(file);
+            }
+        };
+
+        window.eliminarPdf = function(btn) {
+            const td = btn.closest('td');
+            td.innerHTML = `
+                <button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
+                <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
+                <input type="hidden" value="" class="pdf-data">
+            `;
+            recalcularFila(td.closest('tr'));
+        };
+
+        // --- CÁLCULOS AUTOMÁTICOS ---
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             if (!fechaInicioStr || !fechaFinStr) return "";
             let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
-            if (isNaN(start) || isNaN(end)) return "";
-            if (start > end) return "0";
-            
-            let count = 0;
-            let current = new Date(start);
+            if (isNaN(start) || isNaN(end) || start > end) return "";
+            let count = 0; let current = new Date(start);
             while (current <= end) {
                 let dayOfWeek = current.getDay();
-                // 0 es Domingo, 6 es Sábado
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; }
                 current.setDate(current.getDate() + 1);
-            }
-            return count.toString();
+            } return count.toString();
         }
 
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
-            // Índices de columnas (tomando en cuenta checkbox en 0)
-            const iIngreso = 2; // FECHA DE INGRESO:
-            const iMuestra = 10; // TIPO DE MUESTRA:
-            const iEntAud = 21; // FECHA ENTREGA (Auditoría)
-            const iLeadAud = 23; // LEAD TIME AUD
-            const iRes = 24; // RESULTADO
-            const iEntFich = 28; // FECHA ENTREGA2
-            const iLeadEnt = 30; // LEAD TIME ENTREGA
-            const iLeadGen = 31; // LEAD TIME GENERAL
-            const iTipo = 32; // TIPO
-
-            const fIngreso = celdas[iIngreso].querySelector('input') ? celdas[iIngreso].querySelector('input').value : celdas[iIngreso].innerText.trim();
-            const fEntAud = celdas[iEntAud].querySelector('input') ? celdas[iEntAud].querySelector('input').value : celdas[iEntAud].innerText.trim();
-            const fEntFich = celdas[iEntFich].querySelector('input') ? celdas[iEntFich].querySelector('input').value : celdas[iEntFich].innerText.trim();
-            const res = celdas[iRes].querySelector('select') ? celdas[iRes].querySelector('select').value : celdas[iRes].innerText.trim();
-            const tipoMuestra = celdas[iMuestra].innerText.trim().toUpperCase();
+            const fIngreso = celdas[2].querySelector('input') ? celdas[2].querySelector('input').value : celdas[2].innerText.trim();
+            const fEntAud = celdas[21].querySelector('input') ? celdas[21].querySelector('input').value : celdas[21].innerText.trim();
+            const res = celdas[24].querySelector('select') ? celdas[24].querySelector('select').value : celdas[24].innerText.trim();
+            const fEntFich = celdas[28].querySelector('input') ? celdas[28].querySelector('input').value : celdas[28].innerText.trim();
+            const tipoMuestra = celdas[10].innerText.trim().toUpperCase();
 
             // LEAD TIME AUD (Días hábiles Ingreso a EntAud)
-            celdas[iLeadAud].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
-            
-            // LEAD TIME ENTREGA (Días hábiles Ingreso a EntAud - según tu prompt es igual a Lead Time Aud)
-            celdas[iLeadEnt].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+            celdas[23].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+            // LEAD TIME ENTREGA (Igual al anterior según regla)
+            celdas[30].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
 
             // LEAD TIME GENERAL
-            if (fEntFich === "") {
-                celdas[iLeadGen].textContent = "";
-            } else if (res === "CANCELADO" || res === "OBSEQUIO") {
-                celdas[iLeadGen].textContent = "0";
-            } else if (fIngreso && fEntFich) {
-                celdas[iLeadGen].textContent = calcularDiasHabiles(fIngreso, fEntFich);
-            } else {
-                celdas[iLeadGen].textContent = "";
-            }
+            if (fEntFich === "") { celdas[31].textContent = ""; } 
+            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[31].textContent = "0"; } 
+            else if (fIngreso && fEntFich) { celdas[31].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
+            else { celdas[31].textContent = ""; }
 
-            // TIPO
+            // TIPO AUTOMÁTICO
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
-            // Para "SIZE SET PP SAMPLE" etc, buscar si coincide parte del texto
-            if(tipoCalculado === "") {
-                for (const key in mapeoTipo) {
-                    if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; }
-                }
-            }
-            celdas[iTipo].textContent = tipoCalculado;
+            if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
+            celdas[32].textContent = tipoCalculado;
         };
 
-        // --- ESTRUCTURA DE LA TABLA ---
-        function initResizer(th, colIndex) {
-            const resizer = document.createElement('div'); resizer.className = 'resizer'; th.appendChild(resizer);
-            let x = 0; let w = 0;
-            const mouseDownHandler = function(e) {
-                x = e.clientX; w = parseInt(window.getComputedStyle(th).width, 10);
-                document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler);
-                resizer.classList.add('resizing');
-            };
-            const mouseMoveHandler = function(e) {
-                const dx = e.clientX - x; let newWidth = w + dx; if (newWidth < 40) newWidth = 40; 
-                document.documentElement.style.setProperty(`--w-col-${colIndex}`, `${newWidth}px`);
-            };
-            const mouseUpHandler = function() {
-                document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler);
-                resizer.classList.remove('resizing');
-            };
-            resizer.addEventListener('mousedown', mouseDownHandler);
-        }
-
+        // --- INICIALIZACIÓN Y TABLA ---
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow'); const trFilter = document.getElementById('tableFilterRow');
-            
-            const thCheck = document.createElement('th'); thCheck.className = 'col-checkbox';
-            thCheck.innerHTML = `<input type="checkbox" id="selectAll" onclick="toggleSelectAll()">`;
+            const thCheck = document.createElement('th'); thCheck.className = 'col-checkbox'; thCheck.innerHTML = `<input type="checkbox" id="selectAll" onclick="toggleSelectAll()">`;
             trHeader.appendChild(thCheck); trFilter.appendChild(document.createElement('th')).className = 'col-checkbox';
 
             allCols.forEach((col, idx) => { 
-                const thTitle = document.createElement('th'); thTitle.className = 'th-title';
-                thTitle.innerHTML = `${col} ↕`; thTitle.onclick = () => ordenarTabla(idx + 1);
-                trHeader.appendChild(thTitle); initResizer(thTitle, idx + 1); 
+                const thTitle = document.createElement('th'); thTitle.className = 'th-title'; thTitle.innerHTML = `${col} ↕`; thTitle.onclick = () => ordenarTabla(idx + 1);
+                trHeader.appendChild(thTitle);
+                
+                let resizer = document.createElement('div'); resizer.className = 'resizer'; thTitle.appendChild(resizer);
+                let x = 0; let w = 0;
+                resizer.addEventListener('mousedown', function(e) {
+                    x = e.clientX; w = parseInt(window.getComputedStyle(thTitle).width, 10);
+                    const mouseMoveHandler = (ev) => { document.documentElement.style.setProperty(`--w-col-${idx + 1}`, `${Math.max(40, w + ev.clientX - x)}px`); };
+                    const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); };
+                    document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler);
+                });
 
                 const thFilter = document.createElement('th');
-                if (col === 'FOTO') { thFilter.innerHTML = ``; } 
+                if (col === 'FOTO' || col === 'PDF AUDITORÍA') { thFilter.innerHTML = ``; } 
                 else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
                     thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="filtrarTablaCompleta()">`;
                 } else {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()"><datalist id="datalist_${idx + 1}"></datalist>`;
-                }
-                trFilter.appendChild(thFilter);
+                } trFilter.appendChild(thFilter);
             });
-
-            const thAcciones = document.createElement('th'); thAcciones.className = 'th-title'; thAcciones.textContent = 'ACC.'; 
-            trHeader.appendChild(thAcciones); trFilter.appendChild(document.createElement('th'));
+            const thAcciones = document.createElement('th'); thAcciones.className = 'th-title'; thAcciones.textContent = 'ACC.'; trHeader.appendChild(thAcciones); trFilter.appendChild(document.createElement('th'));
         }
 
-        // --- LECTURA Y CREACIÓN DE FILAS ---
         async function cargarDatos() {
             const { data, error } = await client.from('dpto_tecnico').select('*').order('created_at', { ascending: false });
             if (error) return console.error(error);
-            
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
-            data.forEach(filaBD => {
-                let d = filaBD.datos || []; while(d.length < 32) d.push(""); 
-                tbody.appendChild(crearFilaHTML(filaBD.precinto, d));
-            });
+            data.forEach(filaBD => { let d = filaBD.datos || []; while(d.length < 33) d.push(""); tbody.appendChild(crearFilaHTML(filaBD.precinto, d)); });
             window.filtrarTablaCompleta(); window.actualizarDatalists();
         }
 
@@ -330,23 +316,37 @@
         }
 
         function crearFilaHTML(precinto = null, datos = []) {
-            const tr = document.createElement('tr');
-            if (precinto) tr.dataset.id = precinto;
-            
-            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox';
-            tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
+            const tr = document.createElement('tr'); if (precinto) tr.dataset.id = precinto;
+            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
 
             allCols.forEach((colName, index) => {
-                const td = document.createElement('td'); 
-                const valorRaw = datos[index] || '';
+                const td = document.createElement('td'); const valorRaw = datos[index] || '';
 
                 if(colName === 'FOTO') { 
-                    td.contentEditable = "false"; td.style.textAlign = "center"; 
-                    if(valorRaw && valorRaw.includes('http')) {
-                        td.innerHTML = `<img src="${valorRaw}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white; border: 1px solid #d1d5db;" onclick="abrirModalImagen(this.src, event)">`;
-                    } else { td.innerHTML = `<span style="color:#9ca3af">-</span>`; }
+                    td.contentEditable = "false"; td.style.textAlign = "center";
+                    let imgSource = (valorRaw && valorRaw.includes('http') || valorRaw.includes('data:image')) ? valorRaw : 'logo.png';
+                    td.innerHTML = `
+                        <div style="position:relative; width:45px; height:45px; margin:auto;">
+                            <img src="${imgSource}" class="img-foto-prenda" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in; border:1px solid #d1d5db; border-radius:4px; background:white;" onclick="abrirModalImagen(this.src, event)">
+                            <button onclick="this.nextElementSibling.click()" style="position:absolute; top:-8px; right:-8px; background:#fff; border:1px solid #d1d5db; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);" title="Cambiar Foto">✏️</button>
+                            <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">
+                        </div>`;
                 } 
+                else if (colName === 'PDF AUDITORÍA') {
+                    td.contentEditable = "false"; td.style.textAlign = "center";
+                    if(valorRaw && valorRaw.startsWith('data:application/pdf')) {
+                        td.innerHTML = `<div style="display:flex; align-items:center; gap:8px;">
+                            <a href="${valorRaw}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <input type="hidden" value="${valorRaw}" class="pdf-data">
+                        </div>`;
+                    } else {
+                        td.innerHTML = `<button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
+                        <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
+                        <input type="hidden" value="" class="pdf-data">`;
+                    }
+                }
                 else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorRaw}</strong>`; } 
                 else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
@@ -371,17 +371,13 @@
                 }
                 else { 
                     td.contentEditable = "true"; td.textContent = valorRaw; td.onblur = () => recalcularFila(tr);
-                }
-                tr.appendChild(td);
+                } tr.appendChild(td);
             });
 
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `<button onclick="eliminarFila(this)" title="Eliminar Muestra" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:5px 8px; border-radius:4px; cursor:pointer; font-size: 12px; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#374151';">🗑️</button>`;
             tr.appendChild(tdAcciones); 
-            
-            // Calculamos fila inicial
-            setTimeout(() => recalcularFila(tr), 50);
-            return tr;
+            setTimeout(() => recalcularFila(tr), 50); return tr;
         }
 
         window.extraerDatosFila = function(tr) {
@@ -389,7 +385,9 @@
             for(let i = 1; i < celdas.length - 1; i++) { 
                 let colName = allCols[i - 1];
                 if (colName === 'FOTO') { 
-                    const img = celdas[i].querySelector('img'); datosFila.push(img ? img.src : "");
+                    const img = celdas[i].querySelector('.img-foto-prenda'); datosFila.push((img && !img.src.includes('logo.png')) ? img.src : "");
+                } else if (colName === 'PDF AUDITORÍA') {
+                    const pdfInput = celdas[i].querySelector('.pdf-data'); datosFila.push(pdfInput ? pdfInput.value : "");
                 } else if (colName === 'RESULTADO' || colName.includes('MOTIVO')) { 
                     const select = celdas[i].querySelector('select'); datosFila.push(select ? select.value : "");
                 } else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
@@ -397,23 +395,19 @@
                 } else { 
                     datosFila.push(celdas[i].innerText.trim());
                 }
-            } 
-            return datosFila;
+            } return datosFila;
         };
 
         window.guardarCambiosVisibles = async function() {
             const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
             btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
-
-            const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let promesasUpdate = [];
+            const filas = document.getElementById('tableBody').querySelectorAll('tr'); let promesasUpdate = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
                 if (tr.dataset.id) { promesasUpdate.push( client.from('dpto_tecnico').update({ datos: datosFila }).eq('precinto', tr.dataset.id) ); } 
             }
-
             try {
                 if (promesasUpdate.length > 0) { const resultados = await Promise.all(promesasUpdate); for (let res of resultados) { if (res.error) throw res.error; } }
                 btn.innerHTML = "✅ ¡Todo guardado!"; actualizarDatalists(); 
@@ -421,15 +415,13 @@
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
+        // --- FILTROS, BÚSQUEDA Y EXPORTACIÓN ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = document.querySelectorAll('.col-filter');
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-
             filas.forEach(fila => {
-                const celdas = fila.querySelectorAll('td');
-                let coincideGlobal = true; if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
-
+                const celdas = fila.querySelectorAll('td'); let coincideGlobal = true; if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
                 let coincidenColumnas = true;
                 inputsColumnas.forEach(input => {
                     const textoFiltroRaw = input.value.trim(); const textoFiltroLower = textoFiltroRaw.toLowerCase();
@@ -438,38 +430,26 @@
                         if (celda.querySelector('select')) { celdaTexto = celda.querySelector('select').value; } 
                         else if (celda.querySelector('input[type="date"]')) { celdaTexto = celda.querySelector('input[type="date"]').value; } 
                         else { celdaTexto = celda.innerText.trim(); }
-                        
                         const celdaTextoLower = celdaTexto.toLowerCase();
-                        const datalist = document.getElementById(`datalist_${colIndex}`); let isExactOption = false;
-                        if (datalist) { const options = Array.from(datalist.options).map(o => o.value.toLowerCase()); if (options.includes(textoFiltroLower)) isExactOption = true; }
-
                         if (textoFiltroRaw.startsWith('"') && textoFiltroRaw.endsWith('"')) {
                             let exactTerm = textoFiltroLower.slice(1, -1).trim(); if (exactTerm !== celdaTextoLower) coincidenColumnas = false; 
-                        } else if (isExactOption) {
-                            if (celdaTextoLower !== textoFiltroLower) coincidenColumnas = false;
-                        } else {
-                            if (!celdaTextoLower.includes(textoFiltroLower)) coincidenColumnas = false;
-                        }
+                        } else if (!celdaTextoLower.includes(textoFiltroLower)) coincidenColumnas = false;
                     }
                 });
-                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } 
-                else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
+                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
             }); window.actualizarSeleccion(); 
         };
 
         window.actualizarDatalists = function() {
             const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
-            const inputsColumnas = document.querySelectorAll('.col-filter[type="text"]');
-            inputsColumnas.forEach(input => {
+            document.querySelectorAll('.col-filter[type="text"]').forEach(input => {
                 const colIndex = input.getAttribute('data-colindex'); const datalist = document.getElementById(`datalist_${colIndex}`);
                 if (!datalist) return; const uniqueValues = new Set();
                 filas.forEach(fila => {
                     if(!fila.dataset.id) return; const celdas = fila.querySelectorAll('td');
                     if (celdas[colIndex]) {
                         let val = ""; const celda = celdas[colIndex];
-                        if (celda.querySelector('select')) { val = celda.querySelector('select').value; } 
-                        else if (celda.querySelector('input[type="date"]')) { val = celda.querySelector('input[type="date"]').value; } 
-                        else { val = celda.innerText.trim(); }
+                        if (celda.querySelector('select')) { val = celda.querySelector('select').value; } else if (celda.querySelector('input[type="date"]')) { val = celda.querySelector('input[type="date"]').value; } else { val = celda.innerText.trim(); }
                         if (val !== "") uniqueValues.add(val);
                     }
                 });
@@ -477,29 +457,21 @@
             });
         };
 
-        // --- IMPORTACIÓN DESDE DISEÑO ---
         window.abrirBuscadorDiseno = function() { document.getElementById('inputBuscarPrecinto').value = ""; document.getElementById('resultadoBusqueda').style.display = "none"; document.getElementById('modal-agregar').style.display = "flex"; }
         window.cerrarModal = function(id) { document.getElementById(id).style.display = 'none'; }
         window.abrirModalImagen = function(src, event) { if(event) event.stopPropagation(); document.getElementById('imgModalSrc').src = src; document.getElementById('modalVisor').style.display = 'flex'; };
 
         window.buscarPrecintoEnDiseno = async function(e) {
-            const btn = e.target; btn.textContent = "⏳";
-            const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
+            const btn = e.target; btn.textContent = "⏳"; const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
             if(!precinto) { btn.textContent = "🔍 Buscar"; return alert("Escribe un precinto."); }
-
             const { data: yaExiste } = await client.from('dpto_tecnico').select('precinto').eq('precinto', precinto).single();
             if (yaExiste) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#b45309; text-align:center; font-weight:bold;">⚠️ Este precinto ya está en tu tabla.</div>`; btn.textContent = "🔍 Buscar"; return; }
-
             let { data: prenda } = await client.from('prendas').select('*').eq('precinto', precinto).single();
             if(!prenda) { const retry = await client.from('prendas').select('*').eq('id', precinto).single(); prenda = retry.data; }
-
-            if(!prenda) {
-                resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#ef4444; text-align:center; font-weight:bold;">❌ Precinto no encontrado en Diseño.</div>`;
-            } else {
+            if(!prenda) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#ef4444; text-align:center; font-weight:bold;">❌ Precinto no encontrado en Diseño.</div>`; } else {
                 const foto = prenda.fotoUrl || 'logo.png'; const jsonPrenda = encodeURIComponent(JSON.stringify(prenda));
                 resDiv.style.display = 'block';
-                resDiv.innerHTML = `
-                    <div style="display:flex; gap:15px; align-items:center;">
+                resDiv.innerHTML = `<div style="display:flex; gap:15px; align-items:center;">
                         <img src="${foto}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db;">
                         <div style="flex-grow:1; font-size:13px; color:#374151;">
                             <div style="color:#2563eb; font-weight:bold; font-size:16px;">✅ ${prenda.precinto || prenda.id}</div>
@@ -507,8 +479,7 @@
                             <div><b>Género:</b> ${prenda.genero || '-'} | <b>Clasificación:</b> ${prenda.clasificacion || '-'}</div>
                         </div>
                     </div>
-                    <button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronaje('${jsonPrenda}', event)">➕ Agregar Fila a mi Tabla</button>
-                `;
+                    <button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronaje('${jsonPrenda}', event)">➕ Agregar Fila a mi Tabla</button>`;
             } btn.textContent = "🔍 Buscar";
         }
 
@@ -516,24 +487,13 @@
             const btn = e.target; btn.textContent = "⏳ Agregando..."; btn.disabled = true;
             const prenda = JSON.parse(decodeURIComponent(jsonEncoded)); const precintoReal = prenda.precinto || prenda.id;
             
-            let datosNuevos = new Array(32).fill('');
-            const hoy = new Date();
-            const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+            let datosNuevos = new Array(33).fill(''); // 33 columnas
+            const hoy = new Date(); const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
 
-            // MAPEO EXACTO:
-            datosNuevos[0] = prenda.fotoUrl || '';
-            datosNuevos[1] = fechaIngreso; // FECHA INGRESO ACTUAL
-            datosNuevos[2] = prenda.proveedor || ''; // PROVEEDOR
-            // Diseñador vacío (3)
-            datosNuevos[4] = prenda.coleccion || ''; // COLECCION
-            datosNuevos[5] = prenda.genero || ''; // GENERO
-            datosNuevos[6] = precintoReal; // PRECINTO
-            datosNuevos[7] = prenda.referencia || ''; // NOMBRE/REFERENCIA
-            datosNuevos[8] = prenda.talla || ''; // TALLA (Columna M)
-            datosNuevos[9] = prenda.clasificacion || ''; // TIPO MUESTRA = CLASIFICACION
-            datosNuevos[10] = prenda.color || ''; // PINTA = COLOR
-            // Cantidad vacio (11)
-            datosNuevos[12] = prenda.linea || ''; // DESCRIPCION TIPO PRENDA = LINEA
+            datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[2] = prenda.proveedor || ''; 
+            datosNuevos[4] = prenda.coleccion || ''; datosNuevos[5] = prenda.genero || ''; datosNuevos[6] = precintoReal;
+            datosNuevos[7] = prenda.referencia || ''; datosNuevos[8] = prenda.talla || ''; datosNuevos[9] = prenda.clasificacion || '';
+            datosNuevos[10] = prenda.color || ''; datosNuevos[11] = prenda.cantidad || ''; datosNuevos[12] = prenda.linea || '';
 
             const { error } = await client.from('dpto_tecnico').insert([{ precinto: precintoReal, datos: datosNuevos }]);
             if(error) { alert("Error al vincular: " + error.message); } else { alert("✅ ¡Muestra agregada a tu tabla exitosamente!"); cerrarModal('modal-agregar'); cargarDatos(); }
@@ -589,8 +549,10 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = window.extraerDatosFila(fila);
-                    for(let i = 0; i < filaData.length; i++) { if(allCols[i] === 'FOTO' && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) filaData[i] = "🖼️ Imagen Cargada"; }
-                    dataExcel.push(filaData);
+                    for(let i = 0; i < filaData.length; i++) { 
+                        if(allCols[i] === 'FOTO' && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) filaData[i] = "🖼️ Imagen Cargada"; 
+                        if(allCols[i] === 'PDF AUDITORÍA' && filaData[i].startsWith('data:application/pdf')) filaData[i] = "📄 PDF Cargado en Sistema";
+                    } dataExcel.push(filaData);
                 }
             });
             const hoja = XLSX.utils.aoa_to_sheet(dataExcel); const libro = XLSX.utils.book_new();
