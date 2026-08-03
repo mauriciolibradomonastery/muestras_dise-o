@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        :root { --w-col-0: 60px; --w-col-1: 100px; --w-col-7: 150px; }
+        :root { --w-col-0: 60px; --w-col-1: 120px; --w-col-6: 150px; }
 
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -74,12 +74,14 @@
         
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         #imagenAmpliada { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
+
+        /* Estilo para celdas calculadas (solo lectura) */
+        .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
     <script>
-        // CSS Dinámico para redimensionar columnas
         const styleEl = document.createElement('style');
         let cssRules = "";
         for(let i=0; i<=35; i++) {
@@ -146,15 +148,34 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // LAS 31 COLUMNAS EXACTAS DE TU EXCEL + FOTO
+        // COLUMNAS ACTUALIZADAS
         const allCols = [
-            'FOTO', 'FECHA DE INGRESO', 'PROVEEDOR', 'DISEÑADOR', 'COLECCIÓN', 'GÉNERO', 'PRECINTO',
-            'NOMBRE / REFERENCIA', 'M', 'TIPO DE MUESTRA', 'PINTA', 'CANTIDAD', 'DESCRIPCIÓN TIPO DE PRENDA',
-            'SILUETA', 'DISEÑO', 'NIVEL DE PRIORIDAD', 'MEDICIÓN', 'HOJA MEDIDAS', 'FECHA ENVIO (PRUEBAS)',
-            'FECHA RECIBIDO (PRUEBAS)', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR CALIDAD', 'LEAD TIME AUD',
-            'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA (FICHA)', 'AUDITOR FICHA',
+            'FOTO', 'FECHA DE INGRESO:', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
+            'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
+            'SILUETA', 'DISEÑO', 'NIVEL DE PRIORIDAD:', 'MEDICIÓN:', 'HOJA MEDIDAS:', 'FECHA ENVIO:',
+            'FECHA RECIBIDO:', 'FECHA ENTREGA', 'AUDITOR:', 'LEAD TIME AUD',
+            'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA2', 'AUDITOR.',
             'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO'
         ];
+
+        const listaMotivos = [
+            "", "% ENCOGIMIENTO", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
+            "CAMBIO EN DISEÑO", "CASES", "COLOR", "CONFECCION", "CREMALLERA", "CREMALLERA ONDULADA", "CUELLO ONDULADO",
+            "DECOLORACIÓN", "DESCOSIDOS", "DESPEGADO", "DESPISTE", "DISEÑO", "ELÁSTICO", "ESTAMPADO", "ETIQUETA",
+            "FIBRAS EXPUESTAS", "HILOS", "HORMA", "INCOMODO", "INSUMOS", "LASER", "LOOK", "MARQUILLA", "MARRAS",
+            "MEDIDAS", "MOLDERÍA", "PEGANTE EXPUESTO", "PELADO", "PIEZA TEJIDA", "PIEZA VIRADA", "PILLING", "PLANCHA",
+            "POROS", "PROCESO LAVADO", "RANURAS DEFORMADAS", "RASPADO", "ROTOS", "TALLONES", "TEJIDO FRIZADO", "TELA",
+            "TRANSFERENCIA COLOR", "TRASLUCE EL FORRO", "VACIOS"
+        ];
+
+        const mapeoTipo = {
+            "ORIGINAL": "DESARROLLO", "PHOTO SAMPLE": "PRODUCCION", "PP SAMPLE": "DESARROLLO", "PROTO": "DESARROLLO",
+            "SIZE SET PP SAMPLE": "DESARROLLO", "SIZE SET PHOTO SAMPLE": "PRODUCCION", "2DA PHOTO SAMPLE": "PRODUCCION",
+            "3RA PHOTO SAMPLE": "PRODUCCION", "4TA PHOTO SAMPLE": "PRODUCCION", "SHIPPING SAMPLE": "PRODUCCION",
+            "2DA PP SAMPLE": "DESARROLLO", "2DO SIZE SET PP SAMPLE": "DESARROLLO", "3RA PP SAMPLE": "DESARROLLO",
+            "4TA PP SAMPLE": "DESARROLLO", "5TA PP SAMPLE": "DESARROLLO", "2 Pp Sample": "DESARROLLO",
+            "Muestra Original": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
+        };
 
         // --- PRESENCIA ---
         function generarColorHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash); const c = (hash & 0x00FFFFFF).toString(16).toUpperCase(); return '#' + '00000'.substring(0, 6 - c.length) + c; }
@@ -178,7 +199,72 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index_patronaje.html"; }
         verificarSesion();
 
-        // --- ESTRUCTURA DE LA TABLA (EXCEL LIKE) ---
+        // --- CÁLCULOS FECHAS ---
+        function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
+            if (!fechaInicioStr || !fechaFinStr) return "";
+            let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
+            if (isNaN(start) || isNaN(end)) return "";
+            if (start > end) return "0";
+            
+            let count = 0;
+            let current = new Date(start);
+            while (current <= end) {
+                let dayOfWeek = current.getDay();
+                // 0 es Domingo, 6 es Sábado
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; }
+                current.setDate(current.getDate() + 1);
+            }
+            return count.toString();
+        }
+
+        window.recalcularFila = function(tr) {
+            const celdas = tr.querySelectorAll('td');
+            // Índices de columnas (tomando en cuenta checkbox en 0)
+            const iIngreso = 2; // FECHA DE INGRESO:
+            const iMuestra = 10; // TIPO DE MUESTRA:
+            const iEntAud = 21; // FECHA ENTREGA (Auditoría)
+            const iLeadAud = 23; // LEAD TIME AUD
+            const iRes = 24; // RESULTADO
+            const iEntFich = 28; // FECHA ENTREGA2
+            const iLeadEnt = 30; // LEAD TIME ENTREGA
+            const iLeadGen = 31; // LEAD TIME GENERAL
+            const iTipo = 32; // TIPO
+
+            const fIngreso = celdas[iIngreso].querySelector('input') ? celdas[iIngreso].querySelector('input').value : celdas[iIngreso].innerText.trim();
+            const fEntAud = celdas[iEntAud].querySelector('input') ? celdas[iEntAud].querySelector('input').value : celdas[iEntAud].innerText.trim();
+            const fEntFich = celdas[iEntFich].querySelector('input') ? celdas[iEntFich].querySelector('input').value : celdas[iEntFich].innerText.trim();
+            const res = celdas[iRes].querySelector('select') ? celdas[iRes].querySelector('select').value : celdas[iRes].innerText.trim();
+            const tipoMuestra = celdas[iMuestra].innerText.trim().toUpperCase();
+
+            // LEAD TIME AUD (Días hábiles Ingreso a EntAud)
+            celdas[iLeadAud].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+            
+            // LEAD TIME ENTREGA (Días hábiles Ingreso a EntAud - según tu prompt es igual a Lead Time Aud)
+            celdas[iLeadEnt].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+
+            // LEAD TIME GENERAL
+            if (fEntFich === "") {
+                celdas[iLeadGen].textContent = "";
+            } else if (res === "CANCELADO" || res === "OBSEQUIO") {
+                celdas[iLeadGen].textContent = "0";
+            } else if (fIngreso && fEntFich) {
+                celdas[iLeadGen].textContent = calcularDiasHabiles(fIngreso, fEntFich);
+            } else {
+                celdas[iLeadGen].textContent = "";
+            }
+
+            // TIPO
+            let tipoCalculado = mapeoTipo[tipoMuestra] || "";
+            // Para "SIZE SET PP SAMPLE" etc, buscar si coincide parte del texto
+            if(tipoCalculado === "") {
+                for (const key in mapeoTipo) {
+                    if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; }
+                }
+            }
+            celdas[iTipo].textContent = tipoCalculado;
+        };
+
+        // --- ESTRUCTURA DE LA TABLA ---
         function initResizer(th, colIndex) {
             const resizer = document.createElement('div'); resizer.className = 'resizer'; th.appendChild(resizer);
             let x = 0; let w = 0;
@@ -203,8 +289,7 @@
             
             const thCheck = document.createElement('th'); thCheck.className = 'col-checkbox';
             thCheck.innerHTML = `<input type="checkbox" id="selectAll" onclick="toggleSelectAll()">`;
-            trHeader.appendChild(thCheck);
-            trFilter.appendChild(document.createElement('th')).className = 'col-checkbox';
+            trHeader.appendChild(thCheck); trFilter.appendChild(document.createElement('th')).className = 'col-checkbox';
 
             allCols.forEach((col, idx) => { 
                 const thTitle = document.createElement('th'); thTitle.className = 'th-title';
@@ -212,9 +297,8 @@
                 trHeader.appendChild(thTitle); initResizer(thTitle, idx + 1); 
 
                 const thFilter = document.createElement('th');
-                if (col === 'FOTO') {
-                    thFilter.innerHTML = ``;
-                } else if (col.includes('FECHA')) {
+                if (col === 'FOTO') { thFilter.innerHTML = ``; } 
+                else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
                     thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="filtrarTablaCompleta()">`;
                 } else {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()"><datalist id="datalist_${idx + 1}"></datalist>`;
@@ -233,11 +317,16 @@
             
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
             data.forEach(filaBD => {
-                let d = filaBD.datos || [];
-                while(d.length < 32) d.push(""); // Aseguramos que el array tenga las 32 columnas
+                let d = filaBD.datos || []; while(d.length < 32) d.push(""); 
                 tbody.appendChild(crearFilaHTML(filaBD.precinto, d));
             });
             window.filtrarTablaCompleta(); window.actualizarDatalists();
+        }
+
+        function generarOpcionesMotivo(valorSeleccionado) {
+            let html = `<option value=""></option>`;
+            listaMotivos.forEach(motivo => { html += `<option value="${motivo}" ${valorSeleccionado === motivo ? 'selected' : ''}>${motivo}</option>`; });
+            return html;
         }
 
         function crearFilaHTML(precinto = null, datos = []) {
@@ -257,28 +346,42 @@
                     if(valorRaw && valorRaw.includes('http')) {
                         td.innerHTML = `<img src="${valorRaw}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white; border: 1px solid #d1d5db;" onclick="abrirModalImagen(this.src, event)">`;
                     } else { td.innerHTML = `<span style="color:#9ca3af">-</span>`; }
-                } else if (colName === 'PRECINTO') { 
-                    td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorRaw}</strong>`; 
-                } else if (colName === 'RESULTADO') { 
+                } 
+                else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorRaw}</strong>`; } 
+                else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;">
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
                         <option value=""></option>
                         <option value="APROBADO" ${valorRaw === 'APROBADO' ? 'selected' : ''}>APROBADO</option>
                         <option value="RECHAZADO" ${valorRaw === 'RECHAZADO' ? 'selected' : ''}>RECHAZADO</option>
-                        <option value="CON OBSERVACIONES" ${valorRaw === 'CON OBSERVACIONES' ? 'selected' : ''}>CON OBSERVACIONES</option>
+                        <option value="CANCELADO" ${valorRaw === 'CANCELADO' ? 'selected' : ''}>CANCELADO</option>
+                        <option value="OBSEQUIO" ${valorRaw === 'OBSEQUIO' ? 'selected' : ''}>OBSEQUIO</option>
                     </select>`;
-                } else if (colName.includes('FECHA')) { 
+                } 
+                else if (colName.includes('MOTIVO')) {
+                    td.contentEditable = "false";
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;">${generarOpcionesMotivo(valorRaw)}</select>`;
+                }
+                else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
                     td.contentEditable = "false"; 
-                    td.innerHTML = `<input type="date" value="${valorRaw}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;">`;
-                } else { 
-                    td.contentEditable = "true"; td.textContent = valorRaw; 
+                    td.innerHTML = `<input type="date" value="${valorRaw}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
+                } 
+                else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
+                    td.contentEditable = "false"; td.className = "calc-cell"; td.textContent = valorRaw;
+                }
+                else { 
+                    td.contentEditable = "true"; td.textContent = valorRaw; td.onblur = () => recalcularFila(tr);
                 }
                 tr.appendChild(td);
             });
 
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `<button onclick="eliminarFila(this)" title="Eliminar Muestra" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:5px 8px; border-radius:4px; cursor:pointer; font-size: 12px; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#374151';">🗑️</button>`;
-            tr.appendChild(tdAcciones); return tr;
+            tr.appendChild(tdAcciones); 
+            
+            // Calculamos fila inicial
+            setTimeout(() => recalcularFila(tr), 50);
+            return tr;
         }
 
         window.extraerDatosFila = function(tr) {
@@ -287,9 +390,9 @@
                 let colName = allCols[i - 1];
                 if (colName === 'FOTO') { 
                     const img = celdas[i].querySelector('img'); datosFila.push(img ? img.src : "");
-                } else if (colName === 'RESULTADO') { 
+                } else if (colName === 'RESULTADO' || colName.includes('MOTIVO')) { 
                     const select = celdas[i].querySelector('select'); datosFila.push(select ? select.value : "");
-                } else if (colName.includes('FECHA')) { 
+                } else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
                     const dateInp = celdas[i].querySelector('input[type="date"]'); datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
                 } else { 
                     datosFila.push(celdas[i].innerText.trim());
@@ -298,7 +401,6 @@
             return datosFila;
         };
 
-        // --- GUARDAR MASIVO ---
         window.guardarCambiosVisibles = async function() {
             const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
             btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
@@ -313,18 +415,12 @@
             }
 
             try {
-                if (promesasUpdate.length > 0) { 
-                    const resultados = await Promise.all(promesasUpdate); 
-                    for (let res of resultados) { if (res.error) throw res.error; } 
-                }
+                if (promesasUpdate.length > 0) { const resultados = await Promise.all(promesasUpdate); for (let res of resultados) { if (res.error) throw res.error; } }
                 btn.innerHTML = "✅ ¡Todo guardado!"; actualizarDatalists(); 
-            } catch (err) {
-                console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error";
-            }
+            } catch (err) { console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error"; }
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
-        // --- FILTROS Y BÚSQUEDA ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = document.querySelectorAll('.col-filter');
@@ -358,8 +454,7 @@
                 });
                 if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } 
                 else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
-            });
-            window.actualizarSeleccion(); 
+            }); window.actualizarSeleccion(); 
         };
 
         window.actualizarDatalists = function() {
@@ -367,11 +462,9 @@
             const inputsColumnas = document.querySelectorAll('.col-filter[type="text"]');
             inputsColumnas.forEach(input => {
                 const colIndex = input.getAttribute('data-colindex'); const datalist = document.getElementById(`datalist_${colIndex}`);
-                if (!datalist) return;
-                const uniqueValues = new Set();
+                if (!datalist) return; const uniqueValues = new Set();
                 filas.forEach(fila => {
-                    if(!fila.dataset.id) return; 
-                    const celdas = fila.querySelectorAll('td');
+                    if(!fila.dataset.id) return; const celdas = fila.querySelectorAll('td');
                     if (celdas[colIndex]) {
                         let val = ""; const celda = celdas[colIndex];
                         if (celda.querySelector('select')) { val = celda.querySelector('select').value; } 
@@ -380,8 +473,7 @@
                         if (val !== "") uniqueValues.add(val);
                     }
                 });
-                datalist.innerHTML = '';
-                Array.from(uniqueValues).sort().forEach(val => { const option = document.createElement('option'); option.value = val; datalist.appendChild(option); });
+                datalist.innerHTML = ''; Array.from(uniqueValues).sort().forEach(val => { const option = document.createElement('option'); option.value = val; datalist.appendChild(option); });
             });
         };
 
@@ -392,8 +484,7 @@
 
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳";
-            const precinto = document.getElementById('inputBuscarPrecinto').value.trim();
-            const resDiv = document.getElementById('resultadoBusqueda');
+            const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
             if(!precinto) { btn.textContent = "🔍 Buscar"; return alert("Escribe un precinto."); }
 
             const { data: yaExiste } = await client.from('dpto_tecnico').select('precinto').eq('precinto', precinto).single();
@@ -413,13 +504,12 @@
                         <div style="flex-grow:1; font-size:13px; color:#374151;">
                             <div style="color:#2563eb; font-weight:bold; font-size:16px;">✅ ${prenda.precinto || prenda.id}</div>
                             <div style="margin-top:4px;"><b>Ref:</b> ${prenda.referencia || '-'} | <b>Colección:</b> ${prenda.coleccion || '-'}</div>
-                            <div><b>Género:</b> ${prenda.genero || '-'} | <b>Proveedor:</b> ${prenda.proveedor || '-'}</div>
+                            <div><b>Género:</b> ${prenda.genero || '-'} | <b>Clasificación:</b> ${prenda.clasificacion || '-'}</div>
                         </div>
                     </div>
                     <button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronaje('${jsonPrenda}', event)">➕ Agregar Fila a mi Tabla</button>
                 `;
-            }
-            btn.textContent = "🔍 Buscar";
+            } btn.textContent = "🔍 Buscar";
         }
 
         window.agregarAPatronaje = async function(jsonEncoded, e) {
@@ -427,21 +517,29 @@
             const prenda = JSON.parse(decodeURIComponent(jsonEncoded)); const precintoReal = prenda.precinto || prenda.id;
             
             let datosNuevos = new Array(32).fill('');
+            const hoy = new Date();
+            const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+
+            // MAPEO EXACTO:
             datosNuevos[0] = prenda.fotoUrl || '';
-            datosNuevos[2] = prenda.proveedor || '';
-            datosNuevos[4] = prenda.coleccion || '';
-            datosNuevos[5] = prenda.genero || '';
-            datosNuevos[6] = precintoReal;
-            datosNuevos[7] = prenda.referencia || '';
+            datosNuevos[1] = fechaIngreso; // FECHA INGRESO ACTUAL
+            datosNuevos[2] = prenda.proveedor || ''; // PROVEEDOR
+            // Diseñador vacío (3)
+            datosNuevos[4] = prenda.coleccion || ''; // COLECCION
+            datosNuevos[5] = prenda.genero || ''; // GENERO
+            datosNuevos[6] = precintoReal; // PRECINTO
+            datosNuevos[7] = prenda.referencia || ''; // NOMBRE/REFERENCIA
+            datosNuevos[8] = prenda.talla || ''; // TALLA (Columna M)
+            datosNuevos[9] = prenda.clasificacion || ''; // TIPO MUESTRA = CLASIFICACION
+            datosNuevos[10] = prenda.color || ''; // PINTA = COLOR
+            // Cantidad vacio (11)
+            datosNuevos[12] = prenda.linea || ''; // DESCRIPCION TIPO PRENDA = LINEA
 
             const { error } = await client.from('dpto_tecnico').insert([{ precinto: precintoReal, datos: datosNuevos }]);
-            
-            if(error) { alert("Error al vincular: " + error.message); } 
-            else { alert("✅ ¡Muestra agregada a tu tabla exitosamente!"); cerrarModal('modal-agregar'); cargarDatos(); }
+            if(error) { alert("Error al vincular: " + error.message); } else { alert("✅ ¡Muestra agregada a tu tabla exitosamente!"); cerrarModal('modal-agregar'); cargarDatos(); }
             btn.textContent = "➕ Agregar Fila a mi Tabla"; btn.disabled = false;
         }
 
-        // --- EXTRAS (SELECCIÓN Y EXPORTACIÓN) ---
         window.toggleSelectAll = function() {
             const isChecked = document.getElementById('selectAll').checked; const filas = document.getElementById('tableBody').querySelectorAll('tr');
             filas.forEach(tr => { if(tr.style.display !== 'none') { const cb = tr.querySelector('.row-checkbox'); if(cb) cb.checked = isChecked; } });
@@ -482,8 +580,7 @@
                 let numA = parseFloat(valorA); let numB = parseFloat(valorB);
                 if (!isNaN(numA) && !isNaN(numB) && !inputA) return ordenAscendente ? numA - numB : numB - numA;
                 if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
-            });
-            filas.forEach(fila => tbody.appendChild(fila));
+            }); filas.forEach(fila => tbody.appendChild(fila));
         };
 
         window.exportarAExcel = function() {
