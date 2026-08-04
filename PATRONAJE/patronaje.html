@@ -52,7 +52,7 @@
         tbody tr:hover { background-color: #f3f4f6; }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
-        /* CONGELACIÓN DE COLUMNAS */
+        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
         .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         tbody tr:nth-child(even) td.col-checkbox { background-color: #f9fafb; }
@@ -82,10 +82,10 @@
 </head>
 <body>
 
-    <!-- OVERLAY DE CARGA PARA HISTÓRICOS PESADOS -->
+    <!-- OVERLAY DE CARGA OPTIMIZADO -->
     <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter: blur(5px);">
         <div style="font-size:40px; margin-bottom:10px;">⏳</div>
-        <div style="font-size:22px; font-weight:800; color:#1f2937; margin-bottom:10px;">Procesando Histórico</div>
+        <div style="font-size:22px; font-weight:800; color:#1f2937; margin-bottom:10px;">Procesando Datos</div>
         <div id="loadingText" style="font-size:15px; color:#6b7280; font-weight: 600;">Por favor, espera unos segundos...</div>
     </div>
 
@@ -135,7 +135,7 @@
         </table>
     </div>
 
-    <!-- MODAL: IMPORTAR DE DISEÑO -->
+    <!-- MODALES -->
     <div id="modal-agregar" class="modal">
         <div class="modal-content">
             <h3 style="color: #2563eb; margin-top: 0; font-size: 20px;">➕ Importar Prenda a Patronaje</h3>
@@ -151,7 +151,6 @@
         </div>
     </div>
 
-    <!-- VISOR IMAGEN -->
     <div id="modalVisor" onclick="cerrarModal('modalVisor')"><img id="imagenAmpliada"></div>
 
     <script>
@@ -187,13 +186,10 @@
             "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
         };
 
-        // --- MANEJO DE BUSCADOR CON RETRASO (DEBOUNCE) PARA NO CONGELAR ---
         let timerBusqueda = null;
         window.ejecutarFiltro = function() {
             clearTimeout(timerBusqueda);
-            timerBusqueda = setTimeout(() => {
-                window.filtrarTablaCompleta();
-            }, 350); 
+            timerBusqueda = setTimeout(() => { window.filtrarTablaCompleta(); }, 350); 
         };
 
         async function verificarSesion() {
@@ -203,7 +199,6 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index_patronaje.html"; }
         verificarSesion();
 
-        // --- MANEJO DE ARCHIVOS Y FOTOS ---
         window.cambiarFotoFila = function(input) {
             if(input.files && input.files[0]) {
                 let reader = new FileReader();
@@ -243,7 +238,6 @@
             recalcularFila(td.closest('tr'));
         };
 
-        // --- CÁLCULOS AUTOMÁTICOS ---
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             if (!fechaInicioStr || !fechaFinStr) return "";
             let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
@@ -292,7 +286,6 @@
             tr._textoGlobal = tr._datosLower.join(" ");
         };
 
-        // --- ACTUALIZADOR DE COLUMNAS STICKY ---
         window.actualizarSticky = function() {
             const trHeader = document.getElementById('tableHeaderRow');
             if(!trHeader) return;
@@ -302,20 +295,19 @@
             let leftPos = ths[0].offsetWidth; 
             
             document.documentElement.style.setProperty('--left-precinto', `${leftPos}px`);
-            leftPos += ths[7].offsetWidth; // 7 corresponde a PRECINTO
+            leftPos += ths[7].offsetWidth; 
             
             document.documentElement.style.setProperty('--left-nombre', `${leftPos}px`);
-            leftPos += ths[8].offsetWidth; // 8 corresponde a NOMBRE
+            leftPos += ths[8].offsetWidth; 
             
             document.documentElement.style.setProperty('--left-pinta', `${leftPos}px`);
-            leftPos += ths[11].offsetWidth; // 11 corresponde a PINTA
+            leftPos += ths[11].offsetWidth; 
             
             document.documentElement.style.setProperty('--left-desc', `${leftPos}px`);
         };
 
         window.addEventListener('resize', window.actualizarSticky);
 
-        // --- INICIALIZACIÓN Y TABLA ---
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow'); const trFilter = document.getElementById('tableFilterRow');
             const thCheck = document.createElement('th'); thCheck.className = 'col-checkbox'; thCheck.innerHTML = `<input type="checkbox" id="selectAll" onclick="toggleSelectAll()">`;
@@ -324,7 +316,6 @@
             allCols.forEach((col, idx) => { 
                 const thTitle = document.createElement('th'); thTitle.className = 'th-title'; thTitle.innerHTML = `${col} ↕`; thTitle.onclick = () => ordenarTabla(idx + 1);
                 
-                // Clases Sticky para inmovilizar
                 if (col === 'PRECINTO') thTitle.classList.add('col-precinto');
                 if (col === 'NOMBRE / REFERENCIA:') thTitle.classList.add('col-nombre');
                 if (col === 'PINTA:') thTitle.classList.add('col-pinta');
@@ -378,6 +369,7 @@
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
                     .order('created_at', { ascending: false })
+                    .order('id', { ascending: true }) // ESTE ES EL SALVAVIDAS: Previene los errores de empate
                     .range(from, from + step - 1);
                     
                 if (error) { 
@@ -414,7 +406,7 @@
                 const fragment = document.createDocumentFragment();
                 const end = Math.min(i + chunkSize, allData.length);
                 for (; i < end; i++) {
-                    let d = allData[i].datos || []; while(d.length < 33) d.push(""); 
+                    let d = allData[i].datos || []; 
                     fragment.appendChild(crearFilaHTML(allData[i].id, d));
                 }
                 tbody.appendChild(fragment);
@@ -423,10 +415,13 @@
                     document.getElementById('loadingText').innerText = `Dibujando muestras en pantalla: ${i} de ${allData.length}...`;
                     requestAnimationFrame(renderChunk);
                 } else {
-                    window.ejecutarFiltro(); 
-                    window.actualizarDatalists();
-                    window.actualizarSticky();
-                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('loadingText').innerText = "Optimizando filtros y listas...";
+                    setTimeout(() => {
+                        window.actualizarDatalists();
+                        window.actualizarSticky();
+                        window.ejecutarFiltro();
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                    }, 100);
                 }
             }
             renderChunk();
@@ -445,10 +440,31 @@
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
 
+            while(datos.length < 33) datos.push("");
+            const fIngreso = datos[1] || '';
+            const fEntAud = datos[20] || '';
+            const res = datos[23] || '';
+            const fEntFich = datos[27] || '';
+            const tipoMuestra = (datos[9] || '').toUpperCase();
+
+            datos[22] = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+            datos[29] = datos[22];
+
+            if (fEntFich === "") { datos[30] = ""; }
+            else if (res === "CANCELADO" || res === "OBSEQUIO") { datos[30] = "0"; }
+            else if (fIngreso && fEntFich) { datos[30] = calcularDiasHabiles(fIngreso, fEntFich); }
+            else { datos[30] = ""; }
+
+            let tipoCalculado = mapeoTipo[tipoMuestra] || "";
+            if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
+            datos[31] = tipoCalculado;
+
+            tr._datosOriginal = [];
+            tr._datosLower = [];
+
             allCols.forEach((colName, index) => {
                 const td = document.createElement('td'); 
                 
-                // Clases Sticky para Inmovilizar Columnas
                 if (colName === 'PRECINTO') td.classList.add('col-precinto');
                 if (colName === 'NOMBRE / REFERENCIA:') td.classList.add('col-nombre');
                 if (colName === 'PINTA:') td.classList.add('col-pinta');
@@ -458,6 +474,9 @@
                 if (valorRaw === null || valorRaw === undefined) valorRaw = '';
                 const valorStr = String(valorRaw);
                 const valorLower = valorStr.toLowerCase();
+
+                tr._datosOriginal[index + 1] = (colName === 'FOTO') ? "" : valorStr;
+                tr._datosLower[index + 1] = (colName === 'FOTO') ? "" : valorLower;
 
                 if(colName === 'FOTO') { 
                     td.contentEditable = "false"; td.style.textAlign = "center";
@@ -513,17 +532,19 @@
                     td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
-                    td.contentEditable = "false"; td.className += " calc-cell"; td.textContent = valorStr;
+                    td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
                 }
                 else { 
                     td.contentEditable = "true"; td.textContent = valorStr; td.onblur = () => recalcularFila(tr);
                 } tr.appendChild(td);
             });
 
+            tr._textoGlobal = tr._datosLower.join(" ");
+
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `<button onclick="eliminarFila(this)" title="Eliminar Muestra" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:5px 8px; border-radius:4px; cursor:pointer; font-size: 12px; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#374151';">🗑️</button>`;
             tr.appendChild(tdAcciones); 
-            recalcularFila(tr); 
+            
             return tr;
         }
 
@@ -549,16 +570,20 @@
             btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
             
             const filas = document.getElementById('tableBody').querySelectorAll('tr'); 
-            let registrosGuardar = [];
+            
+            // EL ESCUDO FINAL: Aseguramos que nunca envíe 2 filas con el mismo ID fantasma
+            let mapGuardar = new Map();
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
                 if (tr.dataset.id) { 
-                    registrosGuardar.push({ id: tr.dataset.id, datos: datosFila, precinto: datosFila[6] }); 
+                    mapGuardar.set(tr.dataset.id, { id: tr.dataset.id, datos: datosFila, precinto: datosFila[6] }); 
                 } 
             }
             
+            let registrosGuardar = Array.from(mapGuardar.values());
+
             try {
                 const chunkSize = 150;
                 for (let i = 0; i < registrosGuardar.length; i += chunkSize) {
@@ -703,11 +728,14 @@
                 });
                 
                 datalist.innerHTML = ''; 
+                
+                const fragment = document.createDocumentFragment();
                 Array.from(uniqueValues).sort().forEach(val => { 
                     const option = document.createElement('option'); 
                     option.value = val; 
-                    datalist.appendChild(option); 
+                    fragment.appendChild(option); 
                 });
+                datalist.appendChild(fragment);
             });
         };
 
