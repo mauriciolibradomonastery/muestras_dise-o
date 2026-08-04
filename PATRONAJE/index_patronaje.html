@@ -17,24 +17,26 @@
             align-items: center;
             height: 100vh;
             
-            /* IMAGEN DE FONDO: Herramientas de patronaje (cinta métrica, tijeras, accesorios) */
-            background-image: linear-gradient(rgba(18, 18, 18, 0.75), rgba(18, 18, 18, 0.90)), url('https://images.unsplash.com/photo-1605282464161-0026e6d306b1?q=80&w=1920&auto=format&fit=crop');
+            /* COLOR DE RESPALDO Y NUEVA IMAGEN ESTABLE (Herramientas de Sastrería/Patronaje) */
+            background-color: #121212;
+            background-image: linear-gradient(rgba(18, 18, 18, 0.65), rgba(18, 18, 18, 0.95)), url('https://images.pexels.com/photos/461035/pexels-photo-461035.jpeg?auto=compress&cs=tinysrgb&w=1920');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
             color: #ffffff;
         }
 
         .login-container {
-            background-color: #1e1e1e;
+            background-color: rgba(30, 30, 30, 0.85); /* Un poco más transparente para que luzca el fondo */
             padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9);
             width: 100%;
             max-width: 380px;
             text-align: center;
-            border: 1px solid #333;
-            backdrop-filter: blur(5px);
+            border: 1px solid #444;
+            backdrop-filter: blur(8px);
         }
 
         .logo { width: 65px; margin-bottom: 15px; border-radius: 4px; }
@@ -49,8 +51,8 @@
             width: 100%;
             padding: 12px;
             border-radius: 6px;
-            border: 1px solid #444;
-            background-color: #2b2b2b;
+            border: 1px solid #555;
+            background-color: rgba(0, 0, 0, 0.6);
             color: #fff;
             box-sizing: border-box;
             font-size: 14px;
