@@ -96,6 +96,11 @@
         <div class="acciones-izq">
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
+            
+            <!-- NUEVOS BOTONES DE CARGA MASIVA -->
+            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Excel</button>
+            <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
+
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
@@ -142,7 +147,6 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // LAS 33 COLUMNAS EXACTAS
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -241,7 +245,7 @@
             let count = 0; let current = new Date(start);
             while (current <= end) {
                 let dayOfWeek = current.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; } // Ignora Sabado y Domingo
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; }
                 current.setDate(current.getDate() + 1);
             } return count.toString();
         }
@@ -254,18 +258,14 @@
             const fEntFich = celdas[28].querySelector('input') ? celdas[28].querySelector('input').value : celdas[28].innerText.trim();
             const tipoMuestra = celdas[10].innerText.trim().toUpperCase();
 
-            // LEAD TIME AUD (Días hábiles Ingreso a EntAud)
             celdas[23].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
-            // LEAD TIME ENTREGA (Igual al anterior según regla)
             celdas[30].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
 
-            // LEAD TIME GENERAL
             if (fEntFich === "") { celdas[31].textContent = ""; } 
             else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[31].textContent = "0"; } 
             else if (fIngreso && fEntFich) { celdas[31].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
             else { celdas[31].textContent = ""; }
 
-            // TIPO AUTOMÁTICO
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
             celdas[32].textContent = tipoCalculado;
@@ -321,12 +321,16 @@
             tr.appendChild(tdCheck);
 
             allCols.forEach((colName, index) => {
-                const td = document.createElement('td'); const valorRaw = datos[index] || '';
-                const valorLower = valorRaw.toLowerCase();
+                const td = document.createElement('td'); 
+                
+                let valorRaw = datos[index];
+                if (valorRaw === null || valorRaw === undefined) valorRaw = '';
+                const valorStr = String(valorRaw);
+                const valorLower = valorStr.toLowerCase();
 
                 if(colName === 'FOTO') { 
                     td.contentEditable = "false"; td.style.textAlign = "center";
-                    let imgSource = (valorRaw && valorRaw.includes('http') || valorRaw.includes('data:image')) ? valorRaw : 'logo.png';
+                    let imgSource = (valorStr && valorStr.includes('http') || valorStr.includes('data:image')) ? valorStr : 'logo.png';
                     td.innerHTML = `
                         <div style="position:relative; width:45px; height:45px; margin:auto;">
                             <img src="${imgSource}" class="img-foto-prenda" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in; border:1px solid #d1d5db; border-radius:4px; background:white;" onclick="abrirModalImagen(this.src, event)">
@@ -336,11 +340,11 @@
                 } 
                 else if (colName === 'PDF AUDITORÍA') {
                     td.contentEditable = "false"; td.style.textAlign = "center";
-                    if(valorRaw && valorRaw.startsWith('data:application/pdf')) {
+                    if(valorStr && valorStr.startsWith('data:application/pdf')) {
                         td.innerHTML = `<div style="display:flex; align-items:center; gap:8px;">
-                            <a href="${valorRaw}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <a href="${valorStr}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
                             <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
-                            <input type="hidden" value="${valorRaw}" class="pdf-data">
+                            <input type="hidden" value="${valorStr}" class="pdf-data">
                         </div>`;
                     } else {
                         td.innerHTML = `<button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
@@ -348,7 +352,7 @@
                         <input type="hidden" value="" class="pdf-data">`;
                     }
                 }
-                else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorRaw}</strong>`; } 
+                else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorStr}</strong>`; } 
                 else if (colName === 'NIVEL DE PRIORIDAD:') {
                     td.contentEditable = "false";
                     td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
@@ -363,25 +367,25 @@
                     td.contentEditable = "false";
                     td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
                         <option value=""></option>
-                        <option value="APROBADO" ${valorRaw === 'APROBADO' ? 'selected' : ''}>APROBADO</option>
-                        <option value="RECHAZADO" ${valorRaw === 'RECHAZADO' ? 'selected' : ''}>RECHAZADO</option>
-                        <option value="CANCELADO" ${valorRaw === 'CANCELADO' ? 'selected' : ''}>CANCELADO</option>
-                        <option value="OBSEQUIO" ${valorRaw === 'OBSEQUIO' ? 'selected' : ''}>OBSEQUIO</option>
+                        <option value="APROBADO" ${valorStr === 'APROBADO' ? 'selected' : ''}>APROBADO</option>
+                        <option value="RECHAZADO" ${valorStr === 'RECHAZADO' ? 'selected' : ''}>RECHAZADO</option>
+                        <option value="CANCELADO" ${valorStr === 'CANCELADO' ? 'selected' : ''}>CANCELADO</option>
+                        <option value="OBSEQUIO" ${valorStr === 'OBSEQUIO' ? 'selected' : ''}>OBSEQUIO</option>
                     </select>`;
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">${generarOpcionesMotivo(valorRaw)}</select>`;
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">${generarOpcionesMotivo(valorStr)}</select>`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
                     td.contentEditable = "false"; 
-                    td.innerHTML = `<input type="date" value="${valorRaw}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
+                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
-                    td.contentEditable = "false"; td.className = "calc-cell"; td.textContent = valorRaw;
+                    td.contentEditable = "false"; td.className = "calc-cell"; td.textContent = valorStr;
                 }
                 else { 
-                    td.contentEditable = "true"; td.textContent = valorRaw; td.onblur = () => recalcularFila(tr);
+                    td.contentEditable = "true"; td.textContent = valorStr; td.onblur = () => recalcularFila(tr);
                 } tr.appendChild(td);
             });
 
@@ -424,6 +428,57 @@
                 btn.innerHTML = "✅ ¡Todo guardado!"; actualizarDatalists(); 
             } catch (err) { console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error"; }
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
+        };
+
+        // --- CARGA MASIVA EXCEL ---
+        window.procesarExcelImportado = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonRows.length <= 1) return alert("El archivo está vacío o solo tiene encabezados.");
+
+                    const rowsData = jsonRows.slice(1);
+                    let registrosUpsert = [];
+
+                    rowsData.forEach(row => {
+                        let d = new Array(33).fill('');
+                        for (let i = 0; i < 33; i++) {
+                            d[i] = row[i] !== undefined && row[i] !== null ? String(row[i]) : '';
+                        }
+                        
+                        const precinto = d[6] ? d[6].trim() : '';
+                        if (precinto !== '') {
+                            // Limpiar placeholders del export para no dañar la BD
+                            if (d[0].includes("Imagen Cargada")) d[0] = "";
+                            if (d[32].includes("PDF Cargado")) d[32] = "";
+                            
+                            registrosUpsert.push({ precinto: precinto, datos: d });
+                        }
+                    });
+
+                    if (registrosUpsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
+                    
+                    alert(`⏳ Subiendo y actualizando ${registrosUpsert.length} muestras desde Excel...`);
+                    
+                    const { error } = await client.from('dpto_tecnico').upsert(registrosUpsert);
+                    if (error) throw error;
+
+                    alert("✅ ¡Carga masiva completada exitosamente!");
+                    event.target.value = ""; 
+                    cargarDatos(); 
+                } catch (error) {
+                    console.error(error); alert("Error al importar: " + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         };
 
         // --- FILTROS, BÚSQUEDA Y EXPORTACIÓN ---
