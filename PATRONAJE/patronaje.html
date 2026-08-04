@@ -51,6 +51,7 @@
         tbody tr:hover { background-color: #f3f4f6; }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
+        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
         .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         tbody tr:nth-child(even) td.col-checkbox { background-color: #f9fafb; }
@@ -71,6 +72,7 @@
 
         .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
 
+        /* MODALES */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
@@ -116,7 +118,11 @@
                 <button class="btn btn-bulk-delete" id="btnEliminarMasivo" onclick="eliminarSeleccionadas()">🗑️ Eliminar Masivo</button>
             </div>
         </div>
-        <div class="acciones-der">
+        <div class="acciones-der" style="display: flex; align-items: center; gap: 15px;">
+            <!-- CONTADOR DE REGISTROS DINÁMICO -->
+            <div id="contadorRegistros" style="font-size: 13px; font-weight: 700; color: #374151; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                📊 Registros: <span id="cantVisibles" style="color: #2563eb;">0</span> / <span id="cantTotal">0</span>
+            </div>
             <input type="text" id="inputBusquedaGlobal" class="search-input" placeholder="🔍 Buscar en cualquier columna..." oninput="ejecutarFiltro()">
         </div>
     </div>
@@ -362,7 +368,6 @@
             while (fetching) {
                 document.getElementById('loadingText').innerText = `Descargando registros desde la nube: ${allData.length}...`;
                 
-                // ORDENADO POR FECHA DE INGRESO (DESCENTENTE / MÁS RECIENTE PRIMERO)
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
                     .order('datos->1', { ascending: false, nullsFirst: false })
@@ -671,6 +676,7 @@
             reader.readAsArrayBuffer(file);
         };
 
+        // --- FILTRADO CON CONTADOR EN TIEMPO REAL ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => ({
@@ -680,7 +686,9 @@
             })).filter(inp => inp.val !== "");
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            
+            let totalFilas = filas.length;
+            let visibles = 0;
+
             filas.forEach(fila => {
                 let mostrar = true;
                 
@@ -700,12 +708,22 @@
                 
                 if (mostrar) {
                     if (fila.style.display === 'none') fila.style.display = '';
+                    visibles++;
                 } else {
                     if (fila.style.display !== 'none') fila.style.display = 'none';
                     const cb = fila.querySelector('.row-checkbox'); 
                     if (cb && cb.checked) cb.checked = false;
                 }
             });
+
+            // ACTUALIZAR REGISTROS
+            const elVisibles = document.getElementById('cantVisibles');
+            const elTotal = document.getElementById('cantTotal');
+            if (elVisibles && elTotal) {
+                elVisibles.innerText = visibles.toLocaleString();
+                elTotal.innerText = totalFilas.toLocaleString();
+            }
+
             window.actualizarSeleccion(); 
         };
 
