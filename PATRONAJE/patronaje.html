@@ -71,6 +71,13 @@
 </head>
 <body>
 
+    <!-- OVERLAY DE CARGA PARA HISTÓRICOS PESADOS -->
+    <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter: blur(5px);">
+        <div style="font-size:40px; margin-bottom:10px;">⏳</div>
+        <div style="font-size:22px; font-weight:800; color:#1f2937; margin-bottom:10px;">Procesando Histórico</div>
+        <div id="loadingText" style="font-size:15px; color:#6b7280; font-weight: 600;">Por favor, espera unos segundos...</div>
+    </div>
+
     <script>
         const styleEl = document.createElement('style');
         let cssRules = "";
@@ -83,7 +90,6 @@
     <div class="top-bar">
         <div class="titulo-bodega">ÁREA DE PATRONAJE Y DPTO TÉCNICO</div>
         <div style="display: flex; align-items: center;">
-            <!-- Removimos los avatares como solicitaste -->
             <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
@@ -104,7 +110,8 @@
             </div>
         </div>
         <div class="acciones-der">
-            <input type="text" id="inputBusquedaGlobal" class="search-input" placeholder="🔍 Buscar en cualquier columna..." oninput="filtrarTablaCompleta()">
+            <!-- Nota: Usamos ejecutarFiltro() para el retraso inteligente -->
+            <input type="text" id="inputBusquedaGlobal" class="search-input" placeholder="🔍 Buscar en cualquier columna..." oninput="ejecutarFiltro()">
         </div>
     </div>
 
@@ -168,6 +175,15 @@
             "2DA PP SAMPLE": "DESARROLLO", "2DO SIZE SET PP SAMPLE": "DESARROLLO", "3RA PP SAMPLE": "DESARROLLO",
             "4TA PP SAMPLE": "DESARROLLO", "5TA PP SAMPLE": "DESARROLLO", "2 PP SAMPLE": "DESARROLLO",
             "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
+        };
+
+        // --- MANEJO DE BUSCADOR CON RETRASO (DEBOUNCE) PARA NO CONGELAR ---
+        let timerBusqueda = null;
+        window.ejecutarFiltro = function() {
+            clearTimeout(timerBusqueda);
+            timerBusqueda = setTimeout(() => {
+                window.filtrarTablaCompleta();
+            }, 350); // Espera 350ms a que termines de escribir para filtrar
         };
 
         async function verificarSesion() {
@@ -249,6 +265,22 @@
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
             celdas[32].textContent = tipoCalculado;
+
+            // ACTUALIZACIÓN DE CACHÉ PARA FILTRO ULTRARRÁPIDO
+            tr._datosOriginal = [];
+            tr._datosLower = [];
+            for(let i = 1; i <= 33; i++) {
+                if(!celdas[i]) continue;
+                let val = "";
+                if (i === 1) val = ""; // Omitimos foto
+                else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
+                else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
+                else val = celdas[i].innerText.trim();
+                
+                tr._datosOriginal[i] = val;
+                tr._datosLower[i] = val.toLowerCase();
+            }
+            tr._textoGlobal = tr._datosLower.join(" ");
         };
 
         // --- INICIALIZACIÓN Y TABLA ---
@@ -273,20 +305,49 @@
                 const thFilter = document.createElement('th');
                 if (col === 'FOTO' || col === 'PDF AUDITORÍA') { thFilter.innerHTML = ``; } 
                 else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
-                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="filtrarTablaCompleta()">`;
+                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="ejecutarFiltro()">`;
                 } else {
-                    thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()"><datalist id="datalist_${idx + 1}"></datalist>`;
+                    thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
                 } trFilter.appendChild(thFilter);
             });
             const thAcciones = document.createElement('th'); thAcciones.className = 'th-title'; thAcciones.textContent = 'ACC.'; trHeader.appendChild(thAcciones); trFilter.appendChild(document.createElement('th'));
         }
 
         async function cargarDatos() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').innerText = "Descargando base de datos segura...";
+            
             const { data, error } = await client.from('dpto_tecnico').select('*').order('created_at', { ascending: false });
-            if (error) return console.error(error);
-            const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
-            data.forEach(filaBD => { let d = filaBD.datos || []; while(d.length < 33) d.push(""); tbody.appendChild(crearFilaHTML(filaBD.id, d)); });
-            window.filtrarTablaCompleta(); window.actualizarDatalists();
+            if (error) { console.error(error); document.getElementById('loadingOverlay').style.display = 'none'; return; }
+            
+            const tbody = document.getElementById('tableBody'); 
+            tbody.innerHTML = ''; 
+            
+            if(!data || data.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
+
+            // RENDERIZADO POR BLOQUES PARA NO CONGELAR LA PÁGINA
+            let i = 0;
+            const chunkSize = 150; 
+            
+            function renderChunk() {
+                const fragment = document.createDocumentFragment();
+                const end = Math.min(i + chunkSize, data.length);
+                for (; i < end; i++) {
+                    let d = data[i].datos || []; while(d.length < 33) d.push(""); 
+                    fragment.appendChild(crearFilaHTML(data[i].id, d));
+                }
+                tbody.appendChild(fragment);
+                
+                if (i < data.length) {
+                    document.getElementById('loadingText').innerText = `Dibujando muestras: ${i} de ${data.length}...`;
+                    requestAnimationFrame(renderChunk);
+                } else {
+                    window.ejecutarFiltro(); 
+                    window.actualizarDatalists();
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }
+            }
+            renderChunk();
         }
 
         function generarOpcionesMotivo(valorSeleccionado) {
@@ -374,16 +435,16 @@
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `<button onclick="eliminarFila(this)" title="Eliminar Muestra" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:5px 8px; border-radius:4px; cursor:pointer; font-size: 12px; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#374151';">🗑️</button>`;
             tr.appendChild(tdAcciones); 
-            setTimeout(() => recalcularFila(tr), 50); return tr;
+            recalcularFila(tr); 
+            return tr;
         }
 
         window.extraerDatosFila = function(tr) {
             const celdas = tr.querySelectorAll('td'); let datosFila = [];
-            for(let i = 1; i < celdas.length - 1; i++) { 
-                let colName = allCols[i - 1];
-                if (colName === 'FOTO') { 
+            for(let i = 1; i <= 33; i++) { 
+                if (i === 1) { 
                     const img = celdas[i].querySelector('.img-foto-prenda'); datosFila.push((img && !img.src.includes('logo.png')) ? img.src : "");
-                } else if (colName === 'PDF AUDITORÍA') {
+                } else if (i === 33) {
                     const pdfInput = celdas[i].querySelector('.pdf-data'); datosFila.push(pdfInput ? pdfInput.value : "");
                 } else if (celdas[i].querySelector('select')) { 
                     datosFila.push(celdas[i].querySelector('select').value);
@@ -426,7 +487,7 @@
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
-        // --- CARGA MASIVA EXCEL ---
+        // --- CARGA MASIVA EXCEL CON TRADUCTOR DE FECHAS ---
         window.procesarExcelImportado = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -483,7 +544,7 @@
 
                     if (registrosInsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
                     
-                    alert(`⏳ Subiendo ${registrosInsert.length} muestras. Por favor no cierres la página...`);
+                    alert(`⏳ Subiendo ${registrosInsert.length} muestras. Por favor no cierres la página ni presiones F5...`);
                     
                     const chunkSize = 200;
                     for (let i = 0; i < registrosInsert.length; i += chunkSize) {
@@ -502,45 +563,65 @@
             reader.readAsArrayBuffer(file);
         };
 
-        // --- FILTROS, BÚSQUEDA Y EXPORTACIÓN ---
+        // --- FILTRO ULTRARRÁPIDO USANDO CACHÉ (Evita que la página se cuelgue) ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
-            const inputsColumnas = document.querySelectorAll('.col-filter');
+            const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => ({
+                index: parseInt(inp.getAttribute('data-colindex')),
+                val: inp.value.trim().toLowerCase(),
+                raw: inp.value.trim()
+            })).filter(inp => inp.val !== "");
+
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
+            
             filas.forEach(fila => {
-                const celdas = fila.querySelectorAll('td'); let coincideGlobal = true; if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
-                let coincidenColumnas = true;
-                inputsColumnas.forEach(input => {
-                    const textoFiltroRaw = input.value.trim(); const textoFiltroLower = textoFiltroRaw.toLowerCase();
-                    if (textoFiltroRaw !== "") {
-                        const colIndex = input.getAttribute('data-colindex'); const celda = celdas[colIndex]; let celdaTexto = "";
-                        if (celda.querySelector('select')) { celdaTexto = celda.querySelector('select').value; } 
-                        else if (celda.querySelector('input[type="date"]')) { celdaTexto = celda.querySelector('input[type="date"]').value; } 
-                        else { celdaTexto = celda.innerText.trim(); }
-                        const celdaTextoLower = celdaTexto.toLowerCase();
-                        if (textoFiltroRaw.startsWith('"') && textoFiltroRaw.endsWith('"')) {
-                            let exactTerm = textoFiltroLower.slice(1, -1).trim(); if (exactTerm !== celdaTextoLower) coincidenColumnas = false; 
-                        } else if (!celdaTextoLower.includes(textoFiltroLower)) coincidenColumnas = false;
+                let mostrar = true;
+                
+                if (textoGlobal && !fila._textoGlobal.includes(textoGlobal)) {
+                    mostrar = false;
+                } else if (inputsColumnas.length > 0) {
+                    for (let inp of inputsColumnas) {
+                        let celdaTexto = fila._datosLower[inp.index] || "";
+                        if (inp.raw.startsWith('"') && inp.raw.endsWith('"')) {
+                            let exactTerm = inp.val.slice(1, -1).trim(); 
+                            if (exactTerm !== celdaTexto) { mostrar = false; break; }
+                        } else if (!celdaTexto.includes(inp.val)) { 
+                            mostrar = false; break; 
+                        }
                     }
-                });
-                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
-            }); window.actualizarSeleccion(); 
+                }
+                
+                if (mostrar) {
+                    if (fila.style.display === 'none') fila.style.display = '';
+                } else {
+                    if (fila.style.display !== 'none') fila.style.display = 'none';
+                    const cb = fila.querySelector('.row-checkbox'); 
+                    if (cb && cb.checked) cb.checked = false;
+                }
+            });
+            window.actualizarSeleccion(); 
         };
 
         window.actualizarDatalists = function() {
-            const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
+            const filas = document.getElementById('tableBody').querySelectorAll('tr');
             document.querySelectorAll('.col-filter[type="text"]').forEach(input => {
-                const colIndex = input.getAttribute('data-colindex'); const datalist = document.getElementById(`datalist_${colIndex}`);
-                if (!datalist) return; const uniqueValues = new Set();
+                const colIndex = parseInt(input.getAttribute('data-colindex')); 
+                const datalist = document.getElementById(`datalist_${colIndex}`);
+                if (!datalist) return; 
+                
+                const uniqueValues = new Set();
                 filas.forEach(fila => {
-                    if(!fila.dataset.id) return; const celdas = fila.querySelectorAll('td');
-                    if (celdas[colIndex]) {
-                        let val = ""; const celda = celdas[colIndex];
-                        if (celda.querySelector('select')) { val = celda.querySelector('select').value; } else if (celda.querySelector('input[type="date"]')) { val = celda.querySelector('input[type="date"]').value; } else { val = celda.innerText.trim(); }
-                        if (val !== "") uniqueValues.add(val);
-                    }
+                    if(!fila.dataset.id || !fila._datosOriginal) return;
+                    let val = fila._datosOriginal[colIndex];
+                    if (val && val !== "") uniqueValues.add(val);
                 });
-                datalist.innerHTML = ''; Array.from(uniqueValues).sort().forEach(val => { const option = document.createElement('option'); option.value = val; datalist.appendChild(option); });
+                
+                datalist.innerHTML = ''; 
+                Array.from(uniqueValues).sort().forEach(val => { 
+                    const option = document.createElement('option'); 
+                    option.value = val; 
+                    datalist.appendChild(option); 
+                });
             });
         };
 
@@ -642,11 +723,15 @@
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
-                    let filaData = window.extraerDatosFila(fila);
-                    for(let i = 0; i < filaData.length; i++) { 
-                        if(allCols[i] === 'FOTO' && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) filaData[i] = "🖼️ Imagen Cargada"; 
-                        if(allCols[i] === 'PDF AUDITORÍA' && filaData[i].startsWith('data:application/pdf')) filaData[i] = "📄 PDF Cargado en Sistema";
-                    } dataExcel.push(filaData);
+                    // Exportación ultrarrápida usando la caché
+                    let filaData = [];
+                    for(let i = 1; i <= 33; i++) {
+                        let val = fila._datosOriginal[i] || "";
+                        if(i === 1) val = fila.querySelector('.img-foto-prenda') && !fila.querySelector('.img-foto-prenda').src.includes('logo.png') ? "🖼️ Imagen Cargada" : "";
+                        if(i === 33 && val.startsWith('data:application/pdf')) val = "📄 PDF Cargado en Sistema";
+                        filaData.push(val);
+                    }
+                    dataExcel.push(filaData);
                 }
             });
             const hoja = XLSX.utils.aoa_to_sheet(dataExcel); const libro = XLSX.utils.book_new();
