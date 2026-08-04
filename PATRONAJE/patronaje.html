@@ -52,10 +52,21 @@
         tbody tr:hover { background-color: #f3f4f6; }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
+        /* CONGELACIÓN DE COLUMNAS */
         .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         tbody tr:nth-child(even) td.col-checkbox { background-color: #f9fafb; }
         tbody tr:hover td.col-checkbox { background-color: #f3f4f6; }
+
+        .col-precinto { position: sticky !important; left: var(--left-precinto, 60px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
+        .col-nombre { position: sticky !important; left: var(--left-nombre, 160px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
+        .col-pinta { position: sticky !important; left: var(--left-pinta, 260px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
+        .col-desc { position: sticky !important; left: var(--left-desc, 360px); z-index: 8; background-color: #ffffff; border-right: 2px solid #9ca3af !important; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+
+        th.col-precinto, th.col-nombre, th.col-pinta, th.col-desc { z-index: 19 !important; background-color: #f3f4f6 !important; color: #374151; }
+        tbody tr td.col-precinto, tbody tr td.col-nombre, tbody tr td.col-pinta, tbody tr td.col-desc { background-color: #ffffff; }
+        tbody tr:nth-child(even) td.col-precinto, tbody tr:nth-child(even) td.col-nombre, tbody tr:nth-child(even) td.col-pinta, tbody tr:nth-child(even) td.col-desc { background-color: #f9fafb; }
+        tbody tr:hover td.col-precinto, tbody tr:hover td.col-nombre, tbody tr:hover td.col-pinta, tbody tr:hover td.col-desc { background-color: #f3f4f6; }
 
         .resizer { position: absolute; top: 0; right: 0; width: 6px; cursor: col-resize; user-select: none; height: 100%; z-index: 25; }
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; }
@@ -110,7 +121,6 @@
             </div>
         </div>
         <div class="acciones-der">
-            <!-- Nota: Usamos ejecutarFiltro() para el retraso inteligente -->
             <input type="text" id="inputBusquedaGlobal" class="search-input" placeholder="🔍 Buscar en cualquier columna..." oninput="ejecutarFiltro()">
         </div>
     </div>
@@ -183,7 +193,7 @@
             clearTimeout(timerBusqueda);
             timerBusqueda = setTimeout(() => {
                 window.filtrarTablaCompleta();
-            }, 350); // Espera 350ms a que termines de escribir para filtrar
+            }, 350); 
         };
 
         async function verificarSesion() {
@@ -266,13 +276,12 @@
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
             celdas[32].textContent = tipoCalculado;
 
-            // ACTUALIZACIÓN DE CACHÉ PARA FILTRO ULTRARRÁPIDO
             tr._datosOriginal = [];
             tr._datosLower = [];
             for(let i = 1; i <= 33; i++) {
                 if(!celdas[i]) continue;
                 let val = "";
-                if (i === 1) val = ""; // Omitimos foto
+                if (i === 1) val = ""; 
                 else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
                 else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
                 else val = celdas[i].innerText.trim();
@@ -283,6 +292,29 @@
             tr._textoGlobal = tr._datosLower.join(" ");
         };
 
+        // --- ACTUALIZADOR DE COLUMNAS STICKY ---
+        window.actualizarSticky = function() {
+            const trHeader = document.getElementById('tableHeaderRow');
+            if(!trHeader) return;
+            const ths = trHeader.querySelectorAll('th');
+            if(ths.length < 15) return;
+            
+            let leftPos = ths[0].offsetWidth; 
+            
+            document.documentElement.style.setProperty('--left-precinto', `${leftPos}px`);
+            leftPos += ths[7].offsetWidth; // 7 corresponde a PRECINTO
+            
+            document.documentElement.style.setProperty('--left-nombre', `${leftPos}px`);
+            leftPos += ths[8].offsetWidth; // 8 corresponde a NOMBRE
+            
+            document.documentElement.style.setProperty('--left-pinta', `${leftPos}px`);
+            leftPos += ths[11].offsetWidth; // 11 corresponde a PINTA
+            
+            document.documentElement.style.setProperty('--left-desc', `${leftPos}px`);
+        };
+
+        window.addEventListener('resize', window.actualizarSticky);
+
         // --- INICIALIZACIÓN Y TABLA ---
         function inicializarEncabezados() {
             const trHeader = document.getElementById('tableHeaderRow'); const trFilter = document.getElementById('tableFilterRow');
@@ -291,18 +323,37 @@
 
             allCols.forEach((col, idx) => { 
                 const thTitle = document.createElement('th'); thTitle.className = 'th-title'; thTitle.innerHTML = `${col} ↕`; thTitle.onclick = () => ordenarTabla(idx + 1);
+                
+                // Clases Sticky para inmovilizar
+                if (col === 'PRECINTO') thTitle.classList.add('col-precinto');
+                if (col === 'NOMBRE / REFERENCIA:') thTitle.classList.add('col-nombre');
+                if (col === 'PINTA:') thTitle.classList.add('col-pinta');
+                if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thTitle.classList.add('col-desc');
+
                 trHeader.appendChild(thTitle);
                 
                 let resizer = document.createElement('div'); resizer.className = 'resizer'; thTitle.appendChild(resizer);
                 let x = 0; let w = 0;
                 resizer.addEventListener('mousedown', function(e) {
                     x = e.clientX; w = parseInt(window.getComputedStyle(thTitle).width, 10);
-                    const mouseMoveHandler = (ev) => { document.documentElement.style.setProperty(`--w-col-${idx + 1}`, `${Math.max(40, w + ev.clientX - x)}px`); };
-                    const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); };
+                    const mouseMoveHandler = (ev) => { 
+                        document.documentElement.style.setProperty(`--w-col-${idx + 1}`, `${Math.max(40, w + ev.clientX - x)}px`); 
+                        window.actualizarSticky();
+                    };
+                    const mouseUpHandler = () => { 
+                        document.removeEventListener('mousemove', mouseMoveHandler); 
+                        document.removeEventListener('mouseup', mouseUpHandler); 
+                        window.actualizarSticky();
+                    };
                     document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler);
                 });
 
                 const thFilter = document.createElement('th');
+                if (col === 'PRECINTO') thFilter.classList.add('col-precinto');
+                if (col === 'NOMBRE / REFERENCIA:') thFilter.classList.add('col-nombre');
+                if (col === 'PINTA:') thFilter.classList.add('col-pinta');
+                if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thFilter.classList.add('col-desc');
+
                 if (col === 'FOTO' || col === 'PDF AUDITORÍA') { thFilter.innerHTML = ``; } 
                 else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
                     thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="ejecutarFiltro()">`;
@@ -315,35 +366,66 @@
 
         async function cargarDatos() {
             document.getElementById('loadingOverlay').style.display = 'flex';
-            document.getElementById('loadingText').innerText = "Descargando base de datos segura...";
+            document.getElementById('loadingText').innerText = "Conectando con la base de datos...";
             
-            const { data, error } = await client.from('dpto_tecnico').select('*').order('created_at', { ascending: false });
-            if (error) { console.error(error); document.getElementById('loadingOverlay').style.display = 'none'; return; }
-            
+            let allData = [];
+            let from = 0;
+            const step = 1000;
+            let fetching = true;
+
+            while (fetching) {
+                document.getElementById('loadingText').innerText = `Descargando registros desde la nube: ${allData.length}...`;
+                const { data, error } = await client.from('dpto_tecnico')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, from + step - 1);
+                    
+                if (error) { 
+                    console.error(error); 
+                    document.getElementById('loadingOverlay').style.display = 'none'; 
+                    alert("Hubo un error descargando la información.");
+                    return; 
+                }
+                
+                if (data && data.length > 0) {
+                    allData = allData.concat(data);
+                    from += step;
+                } else {
+                    fetching = false;
+                }
+                
+                if (data.length < step) {
+                    fetching = false;
+                }
+            }
+
             const tbody = document.getElementById('tableBody'); 
             tbody.innerHTML = ''; 
             
-            if(!data || data.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
+            if(!allData || allData.length === 0) { 
+                document.getElementById('loadingOverlay').style.display = 'none'; 
+                return; 
+            }
 
-            // RENDERIZADO POR BLOQUES PARA NO CONGELAR LA PÁGINA
             let i = 0;
             const chunkSize = 150; 
             
             function renderChunk() {
                 const fragment = document.createDocumentFragment();
-                const end = Math.min(i + chunkSize, data.length);
+                const end = Math.min(i + chunkSize, allData.length);
                 for (; i < end; i++) {
-                    let d = data[i].datos || []; while(d.length < 33) d.push(""); 
-                    fragment.appendChild(crearFilaHTML(data[i].id, d));
+                    let d = allData[i].datos || []; while(d.length < 33) d.push(""); 
+                    fragment.appendChild(crearFilaHTML(allData[i].id, d));
                 }
                 tbody.appendChild(fragment);
                 
-                if (i < data.length) {
-                    document.getElementById('loadingText').innerText = `Dibujando muestras: ${i} de ${data.length}...`;
+                if (i < allData.length) {
+                    document.getElementById('loadingText').innerText = `Dibujando muestras en pantalla: ${i} de ${allData.length}...`;
                     requestAnimationFrame(renderChunk);
                 } else {
                     window.ejecutarFiltro(); 
                     window.actualizarDatalists();
+                    window.actualizarSticky();
                     document.getElementById('loadingOverlay').style.display = 'none';
                 }
             }
@@ -365,6 +447,12 @@
 
             allCols.forEach((colName, index) => {
                 const td = document.createElement('td'); 
+                
+                // Clases Sticky para Inmovilizar Columnas
+                if (colName === 'PRECINTO') td.classList.add('col-precinto');
+                if (colName === 'NOMBRE / REFERENCIA:') td.classList.add('col-nombre');
+                if (colName === 'PINTA:') td.classList.add('col-pinta');
+                if (colName === 'DESCRIPCIÓN TIPO DE PRENDA:') td.classList.add('col-desc');
                 
                 let valorRaw = datos[index];
                 if (valorRaw === null || valorRaw === undefined) valorRaw = '';
@@ -425,7 +513,7 @@
                     td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
-                    td.contentEditable = "false"; td.className = "calc-cell"; td.textContent = valorStr;
+                    td.contentEditable = "false"; td.className += " calc-cell"; td.textContent = valorStr;
                 }
                 else { 
                     td.contentEditable = "true"; td.textContent = valorStr; td.onblur = () => recalcularFila(tr);
@@ -487,7 +575,6 @@
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
-        // --- CARGA MASIVA EXCEL CON TRADUCTOR DE FECHAS ---
         window.procesarExcelImportado = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -563,7 +650,6 @@
             reader.readAsArrayBuffer(file);
         };
 
-        // --- FILTRO ULTRARRÁPIDO USANDO CACHÉ (Evita que la página se cuelgue) ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => ({
@@ -706,16 +792,47 @@
 
         let columnaOrdenadaActual = -1; let ordenAscendente = true;
         window.ordenarTabla = function(colIndex) {
-            const tbody = document.getElementById('tableBody'); const filas = Array.from(tbody.querySelectorAll('tr'));
-            if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
-            filas.sort((a, b) => {
-                let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
-                const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
-                if(inputA) valorA = inputA.value; if(inputB) valorB = inputB.value;
-                let numA = parseFloat(valorA); let numB = parseFloat(valorB);
-                if (!isNaN(numA) && !isNaN(numB) && !inputA) return ordenAscendente ? numA - numB : numB - numA;
-                if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
-            }); filas.forEach(fila => tbody.appendChild(fila));
+            const tbody = document.getElementById('tableBody'); 
+            const filas = Array.from(tbody.children); 
+            
+            if (filas.length === 0) return;
+            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').innerText = `Ordenando ${filas.length} registros...`;
+            
+            setTimeout(() => {
+                if (columnaOrdenadaActual === colIndex) { 
+                    ordenAscendente = !ordenAscendente; 
+                } else { 
+                    ordenAscendente = true; 
+                    columnaOrdenadaActual = colIndex; 
+                }
+                
+                filas.sort((a, b) => {
+                    let valorA = a._datosOriginal ? a._datosOriginal[colIndex] : ""; 
+                    let valorB = b._datosOriginal ? b._datosOriginal[colIndex] : "";
+                    
+                    if (!valorA) valorA = ordenAscendente ? "zzzzzzz" : ""; 
+                    if (!valorB) valorB = ordenAscendente ? "zzzzzzz" : "";
+                    
+                    let numA = parseFloat(valorA); 
+                    let numB = parseFloat(valorB);
+                    
+                    if (!isNaN(numA) && !isNaN(numB) && !valorA.includes("-") && !valorB.includes("-")) {
+                        return ordenAscendente ? numA - numB : numB - numA;
+                    }
+                    
+                    if (valorA < valorB) return ordenAscendente ? -1 : 1; 
+                    if (valorA > valorB) return ordenAscendente ? 1 : -1; 
+                    return 0;
+                }); 
+                
+                const fragment = document.createDocumentFragment();
+                filas.forEach(fila => fragment.appendChild(fila));
+                tbody.appendChild(fragment);
+                
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 50);
         };
 
         window.exportarAExcel = function() {
@@ -723,7 +840,6 @@
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
-                    // Exportación ultrarrápida usando la caché
                     let filaData = [];
                     for(let i = 1; i <= 33; i++) {
                         let val = fila._datosOriginal[i] || "";
