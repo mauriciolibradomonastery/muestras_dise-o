@@ -23,12 +23,7 @@
 
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); padding-bottom: 15px; }
         .titulo-bodega { font-size: 16px; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 1px; }
-        .en-linea-container { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #6b7280; font-weight: 600; }
-        .avatars-group { display: flex; flex-direction: row-reverse; }
-        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: white; border: 2px solid #ffffff; margin-left: -12px; position: relative; cursor: default; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: 0.2s; }
-        .avatar-circle:hover { transform: translateY(-3px); z-index: 10; }
-        .avatar-circle:hover::after { content: attr(data-name); position: absolute; top: 110%; background: #1f2937; padding: 5px 10px; border-radius: 6px; font-size: 12px; white-space: nowrap; z-index: 20; color: #fff; }
-        .btn-logout { background-color: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; margin-left: 15px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
+        .btn-logout { background-color: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
 
         .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
         .acciones-izq, .acciones-der { display: flex; gap: 10px; align-items: center; }
@@ -87,7 +82,6 @@
     <div class="top-bar">
         <div class="titulo-bodega">ÁREA DE PATRONAJE Y DPTO TÉCNICO</div>
         <div style="display: flex; align-items: center;">
-            <div class="en-linea-container"><span>En línea:</span><div id="usuarios-activos" class="avatars-group"></div></div>
             <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
@@ -97,7 +91,7 @@
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
             
-            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Excel</button>
+            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Excel Histórico</button>
             <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
@@ -174,24 +168,9 @@
             "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
         };
 
-        // --- PRESENCIA Y SESIÓN ---
-        function generarColorHash(str) { let hash = 0; for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash); const c = (hash & 0x00FFFFFF).toString(16).toUpperCase(); return '#' + '00000'.substring(0, 6 - c.length) + c; }
-        function obtenerIniciales(email) { return email.substring(0, 2).toUpperCase(); }
-
-        async function configurarPresencia(emailUsuario) {
-            const canal = client.channel('room-bodega', { config: { presence: { key: emailUsuario } } });
-            canal.on('presence', { event: 'sync' }, () => {
-                const state = canal.presenceState(); const container = document.getElementById('usuarios-activos'); container.innerHTML = '';
-                Object.keys(state).forEach(email => {
-                    const div = document.createElement('div'); div.className = 'avatar-circle'; div.style.backgroundColor = generarColorHash(email); div.setAttribute('data-name', email.split('@')[0]); div.innerText = obtenerIniciales(email); container.appendChild(div);
-                });
-            });
-            canal.subscribe(async (status) => { if (status === 'SUBSCRIBED') await canal.track({ user_email: emailUsuario, online_at: new Date().toISOString() }); });
-        }
-
         async function verificarSesion() {
             const { data: { session } } = await client.auth.getSession();
-            if (!session) window.location.href = "index_patronaje.html"; else configurarPresencia(session.user.email);
+            if (!session) window.location.href = "index_patronaje.html";
         }
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index_patronaje.html"; }
         verificarSesion();
@@ -304,7 +283,7 @@
             const { data, error } = await client.from('dpto_tecnico').select('*').order('created_at', { ascending: false });
             if (error) return console.error(error);
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
-            data.forEach(filaBD => { let d = filaBD.datos || []; while(d.length < 33) d.push(""); tbody.appendChild(crearFilaHTML(filaBD.precinto, d)); });
+            data.forEach(filaBD => { let d = filaBD.datos || []; while(d.length < 33) d.push(""); tbody.appendChild(crearFilaHTML(filaBD.id, d)); });
             window.filtrarTablaCompleta(); window.actualizarDatalists();
         }
 
@@ -314,8 +293,10 @@
             return html;
         }
 
-        function crearFilaHTML(precinto = null, datos = []) {
-            const tr = document.createElement('tr'); if (precinto) tr.dataset.id = precinto;
+        function crearFilaHTML(idDb = null, datos = []) {
+            const tr = document.createElement('tr'); 
+            if (idDb) tr.dataset.id = idDb; // Guardamos el ID único
+            
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
 
@@ -420,7 +401,8 @@
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
-                if (tr.dataset.id) { promesasUpdate.push( client.from('dpto_tecnico').update({ datos: datosFila }).eq('precinto', tr.dataset.id) ); } 
+                // Actualizamos según el ID único, e inyectamos el precinto para consultas rápidas
+                if (tr.dataset.id) { promesasUpdate.push( client.from('dpto_tecnico').update({ datos: datosFila, precinto: datosFila[6] }).eq('id', tr.dataset.id) ); } 
             }
             try {
                 if (promesasUpdate.length > 0) { const resultados = await Promise.all(promesasUpdate); for (let res of resultados) { if (res.error) throw res.error; } }
@@ -445,7 +427,7 @@
                     if (jsonRows.length <= 1) return alert("El archivo está vacío o solo tiene encabezados.");
 
                     const rowsData = jsonRows.slice(1);
-                    let registrosUpsert = [];
+                    let registrosInsert = [];
 
                     rowsData.forEach(row => {
                         let d = new Array(33).fill('');
@@ -458,15 +440,17 @@
                             if (d[0].includes("Imagen Cargada")) d[0] = "";
                             if (d[32].includes("PDF Cargado")) d[32] = "";
                             
-                            registrosUpsert.push({ precinto: precinto, datos: d });
+                            // Insertamos directamente para mantener el historial
+                            registrosInsert.push({ precinto: precinto, datos: d });
                         }
                     });
 
-                    if (registrosUpsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
+                    if (registrosInsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
                     
-                    alert(`⏳ Subiendo y actualizando ${registrosUpsert.length} muestras desde Excel...`);
+                    alert(`⏳ Subiendo ${registrosInsert.length} muestras desde Excel...`);
                     
-                    const { error } = await client.from('dpto_tecnico').upsert(registrosUpsert);
+                    // Al usar .insert(), los precintos repetidos no generarán conflicto 
+                    const { error } = await client.from('dpto_tecnico').insert(registrosInsert);
                     if (error) throw error;
 
                     alert("✅ ¡Carga masiva completada exitosamente!");
@@ -524,7 +508,6 @@
         window.abrirBuscadorDiseno = function() { document.getElementById('inputBuscarPrecinto').value = ""; document.getElementById('resultadoBusqueda').style.display = "none"; document.getElementById('modal-agregar').style.display = "flex"; }
         window.cerrarModal = function(id) { document.getElementById(id).style.display = 'none'; }
         
-        // --- AQUI ESTA LA CORRECCION DEL VISOR DE IMAGENES ---
         window.abrirModalImagen = function(src, event) { 
             if(event) event.stopPropagation(); 
             document.getElementById('imagenAmpliada').src = src; 
@@ -534,8 +517,11 @@
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳"; const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
             if(!precinto) { btn.textContent = "🔍 Buscar"; return alert("Escribe un precinto."); }
+            
+            // LA RESTRICCIÓN DESDE DISEÑO SE MANTIENE AQUÍ
             const { data: yaExiste } = await client.from('dpto_tecnico').select('precinto').eq('precinto', precinto).single();
             if (yaExiste) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#b45309; text-align:center; font-weight:bold;">⚠️ Este precinto ya está en tu tabla.</div>`; btn.textContent = "🔍 Buscar"; return; }
+            
             let { data: prenda } = await client.from('prendas').select('*').eq('precinto', precinto).single();
             if(!prenda) { const retry = await client.from('prendas').select('*').eq('id', precinto).single(); prenda = retry.data; }
             if(!prenda) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#ef4444; text-align:center; font-weight:bold;">❌ Precinto no encontrado en Diseño.</div>`; } else {
@@ -557,7 +543,7 @@
             const btn = e.target; btn.textContent = "⏳ Agregando..."; btn.disabled = true;
             const prenda = JSON.parse(decodeURIComponent(jsonEncoded)); const precintoReal = prenda.precinto || prenda.id;
             
-            let datosNuevos = new Array(33).fill(''); // 33 columnas
+            let datosNuevos = new Array(33).fill(''); 
             const hoy = new Date(); const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
 
             datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[2] = prenda.proveedor || ''; 
@@ -586,7 +572,7 @@
         window.eliminarFila = async function(btn) {
             if(!confirm("¿Seguro que deseas eliminar esta muestra de Patronaje?")) return;
             const tr = btn.closest('tr'); const idDb = tr.dataset.id;
-            if(idDb) { const { error } = await client.from('dpto_tecnico').delete().eq('precinto', idDb); if(error) { alert("Error al eliminar"); return; } }
+            if(idDb) { const { error } = await client.from('dpto_tecnico').delete().eq('id', idDb); if(error) { alert("Error al eliminar"); return; } }
             tr.remove(); window.actualizarDatalists();
         };
 
@@ -595,7 +581,7 @@
             checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none' && tr.dataset.id) { idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás seguro de eliminar definitivamente ${rowsToRemove.length} muestras de Patronaje?`)) return;
-            if (idsToDelete.length > 0) { const { error } = await client.from('dpto_tecnico').delete().in('precinto', idsToDelete); if(error) { alert("Error al eliminar masivamente"); return; } }
+            if (idsToDelete.length > 0) { const { error } = await client.from('dpto_tecnico').delete().in('id', idsToDelete); if(error) { alert("Error al eliminar masivamente"); return; } }
             rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false; window.actualizarSeleccion(); window.actualizarDatalists();
         };
 
