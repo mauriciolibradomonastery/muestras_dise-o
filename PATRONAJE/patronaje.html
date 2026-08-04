@@ -97,7 +97,6 @@
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
             
-            <!-- NUEVOS BOTONES DE CARGA MASIVA -->
             <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Excel</button>
             <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
@@ -456,7 +455,6 @@
                         
                         const precinto = d[6] ? d[6].trim() : '';
                         if (precinto !== '') {
-                            // Limpiar placeholders del export para no dañar la BD
                             if (d[0].includes("Imagen Cargada")) d[0] = "";
                             if (d[32].includes("PDF Cargado")) d[32] = "";
                             
@@ -525,7 +523,13 @@
 
         window.abrirBuscadorDiseno = function() { document.getElementById('inputBuscarPrecinto').value = ""; document.getElementById('resultadoBusqueda').style.display = "none"; document.getElementById('modal-agregar').style.display = "flex"; }
         window.cerrarModal = function(id) { document.getElementById(id).style.display = 'none'; }
-        window.abrirModalImagen = function(src, event) { if(event) event.stopPropagation(); document.getElementById('imgModalSrc').src = src; document.getElementById('modalVisor').style.display = 'flex'; };
+        
+        // --- AQUI ESTA LA CORRECCION DEL VISOR DE IMAGENES ---
+        window.abrirModalImagen = function(src, event) { 
+            if(event) event.stopPropagation(); 
+            document.getElementById('imagenAmpliada').src = src; 
+            document.getElementById('modalVisor').style.display = 'flex'; 
+        };
 
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳"; const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
