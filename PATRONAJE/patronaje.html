@@ -82,7 +82,6 @@
 </head>
 <body>
 
-    <!-- OVERLAY DE CARGA OPTIMIZADO -->
     <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter: blur(5px);">
         <div style="font-size:40px; margin-bottom:10px;">⏳</div>
         <div style="font-size:22px; font-weight:800; color:#1f2937; margin-bottom:10px;">Procesando Datos</div>
@@ -135,16 +134,16 @@
         </table>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL MULTICARGA -->
     <div id="modal-agregar" class="modal">
         <div class="modal-content">
-            <h3 style="color: #2563eb; margin-top: 0; font-size: 20px;">➕ Importar Prenda a Patronaje</h3>
-            <label style="color:#6b7280; font-size: 13px;">Escribe el Precinto entregado por Diseño para crear su ficha técnica:</label>
-            <div style="display:flex; gap: 10px; margin-top: 15px;">
-                <input type="text" id="inputBuscarPrecinto" placeholder="Ej: MST-10293" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #111827; outline: none;">
-                <button class="btn" style="background-color: #1f2937; color: white; border: none;" onclick="buscarPrecintoEnDiseno(event)">🔍 Buscar</button>
+            <h3 style="color: #2563eb; margin-top: 0; font-size: 20px;">➕ Importar Prendas a Patronaje</h3>
+            <label style="color:#6b7280; font-size: 13px;">Escribe o pega los Precintos (separados por coma, espacios o saltos de línea):</label>
+            <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
+                <textarea id="inputBuscarPrecinto" placeholder="Ej:&#10;MST-10293&#10;MST-10294&#10;MST-10295" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #111827; outline: none; resize: vertical; min-height: 80px; font-family: inherit; font-size: 13px;"></textarea>
+                <button class="btn" style="background-color: #1f2937; color: white; border: none; align-self: flex-end;" onclick="buscarPrecintoEnDiseno(event)">🔍 Buscar y Validar</button>
             </div>
-            <div id="resultadoBusqueda" style="margin-top: 25px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db;"></div>
+            <div id="resultadoBusqueda" style="margin-top: 15px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db; max-height: 200px; overflow-y: auto;"></div>
             <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
                 <button class="btn" onclick="cerrarModal('modal-agregar')">Cancelar</button>
             </div>
@@ -369,7 +368,7 @@
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
                     .order('created_at', { ascending: false })
-                    .order('id', { ascending: true }) // ESTE ES EL SALVAVIDAS: Previene los errores de empate
+                    .order('id', { ascending: true }) 
                     .range(from, from + step - 1);
                     
                 if (error) { 
@@ -571,7 +570,6 @@
             
             const filas = document.getElementById('tableBody').querySelectorAll('tr'); 
             
-            // EL ESCUDO FINAL: Aseguramos que nunca envíe 2 filas con el mismo ID fantasma
             let mapGuardar = new Map();
 
             for (let tr of filas) {
@@ -665,7 +663,7 @@
                         if (error) throw error;
                     }
 
-                    alert("✅ ¡Carga masiva de histórico completada exitosamente!");
+                    alert("✅ ¡Carga masiva completada exitosamente!");
                     event.target.value = ""; 
                     cargarDatos(); 
                 } catch (error) {
@@ -748,45 +746,116 @@
             document.getElementById('modalVisor').style.display = 'flex'; 
         };
 
+        // --- BÚSQUEDA MULTIPLE Y RESUMEN INTELIGENTE ---
+        window.prendasAImportar = [];
         window.buscarPrecintoEnDiseno = async function(e) {
-            const btn = e.target; btn.textContent = "⏳"; const precinto = document.getElementById('inputBuscarPrecinto').value.trim(); const resDiv = document.getElementById('resultadoBusqueda');
-            if(!precinto) { btn.textContent = "🔍 Buscar"; return alert("Escribe un precinto."); }
-            
-            const { data: yaExiste } = await client.from('dpto_tecnico').select('precinto').eq('precinto', precinto).single();
-            if (yaExiste) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#b45309; text-align:center; font-weight:bold;">⚠️ Este precinto ya está en tu tabla.</div>`; btn.textContent = "🔍 Buscar"; return; }
-            
-            let { data: prenda } = await client.from('prendas').select('*').eq('precinto', precinto).single();
-            if(!prenda) { const retry = await client.from('prendas').select('*').eq('id', precinto).single(); prenda = retry.data; }
-            if(!prenda) { resDiv.style.display = 'block'; resDiv.innerHTML = `<div style="color:#ef4444; text-align:center; font-weight:bold;">❌ Precinto no encontrado en Diseño.</div>`; } else {
-                const foto = prenda.fotoUrl || 'logo.png'; const jsonPrenda = encodeURIComponent(JSON.stringify(prenda));
+            const btn = e.target; btn.textContent = "⏳ Buscando..."; btn.disabled = true;
+            const resDiv = document.getElementById('resultadoBusqueda');
+            resDiv.style.display = 'none'; window.prendasAImportar = [];
+
+            const rawText = document.getElementById('inputBuscarPrecinto').value;
+            // Separa por comas, espacios o saltos de linea
+            let precintos = rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== '');
+            precintos = [...new Set(precintos)]; // quita duplicados ingresados
+
+            if(precintos.length === 0) { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return alert("Escribe al menos un precinto."); }
+
+            // 1. Validar cuáles ya existen en patronaje
+            const { data: yaExisten } = await client.from('dpto_tecnico').select('precinto').in('precinto', precintos);
+            const precintosExistentes = yaExisten ? yaExisten.map(r => r.precinto.toUpperCase()) : [];
+            const precintosNuevos = precintos.filter(p => !precintosExistentes.includes(p));
+
+            if (precintosNuevos.length === 0) {
                 resDiv.style.display = 'block';
-                resDiv.innerHTML = `<div style="display:flex; gap:15px; align-items:center;">
-                        <img src="${foto}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db;">
-                        <div style="flex-grow:1; font-size:13px; color:#374151;">
-                            <div style="color:#2563eb; font-weight:bold; font-size:16px;">✅ ${prenda.precinto || prenda.id}</div>
-                            <div style="margin-top:4px;"><b>Ref:</b> ${prenda.referencia || '-'} | <b>Colección:</b> ${prenda.coleccion || '-'}</div>
-                            <div><b>Género:</b> ${prenda.genero || '-'} | <b>Clasificación:</b> ${prenda.clasificacion || '-'}</div>
-                        </div>
-                    </div>
-                    <button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronaje('${jsonPrenda}', event)">➕ Agregar Fila a mi Tabla</button>`;
-            } btn.textContent = "🔍 Buscar";
+                resDiv.innerHTML = `<div style="color:#b45309; text-align:center; font-weight:bold;">⚠️ Todos los precintos ingresados (${precintosExistentes.length}) ya están en tu tabla.</div>`;
+                btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return;
+            }
+
+            // 2. Buscar en diseño los que son nuevos
+            const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintosNuevos);
+            
+            let prendasEncontradas = prendasDiseño || [];
+            let encontradosPrecintos = prendasEncontradas.map(p => (p.precinto || p.id).toUpperCase());
+            
+            // Reintentar buscar por ID si en diseño lo guardaron diferente
+            let faltantes = precintosNuevos.filter(p => !encontradosPrecintos.includes(p));
+            if (faltantes.length > 0) {
+                const { data: prendasPorId } = await client.from('prendas').select('*').in('id', faltantes);
+                if (prendasPorId && prendasPorId.length > 0) {
+                    prendasEncontradas = prendasEncontradas.concat(prendasPorId);
+                }
+            }
+
+            window.prendasAImportar = prendasEncontradas;
+
+            // 3. Mostrar resumen en pantalla
+            let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
+            if (window.prendasAImportar.length > 0) {
+                htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} prendas encontradas listas para importar.</div>`;
+            }
+            if (precintosExistentes.length > 0) {
+                htmlResumen += `<div style="color:#b45309; margin-bottom:4px;">⚠️ <b>${precintosExistentes.length}</b> ya estaban en tu tabla (Serán ignorados).</div>`;
+            }
+            let noEncontrados = precintosNuevos.length - window.prendasAImportar.length;
+            if (noEncontrados > 0) {
+                htmlResumen += `<div style="color:#ef4444; margin-bottom:4px;">❌ <b>${noEncontrados}</b> precintos no existen en Diseño.</div>`;
+            }
+            htmlResumen += `</div>`;
+
+            if (window.prendasAImportar.length > 0) {
+                htmlResumen += `<button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronajeMulti(event)">➕ Agregar ${window.prendasAImportar.length} Filas a mi Tabla</button>`;
+            }
+
+            resDiv.innerHTML = htmlResumen;
+            resDiv.style.display = 'block';
+            btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false;
         }
 
-        window.agregarAPatronaje = async function(jsonEncoded, e) {
+        // --- INYECCIÓN DIRECTA SIN RECARGAR 3500 FILAS ---
+        window.agregarAPatronajeMulti = async function(e) {
             const btn = e.target; btn.textContent = "⏳ Agregando..."; btn.disabled = true;
-            const prenda = JSON.parse(decodeURIComponent(jsonEncoded)); const precintoReal = prenda.precinto || prenda.id;
             
-            let datosNuevos = new Array(33).fill(''); 
+            let registrosInsert = [];
             const hoy = new Date(); const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
 
-            datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[2] = prenda.proveedor || ''; 
-            datosNuevos[4] = prenda.coleccion || ''; datosNuevos[5] = prenda.genero || ''; datosNuevos[6] = precintoReal;
-            datosNuevos[7] = prenda.referencia || ''; datosNuevos[8] = prenda.talla || ''; datosNuevos[9] = prenda.clasificacion || '';
-            datosNuevos[10] = prenda.color || ''; datosNuevos[11] = prenda.cantidad || ''; datosNuevos[12] = prenda.linea || '';
+            window.prendasAImportar.forEach(prenda => {
+                const precintoReal = prenda.precinto || prenda.id;
+                let datosNuevos = new Array(33).fill(''); 
+                datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[2] = prenda.proveedor || ''; 
+                datosNuevos[4] = prenda.coleccion || ''; datosNuevos[5] = prenda.genero || ''; datosNuevos[6] = precintoReal;
+                datosNuevos[7] = prenda.referencia || ''; datosNuevos[8] = prenda.talla || ''; datosNuevos[9] = prenda.clasificacion || '';
+                datosNuevos[10] = prenda.color || ''; datosNuevos[11] = prenda.cantidad || ''; datosNuevos[12] = prenda.linea || '';
+                
+                registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
+            });
 
-            const { error } = await client.from('dpto_tecnico').insert([{ precinto: precintoReal, datos: datosNuevos }]);
-            if(error) { alert("Error al vincular: " + error.message); } else { alert("✅ ¡Muestra agregada a tu tabla exitosamente!"); cerrarModal('modal-agregar'); cargarDatos(); }
-            btn.textContent = "➕ Agregar Fila a mi Tabla"; btn.disabled = false;
+            // Usamos .select() para que la base de datos nos devuelva los IDs recién creados
+            const { data: insertedData, error } = await client.from('dpto_tecnico').insert(registrosInsert).select();
+            
+            if(error) { 
+                alert("Error al vincular: " + error.message); 
+                btn.textContent = `➕ Agregar ${window.prendasAImportar.length} Filas a mi Tabla`; btn.disabled = false;
+            } else { 
+                alert(`✅ ¡${registrosInsert.length} muestras agregadas a tu tabla exitosamente!`); 
+                cerrarModal('modal-agregar'); 
+                
+                // INYECTAMOS EN LA TABLA VISUAL INMEDIATAMENTE
+                const tbody = document.getElementById('tableBody');
+                const fragment = document.createDocumentFragment();
+                let rowsToRender = insertedData || registrosInsert; 
+                
+                rowsToRender.forEach(row => {
+                    const newTr = crearFilaHTML(row.id, row.datos);
+                    fragment.appendChild(newTr);
+                });
+                
+                // Las ponemos de primeras en la tabla
+                tbody.insertBefore(fragment, tbody.firstChild);
+
+                window.actualizarDatalists();
+                window.actualizarSticky();
+                window.ejecutarFiltro();
+            }
         }
 
         window.toggleSelectAll = function() {
