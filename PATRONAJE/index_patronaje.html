@@ -3,77 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Dpto. Técnico y Patronaje</title>
+    <title>Login - Área de Patronaje</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .login-container { background-color: #1e1e1e; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 100%; max-width: 400px; text-align: center; border: 1px solid #333; }
-        .login-container img { width: 80px; margin-bottom: 20px; }
-        .login-container h2 { margin: 0 0 5px 0; color: #0dcaf0; }
-        .login-container p { color: #888; font-size: 14px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group label { display: block; font-size: 13px; color: #ccc; font-weight: bold; margin-bottom: 8px; }
-        .form-group input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background-color: #2b2b2b; color: #fff; box-sizing: border-box; font-size: 14px; transition: 0.3s; }
-        .form-group input:focus { border-color: #0dcaf0; outline: none; }
-        .btn-login { width: 100%; background-color: #198754; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; }
-        .btn-login:hover { background-color: #157347; }
-        #mensajeError { color: #dc3545; font-size: 13px; margin-top: 15px; display: none; font-weight: bold; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            
+            /* IMAGEN DE FONDO DE PATRONAJE CON FILTRO OSCURO */
+            background-image: linear-gradient(rgba(18, 18, 18, 0.75), rgba(18, 18, 18, 0.90)), url('https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=1920&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #ffffff;
+        }
+
+        .login-container {
+            background-color: #1e1e1e;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            border: 1px solid #333;
+            backdrop-filter: blur(5px);
+        }
+
+        .logo { width: 65px; margin-bottom: 15px; border-radius: 4px; }
+        
+        h2 { color: #0dcaf0; margin-top: 0; margin-bottom: 5px; font-size: 24px; font-weight: 800; }
+        p.subtitle { color: #9ca3af; font-size: 13px; margin-bottom: 30px; }
+        
+        .form-group { text-align: left; margin-bottom: 18px; }
+        label { display: block; font-size: 12px; margin-bottom: 6px; font-weight: bold; color: #d1d5db; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background-color: #2b2b2b;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+        }
+        input:focus { border-color: #0dcaf0; box-shadow: 0 0 0 2px rgba(13, 202, 240, 0.2); }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #198754;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+            box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
+        }
+        button:hover { background-color: #157347; transform: translateY(-1px); }
+        button:disabled { background-color: #444; cursor: not-allowed; transform: none; box-shadow: none; color: #888; }
+        
+        #mensaje { margin-top: 15px; font-size: 13px; color: #ff6b6b; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="login-container">
-        <!-- Reemplaza logo.png por la ruta de tu logo si es necesario -->
-        <img src="logo.png" alt="Logo">
+        <!-- Usa el logo local si existe, si no, uno de prueba -->
+        <img src="logo.png" alt="Logo" class="logo" onerror="this.src='https://via.placeholder.com/65?text=LOGO'">
         <h2>Área de Patronaje</h2>
-        <p>Portal exclusivo del Departamento Técnico</p>
+        <p class="subtitle">Portal exclusivo del Departamento Técnico</p>
 
         <div class="form-group">
             <label>Correo Electrónico</label>
-            <input type="email" id="email" placeholder="usuario@monastery.com.co" required>
-        </div>
-        <div class="form-group">
-            <label>Contraseña</label>
-            <input type="password" id="password" placeholder="••••••••" required>
+            <input type="email" id="email" placeholder="usuario@monastery.com.co" onkeypress="if(event.key === 'Enter') iniciarSesion()">
         </div>
         
-        <button class="btn-login" id="btnIngresar" onclick="iniciarSesion()">Ingresar al Sistema</button>
-        <div id="mensajeError"></div>
+        <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••" onkeypress="if(event.key === 'Enter') iniciarSesion()">
+        </div>
+
+        <button id="btn-login" onclick="iniciarSesion()">Ingresar al Sistema</button>
+        <div id="mensaje"></div>
     </div>
 
     <script>
-        // CONEXIÓN A TU BASE DE DATOS
-        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
+        // Conexión a Supabase
+        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co';
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, {
+            auth: { storage: window.localStorage }
+        });
 
-        // VERIFICAR SI YA ESTÁ LOGUEADO
-        async function comprobarSesion() {
+        // Si ya tiene sesión, redirigir automáticamente a la tabla
+        async function chequearSesion() {
             const { data: { session } } = await client.auth.getSession();
             if (session) {
-                // Si ya tiene sesión, lo mandamos directo a patronaje
-                window.location.href = "patronaje.html";
+                window.location.href = 'patronaje.html';
             }
         }
-        comprobarSesion();
+        chequearSesion();
 
-        // FUNCIÓN DE LOGIN
-        window.iniciarSesion = async function() {
-            const email = document.getElementById('email').value;
+        // Función de inicio de sesión
+        async function iniciarSesion() {
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const btn = document.getElementById('btnIngresar');
-            const errorDiv = document.getElementById('mensajeError');
+            const msg = document.getElementById('mensaje');
+            const btn = document.getElementById('btn-login');
 
             if (!email || !password) {
-                errorDiv.textContent = "Por favor, completa ambos campos.";
-                errorDiv.style.display = "block";
+                msg.innerText = "⚠️ Por favor ingresa correo y contraseña.";
+                msg.style.display = 'block';
                 return;
             }
 
-            btn.textContent = "Verificando... ⏳";
+            btn.innerText = "Verificando...";
             btn.disabled = true;
-            errorDiv.style.display = "none";
+            msg.style.display = 'none';
 
             const { data, error } = await client.auth.signInWithPassword({
                 email: email,
@@ -81,20 +141,19 @@
             });
 
             if (error) {
-                errorDiv.textContent = "Credenciales incorrectas. Intenta de nuevo.";
-                errorDiv.style.display = "block";
-                btn.textContent = "Ingresar al Sistema";
+                msg.innerText = "❌ Credenciales incorrectas.";
+                msg.style.display = 'block';
+                btn.innerText = "Ingresar al Sistema";
                 btn.disabled = false;
             } else {
-                // REDIRECCIÓN EXCLUSIVA A PATRONAJE
-                window.location.href = "patronaje.html";
+                btn.style.backgroundColor = "#0dcaf0";
+                btn.style.color = "#000";
+                btn.innerText = "✅ Ingreso exitoso...";
+                setTimeout(() => {
+                    window.location.href = 'patronaje.html';
+                }, 500);
             }
         }
-
-        // Permitir enter para iniciar sesión
-        document.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') { iniciarSesion(); }
-        });
     </script>
 </body>
 </html>
