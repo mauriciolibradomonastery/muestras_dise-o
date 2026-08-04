@@ -41,7 +41,6 @@
         .search-input { width: 320px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d1d5db; background-color: #ffffff; color: #111827; outline: none; font-size: 13px; }
         .search-input:focus { border-color: #3b82f6; }
 
-        /* TABLA ESTILO EXCEL CLARO */
         .table-container { width: 100%; overflow-x: auto; max-height: 70vh; background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; color: #374151; }
@@ -52,7 +51,6 @@
         tbody tr:hover { background-color: #f3f4f6; }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
-        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
         .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         tbody tr:nth-child(even) td.col-checkbox { background-color: #f9fafb; }
@@ -73,7 +71,6 @@
 
         .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
 
-        /* MODALES */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
@@ -134,7 +131,6 @@
         </table>
     </div>
 
-    <!-- MODAL MULTICARGA -->
     <div id="modal-agregar" class="modal">
         <div class="modal-content">
             <h3 style="color: #2563eb; margin-top: 0; font-size: 20px;">➕ Importar Prendas a Patronaje</h3>
@@ -365,10 +361,12 @@
 
             while (fetching) {
                 document.getElementById('loadingText').innerText = `Descargando registros desde la nube: ${allData.length}...`;
+                
+                // ORDENADO POR FECHA DE INGRESO (DESCENTENTE / MÁS RECIENTE PRIMERO)
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
+                    .order('datos->1', { ascending: false, nullsFirst: false })
                     .order('created_at', { ascending: false })
-                    .order('id', { ascending: true }) 
                     .range(from, from + step - 1);
                     
                 if (error) { 
@@ -746,7 +744,6 @@
             document.getElementById('modalVisor').style.display = 'flex'; 
         };
 
-        // --- BÚSQUEDA MULTIPLE Y RESUMEN INTELIGENTE ---
         window.prendasAImportar = [];
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳ Buscando..."; btn.disabled = true;
@@ -754,13 +751,11 @@
             resDiv.style.display = 'none'; window.prendasAImportar = [];
 
             const rawText = document.getElementById('inputBuscarPrecinto').value;
-            // Separa por comas, espacios o saltos de linea
             let precintos = rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== '');
-            precintos = [...new Set(precintos)]; // quita duplicados ingresados
+            precintos = [...new Set(precintos)];
 
             if(precintos.length === 0) { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return alert("Escribe al menos un precinto."); }
 
-            // 1. Validar cuáles ya existen en patronaje
             const { data: yaExisten } = await client.from('dpto_tecnico').select('precinto').in('precinto', precintos);
             const precintosExistentes = yaExisten ? yaExisten.map(r => r.precinto.toUpperCase()) : [];
             const precintosNuevos = precintos.filter(p => !precintosExistentes.includes(p));
@@ -771,13 +766,11 @@
                 btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return;
             }
 
-            // 2. Buscar en diseño los que son nuevos
             const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintosNuevos);
             
             let prendasEncontradas = prendasDiseño || [];
             let encontradosPrecintos = prendasEncontradas.map(p => (p.precinto || p.id).toUpperCase());
             
-            // Reintentar buscar por ID si en diseño lo guardaron diferente
             let faltantes = precintosNuevos.filter(p => !encontradosPrecintos.includes(p));
             if (faltantes.length > 0) {
                 const { data: prendasPorId } = await client.from('prendas').select('*').in('id', faltantes);
@@ -788,7 +781,6 @@
 
             window.prendasAImportar = prendasEncontradas;
 
-            // 3. Mostrar resumen en pantalla
             let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
             if (window.prendasAImportar.length > 0) {
                 htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} prendas encontradas listas para importar.</div>`;
@@ -811,7 +803,6 @@
             btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false;
         }
 
-        // --- INYECCIÓN DIRECTA SIN RECARGAR 3500 FILAS ---
         window.agregarAPatronajeMulti = async function(e) {
             const btn = e.target; btn.textContent = "⏳ Agregando..."; btn.disabled = true;
             
@@ -829,7 +820,6 @@
                 registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
             });
 
-            // Usamos .select() para que la base de datos nos devuelva los IDs recién creados
             const { data: insertedData, error } = await client.from('dpto_tecnico').insert(registrosInsert).select();
             
             if(error) { 
@@ -839,7 +829,6 @@
                 alert(`✅ ¡${registrosInsert.length} muestras agregadas a tu tabla exitosamente!`); 
                 cerrarModal('modal-agregar'); 
                 
-                // INYECTAMOS EN LA TABLA VISUAL INMEDIATAMENTE
                 const tbody = document.getElementById('tableBody');
                 const fragment = document.createDocumentFragment();
                 let rowsToRender = insertedData || registrosInsert; 
@@ -849,7 +838,6 @@
                     fragment.appendChild(newTr);
                 });
                 
-                // Las ponemos de primeras en la tabla
                 tbody.insertBefore(fragment, tbody.firstChild);
 
                 window.actualizarDatalists();
