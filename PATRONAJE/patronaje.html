@@ -119,7 +119,6 @@
             </div>
         </div>
         <div class="acciones-der" style="display: flex; align-items: center; gap: 15px;">
-            <!-- CONTADOR DE REGISTROS DINÁMICO -->
             <div id="contadorRegistros" style="font-size: 13px; font-weight: 700; color: #374151; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                 📊 Registros: <span id="cantVisibles" style="color: #2563eb;">0</span> / <span id="cantTotal">0</span>
             </div>
@@ -346,12 +345,15 @@
                 if (col === 'PINTA:') thFilter.classList.add('col-pinta');
                 if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thFilter.classList.add('col-desc');
 
-                if (col === 'FOTO' || col === 'PDF AUDITORÍA') { thFilter.innerHTML = ``; } 
-                else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
-                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx + 1}" oninput="ejecutarFiltro()">`;
+                if (col === 'FOTO' || col === 'PDF AUDITORÍA') { 
+                    thFilter.innerHTML = ``; 
+                } else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
+                    // CAMBIO AQUÍ: Filtro de texto flexible para fechas (Año, Mes-Año, Día)
+                    thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="AAAA, MM, AAAA-MM..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
                 } else {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
-                } trFilter.appendChild(thFilter);
+                } 
+                trFilter.appendChild(thFilter);
             });
             const thAcciones = document.createElement('th'); thAcciones.className = 'th-title'; thAcciones.textContent = 'ACC.'; trHeader.appendChild(thAcciones); trFilter.appendChild(document.createElement('th'));
         }
@@ -676,14 +678,28 @@
             reader.readAsArrayBuffer(file);
         };
 
-        // --- FILTRADO CON CONTADOR EN TIEMPO REAL ---
+        // --- FILTRADO INTELIGENTE DE FECHAS Y TEXTO ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
-            const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => ({
-                index: parseInt(inp.getAttribute('data-colindex')),
-                val: inp.value.trim().toLowerCase(),
-                raw: inp.value.trim()
-            })).filter(inp => inp.val !== "");
+            const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => {
+                let valRaw = inp.value.trim();
+                let valLower = valRaw.toLowerCase();
+                
+                // Normalizador para que coincida AAAA-MM, MM/AAAA, AAAA, etc.
+                let searchVal = valLower.replace(/\//g, '-');
+                let parts = searchVal.split('-');
+                if (parts.length === 2 && parts[0].length <= 2 && parts[1].length === 4) {
+                    searchVal = `${parts[1]}-${parts[0].padStart(2, '0')}`;
+                } else if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) {
+                    searchVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+
+                return {
+                    index: parseInt(inp.getAttribute('data-colindex')),
+                    val: searchVal,
+                    raw: valRaw
+                };
+            }).filter(inp => inp.val !== "");
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
             let totalFilas = filas.length;
@@ -716,7 +732,7 @@
                 }
             });
 
-            // ACTUALIZAR REGISTROS
+            // ACTUALIZAR REGISTROS VISIBLES / TOTAL
             const elVisibles = document.getElementById('cantVisibles');
             const elTotal = document.getElementById('cantTotal');
             if (elVisibles && elTotal) {
