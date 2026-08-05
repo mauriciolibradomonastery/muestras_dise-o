@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        :root { --w-col-0: 60px; --w-col-1: 100px; --w-col-6: 150px; }
+        :root { --w-col-0: 60px; --w-col-1: 110px; --w-col-7: 150px; }
 
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -34,7 +34,9 @@
         
         .btn-save { background-color: #10b981; color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); } 
         .btn-save:hover { background-color: #059669; color: white; transform: translateY(-1px); }
-        
+        .btn-save.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+        .btn-save.unsaved:hover { background-color: #dc2626; }
+
         .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; display: none; }
         .btn-bulk-delete:hover { background-color: #fecdd3; color: #9f1239; }
 
@@ -47,36 +49,35 @@
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
         .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; }
         .filter-input { width: 100%; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #111827; box-sizing: border-box;}
-        tbody tr:nth-child(even) { background-color: #f9fafb; }
-        tbody tr:hover { background-color: #f3f4f6; }
+        tbody tr:hover td { filter: brightness(0.96); }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
-        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
-        .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
+        /* CONGELACIÓN DE COLUMNAS */
+        .col-checkbox { position: sticky !important; left: 0; background-color: inherit; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
-        tbody tr:nth-child(even) td.col-checkbox { background-color: #f9fafb; }
-        tbody tr:hover td.col-checkbox { background-color: #f3f4f6; }
 
-        .col-precinto { position: sticky !important; left: var(--left-precinto, 60px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
-        .col-nombre { position: sticky !important; left: var(--left-nombre, 160px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
-        .col-pinta { position: sticky !important; left: var(--left-pinta, 260px); z-index: 8; background-color: #ffffff; border-right: 1px solid #e5e7eb; }
-        .col-desc { position: sticky !important; left: var(--left-desc, 360px); z-index: 8; background-color: #ffffff; border-right: 2px solid #9ca3af !important; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .col-precinto { position: sticky !important; left: var(--left-precinto, 60px); z-index: 8; background-color: inherit; border-right: 1px solid #e5e7eb; }
+        .col-nombre { position: sticky !important; left: var(--left-nombre, 160px); z-index: 8; background-color: inherit; border-right: 1px solid #e5e7eb; }
+        .col-pinta { position: sticky !important; left: var(--left-pinta, 260px); z-index: 8; background-color: inherit; border-right: 1px solid #e5e7eb; }
+        .col-desc { position: sticky !important; left: var(--left-desc, 360px); z-index: 8; background-color: inherit; border-right: 2px solid #9ca3af !important; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
 
         th.col-precinto, th.col-nombre, th.col-pinta, th.col-desc { z-index: 19 !important; background-color: #f3f4f6 !important; color: #374151; }
-        tbody tr td.col-precinto, tbody tr td.col-nombre, tbody tr td.col-pinta, tbody tr td.col-desc { background-color: #ffffff; }
-        tbody tr:nth-child(even) td.col-precinto, tbody tr:nth-child(even) td.col-nombre, tbody tr:nth-child(even) td.col-pinta, tbody tr:nth-child(even) td.col-desc { background-color: #f9fafb; }
-        tbody tr:hover td.col-precinto, tbody tr:hover td.col-nombre, tbody tr:hover td.col-pinta, tbody tr:hover td.col-desc { background-color: #f3f4f6; }
 
         .resizer { position: absolute; top: 0; right: 0; width: 6px; cursor: col-resize; user-select: none; height: 100%; z-index: 25; }
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; }
 
-        .calc-cell { background-color: #f3f4f6; color: #6b7280; font-weight: bold; text-align: center; }
+        .calc-cell { font-weight: bold; text-align: center; }
+        .estado-cell { font-weight: bold; text-align: center; color: #2563eb; }
 
         /* MODALES */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         #imagenAmpliada { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
+        
+        .row-color-picker { width:22px; height:24px; padding:0; border:none; cursor:pointer; background:transparent; margin-top:5px; border-radius: 4px; }
+        .row-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .row-color-picker::-webkit-color-swatch { border: 1px solid #9ca3af; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -107,11 +108,11 @@
         <div class="acciones-izq">
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
-            
-            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Excel Histórico</button>
+            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Histórico</button>
             <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
+            <button class="btn" style="background-color: #f59e0b; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
@@ -144,7 +145,7 @@
                 <textarea id="inputBuscarPrecinto" placeholder="Ej:&#10;MST-10293&#10;MST-10294&#10;MST-10295" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #ffffff; color: #111827; outline: none; resize: vertical; min-height: 80px; font-family: inherit; font-size: 13px;"></textarea>
                 <button class="btn" style="background-color: #1f2937; color: white; border: none; align-self: flex-end;" onclick="buscarPrecintoEnDiseno(event)">🔍 Buscar y Validar</button>
             </div>
-            <div id="resultadoBusqueda" style="margin-top: 15px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db; max-height: 200px; overflow-y: auto;"></div>
+            <div id="resultadoBusqueda" style="margin-top: 15px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db; max-height: 250px; overflow-y: auto;"></div>
             <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
                 <button class="btn" onclick="cerrarModal('modal-agregar')">Cancelar</button>
             </div>
@@ -158,13 +159,13 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
+        // --- 1. CONFIGURACIÓN LIMPIA DE COLUMNAS ---
         const allCols = [
-            'FOTO', 'FECHA DE INGRESO:', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
+            'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
-            'SILUETA', 'DISEÑO', 'NIVEL DE PRIORIDAD:', 'MEDICIÓN:', 'HOJA MEDIDAS:', 'FECHA ENVIO:',
-            'FECHA RECIBIDO:', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 'LEAD TIME AUD',
-            'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA2', 'AUDITOR.',
-            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO', 'PDF AUDITORÍA'
+            'MEDICIÓN:', 'HOJA MEDIDAS:', 'FECHA ENVIO:', 'FECHA RECIBIDO:', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 
+            'LEAD TIME AUD', 'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA2', 'AUDITOR.',
+            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO'
         ];
 
         const listaMotivos = [
@@ -184,6 +185,21 @@
             "2DA PP SAMPLE": "DESARROLLO", "2DO SIZE SET PP SAMPLE": "DESARROLLO", "3RA PP SAMPLE": "DESARROLLO",
             "4TA PP SAMPLE": "DESARROLLO", "5TA PP SAMPLE": "DESARROLLO", "2 PP SAMPLE": "DESARROLLO",
             "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
+        };
+
+        // --- MANEJO DE CAMBIOS NO GUARDADOS (SEMÁFORO) ---
+        let hayCambiosSinGuardar = false;
+        window.marcarCambios = function() {
+            hayCambiosSinGuardar = true;
+            const btn = document.getElementById('btnGuardarGlobal');
+            btn.classList.add('unsaved');
+            btn.innerText = '⚠️ Guardar Cambios';
+        };
+        window.resetearCambios = function() {
+            hayCambiosSinGuardar = false;
+            const btn = document.getElementById('btnGuardarGlobal');
+            btn.classList.remove('unsaved');
+            btn.innerText = '💾 Guardar Cambios';
         };
 
         let timerBusqueda = null;
@@ -206,38 +222,12 @@
                     const img = input.closest('td').querySelector('.img-foto-prenda');
                     img.src = e.target.result;
                     recalcularFila(input.closest('tr')); 
+                    marcarCambios();
                 }; reader.readAsDataURL(input.files[0]);
             }
         };
 
-        window.subirPdfFila = function(input) {
-            if(input.files && input.files[0]) {
-                const file = input.files[0];
-                if(file.size > 2.5 * 1024 * 1024) { return alert("El PDF es muy pesado. Sube un archivo menor a 2.5MB."); }
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    const td = input.closest('td'); const base64 = e.target.result;
-                    td.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <a href="${base64}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
-                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
-                            <input type="hidden" value="${base64}" class="pdf-data">
-                        </div>`;
-                    recalcularFila(td.closest('tr'));
-                }; reader.readAsDataURL(file);
-            }
-        };
-
-        window.eliminarPdf = function(btn) {
-            const td = btn.closest('td');
-            td.innerHTML = `
-                <button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
-                <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
-                <input type="hidden" value="" class="pdf-data">
-            `;
-            recalcularFila(td.closest('tr'));
-        };
-
+        // --- CÁLCULOS Y LÓGICA DE ESTADOS ---
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             if (!fechaInicioStr || !fechaFinStr) return "";
             let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
@@ -252,30 +242,48 @@
 
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
+            
+            // Los índices corresponden a su posición en allCols + 1 (por la celda Checkbox/Color en 0)
             const fIngreso = celdas[2].querySelector('input') ? celdas[2].querySelector('input').value : celdas[2].innerText.trim();
-            const fEntAud = celdas[21].querySelector('input') ? celdas[21].querySelector('input').value : celdas[21].innerText.trim();
-            const res = celdas[24].querySelector('select') ? celdas[24].querySelector('select').value : celdas[24].innerText.trim();
-            const fEntFich = celdas[28].querySelector('input') ? celdas[28].querySelector('input').value : celdas[28].innerText.trim();
-            const tipoMuestra = celdas[10].innerText.trim().toUpperCase();
+            const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
+            const fEntAud = celdas[19].querySelector('input') ? celdas[19].querySelector('input').value : celdas[19].innerText.trim();
+            const res = celdas[22].querySelector('select') ? celdas[22].querySelector('select').value : celdas[22].innerText.trim();
+            const fEntFich = celdas[26].querySelector('input') ? celdas[26].querySelector('input').value : celdas[26].innerText.trim();
+            const tipoMuestra = celdas[11].innerText.trim().toUpperCase();
 
-            celdas[23].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
-            celdas[30].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
+            // Lógica de ESTADO
+            let estadoCalculado = "Pendiente";
+            if (fMedicion !== "") estadoCalculado = "Modelado";
+            if (fEntAud !== "") estadoCalculado = "Asignado";
+            if (fEntFich !== "") estadoCalculado = "Finalizado";
+            celdas[3].textContent = estadoCalculado;
 
-            if (fEntFich === "") { celdas[31].textContent = ""; } 
-            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[31].textContent = "0"; } 
-            else if (fIngreso && fEntFich) { celdas[31].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
-            else { celdas[31].textContent = ""; }
+            // Lead Times
+            celdas[21].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : ""; // LT AUD
+            celdas[29].textContent = celdas[21].textContent; // LT GENERAL
+
+            if (fEntFich === "") { celdas[28].textContent = ""; }  // LT ENTREGA
+            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[28].textContent = "0"; } 
+            else if (fIngreso && fEntFich) { celdas[28].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
+            else { celdas[28].textContent = ""; }
 
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
-            celdas[32].textContent = tipoCalculado;
+            celdas[30].textContent = tipoCalculado; // TIPO
 
+            // Actualizar Caché interna
             tr._datosOriginal = [];
             tr._datosLower = [];
-            for(let i = 1; i <= 33; i++) {
+            
+            // Guardar Color Fila en el slot 30 (índice 31 oculto)
+            const colorInput = celdas[0].querySelector('.row-color-picker');
+            const colorVal = colorInput ? colorInput.value : '#ffffff';
+            tr._datosOriginal[30] = colorVal;
+
+            for(let i = 1; i <= 30; i++) {
                 if(!celdas[i]) continue;
                 let val = "";
-                if (i === 1) val = ""; 
+                if (i === 1) val = ""; // Foto
                 else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
                 else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
                 else val = celdas[i].innerText.trim();
@@ -286,11 +294,20 @@
             tr._textoGlobal = tr._datosLower.join(" ");
         };
 
+        window.cambiarColorFila = function(input) {
+            const tr = input.closest('tr');
+            const color = input.value;
+            tr.style.backgroundColor = color;
+            tr.querySelectorAll('td').forEach(td => td.style.backgroundColor = color);
+            recalcularFila(tr);
+            marcarCambios();
+        };
+
         window.actualizarSticky = function() {
             const trHeader = document.getElementById('tableHeaderRow');
             if(!trHeader) return;
             const ths = trHeader.querySelectorAll('th');
-            if(ths.length < 15) return;
+            if(ths.length < 10) return;
             
             let leftPos = ths[0].offsetWidth; 
             
@@ -331,11 +348,7 @@
                         document.documentElement.style.setProperty(`--w-col-${idx + 1}`, `${Math.max(40, w + ev.clientX - x)}px`); 
                         window.actualizarSticky();
                     };
-                    const mouseUpHandler = () => { 
-                        document.removeEventListener('mousemove', mouseMoveHandler); 
-                        document.removeEventListener('mouseup', mouseUpHandler); 
-                        window.actualizarSticky();
-                    };
+                    const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); window.actualizarSticky(); };
                     document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler);
                 });
 
@@ -345,17 +358,15 @@
                 if (col === 'PINTA:') thFilter.classList.add('col-pinta');
                 if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thFilter.classList.add('col-desc');
 
-                if (col === 'FOTO' || col === 'PDF AUDITORÍA') { 
+                if (col === 'FOTO') { 
                     thFilter.innerHTML = ``; 
                 } else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
-                    // CAMBIO AQUÍ: Filtro de texto flexible para fechas (Año, Mes-Año, Día)
-                    thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="AAAA, MM, AAAA-MM..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
+                    thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Año o Mes..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
                 } else {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
                 } 
                 trFilter.appendChild(thFilter);
             });
-            const thAcciones = document.createElement('th'); thAcciones.className = 'th-title'; thAcciones.textContent = 'ACC.'; trHeader.appendChild(thAcciones); trFilter.appendChild(document.createElement('th'));
         }
 
         async function cargarDatos() {
@@ -368,7 +379,7 @@
             let fetching = true;
 
             while (fetching) {
-                document.getElementById('loadingText').innerText = `Descargando registros desde la nube: ${allData.length}...`;
+                document.getElementById('loadingText').innerText = `Descargando registros: ${allData.length}...`;
                 
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
@@ -377,34 +388,17 @@
                     .range(from, from + step - 1);
                     
                 if (error) { 
-                    console.error(error); 
-                    document.getElementById('loadingOverlay').style.display = 'none'; 
-                    alert("Hubo un error descargando la información.");
-                    return; 
+                    console.error(error); document.getElementById('loadingOverlay').style.display = 'none'; return alert("Hubo un error descargando la información."); 
                 }
                 
-                if (data && data.length > 0) {
-                    allData = allData.concat(data);
-                    from += step;
-                } else {
-                    fetching = false;
-                }
-                
-                if (data.length < step) {
-                    fetching = false;
-                }
+                if (data && data.length > 0) { allData = allData.concat(data); from += step; } else { fetching = false; }
+                if (data.length < step) { fetching = false; }
             }
 
-            const tbody = document.getElementById('tableBody'); 
-            tbody.innerHTML = ''; 
-            
-            if(!allData || allData.length === 0) { 
-                document.getElementById('loadingOverlay').style.display = 'none'; 
-                return; 
-            }
+            const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
+            if(!allData || allData.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
 
-            let i = 0;
-            const chunkSize = 150; 
+            let i = 0; const chunkSize = 150; 
             
             function renderChunk() {
                 const fragment = document.createDocumentFragment();
@@ -416,14 +410,12 @@
                 tbody.appendChild(fragment);
                 
                 if (i < allData.length) {
-                    document.getElementById('loadingText').innerText = `Dibujando muestras en pantalla: ${i} de ${allData.length}...`;
+                    document.getElementById('loadingText').innerText = `Dibujando muestras: ${i} de ${allData.length}...`;
                     requestAnimationFrame(renderChunk);
                 } else {
-                    document.getElementById('loadingText').innerText = "Optimizando filtros y listas...";
+                    document.getElementById('loadingText').innerText = "Optimizando filtros...";
                     setTimeout(() => {
-                        window.actualizarDatalists();
-                        window.actualizarSticky();
-                        window.ejecutarFiltro();
+                        window.actualizarDatalists(); window.actualizarSticky(); window.ejecutarFiltro();
                         document.getElementById('loadingOverlay').style.display = 'none';
                     }, 100);
                 }
@@ -437,38 +429,40 @@
             return html;
         }
 
+        window.agregarFilaVacia = function() {
+            const tbody = document.getElementById('tableBody');
+            const emptyDatos = new Array(31).fill('');
+            // Pre-llenar fecha ingreso con hoy
+            const hoy = new Date(); 
+            emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+            
+            const newTr = crearFilaHTML(null, emptyDatos);
+            tbody.insertBefore(newTr, tbody.firstChild);
+            window.actualizarSticky();
+            marcarCambios();
+        }
+
         function crearFilaHTML(idDb = null, datos = []) {
             const tr = document.createElement('tr'); 
             if (idDb) tr.dataset.id = idDb; 
             
-            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
+            while(datos.length < 31) datos.push("");
+            
+            const colorFila = datos[30] || '#ffffff';
+            tr.style.backgroundColor = colorFila;
+
+            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.style.backgroundColor = colorFila;
+            tdCheck.innerHTML = `
+                <input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">
+                <br>
+                <input type="color" class="row-color-picker" title="Color de Fila" value="${colorFila}" onchange="cambiarColorFila(this)">
+            `;
             tr.appendChild(tdCheck);
-
-            while(datos.length < 33) datos.push("");
-            const fIngreso = datos[1] || '';
-            const fEntAud = datos[20] || '';
-            const res = datos[23] || '';
-            const fEntFich = datos[27] || '';
-            const tipoMuestra = (datos[9] || '').toUpperCase();
-
-            datos[22] = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : "";
-            datos[29] = datos[22];
-
-            if (fEntFich === "") { datos[30] = ""; }
-            else if (res === "CANCELADO" || res === "OBSEQUIO") { datos[30] = "0"; }
-            else if (fIngreso && fEntFich) { datos[30] = calcularDiasHabiles(fIngreso, fEntFich); }
-            else { datos[30] = ""; }
-
-            let tipoCalculado = mapeoTipo[tipoMuestra] || "";
-            if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
-            datos[31] = tipoCalculado;
-
-            tr._datosOriginal = [];
-            tr._datosLower = [];
 
             allCols.forEach((colName, index) => {
                 const td = document.createElement('td'); 
-                
+                td.style.backgroundColor = colorFila;
+
                 if (colName === 'PRECINTO') td.classList.add('col-precinto');
                 if (colName === 'NOMBRE / REFERENCIA:') td.classList.add('col-nombre');
                 if (colName === 'PINTA:') td.classList.add('col-pinta');
@@ -478,9 +472,6 @@
                 if (valorRaw === null || valorRaw === undefined) valorRaw = '';
                 const valorStr = String(valorRaw);
                 const valorLower = valorStr.toLowerCase();
-
-                tr._datosOriginal[index + 1] = (colName === 'FOTO') ? "" : valorStr;
-                tr._datosLower[index + 1] = (colName === 'FOTO') ? "" : valorLower;
 
                 if(colName === 'FOTO') { 
                     td.contentEditable = "false"; td.style.textAlign = "center";
@@ -492,113 +483,113 @@
                             <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">
                         </div>`;
                 } 
-                else if (colName === 'PDF AUDITORÍA') {
-                    td.contentEditable = "false"; td.style.textAlign = "center";
-                    if(valorStr && valorStr.startsWith('data:application/pdf')) {
-                        td.innerHTML = `<div style="display:flex; align-items:center; gap:8px;">
-                            <a href="${valorStr}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
-                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
-                            <input type="hidden" value="${valorStr}" class="pdf-data">
-                        </div>`;
-                    } else {
-                        td.innerHTML = `<button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
-                        <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
-                        <input type="hidden" value="" class="pdf-data">`;
-                    }
-                }
-                else if (colName === 'PRECINTO') { td.contentEditable = "false"; td.innerHTML = `<strong style="color:#2563eb">${valorStr}</strong>`; } 
-                else if (colName === 'NIVEL DE PRIORIDAD:') {
-                    td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
-                        <option value=""></option>
-                        <option value="Urgente" ${valorLower === 'urgente' ? 'selected' : ''}>Urgente</option>
-                        <option value="Alto" ${valorLower === 'alto' ? 'selected' : ''}>Alto</option>
-                        <option value="Medio" ${valorLower === 'medio' ? 'selected' : ''}>Medio</option>
-                        <option value="Bajo" ${valorLower === 'bajo' ? 'selected' : ''}>Bajo</option>
-                    </select>`;
+                else if (colName === 'ESTADO') {
+                    td.contentEditable = "false"; td.classList.add('estado-cell');
                 }
                 else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">
                         <option value=""></option>
-                        <option value="APROBADO" ${valorStr === 'APROBADO' ? 'selected' : ''}>APROBADO</option>
-                        <option value="RECHAZADO" ${valorStr === 'RECHAZADO' ? 'selected' : ''}>RECHAZADO</option>
-                        <option value="CANCELADO" ${valorStr === 'CANCELADO' ? 'selected' : ''}>CANCELADO</option>
-                        <option value="OBSEQUIO" ${valorStr === 'OBSEQUIO' ? 'selected' : ''}>OBSEQUIO</option>
+                        <option value="Cumple" ${valorStr === 'Cumple' ? 'selected' : ''}>Cumple</option>
+                        <option value="No Cumple" ${valorStr === 'No Cumple' ? 'selected' : ''}>No Cumple</option>
                     </select>`;
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr'))">${generarOpcionesMotivo(valorStr)}</select>`;
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">${generarOpcionesMotivo(valorStr)}</select>`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
                     td.contentEditable = "false"; 
-                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr'))">`;
+                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
                     td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
                 }
                 else { 
-                    td.contentEditable = "true"; td.textContent = valorStr; td.onblur = () => recalcularFila(tr);
+                    td.contentEditable = "true"; td.textContent = valorStr; 
+                    td.oninput = () => { marcarCambios(); recalcularFila(tr); };
                 } tr.appendChild(td);
             });
 
-            tr._textoGlobal = tr._datosLower.join(" ");
-
-            const tdAcciones = document.createElement('td');
-            tdAcciones.innerHTML = `<button onclick="eliminarFila(this)" title="Eliminar Muestra" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:5px 8px; border-radius:4px; cursor:pointer; font-size: 12px; transition: 0.2s;" onmouseover="this.style.background='#fee2e2'; this.style.color='#ef4444';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#374151';">🗑️</button>`;
-            tr.appendChild(tdAcciones); 
-            
+            recalcularFila(tr);
             return tr;
         }
 
         window.extraerDatosFila = function(tr) {
-            const celdas = tr.querySelectorAll('td'); let datosFila = [];
-            for(let i = 1; i <= 33; i++) { 
+            const celdas = tr.querySelectorAll('td'); 
+            let datosFila = new Array(31).fill("");
+            
+            // Color de fondo
+            const colorInput = celdas[0].querySelector('.row-color-picker');
+            datosFila[30] = colorInput ? colorInput.value : '#ffffff';
+
+            for(let i = 1; i <= 30; i++) { 
+                const td = celdas[i];
+                if (!td) continue;
+
                 if (i === 1) { 
-                    const img = celdas[i].querySelector('.img-foto-prenda'); datosFila.push((img && !img.src.includes('logo.png')) ? img.src : "");
-                } else if (i === 33) {
-                    const pdfInput = celdas[i].querySelector('.pdf-data'); datosFila.push(pdfInput ? pdfInput.value : "");
-                } else if (celdas[i].querySelector('select')) { 
-                    datosFila.push(celdas[i].querySelector('select').value);
-                } else if (celdas[i].querySelector('input[type="date"]')) { 
-                    datosFila.push(celdas[i].querySelector('input[type="date"]').value);
+                    const img = td.querySelector('.img-foto-prenda'); datosFila[0] = (img && !img.src.includes('logo.png')) ? img.src : "";
+                } else if (td.querySelector('select')) { 
+                    datosFila[i-1] = td.querySelector('select').value;
+                } else if (td.querySelector('input[type="date"]')) { 
+                    datosFila[i-1] = td.querySelector('input[type="date"]').value;
                 } else { 
-                    datosFila.push(celdas[i].innerText.trim());
+                    datosFila[i-1] = td.innerText.trim();
                 }
             } return datosFila;
         };
 
         window.guardarCambiosVisibles = async function() {
+            if(!hayCambiosSinGuardar && document.getElementById('btnGuardarGlobal').innerText.includes('💾')) return;
+
             const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
+            btn.innerHTML = "⏳ Guardando..."; btn.disabled = true; btn.classList.remove('unsaved');
             
             const filas = document.getElementById('tableBody').querySelectorAll('tr'); 
-            
-            let mapGuardar = new Map();
+            let registrosActualizar = [];
+            let registrosNuevos = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
+                
                 if (tr.dataset.id) { 
-                    mapGuardar.set(tr.dataset.id, { id: tr.dataset.id, datos: datosFila, precinto: datosFila[6] }); 
-                } 
+                    registrosActualizar.push({ id: tr.dataset.id, datos: datosFila, precinto: datosFila[7] }); 
+                } else {
+                    registrosNuevos.push({ datos: datosFila, precinto: datosFila[7] }); 
+                }
             }
-            
-            let registrosGuardar = Array.from(mapGuardar.values());
 
             try {
-                const chunkSize = 150;
-                for (let i = 0; i < registrosGuardar.length; i += chunkSize) {
-                    const chunk = registrosGuardar.slice(i, i + chunkSize);
-                    const { error } = await client.from('dpto_tecnico').upsert(chunk);
+                // Upsert de los existentes
+                if(registrosActualizar.length > 0) {
+                    const chunkSize = 150;
+                    for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
+                        const chunk = registrosActualizar.slice(i, i + chunkSize);
+                        const { error } = await client.from('dpto_tecnico').upsert(chunk);
+                        if (error) throw error;
+                    }
+                }
+                
+                // Insert de los manuales creados con "Fila Vacía"
+                if(registrosNuevos.length > 0) {
+                    const { data: inserted, error } = await client.from('dpto_tecnico').insert(registrosNuevos).select();
                     if (error) throw error;
+                    // Asignar IDs a las filas que acaban de guardarse
+                    let newRowsIndex = 0;
+                    for (let tr of filas) {
+                        if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
+                            tr.dataset.id = inserted[newRowsIndex].id;
+                            newRowsIndex++;
+                        }
+                    }
                 }
                 
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
+                resetearCambios();
                 actualizarDatalists(); 
             } catch (err) { 
-                console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error"; 
+                console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error"; btn.classList.add('unsaved');
             }
             setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
@@ -620,7 +611,7 @@
                     const rowsData = jsonRows.slice(1);
                     let registrosInsert = [];
                     
-                    const columnasFechas = [1, 16, 17, 18, 19, 20, 27];
+                    const columnasFechas = [1, 14, 16, 17, 18, 25];
 
                     function convertirFechaExcel(val) {
                         if (!val) return "";
@@ -639,26 +630,20 @@
                     }
 
                     rowsData.forEach(row => {
-                        let d = new Array(33).fill('');
-                        for (let i = 0; i < 33; i++) {
+                        let d = new Array(31).fill('');
+                        for (let i = 0; i < 30; i++) {
                             let val = row[i] !== undefined && row[i] !== null ? row[i] : '';
-                            if (columnasFechas.includes(i)) {
-                                d[i] = convertirFechaExcel(val);
-                            } else {
-                                d[i] = String(val);
-                            }
+                            if (columnasFechas.includes(i)) { d[i] = convertirFechaExcel(val); } else { d[i] = String(val); }
                         }
                         
-                        const precinto = d[6] ? d[6].trim() : '';
+                        const precinto = d[7] ? d[7].trim() : '';
                         if (precinto !== '') {
                             if (d[0].includes("Imagen Cargada")) d[0] = "";
-                            if (d[32].includes("PDF Cargado")) d[32] = "";
                             registrosInsert.push({ precinto: precinto, datos: d });
                         }
                     });
 
                     if (registrosInsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
-                    
                     alert(`⏳ Subiendo ${registrosInsert.length} muestras. Por favor no cierres la página ni presiones F5...`);
                     
                     const chunkSize = 200;
@@ -678,47 +663,29 @@
             reader.readAsArrayBuffer(file);
         };
 
-        // --- FILTRADO INTELIGENTE DE FECHAS Y TEXTO ---
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
             const inputsColumnas = Array.from(document.querySelectorAll('.col-filter')).map(inp => {
-                let valRaw = inp.value.trim();
-                let valLower = valRaw.toLowerCase();
-                
-                // Normalizador para que coincida AAAA-MM, MM/AAAA, AAAA, etc.
-                let searchVal = valLower.replace(/\//g, '-');
-                let parts = searchVal.split('-');
-                if (parts.length === 2 && parts[0].length <= 2 && parts[1].length === 4) {
-                    searchVal = `${parts[1]}-${parts[0].padStart(2, '0')}`;
-                } else if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) {
-                    searchVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                }
-
-                return {
-                    index: parseInt(inp.getAttribute('data-colindex')),
-                    val: searchVal,
-                    raw: valRaw
-                };
+                let valRaw = inp.value.trim(); let valLower = valRaw.toLowerCase();
+                let searchVal = valLower.replace(/\//g, '-'); let parts = searchVal.split('-');
+                if (parts.length === 2 && parts[0].length <= 2 && parts[1].length === 4) { searchVal = `${parts[1]}-${parts[0].padStart(2, '0')}`; } 
+                else if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) { searchVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; }
+                return { index: parseInt(inp.getAttribute('data-colindex')), val: searchVal, raw: valRaw };
             }).filter(inp => inp.val !== "");
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let totalFilas = filas.length;
-            let visibles = 0;
+            let totalFilas = filas.length; let visibles = 0;
 
             filas.forEach(fila => {
                 let mostrar = true;
-                
-                if (textoGlobal && !fila._textoGlobal.includes(textoGlobal)) {
-                    mostrar = false;
-                } else if (inputsColumnas.length > 0) {
+                if (textoGlobal && !fila._textoGlobal.includes(textoGlobal)) { mostrar = false; } 
+                else if (inputsColumnas.length > 0) {
                     for (let inp of inputsColumnas) {
                         let celdaTexto = fila._datosLower[inp.index] || "";
                         if (inp.raw.startsWith('"') && inp.raw.endsWith('"')) {
                             let exactTerm = inp.val.slice(1, -1).trim(); 
                             if (exactTerm !== celdaTexto) { mostrar = false; break; }
-                        } else if (!celdaTexto.includes(inp.val)) { 
-                            mostrar = false; break; 
-                        }
+                        } else if (!celdaTexto.includes(inp.val)) { mostrar = false; break; }
                     }
                 }
                 
@@ -727,19 +694,12 @@
                     visibles++;
                 } else {
                     if (fila.style.display !== 'none') fila.style.display = 'none';
-                    const cb = fila.querySelector('.row-checkbox'); 
-                    if (cb && cb.checked) cb.checked = false;
+                    const cb = fila.querySelector('.row-checkbox'); if (cb && cb.checked) cb.checked = false;
                 }
             });
 
-            // ACTUALIZAR REGISTROS VISIBLES / TOTAL
-            const elVisibles = document.getElementById('cantVisibles');
-            const elTotal = document.getElementById('cantTotal');
-            if (elVisibles && elTotal) {
-                elVisibles.innerText = visibles.toLocaleString();
-                elTotal.innerText = totalFilas.toLocaleString();
-            }
-
+            const elVisibles = document.getElementById('cantVisibles'); const elTotal = document.getElementById('cantTotal');
+            if (elVisibles && elTotal) { elVisibles.innerText = visibles.toLocaleString(); elTotal.innerText = totalFilas.toLocaleString(); }
             window.actualizarSeleccion(); 
         };
 
@@ -758,14 +718,10 @@
                 });
                 
                 datalist.innerHTML = ''; 
-                
                 const fragment = document.createDocumentFragment();
                 Array.from(uniqueValues).sort().forEach(val => { 
-                    const option = document.createElement('option'); 
-                    option.value = val; 
-                    fragment.appendChild(option); 
-                });
-                datalist.appendChild(fragment);
+                    const option = document.createElement('option'); option.value = val; fragment.appendChild(option); 
+                }); datalist.appendChild(fragment);
             });
         };
 
@@ -774,62 +730,68 @@
         
         window.abrirModalImagen = function(src, event) { 
             if(event) event.stopPropagation(); 
-            document.getElementById('imagenAmpliada').src = src; 
-            document.getElementById('modalVisor').style.display = 'flex'; 
+            document.getElementById('imagenAmpliada').src = src; document.getElementById('modalVisor').style.display = 'flex'; 
         };
 
+        // --- BÚSQUEDA MULTIPLE CON PREVIEW ---
         window.prendasAImportar = [];
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳ Buscando..."; btn.disabled = true;
-            const resDiv = document.getElementById('resultadoBusqueda');
-            resDiv.style.display = 'none'; window.prendasAImportar = [];
+            const resDiv = document.getElementById('resultadoBusqueda'); resDiv.style.display = 'none'; window.prendasAImportar = [];
 
             const rawText = document.getElementById('inputBuscarPrecinto').value;
+            // No usamos Set para PERMITIR duplicados si el usuario pega 2 veces el mismo en la caja de texto.
             let precintos = rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== '');
-            precintos = [...new Set(precintos)];
 
             if(precintos.length === 0) { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return alert("Escribe al menos un precinto."); }
 
-            const { data: yaExisten } = await client.from('dpto_tecnico').select('precinto').in('precinto', precintos);
-            const precintosExistentes = yaExisten ? yaExisten.map(r => r.precinto.toUpperCase()) : [];
-            const precintosNuevos = precintos.filter(p => !precintosExistentes.includes(p));
-
-            if (precintosNuevos.length === 0) {
-                resDiv.style.display = 'block';
-                resDiv.innerHTML = `<div style="color:#b45309; text-align:center; font-weight:bold;">⚠️ Todos los precintos ingresados (${precintosExistentes.length}) ya están en tu tabla.</div>`;
-                btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return;
-            }
-
-            const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintosNuevos);
+            // Buscar directo en la base de datos de Diseño (ya no se restringen existentes)
+            const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintos);
             
             let prendasEncontradas = prendasDiseño || [];
             let encontradosPrecintos = prendasEncontradas.map(p => (p.precinto || p.id).toUpperCase());
             
-            let faltantes = precintosNuevos.filter(p => !encontradosPrecintos.includes(p));
+            let faltantes = precintos.filter(p => !encontradosPrecintos.includes(p));
             if (faltantes.length > 0) {
                 const { data: prendasPorId } = await client.from('prendas').select('*').in('id', faltantes);
-                if (prendasPorId && prendasPorId.length > 0) {
-                    prendasEncontradas = prendasEncontradas.concat(prendasPorId);
-                }
+                if (prendasPorId && prendasPorId.length > 0) { prendasEncontradas = prendasEncontradas.concat(prendasPorId); }
             }
 
-            window.prendasAImportar = prendasEncontradas;
+            // Mapeamos para permitir inyectar repetidos si se solicitaron
+            let mapPrendas = new Map();
+            prendasEncontradas.forEach(p => mapPrendas.set((p.precinto || p.id).toUpperCase(), p));
+            
+            let noEncontradosCount = 0;
+            precintos.forEach(p => {
+                if (mapPrendas.has(p)) window.prendasAImportar.push(mapPrendas.get(p));
+                else noEncontradosCount++;
+            });
 
             let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
             if (window.prendasAImportar.length > 0) {
-                htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} prendas encontradas listas para importar.</div>`;
+                htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} muestras encontradas listas para importar.</div>`;
+                
+                // MINI TARJETAS CON FOTOS
+                htmlResumen += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">`;
+                window.prendasAImportar.forEach(p => {
+                    const foto = p.fotoUrl || 'logo.png';
+                    htmlResumen += `<div style="display:flex; gap:10px; align-items:center; background:#fff; padding:8px; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                        <img src="${foto}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #d1d5db;">
+                        <div>
+                            <div style="font-weight:bold; color:#2563eb; font-size:14px;">${p.precinto || p.id}</div>
+                            <div style="font-size:11px; color:#6b7280;">Ref: ${p.referencia || '-'} | Gen: ${p.genero || '-'}</div>
+                        </div>
+                    </div>`;
+                });
+                htmlResumen += `</div>`;
             }
-            if (precintosExistentes.length > 0) {
-                htmlResumen += `<div style="color:#b45309; margin-bottom:4px;">⚠️ <b>${precintosExistentes.length}</b> ya estaban en tu tabla (Serán ignorados).</div>`;
-            }
-            let noEncontrados = precintosNuevos.length - window.prendasAImportar.length;
-            if (noEncontrados > 0) {
-                htmlResumen += `<div style="color:#ef4444; margin-bottom:4px;">❌ <b>${noEncontrados}</b> precintos no existen en Diseño.</div>`;
+            if (noEncontradosCount > 0) {
+                htmlResumen += `<div style="color:#ef4444; margin-top:10px;">❌ <b>${noEncontradosCount}</b> precintos no existen en el sistema de Diseño.</div>`;
             }
             htmlResumen += `</div>`;
 
             if (window.prendasAImportar.length > 0) {
-                htmlResumen += `<button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronajeMulti(event)">➕ Agregar ${window.prendasAImportar.length} Filas a mi Tabla</button>`;
+                htmlResumen += `<button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronajeMulti(event)">➕ Confirmar y Agregar ${window.prendasAImportar.length} Filas</button>`;
             }
 
             resDiv.innerHTML = htmlResumen;
@@ -845,11 +807,12 @@
 
             window.prendasAImportar.forEach(prenda => {
                 const precintoReal = prenda.precinto || prenda.id;
-                let datosNuevos = new Array(33).fill(''); 
-                datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[2] = prenda.proveedor || ''; 
-                datosNuevos[4] = prenda.coleccion || ''; datosNuevos[5] = prenda.genero || ''; datosNuevos[6] = precintoReal;
-                datosNuevos[7] = prenda.referencia || ''; datosNuevos[8] = prenda.talla || ''; datosNuevos[9] = prenda.clasificacion || '';
-                datosNuevos[10] = prenda.color || ''; datosNuevos[11] = prenda.cantidad || ''; datosNuevos[12] = prenda.linea || '';
+                let datosNuevos = new Array(31).fill(''); 
+                datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[3] = prenda.proveedor || ''; 
+                datosNuevos[5] = prenda.coleccion || ''; datosNuevos[6] = prenda.genero || ''; datosNuevos[7] = precintoReal;
+                datosNuevos[8] = prenda.referencia || ''; datosNuevos[9] = prenda.talla || ''; datosNuevos[10] = prenda.clasificacion || '';
+                datosNuevos[11] = prenda.color || ''; datosNuevos[12] = prenda.cantidad || ''; datosNuevos[13] = prenda.linea || '';
+                datosNuevos[30] = '#ffffff'; // Color Blanco por Defecto
                 
                 registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
             });
@@ -858,25 +821,19 @@
             
             if(error) { 
                 alert("Error al vincular: " + error.message); 
-                btn.textContent = `➕ Agregar ${window.prendasAImportar.length} Filas a mi Tabla`; btn.disabled = false;
+                btn.textContent = `➕ Confirmar y Agregar ${window.prendasAImportar.length} Filas`; btn.disabled = false;
             } else { 
-                alert(`✅ ¡${registrosInsert.length} muestras agregadas a tu tabla exitosamente!`); 
                 cerrarModal('modal-agregar'); 
                 
                 const tbody = document.getElementById('tableBody');
                 const fragment = document.createDocumentFragment();
                 let rowsToRender = insertedData || registrosInsert; 
                 
-                rowsToRender.forEach(row => {
-                    const newTr = crearFilaHTML(row.id, row.datos);
-                    fragment.appendChild(newTr);
-                });
-                
+                rowsToRender.forEach(row => { fragment.appendChild(crearFilaHTML(row.id, row.datos)); });
                 tbody.insertBefore(fragment, tbody.firstChild);
 
-                window.actualizarDatalists();
-                window.actualizarSticky();
-                window.ejecutarFiltro();
+                window.actualizarDatalists(); window.actualizarSticky(); window.ejecutarFiltro();
+                marcarCambios();
             }
         }
 
@@ -893,63 +850,37 @@
             else { bulkDiv.style.display = 'none'; document.getElementById('btnEliminarMasivo').style.display = 'none'; }
         };
 
-        window.eliminarFila = async function(btn) {
-            if(!confirm("¿Seguro que deseas eliminar esta muestra de Patronaje?")) return;
-            const tr = btn.closest('tr'); const idDb = tr.dataset.id;
-            if(idDb) { const { error } = await client.from('dpto_tecnico').delete().eq('id', idDb); if(error) { alert("Error al eliminar"); return; } }
-            tr.remove(); window.actualizarDatalists();
-        };
-
         window.eliminarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked'); let idsToDelete = []; let rowsToRemove = [];
-            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none' && tr.dataset.id) { idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
+            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none' && tr.dataset.id) { idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } else if (!tr.dataset.id) { rowsToRemove.push(tr); } });
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás seguro de eliminar definitivamente ${rowsToRemove.length} muestras de Patronaje?`)) return;
+            
             if (idsToDelete.length > 0) { const { error } = await client.from('dpto_tecnico').delete().in('id', idsToDelete); if(error) { alert("Error al eliminar masivamente"); return; } }
-            rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false; window.actualizarSeleccion(); window.actualizarDatalists();
+            rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false; window.actualizarSeleccion(); window.actualizarDatalists(); window.ejecutarFiltro();
+            marcarCambios();
         };
 
         let columnaOrdenadaActual = -1; let ordenAscendente = true;
         window.ordenarTabla = function(colIndex) {
-            const tbody = document.getElementById('tableBody'); 
-            const filas = Array.from(tbody.children); 
-            
+            const tbody = document.getElementById('tableBody'); const filas = Array.from(tbody.children); 
             if (filas.length === 0) return;
             
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            document.getElementById('loadingText').innerText = `Ordenando ${filas.length} registros...`;
+            document.getElementById('loadingOverlay').style.display = 'flex'; document.getElementById('loadingText').innerText = `Ordenando ${filas.length} registros...`;
             
             setTimeout(() => {
-                if (columnaOrdenadaActual === colIndex) { 
-                    ordenAscendente = !ordenAscendente; 
-                } else { 
-                    ordenAscendente = true; 
-                    columnaOrdenadaActual = colIndex; 
-                }
+                if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
                 
                 filas.sort((a, b) => {
-                    let valorA = a._datosOriginal ? a._datosOriginal[colIndex] : ""; 
-                    let valorB = b._datosOriginal ? b._datosOriginal[colIndex] : "";
+                    let valorA = a._datosOriginal ? a._datosOriginal[colIndex] : ""; let valorB = b._datosOriginal ? b._datosOriginal[colIndex] : "";
+                    if (!valorA) valorA = ordenAscendente ? "zzzzzzz" : ""; if (!valorB) valorB = ordenAscendente ? "zzzzzzz" : "";
                     
-                    if (!valorA) valorA = ordenAscendente ? "zzzzzzz" : ""; 
-                    if (!valorB) valorB = ordenAscendente ? "zzzzzzz" : "";
-                    
-                    let numA = parseFloat(valorA); 
-                    let numB = parseFloat(valorB);
-                    
-                    if (!isNaN(numA) && !isNaN(numB) && !valorA.includes("-") && !valorB.includes("-")) {
-                        return ordenAscendente ? numA - numB : numB - numA;
-                    }
-                    
-                    if (valorA < valorB) return ordenAscendente ? -1 : 1; 
-                    if (valorA > valorB) return ordenAscendente ? 1 : -1; 
-                    return 0;
+                    let numA = parseFloat(valorA); let numB = parseFloat(valorB);
+                    if (!isNaN(numA) && !isNaN(numB) && !valorA.includes("-") && !valorB.includes("-")) { return ordenAscendente ? numA - numB : numB - numA; }
+                    if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
                 }); 
                 
-                const fragment = document.createDocumentFragment();
-                filas.forEach(fila => fragment.appendChild(fila));
-                tbody.appendChild(fragment);
-                
+                const fragment = document.createDocumentFragment(); filas.forEach(fila => fragment.appendChild(fila)); tbody.appendChild(fragment);
                 document.getElementById('loadingOverlay').style.display = 'none';
             }, 50);
         };
@@ -960,10 +891,9 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = [];
-                    for(let i = 1; i <= 33; i++) {
+                    for(let i = 1; i <= 30; i++) {
                         let val = fila._datosOriginal[i] || "";
                         if(i === 1) val = fila.querySelector('.img-foto-prenda') && !fila.querySelector('.img-foto-prenda').src.includes('logo.png') ? "🖼️ Imagen Cargada" : "";
-                        if(i === 33 && val.startsWith('data:application/pdf')) val = "📄 PDF Cargado en Sistema";
                         filaData.push(val);
                     }
                     dataExcel.push(filaData);
