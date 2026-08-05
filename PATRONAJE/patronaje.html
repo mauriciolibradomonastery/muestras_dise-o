@@ -109,7 +109,7 @@
             <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
-            <button class="btn" style="background-color: #f59e0b; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
+            <button class="btn" style="background-color: #6b7280; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
@@ -255,9 +255,9 @@
 
             // Lógica de COLOR AUTOMÁTICO
             let bgColor = '#ffffff'; // Blanco por defecto
-            if (estadoCalculado === 'Pendiente') bgColor = '#fee2e2'; // Rojo claro
+            if (estadoCalculado === 'Pendiente') bgColor = '#ef4444'; // Rojo fuerte (igual al botón de guardar)
             else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') bgColor = '#fef3c7'; // Amarillo claro
-            else if (estadoCalculado === 'Finalizado') bgColor = '#dcfce7'; // Verde claro
+            else if (estadoCalculado === 'Finalizado') bgColor = '#4ade80'; // Verde más oscuro
 
             tr.style.backgroundColor = bgColor;
             celdas.forEach(td => td.style.backgroundColor = bgColor);
