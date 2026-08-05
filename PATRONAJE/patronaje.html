@@ -43,7 +43,8 @@
         .search-input { width: 320px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d1d5db; background-color: #ffffff; color: #111827; outline: none; font-size: 13px; }
         .search-input:focus { border-color: #3b82f6; }
 
-        .table-container { width: 100%; overflow-x: auto; max-height: 70vh; background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
+        /* TABLA ESTILO EXCEL CLARO CON ALTURA AMPLIADA */
+        .table-container { width: 100%; overflow-x: auto; height: calc(100vh - 165px); max-height: calc(100vh - 165px); background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; color: #374151; }
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
@@ -52,7 +53,7 @@
         tbody tr:hover td { filter: brightness(0.96); }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
-        /* CONGELACIÓN DE COLUMNAS */
+        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
         .col-checkbox { position: sticky !important; left: 0; background-color: inherit; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
 
@@ -74,10 +75,6 @@
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         #imagenAmpliada { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
-        
-        .row-color-picker { width:22px; height:24px; padding:0; border:none; cursor:pointer; background:transparent; margin-top:5px; border-radius: 4px; }
-        .row-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-        .row-color-picker::-webkit-color-swatch { border: 1px solid #9ca3af; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -159,7 +156,6 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // --- 1. CONFIGURACIÓN LIMPIA DE COLUMNAS ---
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -227,7 +223,7 @@
             }
         };
 
-        // --- CÁLCULOS Y LÓGICA DE ESTADOS ---
+        // --- CÁLCULOS Y LÓGICA DE ESTADOS Y COLORES AUTOMÁTICOS ---
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             if (!fechaInicioStr || !fechaFinStr) return "";
             let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
@@ -243,7 +239,6 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
-            // Los índices corresponden a su posición en allCols + 1 (por la celda Checkbox/Color en 0)
             const fIngreso = celdas[2].querySelector('input') ? celdas[2].querySelector('input').value : celdas[2].innerText.trim();
             const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
             const fEntAud = celdas[19].querySelector('input') ? celdas[19].querySelector('input').value : celdas[19].innerText.trim();
@@ -258,32 +253,36 @@
             if (fEntFich !== "") estadoCalculado = "Finalizado";
             celdas[3].textContent = estadoCalculado;
 
-            // Lead Times
-            celdas[21].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : ""; // LT AUD
-            celdas[29].textContent = celdas[21].textContent; // LT GENERAL
+            // Lógica de COLOR AUTOMÁTICO
+            let bgColor = '#ffffff'; // Blanco por defecto
+            if (estadoCalculado === 'Pendiente') bgColor = '#fee2e2'; // Rojo claro
+            else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') bgColor = '#fef3c7'; // Amarillo claro
+            else if (estadoCalculado === 'Finalizado') bgColor = '#dcfce7'; // Verde claro
 
-            if (fEntFich === "") { celdas[28].textContent = ""; }  // LT ENTREGA
+            tr.style.backgroundColor = bgColor;
+            celdas.forEach(td => td.style.backgroundColor = bgColor);
+
+            // Lead Times
+            celdas[21].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : ""; 
+            celdas[29].textContent = celdas[21].textContent; 
+
+            if (fEntFich === "") { celdas[28].textContent = ""; }  
             else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[28].textContent = "0"; } 
             else if (fIngreso && fEntFich) { celdas[28].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
             else { celdas[28].textContent = ""; }
 
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
-            celdas[30].textContent = tipoCalculado; // TIPO
+            celdas[30].textContent = tipoCalculado; 
 
             // Actualizar Caché interna
             tr._datosOriginal = [];
             tr._datosLower = [];
-            
-            // Guardar Color Fila en el slot 30 (índice 31 oculto)
-            const colorInput = celdas[0].querySelector('.row-color-picker');
-            const colorVal = colorInput ? colorInput.value : '#ffffff';
-            tr._datosOriginal[30] = colorVal;
 
             for(let i = 1; i <= 30; i++) {
                 if(!celdas[i]) continue;
                 let val = "";
-                if (i === 1) val = ""; // Foto
+                if (i === 1) val = ""; 
                 else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
                 else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
                 else val = celdas[i].innerText.trim();
@@ -292,15 +291,6 @@
                 tr._datosLower[i] = val.toLowerCase();
             }
             tr._textoGlobal = tr._datosLower.join(" ");
-        };
-
-        window.cambiarColorFila = function(input) {
-            const tr = input.closest('tr');
-            const color = input.value;
-            tr.style.backgroundColor = color;
-            tr.querySelectorAll('td').forEach(td => td.style.backgroundColor = color);
-            recalcularFila(tr);
-            marcarCambios();
         };
 
         window.actualizarSticky = function() {
@@ -431,8 +421,7 @@
 
         window.agregarFilaVacia = function() {
             const tbody = document.getElementById('tableBody');
-            const emptyDatos = new Array(31).fill('');
-            // Pre-llenar fecha ingreso con hoy
+            const emptyDatos = new Array(30).fill('');
             const hoy = new Date(); 
             emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
             
@@ -446,22 +435,14 @@
             const tr = document.createElement('tr'); 
             if (idDb) tr.dataset.id = idDb; 
             
-            while(datos.length < 31) datos.push("");
+            while(datos.length < 30) datos.push("");
             
-            const colorFila = datos[30] || '#ffffff';
-            tr.style.backgroundColor = colorFila;
-
-            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; tdCheck.style.backgroundColor = colorFila;
-            tdCheck.innerHTML = `
-                <input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">
-                <br>
-                <input type="color" class="row-color-picker" title="Color de Fila" value="${colorFila}" onchange="cambiarColorFila(this)">
-            `;
+            const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; 
+            tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
 
             allCols.forEach((colName, index) => {
                 const td = document.createElement('td'); 
-                td.style.backgroundColor = colorFila;
 
                 if (colName === 'PRECINTO') td.classList.add('col-precinto');
                 if (colName === 'NOMBRE / REFERENCIA:') td.classList.add('col-nombre');
@@ -471,7 +452,6 @@
                 let valorRaw = datos[index];
                 if (valorRaw === null || valorRaw === undefined) valorRaw = '';
                 const valorStr = String(valorRaw);
-                const valorLower = valorStr.toLowerCase();
 
                 if(colName === 'FOTO') { 
                     td.contentEditable = "false"; td.style.textAlign = "center";
@@ -517,12 +497,8 @@
 
         window.extraerDatosFila = function(tr) {
             const celdas = tr.querySelectorAll('td'); 
-            let datosFila = new Array(31).fill("");
+            let datosFila = new Array(30).fill("");
             
-            // Color de fondo
-            const colorInput = celdas[0].querySelector('.row-color-picker');
-            datosFila[30] = colorInput ? colorInput.value : '#ffffff';
-
             for(let i = 1; i <= 30; i++) { 
                 const td = celdas[i];
                 if (!td) continue;
@@ -561,7 +537,6 @@
             }
 
             try {
-                // Upsert de los existentes
                 if(registrosActualizar.length > 0) {
                     const chunkSize = 150;
                     for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
@@ -571,11 +546,9 @@
                     }
                 }
                 
-                // Insert de los manuales creados con "Fila Vacía"
                 if(registrosNuevos.length > 0) {
                     const { data: inserted, error } = await client.from('dpto_tecnico').insert(registrosNuevos).select();
                     if (error) throw error;
-                    // Asignar IDs a las filas que acaban de guardarse
                     let newRowsIndex = 0;
                     for (let tr of filas) {
                         if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
@@ -630,7 +603,7 @@
                     }
 
                     rowsData.forEach(row => {
-                        let d = new Array(31).fill('');
+                        let d = new Array(30).fill('');
                         for (let i = 0; i < 30; i++) {
                             let val = row[i] !== undefined && row[i] !== null ? row[i] : '';
                             if (columnasFechas.includes(i)) { d[i] = convertirFechaExcel(val); } else { d[i] = String(val); }
@@ -733,19 +706,16 @@
             document.getElementById('imagenAmpliada').src = src; document.getElementById('modalVisor').style.display = 'flex'; 
         };
 
-        // --- BÚSQUEDA MULTIPLE CON PREVIEW ---
         window.prendasAImportar = [];
         window.buscarPrecintoEnDiseno = async function(e) {
             const btn = e.target; btn.textContent = "⏳ Buscando..."; btn.disabled = true;
             const resDiv = document.getElementById('resultadoBusqueda'); resDiv.style.display = 'none'; window.prendasAImportar = [];
 
             const rawText = document.getElementById('inputBuscarPrecinto').value;
-            // No usamos Set para PERMITIR duplicados si el usuario pega 2 veces el mismo en la caja de texto.
             let precintos = rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== '');
 
             if(precintos.length === 0) { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return alert("Escribe al menos un precinto."); }
 
-            // Buscar directo en la base de datos de Diseño (ya no se restringen existentes)
             const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintos);
             
             let prendasEncontradas = prendasDiseño || [];
@@ -757,7 +727,6 @@
                 if (prendasPorId && prendasPorId.length > 0) { prendasEncontradas = prendasEncontradas.concat(prendasPorId); }
             }
 
-            // Mapeamos para permitir inyectar repetidos si se solicitaron
             let mapPrendas = new Map();
             prendasEncontradas.forEach(p => mapPrendas.set((p.precinto || p.id).toUpperCase(), p));
             
@@ -770,8 +739,6 @@
             let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
             if (window.prendasAImportar.length > 0) {
                 htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} muestras encontradas listas para importar.</div>`;
-                
-                // MINI TARJETAS CON FOTOS
                 htmlResumen += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">`;
                 window.prendasAImportar.forEach(p => {
                     const foto = p.fotoUrl || 'logo.png';
@@ -807,12 +774,11 @@
 
             window.prendasAImportar.forEach(prenda => {
                 const precintoReal = prenda.precinto || prenda.id;
-                let datosNuevos = new Array(31).fill(''); 
+                let datosNuevos = new Array(30).fill(''); 
                 datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[3] = prenda.proveedor || ''; 
                 datosNuevos[5] = prenda.coleccion || ''; datosNuevos[6] = prenda.genero || ''; datosNuevos[7] = precintoReal;
                 datosNuevos[8] = prenda.referencia || ''; datosNuevos[9] = prenda.talla || ''; datosNuevos[10] = prenda.clasificacion || '';
                 datosNuevos[11] = prenda.color || ''; datosNuevos[12] = prenda.cantidad || ''; datosNuevos[13] = prenda.linea || '';
-                datosNuevos[30] = '#ffffff'; // Color Blanco por Defecto
                 
                 registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
             });
