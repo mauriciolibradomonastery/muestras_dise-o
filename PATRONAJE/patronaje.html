@@ -53,7 +53,7 @@
         tbody tr:hover td { filter: brightness(0.96); }
         td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
 
-        /* CONGELACIÓN DE COLUMNAS (Sticky Columns) */
+        /* CONGELACIÓN DE COLUMNAS */
         .col-checkbox { position: sticky !important; left: 0; background-color: inherit; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
 
@@ -95,7 +95,7 @@
     </script>
 
     <div class="top-bar">
-        <div class="titulo-bodega">ÁREA DE PATRONAJE Y DPTO TÉCNICO</div>
+        <div class="titulo-bodega">DEPARTAMENTO TÉCNICO</div>
         <div style="display: flex; align-items: center;">
             <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
@@ -156,12 +156,13 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
+        // --- COLUMNAS ACTUALIZADAS AL 10 DE AGOSTO DE 2026 ---
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
-            'MEDICIÓN:', 'HOJA MEDIDAS:', 'FECHA ENVIO:', 'FECHA RECIBIDO:', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 
-            'LEAD TIME AUD', 'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA ENTREGA2', 'AUDITOR.',
-            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO'
+            'MEDICIÓN:', 'INGRESO HÚMEDO', 'SALIDA HÚMEDO', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 
+            'LEAD TIME AUD', 'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA FINAL',
+            'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO', 'PDF AUDITORÍA'
         ];
 
         const listaMotivos = [
@@ -183,7 +184,6 @@
             "MUESTRA ORIGINAL": "DESARROLLO", "SIZE SET PROTO": "DESARROLLO"
         };
 
-        // --- MANEJO DE CAMBIOS NO GUARDADOS (SEMÁFORO) ---
         let hayCambiosSinGuardar = false;
         window.marcarCambios = function() {
             hayCambiosSinGuardar = true;
@@ -223,7 +223,36 @@
             }
         };
 
-        // --- CÁLCULOS Y LÓGICA DE ESTADOS Y COLORES AUTOMÁTICOS ---
+        window.subirPdfFila = function(input) {
+            if(input.files && input.files[0]) {
+                const file = input.files[0];
+                if(file.size > 2.5 * 1024 * 1024) { return alert("El PDF es muy pesado. Sube un archivo menor a 2.5MB."); }
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    const td = input.closest('td'); const base64 = e.target.result;
+                    td.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+                            <a href="${base64}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <input type="hidden" value="${base64}" class="pdf-data">
+                        </div>`;
+                    recalcularFila(td.closest('tr'));
+                    marcarCambios();
+                }; reader.readAsDataURL(file);
+            }
+        };
+
+        window.eliminarPdf = function(btn) {
+            const td = btn.closest('td');
+            td.innerHTML = `
+                <button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
+                <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
+                <input type="hidden" value="" class="pdf-data">
+            `;
+            recalcularFila(td.closest('tr'));
+            marcarCambios();
+        };
+
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             if (!fechaInicioStr || !fechaFinStr) return "";
             let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
@@ -239,50 +268,54 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
-            const fIngreso = celdas[2].querySelector('input') ? celdas[2].querySelector('input').value : celdas[2].innerText.trim();
+            // Los índices corresponden a posición + 1 por el checkbox
             const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
-            const fEntAud = celdas[19].querySelector('input') ? celdas[19].querySelector('input').value : celdas[19].innerText.trim();
-            const res = celdas[22].querySelector('select') ? celdas[22].querySelector('select').value : celdas[22].innerText.trim();
-            const fEntFich = celdas[26].querySelector('input') ? celdas[26].querySelector('input').value : celdas[26].innerText.trim();
+            const fEntAud = celdas[18].querySelector('input') ? celdas[18].querySelector('input').value : celdas[18].innerText.trim();
+            const res = celdas[21].querySelector('select') ? celdas[21].querySelector('select').value : celdas[21].innerText.trim();
+            const fEntFich = celdas[25].querySelector('input') ? celdas[25].querySelector('input').value : celdas[25].innerText.trim();
             const tipoMuestra = celdas[11].innerText.trim().toUpperCase();
 
-            // Lógica de ESTADO
+            // ESTADO
             let estadoCalculado = "Pendiente";
             if (fMedicion !== "") estadoCalculado = "Modelado";
             if (fEntAud !== "") estadoCalculado = "Asignado";
             if (fEntFich !== "") estadoCalculado = "Finalizado";
             celdas[3].textContent = estadoCalculado;
 
-            // Lógica de COLOR AUTOMÁTICO
-            let bgColor = '#ffffff'; // Blanco por defecto
-            if (estadoCalculado === 'Pendiente') bgColor = '#ef4444'; // Rojo fuerte (igual al botón de guardar)
+            // COLOR AUTOMÁTICO
+            let bgColor = '#ffffff'; 
+            if (estadoCalculado === 'Pendiente') bgColor = '#ef4444'; // Rojo fuerte
             else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') bgColor = '#fef3c7'; // Amarillo claro
-            else if (estadoCalculado === 'Finalizado') bgColor = '#4ade80'; // Verde más oscuro
+            else if (estadoCalculado === 'Finalizado') bgColor = '#4ade80'; // Verde oscuro
 
             tr.style.backgroundColor = bgColor;
             celdas.forEach(td => td.style.backgroundColor = bgColor);
 
-            // Lead Times
-            celdas[21].textContent = (fIngreso && fEntAud) ? calcularDiasHabiles(fIngreso, fEntAud) : ""; 
-            celdas[29].textContent = celdas[21].textContent; 
+            // LEAD TIMES (Calculados desde MEDICIÓN)
+            celdas[20].textContent = (fMedicion && fEntAud) ? calcularDiasHabiles(fMedicion, fEntAud) : ""; 
+            celdas[27].textContent = celdas[20].textContent; 
 
-            if (fEntFich === "") { celdas[28].textContent = ""; }  
-            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[28].textContent = "0"; } 
-            else if (fIngreso && fEntFich) { celdas[28].textContent = calcularDiasHabiles(fIngreso, fEntFich); } 
-            else { celdas[28].textContent = ""; }
+            if (fEntFich === "") { celdas[26].textContent = ""; }  
+            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[26].textContent = "0"; } 
+            else if (fMedicion && fEntFich) { celdas[26].textContent = calcularDiasHabiles(fMedicion, fEntFich); } 
+            else { celdas[26].textContent = ""; }
 
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
-            celdas[30].textContent = tipoCalculado; 
+            celdas[28].textContent = tipoCalculado; 
 
-            // Actualizar Caché interna
+            // Caché interna
             tr._datosOriginal = [];
             tr._datosLower = [];
 
-            for(let i = 1; i <= 30; i++) {
+            for(let i = 1; i <= 29; i++) {
                 if(!celdas[i]) continue;
                 let val = "";
                 if (i === 1) val = ""; 
+                else if (i === 29) {
+                    const pdfInput = celdas[i].querySelector('.pdf-data');
+                    val = pdfInput ? pdfInput.value : "";
+                }
                 else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
                 else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
                 else val = celdas[i].innerText.trim();
@@ -348,9 +381,9 @@
                 if (col === 'PINTA:') thFilter.classList.add('col-pinta');
                 if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thFilter.classList.add('col-desc');
 
-                if (col === 'FOTO') { 
+                if (col === 'FOTO' || col === 'PDF AUDITORÍA') { 
                     thFilter.innerHTML = ``; 
-                } else if (col.includes('FECHA') || col.includes('MEDICIÓN:') || col.includes('HOJA MEDIDAS:')) {
+                } else if (col.includes('FECHA') || col.includes('INGRESO HÚMEDO') || col.includes('SALIDA HÚMEDO') || col.includes('MEDICIÓN:')) {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Año o Mes..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
                 } else {
                     thFilter.innerHTML = `<input type="text" class="filter-input col-filter" list="datalist_${idx + 1}" data-colindex="${idx + 1}" placeholder="Filtrar..." oninput="ejecutarFiltro()"><datalist id="datalist_${idx + 1}"></datalist>`;
@@ -373,7 +406,6 @@
                 
                 const { data, error } = await client.from('dpto_tecnico')
                     .select('*')
-                    .order('datos->1', { ascending: false, nullsFirst: false })
                     .order('created_at', { ascending: false })
                     .range(from, from + step - 1);
                     
@@ -387,6 +419,33 @@
 
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
             if(!allData || allData.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
+
+            // ORDENAMIENTO POR SEMÁFORO (ROJO -> AMARILLO -> VERDE) y LUEGO POR FECHA
+            allData.sort((a, b) => {
+                const getEstadoRank = (datos) => {
+                    const fMedicion = datos[14] || '';
+                    const fEntAud = datos[17] || '';
+                    const fEntFich = datos[24] || '';
+                    
+                    let estado = "Pendiente";
+                    if (fMedicion !== "") estado = "Modelado";
+                    if (fEntAud !== "") estado = "Asignado";
+                    if (fEntFich !== "") estado = "Finalizado";
+                    
+                    if (estado === 'Pendiente') return 1;
+                    if (estado === 'Modelado' || estado === 'Asignado') return 2;
+                    return 3;
+                };
+
+                const rankA = getEstadoRank(a.datos);
+                const rankB = getEstadoRank(b.datos);
+                
+                if (rankA !== rankB) return rankA - rankB; 
+                
+                const dateA = new Date(a.datos[1] || '1970-01-01').getTime();
+                const dateB = new Date(b.datos[1] || '1970-01-01').getTime();
+                return dateB - dateA; 
+            });
 
             let i = 0; const chunkSize = 150; 
             
@@ -421,7 +480,7 @@
 
         window.agregarFilaVacia = function() {
             const tbody = document.getElementById('tableBody');
-            const emptyDatos = new Array(30).fill('');
+            const emptyDatos = new Array(29).fill('');
             const hoy = new Date(); 
             emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
             
@@ -435,7 +494,7 @@
             const tr = document.createElement('tr'); 
             if (idDb) tr.dataset.id = idDb; 
             
-            while(datos.length < 30) datos.push("");
+            while(datos.length < 29) datos.push("");
             
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; 
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
@@ -463,6 +522,20 @@
                             <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">
                         </div>`;
                 } 
+                else if (colName === 'PDF AUDITORÍA') {
+                    td.contentEditable = "false"; td.style.textAlign = "center";
+                    if(valorStr && valorStr.startsWith('data:application/pdf')) {
+                        td.innerHTML = `<div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+                            <a href="${valorStr}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <input type="hidden" value="${valorStr}" class="pdf-data">
+                        </div>`;
+                    } else {
+                        td.innerHTML = `<button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
+                        <input type="file" accept=".pdf" style="display:none;" onchange="subirPdfFila(this)">
+                        <input type="hidden" value="" class="pdf-data">`;
+                    }
+                }
                 else if (colName === 'ESTADO') {
                     td.contentEditable = "false"; td.classList.add('estado-cell');
                 }
@@ -478,12 +551,16 @@
                     td.contentEditable = "false";
                     td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">${generarOpcionesMotivo(valorStr)}</select>`;
                 }
-                else if (colName.includes('FECHA') || colName.includes('MEDICIÓN:') || colName.includes('HOJA MEDIDAS:')) { 
+                else if (colName.includes('FECHA') || colName.includes('INGRESO HÚMEDO') || colName.includes('SALIDA HÚMEDO') || colName.includes('MEDICIÓN:')) { 
                     td.contentEditable = "false"; 
                     td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
                     td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
+                }
+                else if (colName === 'NOMBRE / REFERENCIA:') {
+                    td.contentEditable = "true"; td.style.fontWeight = "bold"; td.textContent = valorStr;
+                    td.oninput = () => { marcarCambios(); recalcularFila(tr); };
                 }
                 else { 
                     td.contentEditable = "true"; td.textContent = valorStr; 
@@ -497,14 +574,16 @@
 
         window.extraerDatosFila = function(tr) {
             const celdas = tr.querySelectorAll('td'); 
-            let datosFila = new Array(30).fill("");
+            let datosFila = new Array(29).fill("");
             
-            for(let i = 1; i <= 30; i++) { 
+            for(let i = 1; i <= 29; i++) { 
                 const td = celdas[i];
                 if (!td) continue;
 
                 if (i === 1) { 
-                    const img = td.querySelector('.img-foto-prenda'); datosFila[0] = (img && !img.src.includes('logo.png')) ? img.src : "";
+                    const img = td.querySelector('.img-foto-prenda'); datosFila[i-1] = (img && !img.src.includes('logo.png')) ? img.src : "";
+                } else if (i === 29) {
+                    const pdfInput = td.querySelector('.pdf-data'); datosFila[i-1] = pdfInput ? pdfInput.value : "";
                 } else if (td.querySelector('select')) { 
                     datosFila[i-1] = td.querySelector('select').value;
                 } else if (td.querySelector('input[type="date"]')) { 
@@ -584,7 +663,7 @@
                     const rowsData = jsonRows.slice(1);
                     let registrosInsert = [];
                     
-                    const columnasFechas = [1, 14, 16, 17, 18, 25];
+                    const columnasFechas = [1, 14, 15, 16, 17, 24]; // Índices exactos de fecha
 
                     function convertirFechaExcel(val) {
                         if (!val) return "";
@@ -603,8 +682,8 @@
                     }
 
                     rowsData.forEach(row => {
-                        let d = new Array(30).fill('');
-                        for (let i = 0; i < 30; i++) {
+                        let d = new Array(29).fill('');
+                        for (let i = 0; i < 29; i++) {
                             let val = row[i] !== undefined && row[i] !== null ? row[i] : '';
                             if (columnasFechas.includes(i)) { d[i] = convertirFechaExcel(val); } else { d[i] = String(val); }
                         }
@@ -612,6 +691,7 @@
                         const precinto = d[7] ? d[7].trim() : '';
                         if (precinto !== '') {
                             if (d[0].includes("Imagen Cargada")) d[0] = "";
+                            if (d[28].includes("PDF Cargado")) d[28] = "";
                             registrosInsert.push({ precinto: precinto, datos: d });
                         }
                     });
@@ -774,7 +854,7 @@
 
             window.prendasAImportar.forEach(prenda => {
                 const precintoReal = prenda.precinto || prenda.id;
-                let datosNuevos = new Array(30).fill(''); 
+                let datosNuevos = new Array(29).fill(''); 
                 datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[3] = prenda.proveedor || ''; 
                 datosNuevos[5] = prenda.coleccion || ''; datosNuevos[6] = prenda.genero || ''; datosNuevos[7] = precintoReal;
                 datosNuevos[8] = prenda.referencia || ''; datosNuevos[9] = prenda.talla || ''; datosNuevos[10] = prenda.clasificacion || '';
@@ -857,9 +937,10 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = [];
-                    for(let i = 1; i <= 30; i++) {
+                    for(let i = 1; i <= 29; i++) {
                         let val = fila._datosOriginal[i] || "";
                         if(i === 1) val = fila.querySelector('.img-foto-prenda') && !fila.querySelector('.img-foto-prenda').src.includes('logo.png') ? "🖼️ Imagen Cargada" : "";
+                        if(i === 29 && val.startsWith('data:application/pdf')) val = "📄 PDF Cargado en Sistema";
                         filaData.push(val);
                     }
                     dataExcel.push(filaData);
