@@ -241,7 +241,7 @@
         <div class="modal-contenido-amplio">
             <h2 style="margin-top:0; border-bottom:1px solid #444; padding-bottom:10px; color:#ffc107;">✏️ Editar Información de la Prenda</h2>
             <div class="cuadricula-detalles" style="margin-top:15px;">
-                <div><label class="lbl-detalle">Precinto (ID)</label><input type="text" id="edPrecinto" class="input-edicion" disabled></div>
+                <div><label class="lbl-detalle">Precinto (ID)</label><input type="text" id="edPrecinto" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Fecha Ingreso</label><input type="date" id="edFechaIngreso" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Registrado Por</label><input type="text" id="edRegistradoPor" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Referencia</label><input type="text" id="edReferencia" class="input-edicion"></div>
@@ -251,6 +251,7 @@
                 <div><label class="lbl-detalle">Talla</label><input type="text" id="edTalla" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Género</label><input type="text" id="edGenero" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Color</label><input type="text" id="edColor" class="input-edicion"></div>
+                <div><label class="lbl-detalle">Cantidad</label><input type="number" id="edCantidad" class="input-edicion" min="1"></div>
                 <div><label class="lbl-detalle">Ubicación General</label><input type="text" id="edUbiGeneral" class="input-edicion"></div>
                 <div><label class="lbl-detalle">Ubicación Diseño</label><input type="text" id="edUbiDiseno" class="input-edicion"></div>
                 
@@ -604,6 +605,7 @@
             document.getElementById('edTalla').value = item.talla || '';
             document.getElementById('edGenero').value = item.genero || '';
             document.getElementById('edColor').value = item.color || '';
+            document.getElementById('edCantidad').value = item.cantidad || item.cant || 1;
             document.getElementById('edUbiGeneral').value = item.ubicacionGeneral || item.ubicacion_general || '';
             document.getElementById('edUbiDiseno').value = item.ubicacionDiseno || item.ubicacion_diseno || '';
             document.getElementById('edObservaciones').value = item.observaciones || item.accionCorrectiva || '';
@@ -657,11 +659,13 @@
                 let estadoSeleccionado = document.getElementById('edEstado').value;
 
                 let datosActualizar = {
+                    precinto: document.getElementById('edPrecinto').value.trim(),
                     fechaIngreso: document.getElementById('edFechaIngreso').value, registradoPor: document.getElementById('edRegistradoPor').value,
                     referencia: document.getElementById('edReferencia').value, coleccion: document.getElementById('edColeccion').value,
                     fechaEntregaCI: document.getElementById('edFechaEntregaCI').value, tipo: document.getElementById('edTipo').value,
                     linea: document.getElementById('edLinea').value, talla: document.getElementById('edTalla').value,
                     genero: document.getElementById('edGenero').value, color: document.getElementById('edColor').value,
+                    cantidad: parseInt(document.getElementById('edCantidad').value) || 1,
                     ubicacionGeneral: document.getElementById('edUbiGeneral').value, ubicacionDiseno: document.getElementById('edUbiDiseno').value,
                     observaciones: document.getElementById('edObservaciones').value, estado: estadoSeleccionado,
                     salidaRemision: document.getElementById('edRemision').value, salidaFecha: fechaSalidaRevisada,
