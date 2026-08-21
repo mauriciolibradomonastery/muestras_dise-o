@@ -156,7 +156,6 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // --- COLUMNAS ACTUALIZADAS AL 10 DE AGOSTO DE 2026 ---
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -209,6 +208,20 @@
             btn.innerText = '💾 Guardar Cambios';
         };
 
+        window.agregarMotivoDatalist = function(val) {
+            let str = val.trim().toUpperCase();
+            if (str !== "") {
+                const dl = document.getElementById("listMotivos");
+                let exists = Array.from(dl.options).some(opt => opt.value === str);
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = str;
+                    dl.appendChild(opt);
+                    if(!listaMotivos.includes(str)) listaMotivos.push(str);
+                }
+            }
+        };
+
         let timerBusqueda = null;
         window.ejecutarFiltro = function() {
             clearTimeout(timerBusqueda);
@@ -237,7 +250,6 @@
         window.subirPdfFila = function(input) {
             if(input.files && input.files[0]) {
                 const file = input.files[0];
-                // LÍMITE AUMENTADO A 10 MB
                 if(file.size > 10 * 1024 * 1024) { return alert("El PDF es muy pesado. Intenta subir un archivo menor a 10MB."); }
                 let reader = new FileReader();
                 reader.onload = function(e) {
@@ -280,7 +292,6 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
-            // Los índices corresponden a posición + 1 por el checkbox
             const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
             const fEntAud = celdas[18].querySelector('input') ? celdas[18].querySelector('input').value : celdas[18].innerText.trim();
             const res = celdas[21].querySelector('select') ? celdas[21].querySelector('select').value : celdas[21].innerText.trim();
@@ -303,7 +314,7 @@
             tr.style.backgroundColor = bgColor;
             celdas.forEach(td => td.style.backgroundColor = bgColor);
 
-            // LEAD TIMES (Calculados desde MEDICIÓN)
+            // LEAD TIMES 
             celdas[20].textContent = (fMedicion && fEntAud) ? calcularDiasHabiles(fMedicion, fEntAud) : ""; 
             celdas[27].textContent = celdas[20].textContent; 
 
@@ -316,7 +327,6 @@
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
             celdas[28].textContent = tipoCalculado; 
 
-            // Caché interna
             tr._datosOriginal = [];
             tr._datosLower = [];
 
@@ -558,7 +568,7 @@
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="marcarCambios()" onchange="recalcularFila(this.closest('tr'))">`;
+                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="marcarCambios()" onchange="agregarMotivoDatalist(this.value); recalcularFila(this.closest('tr'));">`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('INGRESO HÚMEDO') || colName.includes('SALIDA HÚMEDO') || colName.includes('MEDICIÓN:')) { 
                     td.contentEditable = "false"; 
@@ -823,6 +833,29 @@
                     const option = document.createElement('option'); option.value = val; fragment.appendChild(option); 
                 }); datalist.appendChild(fragment);
             });
+
+            // RECOLECTAR Y ACTUALIZAR LA LISTA GLOBAL DE MOTIVOS
+            const motivosSet = new Set(listaMotivos);
+            filas.forEach(fila => {
+                if(!fila._datosOriginal) return;
+                [22, 23, 24].forEach(idx => {
+                    let val = fila._datosOriginal[idx];
+                    if (val && val.trim() !== "") motivosSet.add(val.trim().toUpperCase());
+                });
+            });
+            
+            const dlMotivosEl = document.getElementById("listMotivos");
+            if (dlMotivosEl) {
+                dlMotivosEl.innerHTML = '';
+                Array.from(motivosSet).sort().forEach(m => {
+                    if(m !== "") {
+                        if(!listaMotivos.includes(m)) listaMotivos.push(m);
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        dlMotivosEl.appendChild(opt);
+                    }
+                });
+            }
         };
 
         window.abrirBuscadorDiseno = function() { document.getElementById('inputBuscarPrecinto').value = ""; document.getElementById('resultadoBusqueda').style.display = "none"; document.getElementById('modal-agregar').style.display = "flex"; }
