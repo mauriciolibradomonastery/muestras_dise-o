@@ -324,6 +324,9 @@
                 tr._datosLower[i] = val.toLowerCase();
             }
             tr._textoGlobal = tr._datosLower.join(" ");
+            
+            // 🔥 Novedad: Guardar un "Sello" de los datos para saber si realmente cambiaron al dar Guardar
+            tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
         };
 
         window.actualizarSticky = function() {
@@ -607,18 +610,29 @@
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
+                let hashActual = JSON.stringify(datosFila);
                 
                 if (tr.dataset.id) { 
+                    if (tr._hashGuardado === hashActual) continue; 
                     registrosActualizar.push({ id: tr.dataset.id, datos: datosFila, precinto: datosFila[7] }); 
                 } else {
                     registrosNuevos.push({ datos: datosFila, precinto: datosFila[7] }); 
                 }
             }
 
+            if (registrosActualizar.length === 0 && registrosNuevos.length === 0) {
+                btn.innerHTML = "✅ ¡Todo guardado!"; 
+                resetearCambios();
+                setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 2000);
+                return;
+            }
+
             try {
+                const chunkSize = 5; 
+
                 if(registrosActualizar.length > 0) {
-                    const chunkSize = 150;
                     for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
+                        btn.innerHTML = `⏳ Actualizando... (${i + 1} de ${registrosActualizar.length})`;
                         const chunk = registrosActualizar.slice(i, i + chunkSize);
                         const { error } = await client.from('dpto_tecnico').upsert(chunk);
                         if (error) throw error;
@@ -626,17 +640,28 @@
                 }
                 
                 if(registrosNuevos.length > 0) {
-                    const { data: inserted, error } = await client.from('dpto_tecnico').insert(registrosNuevos).select();
-                    if (error) throw error;
-                    let newRowsIndex = 0;
-                    for (let tr of filas) {
-                        if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
-                            tr.dataset.id = inserted[newRowsIndex].id;
-                            newRowsIndex++;
+                    for (let i = 0; i < registrosNuevos.length; i += chunkSize) {
+                        btn.innerHTML = `⏳ Creando nuevos... (${i + 1} de ${registrosNuevos.length})`;
+                        const chunk = registrosNuevos.slice(i, i + chunkSize);
+                        const { data: inserted, error } = await client.from('dpto_tecnico').insert(chunk).select();
+                        if (error) throw error;
+                        
+                        let newRowsIndex = 0;
+                        for (let tr of filas) {
+                            if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
+                                tr.dataset.id = inserted[newRowsIndex].id;
+                                newRowsIndex++;
+                            }
                         }
                     }
                 }
                 
+                for (let tr of filas) {
+                    if (tr.style.display !== 'none' && tr.dataset.id) {
+                        tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
+                    }
+                }
+
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
                 resetearCambios();
                 actualizarDatalists(); 
