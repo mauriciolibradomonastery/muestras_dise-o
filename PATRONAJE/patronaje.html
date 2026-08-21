@@ -156,6 +156,7 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
+        // --- COLUMNAS ACTUALIZADAS AL 10 DE AGOSTO DE 2026 ---
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -236,7 +237,8 @@
         window.subirPdfFila = function(input) {
             if(input.files && input.files[0]) {
                 const file = input.files[0];
-                if(file.size > 2.5 * 1024 * 1024) { return alert("El PDF es muy pesado. Sube un archivo menor a 2.5MB."); }
+                // LÍMITE AUMENTADO A 10 MB
+                if(file.size > 10 * 1024 * 1024) { return alert("El PDF es muy pesado. Intenta subir un archivo menor a 10MB."); }
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     const td = input.closest('td'); const base64 = e.target.result;
@@ -278,6 +280,7 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
+            // Los índices corresponden a posición + 1 por el checkbox
             const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
             const fEntAud = celdas[18].querySelector('input') ? celdas[18].querySelector('input').value : celdas[18].innerText.trim();
             const res = celdas[21].querySelector('select') ? celdas[21].querySelector('select').value : celdas[21].innerText.trim();
@@ -334,8 +337,6 @@
                 tr._datosLower[i] = val.toLowerCase();
             }
             tr._textoGlobal = tr._datosLower.join(" ");
-            
-            // ELIMINADA la actualización del hash de guardado de aquí para no generar "amnesia" en el botón
         };
 
         window.actualizarSticky = function() {
@@ -466,7 +467,6 @@
                 for (; i < end; i++) {
                     let d = allData[i].datos || []; 
                     let trCreado = crearFilaHTML(allData[i].id, d);
-                    // AQUÍ ESTABLECEMOS EL HASH DE GUARDADO INICIAL
                     trCreado._hashGuardado = JSON.stringify(window.extraerDatosFila(trCreado));
                     fragment.appendChild(trCreado);
                 }
@@ -493,7 +493,6 @@
             emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
             
             const newTr = crearFilaHTML(null, emptyDatos);
-            // Establecer el hash inicial para filas nuevas
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             tbody.insertBefore(newTr, tbody.firstChild);
             window.actualizarSticky();
@@ -670,7 +669,6 @@
                     }
                 }
                 
-                // Actualizamos el hash para la próxima vez
                 for (let tr of filas) {
                     if (tr.style.display !== 'none' && tr.dataset.id) {
                         tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
