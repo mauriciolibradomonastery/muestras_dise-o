@@ -166,7 +166,7 @@
         ];
 
         const listaMotivos = [
-            "", "% ENCOGIMIENTO", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
+            "%", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
             "CAMBIO EN DISEÑO", "CASES", "COLOR", "CONFECCION", "CREMALLERA", "CREMALLERA ONDULADA", "CUELLO ONDULADO",
             "DECOLORACIÓN", "DESCOSIDOS", "DESPEGADO", "DESPISTE", "DISEÑO", "ELÁSTICO", "ESTAMPADO", "ETIQUETA",
             "FIBRAS EXPUESTAS", "HILOS", "HORMA", "INCOMODO", "INSUMOS", "LASER", "LOOK", "MARQUILLA", "MARRAS",
@@ -174,6 +174,18 @@
             "POROS", "PROCESO LAVADO", "RANURAS DEFORMADAS", "RASPADO", "ROTOS", "TALLONES", "TEJIDO FRIZADO", "TELA",
             "TRANSFERENCIA COLOR", "TRASLUCE EL FORRO", "VACIOS"
         ];
+
+        // CREAR DATALIST GLOBAL PARA LOS MOTIVOS (HÍBRIDO: LISTA + TEXTO LIBRE)
+        const dlMotivos = document.createElement('datalist');
+        dlMotivos.id = "listMotivos";
+        listaMotivos.forEach(m => {
+            if(m !== "") {
+                const opt = document.createElement('option');
+                opt.value = m;
+                dlMotivos.appendChild(opt);
+            }
+        });
+        document.body.appendChild(dlMotivos);
 
         const mapeoTipo = {
             "ORIGINAL": "DESARROLLO", "PHOTO SAMPLE": "PRODUCCION", "PP SAMPLE": "DESARROLLO", "PROTO": "DESARROLLO",
@@ -268,7 +280,6 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
-            // Los índices corresponden a posición + 1 por el checkbox
             const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
             const fEntAud = celdas[18].querySelector('input') ? celdas[18].querySelector('input').value : celdas[18].innerText.trim();
             const res = celdas[21].querySelector('select') ? celdas[21].querySelector('select').value : celdas[21].innerText.trim();
@@ -318,6 +329,7 @@
                 }
                 else if (celdas[i].querySelector('select')) val = celdas[i].querySelector('select').value;
                 else if (celdas[i].querySelector('input[type="date"]')) val = celdas[i].querySelector('input[type="date"]').value;
+                else if (celdas[i].querySelector('input[type="text"]')) val = celdas[i].querySelector('input[type="text"]').value;
                 else val = celdas[i].innerText.trim();
                 
                 tr._datosOriginal[i] = val;
@@ -325,7 +337,6 @@
             }
             tr._textoGlobal = tr._datosLower.join(" ");
             
-            // 🔥 Novedad: Guardar un "Sello" de los datos para saber si realmente cambiaron al dar Guardar
             tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
         };
 
@@ -475,12 +486,6 @@
             renderChunk();
         }
 
-        function generarOpcionesMotivo(valorSeleccionado) {
-            let html = `<option value=""></option>`;
-            listaMotivos.forEach(motivo => { html += `<option value="${motivo}" ${valorSeleccionado === motivo ? 'selected' : ''}>${motivo}</option>`; });
-            return html;
-        }
-
         window.agregarFilaVacia = function() {
             const tbody = document.getElementById('tableBody');
             const emptyDatos = new Array(29).fill('');
@@ -552,7 +557,8 @@
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">${generarOpcionesMotivo(valorStr)}</select>`;
+                    // 💡 AQUÍ SE MODIFICÓ PARA QUE SEA INPUT DE TEXTO + DATALIST
+                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="marcarCambios()" onchange="recalcularFila(this.closest('tr'))">`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('INGRESO HÚMEDO') || colName.includes('SALIDA HÚMEDO') || colName.includes('MEDICIÓN:')) { 
                     td.contentEditable = "false"; 
@@ -591,6 +597,9 @@
                     datosFila[i-1] = td.querySelector('select').value;
                 } else if (td.querySelector('input[type="date"]')) { 
                     datosFila[i-1] = td.querySelector('input[type="date"]').value;
+                } else if (td.querySelector('input[type="text"]')) { 
+                    // 💡 EXTRACCIÓN CORRECTA DE LOS MOTIVOS COMBINADOS
+                    datosFila[i-1] = td.querySelector('input[type="text"]').value;
                 } else { 
                     datosFila[i-1] = td.innerText.trim();
                 }
@@ -600,8 +609,10 @@
         window.guardarCambiosVisibles = async function() {
             if(!hayCambiosSinGuardar && document.getElementById('btnGuardarGlobal').innerText.includes('💾')) return;
 
-            const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Guardando..."; btn.disabled = true; btn.classList.remove('unsaved');
+            const btn = document.getElementById('btnGuardarGlobal'); 
+            btn.innerHTML = "⏳ Guardando..."; 
+            btn.disabled = true; 
+            btn.classList.remove('unsaved');
             
             const filas = document.getElementById('tableBody').querySelectorAll('tr'); 
             let registrosActualizar = [];
@@ -622,8 +633,11 @@
 
             if (registrosActualizar.length === 0 && registrosNuevos.length === 0) {
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
-                resetearCambios();
-                setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 2000);
+                hayCambiosSinGuardar = false;
+                setTimeout(() => { 
+                    btn.innerHTML = "💾 Guardar Cambios"; 
+                    btn.disabled = false; 
+                }, 2000);
                 return;
             }
 
@@ -663,12 +677,21 @@
                 }
 
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
-                resetearCambios();
                 actualizarDatalists(); 
+                hayCambiosSinGuardar = false;
+                
+                setTimeout(() => { 
+                    btn.innerHTML = "💾 Guardar Cambios"; 
+                    btn.disabled = false; 
+                }, 3000);
+
             } catch (err) { 
-                console.error(err); alert("Hubo un error al guardar: " + err.message); btn.innerHTML = "❌ Error"; btn.classList.add('unsaved');
+                console.error(err); 
+                alert("Hubo un error al guardar: " + err.message); 
+                btn.innerHTML = "⚠️ Guardar Cambios"; 
+                btn.classList.add('unsaved');
+                btn.disabled = false;
             }
-            setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
         window.procesarExcelImportado = function(event) {
@@ -688,7 +711,7 @@
                     const rowsData = jsonRows.slice(1);
                     let registrosInsert = [];
                     
-                    const columnasFechas = [1, 14, 15, 16, 17, 24]; // Índices exactos de fecha
+                    const columnasFechas = [1, 14, 15, 16, 17, 24]; 
 
                     function convertirFechaExcel(val) {
                         if (!val) return "";
