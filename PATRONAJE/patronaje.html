@@ -156,11 +156,12 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
+        // --- NUEVO ORDEN EXACTO SOLICITADO ---
         const allCols = [
-            'FOTO', 'FECHA DE INGRESO:', 'ESTADO', 'PROVEEDOR:', 'DISEÑADOR:', 'COLECCIÓN:', 'GÉNERO', 'PRECINTO',
+            'FOTO', 'FECHA DE INGRESO:', 'DISEÑADOR:', 'GÉNERO', 'PROVEEDOR:', 'PAIS', 'COLECCIÓN:', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
-            'MEDICIÓN:', 'INGRESO HÚMEDO', 'SALIDA HÚMEDO', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 
-            'LEAD TIME AUD', 'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA FINAL',
+            'ESTADO', 'MEDICIÓN:', 'FECHA ENTREGA (AUDITORÍA)', 'AUDITOR:', 'LEAD TIME AUD', 
+            'INGRESO HÚMEDO', 'SALIDA HÚMEDO', 'RESULTADO', 'MOTIVO 1', 'MOTIVO 2', 'MOTIVO 3', 'FECHA FINAL',
             'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO', 'PDF AUDITORÍA'
         ];
 
@@ -292,10 +293,10 @@
         window.recalcularFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             
-            const fMedicion = celdas[15].querySelector('input') ? celdas[15].querySelector('input').value : celdas[15].innerText.trim();
-            const fEntAud = celdas[18].querySelector('input') ? celdas[18].querySelector('input').value : celdas[18].innerText.trim();
-            const res = celdas[21].querySelector('select') ? celdas[21].querySelector('select').value : celdas[21].innerText.trim();
-            const fEntFich = celdas[25].querySelector('input') ? celdas[25].querySelector('input').value : celdas[25].innerText.trim();
+            const fMedicion = celdas[16].querySelector('input') ? celdas[16].querySelector('input').value : celdas[16].innerText.trim();
+            const fEntAud = celdas[17].querySelector('input') ? celdas[17].querySelector('input').value : celdas[17].innerText.trim();
+            const res = celdas[22].querySelector('select') ? celdas[22].querySelector('select').value : celdas[22].innerText.trim();
+            const fEntFich = celdas[26].querySelector('input') ? celdas[26].querySelector('input').value : celdas[26].innerText.trim();
             const tipoMuestra = celdas[11].innerText.trim().toUpperCase();
 
             // ESTADO
@@ -303,7 +304,7 @@
             if (fMedicion !== "") estadoCalculado = "Modelado";
             if (fEntAud !== "") estadoCalculado = "Asignado";
             if (fEntFich !== "") estadoCalculado = "Finalizado";
-            celdas[3].textContent = estadoCalculado;
+            celdas[15].textContent = estadoCalculado;
 
             // COLOR AUTOMÁTICO
             let bgColor = '#ffffff'; 
@@ -315,26 +316,26 @@
             celdas.forEach(td => td.style.backgroundColor = bgColor);
 
             // LEAD TIMES 
-            celdas[20].textContent = (fMedicion && fEntAud) ? calcularDiasHabiles(fMedicion, fEntAud) : ""; 
-            celdas[27].textContent = celdas[20].textContent; 
+            celdas[19].textContent = (fMedicion && fEntAud) ? calcularDiasHabiles(fMedicion, fEntAud) : ""; 
+            celdas[28].textContent = celdas[19].textContent; 
 
-            if (fEntFich === "") { celdas[26].textContent = ""; }  
-            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[26].textContent = "0"; } 
-            else if (fMedicion && fEntFich) { celdas[26].textContent = calcularDiasHabiles(fMedicion, fEntFich); } 
-            else { celdas[26].textContent = ""; }
+            if (fEntFich === "") { celdas[27].textContent = ""; }  
+            else if (res === "CANCELADO" || res === "OBSEQUIO") { celdas[27].textContent = "0"; } 
+            else if (fMedicion && fEntFich) { celdas[27].textContent = calcularDiasHabiles(fMedicion, fEntFich); } 
+            else { celdas[27].textContent = ""; }
 
             let tipoCalculado = mapeoTipo[tipoMuestra] || "";
             if(tipoCalculado === "") { for (const key in mapeoTipo) { if (tipoMuestra.includes(key)) { tipoCalculado = mapeoTipo[key]; break; } } }
-            celdas[28].textContent = tipoCalculado; 
+            celdas[29].textContent = tipoCalculado; 
 
             tr._datosOriginal = [];
             tr._datosLower = [];
 
-            for(let i = 1; i <= 29; i++) {
+            for(let i = 1; i <= 30; i++) {
                 if(!celdas[i]) continue;
                 let val = "";
                 if (i === 1) val = ""; 
-                else if (i === 29) {
+                else if (i === 30) {
                     const pdfInput = celdas[i].querySelector('.pdf-data');
                     val = pdfInput ? pdfInput.value : "";
                 }
@@ -353,20 +354,19 @@
             const trHeader = document.getElementById('tableHeaderRow');
             if(!trHeader) return;
             const ths = trHeader.querySelectorAll('th');
-            if(ths.length < 10) return;
+            if(ths.length < 15) return;
             
-            let leftPos = ths[0].offsetWidth; 
+            let leftPrecinto = ths[0].offsetWidth; 
+            document.documentElement.style.setProperty('--left-precinto', `${leftPrecinto}px`);
             
-            document.documentElement.style.setProperty('--left-precinto', `${leftPos}px`);
-            leftPos += ths[7].offsetWidth; 
+            let leftNombre = leftPrecinto + ths[8].offsetWidth;
+            document.documentElement.style.setProperty('--left-nombre', `${leftNombre}px`);
             
-            document.documentElement.style.setProperty('--left-nombre', `${leftPos}px`);
-            leftPos += ths[8].offsetWidth; 
+            let leftPinta = leftNombre + ths[9].offsetWidth; 
+            document.documentElement.style.setProperty('--left-pinta', `${leftPinta}px`);
             
-            document.documentElement.style.setProperty('--left-pinta', `${leftPos}px`);
-            leftPos += ths[11].offsetWidth; 
-            
-            document.documentElement.style.setProperty('--left-desc', `${leftPos}px`);
+            let leftDesc = leftPinta + ths[12].offsetWidth; 
+            document.documentElement.style.setProperty('--left-desc', `${leftDesc}px`);
         };
 
         window.addEventListener('resize', window.actualizarSticky);
@@ -445,9 +445,9 @@
 
             allData.sort((a, b) => {
                 const getEstadoRank = (datos) => {
-                    const fMedicion = datos[14] || '';
-                    const fEntAud = datos[17] || '';
-                    const fEntFich = datos[24] || '';
+                    const fMedicion = datos[15] || '';
+                    const fEntAud = datos[16] || '';
+                    const fEntFich = datos[25] || '';
                     
                     let estado = "Pendiente";
                     if (fMedicion !== "") estado = "Modelado";
@@ -498,7 +498,7 @@
 
         window.agregarFilaVacia = function() {
             const tbody = document.getElementById('tableBody');
-            const emptyDatos = new Array(29).fill('');
+            const emptyDatos = new Array(30).fill('');
             const hoy = new Date(); 
             emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
             
@@ -513,7 +513,7 @@
             const tr = document.createElement('tr'); 
             if (idDb) tr.dataset.id = idDb; 
             
-            while(datos.length < 29) datos.push("");
+            while(datos.length < 30) datos.push("");
             
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; 
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
@@ -593,15 +593,15 @@
 
         window.extraerDatosFila = function(tr) {
             const celdas = tr.querySelectorAll('td'); 
-            let datosFila = new Array(29).fill("");
+            let datosFila = new Array(30).fill("");
             
-            for(let i = 1; i <= 29; i++) { 
+            for(let i = 1; i <= 30; i++) { 
                 const td = celdas[i];
                 if (!td) continue;
 
                 if (i === 1) { 
                     const img = td.querySelector('.img-foto-prenda'); datosFila[i-1] = (img && !img.src.includes('logo.png')) ? img.src : "";
-                } else if (i === 29) {
+                } else if (i === 30) {
                     const pdfInput = td.querySelector('.pdf-data'); datosFila[i-1] = pdfInput ? pdfInput.value : "";
                 } else if (td.querySelector('select')) { 
                     datosFila[i-1] = td.querySelector('select').value;
@@ -720,7 +720,7 @@
                     const rowsData = jsonRows.slice(1);
                     let registrosInsert = [];
                     
-                    const columnasFechas = [1, 14, 15, 16, 17, 24]; 
+                    const columnasFechas = [1, 15, 16, 19, 20, 25]; 
 
                     function convertirFechaExcel(val) {
                         if (!val) return "";
@@ -739,8 +739,8 @@
                     }
 
                     rowsData.forEach(row => {
-                        let d = new Array(29).fill('');
-                        for (let i = 0; i < 29; i++) {
+                        let d = new Array(30).fill('');
+                        for (let i = 0; i < 30; i++) {
                             let val = row[i] !== undefined && row[i] !== null ? row[i] : '';
                             if (columnasFechas.includes(i)) { d[i] = convertirFechaExcel(val); } else { d[i] = String(val); }
                         }
@@ -748,7 +748,7 @@
                         const precinto = d[7] ? d[7].trim() : '';
                         if (precinto !== '') {
                             if (d[0].includes("Imagen Cargada")) d[0] = "";
-                            if (d[28].includes("PDF Cargado")) d[28] = "";
+                            if (d[29].includes("PDF Cargado")) d[29] = "";
                             registrosInsert.push({ precinto: precinto, datos: d });
                         }
                     });
@@ -834,7 +834,6 @@
                 }); datalist.appendChild(fragment);
             });
 
-            // RECOLECTAR Y ACTUALIZAR LA LISTA GLOBAL DE MOTIVOS
             const motivosSet = new Set(listaMotivos);
             filas.forEach(fila => {
                 if(!fila._datosOriginal) return;
@@ -934,11 +933,22 @@
 
             window.prendasAImportar.forEach(prenda => {
                 const precintoReal = prenda.precinto || prenda.id;
-                let datosNuevos = new Array(29).fill(''); 
-                datosNuevos[0] = prenda.fotoUrl || ''; datosNuevos[1] = fechaIngreso; datosNuevos[3] = prenda.proveedor || ''; 
-                datosNuevos[5] = prenda.coleccion || ''; datosNuevos[6] = prenda.genero || ''; datosNuevos[7] = precintoReal;
-                datosNuevos[8] = prenda.referencia || ''; datosNuevos[9] = prenda.talla || ''; datosNuevos[10] = prenda.clasificacion || '';
-                datosNuevos[11] = prenda.color || ''; datosNuevos[12] = prenda.cantidad || ''; datosNuevos[13] = prenda.linea || '';
+                let datosNuevos = new Array(30).fill(''); 
+                
+                datosNuevos[0] = prenda.fotoUrl || ''; 
+                datosNuevos[1] = fechaIngreso; 
+                datosNuevos[2] = prenda.registradoPor || prenda.disenador || ''; 
+                datosNuevos[3] = prenda.genero || ''; 
+                datosNuevos[4] = prenda.proveedor || ''; 
+                datosNuevos[5] = prenda.paisOrigen || prenda.pais_origen || ''; 
+                datosNuevos[6] = prenda.coleccion || ''; 
+                datosNuevos[7] = precintoReal;
+                datosNuevos[8] = prenda.referencia || ''; 
+                datosNuevos[9] = prenda.talla || ''; 
+                datosNuevos[10] = prenda.clasificacion || '';
+                datosNuevos[11] = prenda.color || ''; 
+                datosNuevos[12] = prenda.cantidad || ''; 
+                datosNuevos[13] = prenda.linea || '';
                 
                 registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
             });
@@ -1021,10 +1031,10 @@
             filas.forEach(fila => {
                 if(fila.style.display !== 'none') {
                     let filaData = [];
-                    for(let i = 1; i <= 29; i++) {
+                    for(let i = 1; i <= 30; i++) {
                         let val = fila._datosOriginal[i] || "";
                         if(i === 1) val = fila.querySelector('.img-foto-prenda') && !fila.querySelector('.img-foto-prenda').src.includes('logo.png') ? "🖼️ Imagen Cargada" : "";
-                        if(i === 29 && val.startsWith('data:application/pdf')) val = "📄 PDF Cargado en Sistema";
+                        if(i === 30 && val.startsWith('data:application/pdf')) val = "📄 PDF Cargado en Sistema";
                         filaData.push(val);
                     }
                     dataExcel.push(filaData);
