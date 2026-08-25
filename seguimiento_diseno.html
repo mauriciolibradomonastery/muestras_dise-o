@@ -338,7 +338,7 @@
             "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIM SHORT_MEN": 0.55,
             "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
             
-            // 🔥 ALIAS PARA LAS T-SHIRTS
+            // 🔥 ALIAS PARA LAS T-SHIRTS (Para que detecte variaciones)
             "T-SHIRT MEN_MEN": 0.68, "T-SHIRT_MEN": 0.68,
             "T-SHIRT_WOMEN": 0.6, "T-SHIRT WOMEN_WOMEN": 0.6,
             "T-SHIRT_": 0.68, 
@@ -411,22 +411,46 @@
             let celdaMin = celdas[63]; 
             let celdaReal = celdas[64]; 
 
-            // 1. Cálculo de Margen Mínimo
+            // ==========================================
+            // 1. GESTIÓN DEL MARGEN MÍNIMO (Inteligente y Editable)
+            // ==========================================
             let key = linea + "_" + genero;
             let keySinGen = linea + "_";
-            let margenMin = baseMargen[key] !== undefined ? baseMargen[key] : (baseMargen[keySinGen] !== undefined ? baseMargen[keySinGen] : null);
+            let margenMinBase = baseMargen[key] !== undefined ? baseMargen[key] : (baseMargen[keySinGen] !== undefined ? baseMargen[keySinGen] : null);
             
-            if (margenMin !== null) { celdaMin.innerText = formatPorcentaje(margenMin); } 
-            else { celdaMin.innerText = ""; }
+            let previousKey = celdaMin.dataset.autokey;
+            
+            if (previousKey === undefined) {
+                // Primera vez evaluando la fila
+                if (celdaMin.innerText.trim() === "" && margenMinBase !== null) {
+                    celdaMin.innerText = formatPorcentaje(margenMinBase);
+                }
+                celdaMin.dataset.autokey = key;
+            } else if (previousKey !== key) {
+                // El usuario cambió la Línea o el Género
+                if (margenMinBase !== null) {
+                    celdaMin.innerText = formatPorcentaje(margenMinBase);
+                } else {
+                    celdaMin.innerText = "";
+                }
+                celdaMin.dataset.autokey = key;
+            }
 
-            // Si ALGUNO de estos campos está vacío, NO calcula el Margen Real
+            // ==========================================
+            // 2. CÁLCULO DEL MARGEN REAL
+            // ==========================================
+            let margenMinActualText = celdaMin.innerText.trim();
+            let margenMinActual = parseNumeroInteligente(margenMinActualText);
+            let targetDecimal = isNaN(margenMinActual) ? null : (margenMinActual > 1 ? margenMinActual / 100 : margenMinActual);
+
+            // Regla estricta: Si falta un campo clave, borra el Margen Real y restaura estilo
             if (pais === "" || vdStr === "" || cpStr === "" || costoStr === "" || pvpStr === "") {
                 celdaReal.innerText = "";
                 celdaReal.style.color = "inherit";
+                celdaReal.style.backgroundColor = "#f1f5f9"; // Restaurar fondo default
                 return; 
             }
 
-            // 2. Cálculo del Margen Real
             let ventaDistRaw = parseNumeroInteligente(vdStr);
             let canalPropioRaw = parseNumeroInteligente(cpStr);
             let costoUnitRaw = parseNumeroInteligente(costoStr);
@@ -450,15 +474,28 @@
                     let margenReal = (precioPonderado - costoTotalPesos) / precioPonderado;
                     celdaReal.innerText = formatPorcentaje(margenReal);
                     
-                    if (margenMin !== null) {
-                        celdaReal.style.color = (margenReal >= margenMin) ? "#059669" : "#ef4444";
+                    // 🔥 COLOR CONDICIONAL: Verde o Azul Oscuro con letra Blanca
+                    if (targetDecimal !== null) {
+                        if (margenReal >= targetDecimal) {
+                            celdaReal.style.color = "#059669"; // Verde
+                            celdaReal.style.backgroundColor = "#f1f5f9"; // Fondo normal
+                        } else {
+                            celdaReal.style.color = "#ffffff"; // Letra blanca
+                            celdaReal.style.backgroundColor = "#1e3a8a"; // Azul oscuro
+                        }
+                    } else {
+                        celdaReal.style.color = "inherit";
+                        celdaReal.style.backgroundColor = "#f1f5f9";
                     }
                 } else { 
                     celdaReal.innerText = ""; 
+                    celdaReal.style.color = "inherit";
+                    celdaReal.style.backgroundColor = "#f1f5f9";
                 }
             } else { 
                 celdaReal.innerText = ""; 
                 celdaReal.style.color = "inherit"; 
+                celdaReal.style.backgroundColor = "#f1f5f9";
             }
         };
 
@@ -473,7 +510,7 @@
                 
                 if(colName) {
                     colName = colName.toUpperCase();
-                    if (colName === 'VENTA DISTRIBUIDOR' || colName === 'CANAL PROPIO') {
+                    if (colName === 'VENTA DISTRIBUIDOR' || colName === 'CANAL PROPIO' || colName === 'MARGEN MÍNIMO') {
                         td.textContent = formatPorcentaje(td.textContent);
                     } else if (colName === 'COSTO UNITARIO INICIAL' || colName === 'COSTO UNITARIO FINAL' || colName === 'PVP UNITARIO' || colName === 'PVP PACK') {
                         td.textContent = formatMoneda(td.textContent);
@@ -488,8 +525,8 @@
                     if (!td) return;
                     let tr = td.closest('tr');
                     let colIndex = Array.from(tr.children).indexOf(td);
-                    // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo Final), 59(Moneda), 60(PVP)
-                    if ([3, 5, 7, 8, 55, 56, 58, 59, 60].includes(colIndex)) {
+                    // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo), 59(Moneda), 60(PVP), 63(Margen Mínimo)
+                    if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
                         window.calcularMargenesFila(tr);
                     }
                 });
@@ -785,7 +822,8 @@
             }
             window.filtrarTablaCompleta(); 
             calcularKPIs(); 
-            window.actualizarDatalists();
+            // Después de cargar datos y calcular todos los márgenes, actualizamos los selectores del filtro:
+            setTimeout(window.actualizarDatalists, 200);
         }
 
         window.actualizarDatalists = function() {
@@ -941,8 +979,12 @@
                 } else if (colName.startsWith('FECHA')) { 
                     td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
                 
-                // 🔥 REGLAS DE FORMATO INTELIGENTE Y BLOQUEO DE MÁRGENES
-                } else if (colName === 'MARGEN MÍNIMO' || colName === 'MARGEN REAL') {
+                } else if (colName === 'MARGEN MÍNIMO') {
+                    td.contentEditable = "true";
+                    td.style.backgroundColor = "#f8fafc"; 
+                    td.style.fontWeight = "bold";
+                    td.textContent = formatPorcentaje(valorRaw);
+                } else if (colName === 'MARGEN REAL') {
                     td.contentEditable = "false";
                     td.style.backgroundColor = "#f1f5f9"; 
                     td.style.fontWeight = "bold";
@@ -968,7 +1010,8 @@
             `;
             tr.appendChild(tdAcciones); 
             
-            setTimeout(() => window.calcularMargenesFila(tr), 50);
+            // Auto-calcular fila cuando se crea
+            window.calcularMargenesFila(tr);
 
             return tr;
         }
