@@ -206,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- BOTÓN VOLVER MODIFICADO AL MENÚ -->
             <a href="menu.html" class="btn-back">⬅ Volver al Menú Principal</a>
         </div>
     </div>
@@ -384,32 +383,47 @@
 
         window.calcularMargenesFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
-            if (celdas.length < 64) return;
+            if (celdas.length < 64) return; // Validación de seguridad
 
+            // Índices de columnas teniendo en cuenta la columna [0] del Checkbox
             let linea = (celdas[3].innerText || "").toUpperCase().replace("EXTRAS", "").trim();
-            let pais = celdas[5].innerText;
+            let pais = (celdas[5].innerText || "").trim();
             let genero = (celdas[7].innerText || "").toUpperCase().trim();
-            let familia = celdas[8].innerText;
+            let familia = (celdas[8].innerText || "").toUpperCase().trim();
             
-            let ventaDistRaw = parseNumeroInteligente(celdas[56].innerText);
-            let canalPropioRaw = parseNumeroInteligente(celdas[57].innerText);
-            let costoUnitRaw = parseNumeroInteligente(celdas[59].innerText); // FOB USD Final
-            let pvpRaw = parseNumeroInteligente(celdas[61].innerText); // PVP Unitario
+            let vdStr = (celdas[55].innerText || "").trim(); // Columna: VENTA DISTRIBUIDOR
+            let cpStr = (celdas[56].innerText || "").trim(); // Columna: CANAL PROPIO
+            let costoStr = (celdas[58].innerText || "").trim(); // Columna: COSTO UNITARIO FINAL
+            let pvpStr = (celdas[60].innerText || "").trim(); // Columna: PVP UNITARIO
 
+            let celdaMin = celdas[63]; // Columna: MARGEN MÍNIMO
+            let celdaReal = celdas[64]; // Columna: MARGEN REAL
+
+            // 1. Cálculo de Margen Mínimo
             let key = linea + "_" + genero;
             let keySinGen = linea + "_";
             let margenMin = baseMargen[key] !== undefined ? baseMargen[key] : (baseMargen[keySinGen] !== undefined ? baseMargen[keySinGen] : null);
             
-            let celdaMin = celdas[64];
-            let celdaReal = celdas[65];
-
             if (margenMin !== null) { celdaMin.innerText = formatPorcentaje(margenMin); } 
             else { celdaMin.innerText = ""; }
+
+            // 🔥 NUEVA REGLA ESTRICTA: Si ALGUNO de estos 5 campos está vacío, NO calcula el Margen Real
+            if (pais === "" || vdStr === "" || cpStr === "" || costoStr === "" || pvpStr === "") {
+                celdaReal.innerText = "";
+                celdaReal.style.color = "inherit";
+                return; // Detiene la función aquí mismo
+            }
+
+            // 2. Si todos los campos están llenos, procede a calcular el Margen Real
+            let ventaDistRaw = parseNumeroInteligente(vdStr);
+            let canalPropioRaw = parseNumeroInteligente(cpStr);
+            let costoUnitRaw = parseNumeroInteligente(costoStr);
+            let pvpRaw = parseNumeroInteligente(pvpStr);
 
             let vd = ventaDistRaw > 1 ? ventaDistRaw / 100 : ventaDistRaw;
             let cp = canalPropioRaw > 1 ? canalPropioRaw / 100 : canalPropioRaw;
 
-            if (costoUnitRaw > 0 && pvpRaw > 0 && (vd > 0 || cp > 0)) {
+            if (costoUnitRaw > 0 && pvpRaw > 0) {
                 let nac = obtenerNacionalizacion(pais, familia);
                 let costoCertificado = (linea.includes("CAP") || linea.includes("GORRA")) ? 8200 : 3100;
                 let costoTotalPesos = (costoUnitRaw * (1 + nac) * window.trmDolarGlobal) + costoCertificado; 
@@ -424,8 +438,13 @@
                     if (margenMin !== null) {
                         celdaReal.style.color = (margenReal >= margenMin) ? "#059669" : "#ef4444";
                     }
-                } else { celdaReal.innerText = ""; }
-            } else { celdaReal.innerText = ""; celdaReal.style.color = "inherit"; }
+                } else { 
+                    celdaReal.innerText = ""; 
+                }
+            } else { 
+                celdaReal.innerText = ""; 
+                celdaReal.style.color = "inherit"; 
+            }
         };
 
         // Disparador de formato al desenfocar (salir) de la celda editada
@@ -435,7 +454,7 @@
                 if (!td) return;
                 let tr = td.closest('tr');
                 let colIndex = Array.from(tr.children).indexOf(td);
-                let colName = allCols[colIndex - 1]; // -1 por el checkbox
+                let colName = allCols[colIndex - 1]; // -1 por el checkbox inicial
                 
                 if(colName) {
                     colName = colName.toUpperCase();
@@ -453,7 +472,8 @@
                 if (!td) return;
                 let tr = td.closest('tr');
                 let colIndex = Array.from(tr.children).indexOf(td);
-                if ([3, 5, 7, 8, 56, 57, 59, 61].includes(colIndex)) {
+                // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo Final), 60(PVP)
+                if ([3, 5, 7, 8, 55, 56, 58, 60].includes(colIndex)) {
                     window.calcularMargenesFila(tr);
                 }
             });
