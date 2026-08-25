@@ -324,18 +324,27 @@
         const baseMargen = {
             "BACK PACK_MEN": 0.6, "BELT_MEN": 0.6, "BLUSON_": 0.65, "BODY_WOMEN": 0.7, 
             "BOXER_MEN": 0.5, "SHORT_WOMEN": 0.55, "CAP_MEN": 0.8, "CAP_WOMEN": 0.8, 
-            "CARD HOLER_": 0.65, "PANT_MEN": 0.6, "PANT_WOMEN": 0.6, "CROPTOP_WOMEN": 0.6, 
+            "CARD HOLER_": 0.65, "CARD HOLDER_": 0.65,
+            "PANT_MEN": 0.6, "PANT_WOMEN": 0.6, "CROPTOP_WOMEN": 0.6, 
             "SHORT_MEN": 0.55, "DRESS_WOMEN": 0.65, "DUFFLE BAG_MEN": 0.65, "FANNY PACK_MEN": 0.7, 
             "FRAGANCE_": 0.4, "HAT_": 0.7, "HOODIE_MEN": 0.55, "HOODIE_WOMEN": 0.55, 
             "JEAN_MEN": 0.65, "JEAN_WOMEN": 0.65, "JOGGER_MEN": 0.55, "JOGGER_WOMEN": 0.55, 
             "KNITTED DRESS_": 0.6, "KNITTED TOP_": 0.6, "LONG SLEEVE_": 0.6, "LUGGAGE_": 0.45, 
-            "BRA_WOMEN": 0.55, "PANTY_WOMEN": 0.55, "POCKET HOLER_": 0.65, "POLO_MEN": 0.6, 
-            "POLO_WOMEN": 0.6, "JACKET_MEN": 0.55, "JACKET_WOMEN": 0.55, "VEST_WOMEN": 0.55, 
+            "BRA_WOMEN": 0.55, "PANTY_WOMEN": 0.55, 
+            "POCKET HOLER_": 0.65, "POCKET HOLDER_": 0.65,
+            "POLO_MEN": 0.6, "POLO_WOMEN": 0.6, "JACKET_MEN": 0.55, "JACKET_WOMEN": 0.55, "VEST_WOMEN": 0.55, 
             "SANDAL_UNISEX": 0.7, "SHIRT_MEN": 0.6, "SHOULDER BAG_WOMEN": 0.6, "SILK SET_": 0.5, 
             "STILETTO_": 0.5, "SNEAKER_MEN": 0.5, "SNEAKER_WOMEN": 0.5, "SOCKS_": 0.6, 
-            "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
-            "T-SHIRT MEN_MEN": 0.68, "T-SHIRT OVERSIZED_MEN": 0.68, "T-SHIRT PACK_MEN": 0.55, 
-            "T-SHIRT WOMEN_WOMEN": 0.6, "WALLET_MEN": 0.65, "SKIRT_WOMEN": 0.6, "LEGGIN_WOMEN": 0.5
+            "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIM SHORT_MEN": 0.55,
+            "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
+            
+            // 🔥 ALIAS PARA LAS T-SHIRTS
+            "T-SHIRT MEN_MEN": 0.68, "T-SHIRT_MEN": 0.68,
+            "T-SHIRT_WOMEN": 0.6, "T-SHIRT WOMEN_WOMEN": 0.6,
+            "T-SHIRT_": 0.68, 
+
+            "T-SHIRT OVERSIZED_MEN": 0.68, "T-SHIRT PACK_MEN": 0.55, 
+            "WALLET_MEN": 0.65, "SKIRT_WOMEN": 0.6, "LEGGIN_WOMEN": 0.5
         };
 
         function parseNumeroInteligente(str) {
@@ -383,21 +392,24 @@
 
         window.calcularMargenesFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
-            if (celdas.length < 64) return; // Validación de seguridad
+            if (celdas.length < 64) return;
 
-            // Índices de columnas teniendo en cuenta la columna [0] del Checkbox
             let linea = (celdas[3].innerText || "").toUpperCase().replace("EXTRAS", "").trim();
             let pais = (celdas[5].innerText || "").trim();
             let genero = (celdas[7].innerText || "").toUpperCase().trim();
             let familia = (celdas[8].innerText || "").toUpperCase().trim();
             
-            let vdStr = (celdas[55].innerText || "").trim(); // Columna: VENTA DISTRIBUIDOR
-            let cpStr = (celdas[56].innerText || "").trim(); // Columna: CANAL PROPIO
-            let costoStr = (celdas[58].innerText || "").trim(); // Columna: COSTO UNITARIO FINAL
-            let pvpStr = (celdas[60].innerText || "").trim(); // Columna: PVP UNITARIO
+            let vdStr = (celdas[55].innerText || "").trim(); 
+            let cpStr = (celdas[56].innerText || "").trim(); 
+            let costoStr = (celdas[58].innerText || "").trim(); 
+            
+            let monedaSelect = celdas[59].querySelector('select');
+            let moneda = (monedaSelect ? monedaSelect.value : celdas[59].innerText).trim().toUpperCase();
 
-            let celdaMin = celdas[63]; // Columna: MARGEN MÍNIMO
-            let celdaReal = celdas[64]; // Columna: MARGEN REAL
+            let pvpStr = (celdas[60].innerText || "").trim(); 
+
+            let celdaMin = celdas[63]; 
+            let celdaReal = celdas[64]; 
 
             // 1. Cálculo de Margen Mínimo
             let key = linea + "_" + genero;
@@ -407,14 +419,14 @@
             if (margenMin !== null) { celdaMin.innerText = formatPorcentaje(margenMin); } 
             else { celdaMin.innerText = ""; }
 
-            // 🔥 NUEVA REGLA ESTRICTA: Si ALGUNO de estos 5 campos está vacío, NO calcula el Margen Real
+            // Si ALGUNO de estos campos está vacío, NO calcula el Margen Real
             if (pais === "" || vdStr === "" || cpStr === "" || costoStr === "" || pvpStr === "") {
                 celdaReal.innerText = "";
                 celdaReal.style.color = "inherit";
-                return; // Detiene la función aquí mismo
+                return; 
             }
 
-            // 2. Si todos los campos están llenos, procede a calcular el Margen Real
+            // 2. Cálculo del Margen Real
             let ventaDistRaw = parseNumeroInteligente(vdStr);
             let canalPropioRaw = parseNumeroInteligente(cpStr);
             let costoUnitRaw = parseNumeroInteligente(costoStr);
@@ -426,7 +438,10 @@
             if (costoUnitRaw > 0 && pvpRaw > 0) {
                 let nac = obtenerNacionalizacion(pais, familia);
                 let costoCertificado = (linea.includes("CAP") || linea.includes("GORRA")) ? 8200 : 3100;
-                let costoTotalPesos = (costoUnitRaw * (1 + nac) * window.trmDolarGlobal) + costoCertificado; 
+                
+                let multiplicadorTRM = (moneda === 'COP') ? 1 : window.trmDolarGlobal;
+                
+                let costoTotalPesos = (costoUnitRaw * (1 + nac) * multiplicadorTRM) + costoCertificado; 
                 
                 let precioSinIVA = pvpRaw / 1.19;
                 let precioPonderado = (precioSinIVA * cp) + ((precioSinIVA * 0.5) * vd);
@@ -466,16 +481,18 @@
                 }
             });
 
-            // Recálculo automático al escribir en columnas clave
-            document.getElementById('tableBody').addEventListener('input', function(e) {
-                let td = e.target.closest('td');
-                if (!td) return;
-                let tr = td.closest('tr');
-                let colIndex = Array.from(tr.children).indexOf(td);
-                // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo Final), 60(PVP)
-                if ([3, 5, 7, 8, 55, 56, 58, 60].includes(colIndex)) {
-                    window.calcularMargenesFila(tr);
-                }
+            // Recálculo automático al escribir o cambiar selectores en columnas clave
+            ['input', 'change'].forEach(evt => {
+                document.getElementById('tableBody').addEventListener(evt, function(e) {
+                    let td = e.target.closest('td');
+                    if (!td) return;
+                    let tr = td.closest('tr');
+                    let colIndex = Array.from(tr.children).indexOf(td);
+                    // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo Final), 59(Moneda), 60(PVP)
+                    if ([3, 5, 7, 8, 55, 56, 58, 59, 60].includes(colIndex)) {
+                        window.calcularMargenesFila(tr);
+                    }
+                });
             });
         });
         // ==========================================
@@ -924,7 +941,7 @@
                 } else if (colName.startsWith('FECHA')) { 
                     td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
                 
-                // 🔥 NUEVAS REGLAS DE FORMATO INTELIGENTE Y BLOQUEO DE MÁRGENES
+                // 🔥 REGLAS DE FORMATO INTELIGENTE Y BLOQUEO DE MÁRGENES
                 } else if (colName === 'MARGEN MÍNIMO' || colName === 'MARGEN REAL') {
                     td.contentEditable = "false";
                     td.style.backgroundColor = "#f1f5f9"; 
