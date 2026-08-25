@@ -304,6 +304,163 @@
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
 
+        // ==========================================
+        // 🔥 LÓGICA DEL SIMULADOR DE COSTOS Y FORMATOS
+        // ==========================================
+        window.trmDolarGlobal = 3500;
+
+        window.actualizarTrmGlobal = function(val) {
+            let newTrm = parseFloat(val);
+            if(!isNaN(newTrm) && newTrm > 0) {
+                window.trmDolarGlobal = newTrm;
+                const filas = document.getElementById('tableBody').querySelectorAll('tr');
+                filas.forEach(tr => {
+                    if(tr.style.display !== 'none') {
+                        window.calcularMargenesFila(tr);
+                    }
+                });
+            }
+        };
+
+        const baseMargen = {
+            "BACK PACK_MEN": 0.6, "BELT_MEN": 0.6, "BLUSON_": 0.65, "BODY_WOMEN": 0.7, 
+            "BOXER_MEN": 0.5, "SHORT_WOMEN": 0.55, "CAP_MEN": 0.8, "CAP_WOMEN": 0.8, 
+            "CARD HOLER_": 0.65, "PANT_MEN": 0.6, "PANT_WOMEN": 0.6, "CROPTOP_WOMEN": 0.6, 
+            "SHORT_MEN": 0.55, "DRESS_WOMEN": 0.65, "DUFFLE BAG_MEN": 0.65, "FANNY PACK_MEN": 0.7, 
+            "FRAGANCE_": 0.4, "HAT_": 0.7, "HOODIE_MEN": 0.55, "HOODIE_WOMEN": 0.55, 
+            "JEAN_MEN": 0.65, "JEAN_WOMEN": 0.65, "JOGGER_MEN": 0.55, "JOGGER_WOMEN": 0.55, 
+            "KNITTED DRESS_": 0.6, "KNITTED TOP_": 0.6, "LONG SLEEVE_": 0.6, "LUGGAGE_": 0.45, 
+            "BRA_WOMEN": 0.55, "PANTY_WOMEN": 0.55, "POCKET HOLER_": 0.65, "POLO_MEN": 0.6, 
+            "POLO_WOMEN": 0.6, "JACKET_MEN": 0.55, "JACKET_WOMEN": 0.55, "VEST_WOMEN": 0.55, 
+            "SANDAL_UNISEX": 0.7, "SHIRT_MEN": 0.6, "SHOULDER BAG_WOMEN": 0.6, "SILK SET_": 0.5, 
+            "STILETTO_": 0.5, "SNEAKER_MEN": 0.5, "SNEAKER_WOMEN": 0.5, "SOCKS_": 0.6, 
+            "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
+            "T-SHIRT MEN_MEN": 0.68, "T-SHIRT OVERSIZED_MEN": 0.68, "T-SHIRT PACK_MEN": 0.55, 
+            "T-SHIRT WOMEN_WOMEN": 0.6, "WALLET_MEN": 0.65, "SKIRT_WOMEN": 0.6, "LEGGIN_WOMEN": 0.5
+        };
+
+        function parseNumeroInteligente(str) {
+            if (str === "" || str === null || str === undefined) return 0;
+            if (typeof str === 'number') return str;
+            let s = String(str).trim().replace(/\$|\s|%/g, '').replace(/,/g, '');
+            if ((s.match(/\./g) || []).length > 1) { s = s.replace(/\./g, ''); } 
+            else if (/\.\d{3}$/.test(s)) { s = s.replace(/\./g, ''); }
+            return parseFloat(s) || 0;
+        }
+
+        function formatMoneda(val) {
+            if(val === "" || val == null) return "";
+            let num = typeof val === 'number' ? val : parseNumeroInteligente(val);
+            if(num === 0 && String(val).trim() === "") return "";
+            if (num % 1 !== 0) {
+                return "$ " + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } else {
+                return "$ " + num.toLocaleString('es-CO'); 
+            }
+        }
+
+        function formatPorcentaje(val) {
+            if(val === "" || val == null || isNaN(parseNumeroInteligente(val))) return "";
+            let num = typeof val === 'number' ? val : parseNumeroInteligente(val);
+            if(num === 0 && String(val).trim() === "") return "";
+            let pct = num > 1 ? num : num * 100;
+            return parseFloat(pct.toFixed(2)) + "%";
+        }
+
+        function obtenerNacionalizacion(paisOrigen, familia) {
+            let pais = (paisOrigen || "").trim().toUpperCase();
+            let fam = (familia || "").trim().toUpperCase();
+            let esPrenda = fam.includes("PRENDA");
+            
+            if (pais.includes("COLOMBIA")) return 0.0;
+            if (pais.includes("PER")) return 0.03;
+            if (pais.includes("ESPAÑA") || pais.includes("ESPANA")) return 0.140954;
+            if (pais.includes("PORTUGAL") || pais.includes("ITALY SIN") || pais.includes("ITALIA SIN")) return 0.540954;
+            if (pais.includes("ITALY CON") || pais.includes("ITALIA CON")) return 0.15;
+            if (pais.includes("TURQU")) return 0.40;
+            if (pais.includes("CHINA")) return esPrenda ? 0.60 : 0.40;
+            return 0.60;
+        }
+
+        window.calcularMargenesFila = function(tr) {
+            const celdas = tr.querySelectorAll('td');
+            if (celdas.length < 64) return;
+
+            let linea = (celdas[3].innerText || "").toUpperCase().replace("EXTRAS", "").trim();
+            let pais = celdas[5].innerText;
+            let genero = (celdas[7].innerText || "").toUpperCase().trim();
+            let familia = celdas[8].innerText;
+            
+            let ventaDistRaw = parseNumeroInteligente(celdas[56].innerText);
+            let canalPropioRaw = parseNumeroInteligente(celdas[57].innerText);
+            let costoUnitRaw = parseNumeroInteligente(celdas[59].innerText); // FOB USD Final
+            let pvpRaw = parseNumeroInteligente(celdas[61].innerText); // PVP Unitario
+
+            let key = linea + "_" + genero;
+            let keySinGen = linea + "_";
+            let margenMin = baseMargen[key] !== undefined ? baseMargen[key] : (baseMargen[keySinGen] !== undefined ? baseMargen[keySinGen] : null);
+            
+            let celdaMin = celdas[64];
+            let celdaReal = celdas[65];
+
+            if (margenMin !== null) { celdaMin.innerText = formatPorcentaje(margenMin); } 
+            else { celdaMin.innerText = ""; }
+
+            let vd = ventaDistRaw > 1 ? ventaDistRaw / 100 : ventaDistRaw;
+            let cp = canalPropioRaw > 1 ? canalPropioRaw / 100 : canalPropioRaw;
+
+            if (costoUnitRaw > 0 && pvpRaw > 0 && (vd > 0 || cp > 0)) {
+                let nac = obtenerNacionalizacion(pais, familia);
+                let costoCertificado = (linea.includes("CAP") || linea.includes("GORRA")) ? 8200 : 3100;
+                let costoTotalPesos = (costoUnitRaw * (1 + nac) * window.trmDolarGlobal) + costoCertificado; 
+                
+                let precioSinIVA = pvpRaw / 1.19;
+                let precioPonderado = (precioSinIVA * cp) + ((precioSinIVA * 0.5) * vd);
+                
+                if (precioPonderado > 0) {
+                    let margenReal = (precioPonderado - costoTotalPesos) / precioPonderado;
+                    celdaReal.innerText = formatPorcentaje(margenReal);
+                    
+                    if (margenMin !== null) {
+                        celdaReal.style.color = (margenReal >= margenMin) ? "#059669" : "#ef4444";
+                    }
+                } else { celdaReal.innerText = ""; }
+            } else { celdaReal.innerText = ""; celdaReal.style.color = "inherit"; }
+        };
+
+        // Disparador de formato al desenfocar (salir) de la celda editada
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tableBody').addEventListener('focusout', function(e) {
+                let td = e.target.closest('td');
+                if (!td) return;
+                let tr = td.closest('tr');
+                let colIndex = Array.from(tr.children).indexOf(td);
+                let colName = allCols[colIndex - 1]; // -1 por el checkbox
+                
+                if(colName) {
+                    colName = colName.toUpperCase();
+                    if (colName === 'VENTA DISTRIBUIDOR' || colName === 'CANAL PROPIO') {
+                        td.textContent = formatPorcentaje(td.textContent);
+                    } else if (colName === 'COSTO UNITARIO INICIAL' || colName === 'COSTO UNITARIO FINAL' || colName === 'PVP UNITARIO' || colName === 'PVP PACK') {
+                        td.textContent = formatMoneda(td.textContent);
+                    }
+                }
+            });
+
+            // Recálculo automático al escribir en columnas clave
+            document.getElementById('tableBody').addEventListener('input', function(e) {
+                let td = e.target.closest('td');
+                if (!td) return;
+                let tr = td.closest('tr');
+                let colIndex = Array.from(tr.children).indexOf(td);
+                if ([3, 5, 7, 8, 56, 57, 59, 61].includes(colIndex)) {
+                    window.calcularMargenesFila(tr);
+                }
+            });
+        });
+        // ==========================================
+
+
         let miNombre = localStorage.getItem('wips_username');
         if (!miNombre) {
             miNombre = prompt("Para mostrarte en línea, ¿Cuál es tu nombre?") || "Anónimo";
@@ -311,7 +468,7 @@
         }
         
         const misIniciales = miNombre.substring(0, 2).toUpperCase();
-        const paletaColores = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185'];
+        const paletaColores = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#c084fc', '#e879f9', '#f472b6', '#fb7185'];
         
         let miColor = localStorage.getItem('wips_usercolor');
         if(!miColor) {
@@ -532,7 +689,12 @@
                 if(colUpper === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
-                thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
+                if (colUpper === 'MARGEN REAL') {
+                    thTitle.innerHTML = `${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                } else {
+                    thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
+                }
+                
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
                 trHeader.appendChild(thTitle); 
                 initResizer(thTitle, columnIndex); 
@@ -683,6 +845,10 @@
                     const select = celdas[i].querySelector('select'); datosFila.push(select ? select.value : "");
                 } else if (colName.startsWith('FECHA')) { 
                     const dateInp = celdas[i].querySelector('input[type="date"]'); datosFila.push(dateInp ? dateInp.value : celdas[i].innerText.trim());
+                } else if (colName === 'VENTA DISTRIBUIDOR' || colName === 'CANAL PROPIO' || colName === 'MARGEN MÍNIMO' || colName === 'MARGEN REAL') {
+                    datosFila.push(celdas[i].innerText.trim());
+                } else if (colName === 'COSTO UNITARIO INICIAL' || colName === 'COSTO UNITARIO FINAL' || colName === 'PVP UNITARIO' || colName === 'PVP PACK') {
+                    datosFila.push(celdas[i].innerText.trim());
                 } else { 
                     datosFila.push(celdas[i].innerText.trim());
                 }
@@ -737,6 +903,18 @@
                     td.innerHTML = `<select class="select-input"><option value=""></option><option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option><option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option><option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option></select>`;
                 } else if (colName.startsWith('FECHA')) { 
                     td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
+                
+                // 🔥 NUEVAS REGLAS DE FORMATO INTELIGENTE Y BLOQUEO DE MÁRGENES
+                } else if (colName === 'MARGEN MÍNIMO' || colName === 'MARGEN REAL') {
+                    td.contentEditable = "false";
+                    td.style.backgroundColor = "#f1f5f9"; 
+                    td.style.fontWeight = "bold";
+                    td.textContent = formatPorcentaje(valorRaw);
+                } else if (colName === 'VENTA DISTRIBUIDOR' || colName === 'CANAL PROPIO') {
+                    td.contentEditable = "true"; td.textContent = formatPorcentaje(valorRaw);
+                } else if (colName === 'COSTO UNITARIO INICIAL' || colName === 'COSTO UNITARIO FINAL' || colName === 'PVP UNITARIO' || colName === 'PVP PACK') {
+                    td.contentEditable = "true"; td.textContent = formatMoneda(valorRaw);
+                
                 } else { 
                     td.contentEditable = "true"; td.textContent = valorRaw; 
                 }
@@ -751,7 +929,11 @@
                 <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
                 <button class="btn-delete" onclick="eliminarFila(this)" title="Eliminar Permanente">🗑️</button>
             `;
-            tr.appendChild(tdAcciones); return tr;
+            tr.appendChild(tdAcciones); 
+            
+            setTimeout(() => window.calcularMargenesFila(tr), 50);
+
+            return tr;
         }
 
         window.calcularKPIs = function() {
@@ -967,8 +1149,8 @@
                 let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
                 const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
                 if(inputA) valorA = inputA.value; if(inputB) valorB = inputB.value;
-                let numA = parseFloat(valorA); let numB = parseFloat(valorB);
-                if (!isNaN(numA) && !isNaN(numB) && !inputA) return ordenAscendente ? numA - numB : numB - numA;
+                let numA = parseNumeroInteligente(valorA); let numB = parseNumeroInteligente(valorB);
+                if (!isNaN(numA) && !isNaN(numB) && !inputA && valorA !== "" && valorB !== "") return ordenAscendente ? numA - numB : numB - numA;
                 if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
             });
             filas.forEach(fila => tbody.appendChild(fila));
