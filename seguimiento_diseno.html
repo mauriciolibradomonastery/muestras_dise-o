@@ -101,6 +101,7 @@
         .btn-save-global:hover { background-color: #059669; transform: translateY(-1px); }
         .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
         
+        /* 🔥 CLASE NUEVA: Estado Rojo para Cambios Pendientes */
         .btn-save-global.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); animation: pulseUnsaved 2s infinite; }
         .btn-save-global.unsaved:hover { background-color: #dc2626; }
         @keyframes pulseUnsaved { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
@@ -137,7 +138,6 @@
         .col-fija-ref { 
             position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; 
         }
-        /* Clase especial para REFERENCIA para destacarla sutilmente (Gris muy oscuro y semibold) */
         .col-referencia { font-weight: 600 !important; color: #111827 !important; }
 
         .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
@@ -855,7 +855,7 @@
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 if (colUpper === 'MARGEN REAL') {
-                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span> <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
                 } else {
                     thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span>`;
                 }
@@ -928,6 +928,7 @@
                 
                 const uniqueValues = new Set();
                 filas.forEach(fila => {
+                    // Ahora SOLO incluye en la lista a las filas que están VISIBLES actualmente
                     if(!fila.dataset.id || fila.style.display === 'none') return; 
                     
                     const celdas = fila.querySelectorAll('td');
@@ -1264,7 +1265,7 @@
             });
             actualizarContador(); 
             window.actualizarSeleccion(); 
-            window.actualizarDatalists(); 
+            window.actualizarDatalists(); // Filtro dinámico: solo lo visible a las listas
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
@@ -1314,7 +1315,7 @@
         window.eliminarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             let idsToDelete = []; let rowsToRemove = [];
-            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none') { if(tr.dataset.id) idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
+            checkboxes.forEach(cb => { const tr = closest('tr'); if(tr.style.display !== 'none') { if(tr.dataset.id) idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
 
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás COMPLETAMENTE SEGURO de eliminar definitivamente ${rowsToRemove.length} muestras?`)) return;
@@ -1360,9 +1361,10 @@
             btn.classList.remove('unsaved');
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let registrosActualizar = []; 
+            let promesasUpdate = []; 
             let registrosNuevos = []; 
             let filasNuevasDOM = [];
+            let filasActualizadasDOM = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
@@ -1371,7 +1373,9 @@
 
                 if (tr.dataset.id) { 
                     if (tr._hashGuardado === hashActual) continue; 
-                    registrosActualizar.push({ id: tr.dataset.id, datos: datosFila }); 
+                    // CORRECCIÓN: Usamos UPDATE directamente para evitar el error del ID en la base de datos
+                    promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id) );
+                    filasActualizadasDOM.push(tr);
                 } 
                 else { 
                     registrosNuevos.push({ datos: datosFila }); 
@@ -1379,7 +1383,7 @@
                 }
             }
 
-            if (registrosActualizar.length === 0 && registrosNuevos.length === 0) {
+            if (promesasUpdate.length === 0 && registrosNuevos.length === 0) {
                 btn.innerHTML = "✅ Cambios Guardados"; 
                 window.resetearCambios();
                 setTimeout(() => { 
@@ -1392,38 +1396,34 @@
             }
 
             try {
-                const chunkSize = 5; 
-
-                if(registrosActualizar.length > 0) {
-                    for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
-                        btn.innerHTML = `⏳ Actualizando... (${i + 1} de ${registrosActualizar.length})`;
-                        const chunk = registrosActualizar.slice(i, i + chunkSize);
-                        const { error } = await supabase.from('wips_muestras').upsert(chunk);
-                        if (error) throw error;
-                    }
+                // 1. Guardar las filas editadas (Updates)
+                if (promesasUpdate.length > 0) {
+                    btn.innerHTML = `⏳ Actualizando (${promesasUpdate.length})...`;
+                    const resultados = await Promise.all(promesasUpdate);
+                    for (let res of resultados) { if (res.error) throw res.error; }
                 }
                 
+                // 2. Guardar las filas nuevas (Insert) por lotes
                 if(registrosNuevos.length > 0) {
+                    const chunkSize = 5; 
                     for (let i = 0; i < registrosNuevos.length; i += chunkSize) {
                         btn.innerHTML = `⏳ Creando nuevos... (${i + 1} de ${registrosNuevos.length})`;
                         const chunk = registrosNuevos.slice(i, i + chunkSize);
                         const { data: inserted, error } = await supabase.from('wips_muestras').insert(chunk).select();
                         if (error) throw error;
                         
-                        let newRowsIndex = 0;
-                        for (let tr of filas) {
-                            if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
-                                tr.dataset.id = inserted[newRowsIndex].id;
-                                newRowsIndex++;
-                            }
+                        for (let j = 0; j < inserted.length; j++) {
+                            filasNuevasDOM[i + j].dataset.id = inserted[j].id;
                         }
                     }
                 }
 
-                for (let tr of filas) {
-                    if (tr.style.display !== 'none' && tr.dataset.id) {
-                        tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
-                    }
+                // 3. Sellar la memoria para saber que ya todo esto guardó
+                for (let tr of filasActualizadasDOM) {
+                    tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
+                }
+                for (let tr of filasNuevasDOM) {
+                    tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
                 }
 
                 btn.innerHTML = "✅ Cambios Guardados";
@@ -1440,7 +1440,7 @@
 
             } catch (err) {
                 console.error(err); 
-                alert("Hubo un error al guardar masivamente: " + err.message); 
+                alert("Hubo un error al guardar: " + err.message); 
                 window.marcarCambios();
                 btn.disabled = false;
             }
