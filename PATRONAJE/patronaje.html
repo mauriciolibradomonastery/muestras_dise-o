@@ -32,10 +32,11 @@
         .btn { padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; color: #374151; background-color: #ffffff; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); transition: all 0.2s; }
         .btn:hover { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
         
-        .btn-save { background-color: #10b981; color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); } 
+        .btn-save { background-color: #10b981; color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; } 
         .btn-save:hover { background-color: #059669; color: white; transform: translateY(-1px); }
-        .btn-save.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+        .btn-save.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); animation: pulseUnsaved 2s infinite; }
         .btn-save.unsaved:hover { background-color: #dc2626; }
+        @keyframes pulseUnsaved { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
         .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; display: none; }
         .btn-bulk-delete:hover { background-color: #fecdd3; color: #9f1239; }
@@ -69,7 +70,6 @@
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; }
 
         .calc-cell { font-weight: bold; text-align: center; }
-        /* El color ahora se hereda o se sobreescribe en JS para que cambie a blanco si es necesario */
         .estado-cell { font-weight: bold; text-align: center; } 
 
         /* MODALES */
@@ -259,7 +259,7 @@
                     td.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
                             <a href="${base64}" download="Auditoria.pdf" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
-                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
                             <input type="hidden" value="${base64}" class="pdf-data">
                         </div>`;
                     recalcularFila(td.closest('tr'));
@@ -307,16 +307,16 @@
             if (fEntFich !== "") estadoCalculado = "Finalizado";
             celdas[15].textContent = estadoCalculado;
 
-            // COLOR AUTOMÁTICO DE FILA Y LETRA (Roja = Blanco, Resto = Oscuro)
+            // COLOR AUTOMÁTICO DE FILA Y LETRA
             let bgColor = '#ffffff'; 
-            let textColor = '#374151'; // Gris oscuro normal
+            let textColor = '#374151'; 
             
             if (estadoCalculado === 'Pendiente') { 
                 bgColor = '#ef4444'; 
-                textColor = '#ffffff'; // Letra Blanca para fondo rojo
+                textColor = '#ffffff'; 
             } else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') { 
                 bgColor = '#fef3c7'; 
-                textColor = '#111827'; // Letra muy oscura para fondo amarillo
+                textColor = '#111827'; 
             } else if (estadoCalculado === 'Finalizado') { 
                 bgColor = '#4ade80'; 
                 textColor = '#111827'; 
@@ -329,18 +329,15 @@
                 td.style.backgroundColor = bgColor;
                 td.style.color = textColor;
                 
-                // Asegurarnos de que los inputs y selects adentro también hereden el color blanco/negro
                 let inps = td.querySelectorAll('input, select');
                 inps.forEach(inp => inp.style.color = textColor);
 
-                // Asegurar que el link del PDF se vea bien
                 let pdfLink = td.querySelector('.pdf-link');
                 if (pdfLink) {
                     pdfLink.style.color = (estadoCalculado === 'Pendiente') ? '#ffffff' : '#ef4444';
                 }
             });
 
-            // Color del texto de "Estado"
             celdas[15].style.color = (estadoCalculado === 'Pendiente') ? '#ffffff' : '#2563eb';
 
             // LEAD TIMES 
@@ -382,7 +379,6 @@
             const trHeader = document.getElementById('tableHeaderRow');
             if(!trHeader) return;
             const ths = trHeader.querySelectorAll('th');
-            // Como ocultamos FOTO, revisamos la longitud basada en las columnas visibles (restando 1)
             if(ths.length < 15) return;
             
             let leftPrecinto = ths[0].offsetWidth; 
@@ -654,7 +650,7 @@
                 } else if (td.querySelector('input[type="text"]')) { 
                     datosFila[i-1] = td.querySelector('input[type="text"]').value;
                 } else { 
-                    datosFila[i-1] = td.textContent.trim(); // Se cambia innerText por textContent por la celda oculta de Foto
+                    datosFila[i-1] = td.textContent.trim(); 
                 }
             } return datosFila;
         };
@@ -668,8 +664,10 @@
             btn.classList.remove('unsaved');
             
             const filas = document.getElementById('tableBody').querySelectorAll('tr'); 
-            let registrosActualizar = [];
+            let promesasUpdate = [];
+            let filasActualizadasDOM = [];
             let registrosNuevos = [];
+            let filasNuevasDOM = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
@@ -678,13 +676,16 @@
                 
                 if (tr.dataset.id) { 
                     if (tr._hashGuardado === hashActual) continue; 
-                    registrosActualizar.push({ id: tr.dataset.id, datos: datosFila, precinto: datosFila[7] }); 
+                    // 🔥 USAMOS UPDATE DIRECTO PARA NO CHOCAR CON LOS ID DE SUPABASE
+                    promesasUpdate.push( client.from('dpto_tecnico').update({ datos: datosFila, precinto: datosFila[7] }).eq('id', tr.dataset.id) ); 
+                    filasActualizadasDOM.push(tr);
                 } else {
                     registrosNuevos.push({ datos: datosFila, precinto: datosFila[7] }); 
+                    filasNuevasDOM.push(tr);
                 }
             }
 
-            if (registrosActualizar.length === 0 && registrosNuevos.length === 0) {
+            if (promesasUpdate.length === 0 && registrosNuevos.length === 0) {
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
                 hayCambiosSinGuardar = false;
                 setTimeout(() => { 
@@ -695,17 +696,15 @@
             }
 
             try {
-                const chunkSize = 5; 
-
-                if(registrosActualizar.length > 0) {
-                    for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
-                        btn.innerHTML = `⏳ Actualizando... (${i + 1} de ${registrosActualizar.length})`;
-                        const chunk = registrosActualizar.slice(i, i + chunkSize);
-                        const { error } = await client.from('dpto_tecnico').upsert(chunk);
-                        if (error) throw error;
-                    }
+                // Guardar actualizaciones de lo que ya existía
+                if (promesasUpdate.length > 0) {
+                    btn.innerHTML = `⏳ Actualizando (${promesasUpdate.length})...`;
+                    const resultados = await Promise.all(promesasUpdate);
+                    for (let res of resultados) { if (res.error) throw res.error; }
                 }
                 
+                // Guardar las filas completamente nuevas
+                const chunkSize = 5; 
                 if(registrosNuevos.length > 0) {
                     for (let i = 0; i < registrosNuevos.length; i += chunkSize) {
                         btn.innerHTML = `⏳ Creando nuevos... (${i + 1} de ${registrosNuevos.length})`;
@@ -713,20 +712,20 @@
                         const { data: inserted, error } = await client.from('dpto_tecnico').insert(chunk).select();
                         if (error) throw error;
                         
-                        let newRowsIndex = 0;
-                        for (let tr of filas) {
-                            if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
-                                tr.dataset.id = inserted[newRowsIndex].id;
-                                newRowsIndex++;
+                        for (let j = 0; j < inserted.length; j++) {
+                            if (filasNuevasDOM[i + j]) {
+                                filasNuevasDOM[i + j].dataset.id = inserted[j].id;
                             }
                         }
                     }
                 }
                 
-                for (let tr of filas) {
-                    if (tr.style.display !== 'none' && tr.dataset.id) {
-                        tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
-                    }
+                // Sellar la memoria para saber qué se guardó
+                for (let tr of filasActualizadasDOM) {
+                    tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
+                }
+                for (let tr of filasNuevasDOM) {
+                    tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
                 }
 
                 btn.innerHTML = "✅ ¡Todo guardado!"; 
