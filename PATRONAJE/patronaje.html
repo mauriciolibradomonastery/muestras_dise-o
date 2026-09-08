@@ -478,7 +478,7 @@
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
             if(!allData || allData.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
 
-            // 🔥 ORDEN DE SEMÁFORO CORREGIDO: Rojo(Pendiente) -> Amarillo(Asignado) -> Amarillo(Modelado) -> Verde(Finalizado)
+            // 🔥 ORDEN DE SEMÁFORO: Rojo(Pendiente) -> Amarillo(Modelado) -> Amarillo(Asignado) -> Verde(Finalizado)
             allData.sort((a, b) => {
                 const getEstadoRank = (datos) => {
                     const fMedicion = datos[15] || '';
@@ -491,8 +491,8 @@
                     if (fEntFich !== "") estado = "Finalizado";
                     
                     if (estado === 'Pendiente') return 1;
-                    if (estado === 'Asignado') return 2;  // Asignado va primero dentro de los amarillos
-                    if (estado === 'Modelado') return 3;  // Modelado va después de Asignado
+                    if (estado === 'Modelado') return 2;  // Modelado va primero en los amarillos
+                    if (estado === 'Asignado') return 3;  // Asignado va después
                     return 4; // Finalizado al fondo
                 };
 
