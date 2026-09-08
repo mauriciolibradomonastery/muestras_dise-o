@@ -101,7 +101,6 @@
         .btn-save-global:hover { background-color: #059669; transform: translateY(-1px); }
         .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
         
-        /* 🔥 CLASE NUEVA: Estado Rojo para Cambios Pendientes */
         .btn-save-global.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); animation: pulseUnsaved 2s infinite; }
         .btn-save-global.unsaved:hover { background-color: #dc2626; }
         @keyframes pulseUnsaved { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
@@ -120,7 +119,10 @@
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; }
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
-        .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; }
+        .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; transition: background-color 0.2s; }
+        .th-title:hover { background-color: #e5e7eb; }
+        .sort-icon { display: inline-block; margin-left: 5px; font-size: 12px; }
+
         .filter-input { width: 100%; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; }
         tbody tr:nth-child(even) { background-color: #f9fafb; }
         tbody tr:hover { background-color: #f3f4f6; }
@@ -135,7 +137,8 @@
         .col-fija-ref { 
             position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; 
         }
-        .col-referencia { font-weight: 900 !important; color: #000000 !important; }
+        /* Clase especial para REFERENCIA para destacarla sutilmente (Gris muy oscuro y semibold) */
+        .col-referencia { font-weight: 600 !important; color: #111827 !important; }
 
         .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
 
@@ -335,6 +338,71 @@
         };
 
         // ==========================================
+        // 🔥 ORDENAMIENTO DE COLUMNAS (A-Z / Mayor-Menor)
+        // ==========================================
+        let columnaOrdenadaActual = -1; 
+        let ordenAscendente = true;
+
+        window.ordenarTabla = function(colIndex) {
+            const tbody = document.getElementById('tableBody'); 
+            const filas = Array.from(tbody.querySelectorAll('tr'));
+            if (filas.length === 0) return;
+
+            // 1. Cambiar la dirección del orden
+            if (columnaOrdenadaActual === colIndex) { 
+                ordenAscendente = !ordenAscendente; 
+            } else { 
+                ordenAscendente = true; 
+                columnaOrdenadaActual = colIndex; 
+            }
+
+            // 2. Actualizar visualmente la flecha en el encabezado
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.innerHTML = '↕';
+                icon.style.color = 'inherit';
+                icon.style.fontWeight = 'normal';
+            });
+            const thClickeado = document.querySelector(`th:nth-child(${colIndex + 1}) .sort-icon`);
+            if (thClickeado) {
+                thClickeado.innerHTML = ordenAscendente ? '↓' : '↑'; 
+                thClickeado.style.color = '#2563eb'; 
+                thClickeado.style.fontWeight = 'bold';
+            }
+
+            // 3. Ordenar filas de manera inteligente
+            filas.sort((a, b) => {
+                let valorA = a.cells[colIndex].innerText.trim(); 
+                let valorB = b.cells[colIndex].innerText.trim();
+                
+                const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); 
+                const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
+                if(inputA) valorA = inputA.value; 
+                if(inputB) valorB = inputB.value;
+
+                // Enviar celdas vacías siempre al final
+                if (valorA === "" && valorB !== "") return 1;
+                if (valorA !== "" && valorB === "") return -1;
+                if (valorA === "" && valorB === "") return 0;
+
+                let numA = parseNumeroInteligente(valorA); 
+                let numB = parseNumeroInteligente(valorB);
+                
+                // Detectar si son números (moneda, porcentaje, etc)
+                let esNumA = !isNaN(numA) && /^[0-9.,$% -]+$/.test(valorA);
+                let esNumB = !isNaN(numB) && /^[0-9.,$% -]+$/.test(valorB);
+
+                if (esNumA && esNumB && !inputA && !inputB) {
+                    return ordenAscendente ? numA - numB : numB - numA;
+                }
+                
+                // Ordenamiento alfabético inteligente
+                return ordenAscendente ? valorA.localeCompare(valorB) : valorB.localeCompare(valorA);
+            });
+
+            filas.forEach(fila => tbody.appendChild(fila));
+        };
+
+        // ==========================================
         // 🔥 LÓGICA DEL SIMULADOR DE COSTOS Y FORMATOS
         // ==========================================
         window.trmDolarGlobal = 3500;
@@ -527,13 +595,11 @@
                     let td = e.target.closest('td');
                     if (!td) return;
 
-                    // El cerebro detecta el cambio!
                     window.marcarCambios();
 
                     let tr = td.closest('tr');
                     let colIndex = Array.from(tr.children).indexOf(td);
                     
-                    // Solo recalcular márgenes si toca columnas financieras
                     if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
                         window.calcularMargenesFila(tr);
                     }
@@ -784,12 +850,12 @@
                 thTitle.className = 'th-title';
                 
                 if(colUpper === 'LINEA') thTitle.classList.add('col-fija-linea');
-                if(colUpper === 'REFERENCIA') thTitle.classList.add('col-fija-ref', 'col-referencia');
+                if(colUpper === 'REFERENCIA') thTitle.classList.add('col-fija-ref');
                 if(colUpper === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 if (colUpper === 'MARGEN REAL') {
-                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span> <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
                 } else {
                     thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span>`;
                 }
@@ -862,7 +928,6 @@
                 
                 const uniqueValues = new Set();
                 filas.forEach(fila => {
-                    // Ahora SOLO incluye en la lista a las filas que están VISIBLES actualmente
                     if(!fila.dataset.id || fila.style.display === 'none') return; 
                     
                     const celdas = fila.querySelectorAll('td');
@@ -1199,7 +1264,7 @@
             });
             actualizarContador(); 
             window.actualizarSeleccion(); 
-            window.actualizarDatalists(); // Filtro dinámico: solo lo visible a las listas
+            window.actualizarDatalists(); 
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
@@ -1260,21 +1325,6 @@
             }
             rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false;
             window.actualizarContador(); window.calcularKPIs(); window.actualizarSeleccion(); window.actualizarDatalists();
-        };
-
-        let columnaOrdenadaActual = -1; let ordenAscendente = true;
-        window.ordenarTabla = function(colIndex) {
-            const tbody = document.getElementById('tableBody'); const filas = Array.from(tbody.querySelectorAll('tr'));
-            if (columnaOrdenadaActual === colIndex) { ordenAscendente = !ordenAscendente; } else { ordenAscendente = true; columnaOrdenadaActual = colIndex; }
-            filas.sort((a, b) => {
-                let valorA = a.cells[colIndex].innerText.trim().toLowerCase(); let valorB = b.cells[colIndex].innerText.trim().toLowerCase();
-                const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
-                if(inputA) valorA = inputA.value; if(inputB) valorB = inputB.value;
-                let numA = parseNumeroInteligente(valorA); let numB = parseNumeroInteligente(valorB);
-                if (!isNaN(numA) && !isNaN(numB) && !inputA && valorA !== "" && valorB !== "") return ordenAscendente ? numA - numB : numB - numA;
-                if (valorA < valorB) return ordenAscendente ? -1 : 1; if (valorA > valorB) return ordenAscendente ? 1 : -1; return 0;
-            });
-            filas.forEach(fila => tbody.appendChild(fila));
         };
 
         window.agregarFilaVacia = function() {
@@ -1342,7 +1392,6 @@
             }
 
             try {
-                // Guardado por paquetes (Chunks) para no saturar 
                 const chunkSize = 5; 
 
                 if(registrosActualizar.length > 0) {
@@ -1371,7 +1420,6 @@
                     }
                 }
 
-                // Sellar la memoria para saber que ya todo esto guardó
                 for (let tr of filas) {
                     if (tr.style.display !== 'none' && tr.dataset.id) {
                         tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
