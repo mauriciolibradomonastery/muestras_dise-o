@@ -96,9 +96,15 @@
         .btn-add, .btn-toggle, .btn-export, .btn-import { background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
         .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
 
-        .btn-save-global { background-color: #10b981; color: white; border: none; padding: 9px 18px; font-size: 14px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        /* Estilos del Botón de Guardado */
+        .btn-save-global { background-color: #10b981; color: white; border: none; padding: 9px 18px; font-size: 14px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; }
         .btn-save-global:hover { background-color: #059669; transform: translateY(-1px); }
-        .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; }
+        .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        /* 🔥 CLASE NUEVA: Estado Rojo para Cambios Pendientes */
+        .btn-save-global.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); animation: pulseUnsaved 2s infinite; }
+        .btn-save-global.unsaved:hover { background-color: #dc2626; }
+        @keyframes pulseUnsaved { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
         .btn-bulk-cancel { background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
         .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; }
@@ -125,8 +131,15 @@
 
         .col-checkbox { position: sticky !important; left: 0; background-color: #ffffff; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
         .col-fija-linea { position: sticky !important; left: var(--l-linea) !important; background-color: #ffffff; z-index: 7; border-right: 1px solid #d1d5db !important; }
-        .col-fija-ref { position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; }
+        
+        .col-fija-ref { 
+            position: sticky !important; left: var(--l-ref) !important; background-color: #ffffff; z-index: 6; border-right: 1px solid #d1d5db !important; 
+        }
+        .col-referencia { font-weight: 900 !important; color: #000000 !important; }
+
         .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
+
+        .multiline-cell { white-space: pre-wrap !important; word-wrap: break-word; }
 
         th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
         th.col-fija-linea { z-index: 18 !important; background-color: #f3f4f6 !important; }
@@ -302,6 +315,24 @@
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
+        window.hayCambiosSinGuardar = false;
+
+        // ==========================================
+        // 🔥 SISTEMA DE ALERTAS (Botón Rojo / Verde)
+        // ==========================================
+        window.marcarCambios = function() {
+            window.hayCambiosSinGuardar = true;
+            const btn = document.getElementById('btnGuardarGlobal');
+            btn.classList.add('unsaved');
+            btn.innerHTML = '⚠️ Guardar Cambios Pendientes';
+        };
+
+        window.resetearCambios = function() {
+            window.hayCambiosSinGuardar = false;
+            const btn = document.getElementById('btnGuardarGlobal');
+            btn.classList.remove('unsaved');
+            btn.innerHTML = '💾 Guardar Cambios Visibles';
+        };
 
         // ==========================================
         // 🔥 LÓGICA DEL SIMULADOR DE COSTOS Y FORMATOS
@@ -318,6 +349,7 @@
                         window.calcularMargenesFila(tr);
                     }
                 });
+                window.marcarCambios();
             }
         };
 
@@ -338,7 +370,6 @@
             "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIM SHORT_MEN": 0.55,
             "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
             
-            // 🔥 ALIAS PARA LAS T-SHIRTS (Para que detecte variaciones)
             "T-SHIRT MEN_MEN": 0.68, "T-SHIRT_MEN": 0.68,
             "T-SHIRT_WOMEN": 0.6, "T-SHIRT WOMEN_WOMEN": 0.6,
             "T-SHIRT_": 0.68, 
@@ -411,9 +442,6 @@
             let celdaMin = celdas[63]; 
             let celdaReal = celdas[64]; 
 
-            // ==========================================
-            // 1. GESTIÓN DEL MARGEN MÍNIMO (Inteligente y Editable)
-            // ==========================================
             let key = linea + "_" + genero;
             let keySinGen = linea + "_";
             let margenMinBase = baseMargen[key] !== undefined ? baseMargen[key] : (baseMargen[keySinGen] !== undefined ? baseMargen[keySinGen] : null);
@@ -421,13 +449,11 @@
             let previousKey = celdaMin.dataset.autokey;
             
             if (previousKey === undefined) {
-                // Primera vez evaluando la fila
                 if (celdaMin.innerText.trim() === "" && margenMinBase !== null) {
                     celdaMin.innerText = formatPorcentaje(margenMinBase);
                 }
                 celdaMin.dataset.autokey = key;
             } else if (previousKey !== key) {
-                // El usuario cambió la Línea o el Género
                 if (margenMinBase !== null) {
                     celdaMin.innerText = formatPorcentaje(margenMinBase);
                 } else {
@@ -436,18 +462,14 @@
                 celdaMin.dataset.autokey = key;
             }
 
-            // ==========================================
-            // 2. CÁLCULO DEL MARGEN REAL
-            // ==========================================
             let margenMinActualText = celdaMin.innerText.trim();
             let margenMinActual = parseNumeroInteligente(margenMinActualText);
             let targetDecimal = isNaN(margenMinActual) ? null : (margenMinActual > 1 ? margenMinActual / 100 : margenMinActual);
 
-            // Regla estricta: Si falta un campo clave, borra el Margen Real y restaura estilo
             if (pais === "" || vdStr === "" || cpStr === "" || costoStr === "" || pvpStr === "") {
                 celdaReal.innerText = "";
                 celdaReal.style.color = "inherit";
-                celdaReal.style.backgroundColor = "#f1f5f9"; // Restaurar fondo default
+                celdaReal.style.backgroundColor = "#f1f5f9"; 
                 return; 
             }
 
@@ -474,14 +496,13 @@
                     let margenReal = (precioPonderado - costoTotalPesos) / precioPonderado;
                     celdaReal.innerText = formatPorcentaje(margenReal);
                     
-                    // 🔥 COLOR CONDICIONAL: Verde o Azul Oscuro con letra Blanca
                     if (targetDecimal !== null) {
                         if (margenReal >= targetDecimal) {
-                            celdaReal.style.color = "#059669"; // Verde
-                            celdaReal.style.backgroundColor = "#f1f5f9"; // Fondo normal
+                            celdaReal.style.color = "#059669"; 
+                            celdaReal.style.backgroundColor = "#f1f5f9"; 
                         } else {
-                            celdaReal.style.color = "#ffffff"; // Letra blanca
-                            celdaReal.style.backgroundColor = "#1e3a8a"; // Azul oscuro
+                            celdaReal.style.color = "#ffffff"; 
+                            celdaReal.style.backgroundColor = "#1e3a8a"; 
                         }
                     } else {
                         celdaReal.style.color = "inherit";
@@ -499,14 +520,32 @@
             }
         };
 
-        // Disparador de formato al desenfocar (salir) de la celda editada
         document.addEventListener('DOMContentLoaded', () => {
+            // Activar botón de guardar en rojo cuando el usuario teclea algo
+            ['input', 'change'].forEach(evt => {
+                document.getElementById('tableBody').addEventListener(evt, function(e) {
+                    let td = e.target.closest('td');
+                    if (!td) return;
+
+                    // El cerebro detecta el cambio!
+                    window.marcarCambios();
+
+                    let tr = td.closest('tr');
+                    let colIndex = Array.from(tr.children).indexOf(td);
+                    
+                    // Solo recalcular márgenes si toca columnas financieras
+                    if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
+                        window.calcularMargenesFila(tr);
+                    }
+                });
+            });
+
             document.getElementById('tableBody').addEventListener('focusout', function(e) {
                 let td = e.target.closest('td');
                 if (!td) return;
                 let tr = td.closest('tr');
                 let colIndex = Array.from(tr.children).indexOf(td);
-                let colName = allCols[colIndex - 1]; // -1 por el checkbox inicial
+                let colName = allCols[colIndex - 1]; 
                 
                 if(colName) {
                     colName = colName.toUpperCase();
@@ -516,20 +555,6 @@
                         td.textContent = formatMoneda(td.textContent);
                     }
                 }
-            });
-
-            // Recálculo automático al escribir o cambiar selectores en columnas clave
-            ['input', 'change'].forEach(evt => {
-                document.getElementById('tableBody').addEventListener(evt, function(e) {
-                    let td = e.target.closest('td');
-                    if (!td) return;
-                    let tr = td.closest('tr');
-                    let colIndex = Array.from(tr.children).indexOf(td);
-                    // Escucha cambios en: 3(Línea), 5(País), 7(Género), 8(Familia), 55(% VD), 56(% CP), 58(Costo), 59(Moneda), 60(PVP), 63(Margen Mínimo)
-                    if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
-                        window.calcularMargenesFila(tr);
-                    }
-                });
             });
         });
         // ==========================================
@@ -743,7 +768,7 @@
             
             const thCheck = document.createElement('th');
             thCheck.className = 'col-checkbox';
-            thCheck.innerHTML = `<div style="font-size: 10px; margin-bottom: 5px; color: #374151;">SELECCIONAR</div><input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
+            thCheck.innerHTML = `<div style="font-size: 10px; margin-bottom: 5px; color: #374151;">SELECC.</div><input type="checkbox" id="selectAll" style="cursor:pointer;" onclick="toggleSelectAll()" title="Seleccionar Todo">`;
             trHeader.appendChild(thCheck);
             initResizer(thCheck, 0); 
 
@@ -759,14 +784,14 @@
                 thTitle.className = 'th-title';
                 
                 if(colUpper === 'LINEA') thTitle.classList.add('col-fija-linea');
-                if(colUpper === 'REFERENCIA') thTitle.classList.add('col-fija-ref');
+                if(colUpper === 'REFERENCIA') thTitle.classList.add('col-fija-ref', 'col-referencia');
                 if(colUpper === 'COLOR COLECCIÓN') thTitle.classList.add('col-fija-color');
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 if (colUpper === 'MARGEN REAL') {
-                    thTitle.innerHTML = `${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
                 } else {
-                    thTitle.innerHTML = `${col} <span class="sort-icon">↕</span>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span>`;
                 }
                 
                 let idx = columnIndex; thTitle.onclick = () => ordenarTabla(idx);
@@ -817,12 +842,13 @@
                         else if (d.length === 63) { d.splice(56, 0, ""); }
                         while(d.length < 64) d.push("");
                     }
-                    tbody.appendChild(crearFilaHTML(filaBD.id, d));
+                    let trCreado = crearFilaHTML(filaBD.id, d);
+                    trCreado._hashGuardado = JSON.stringify(window.extraerDatosFila(trCreado));
+                    tbody.appendChild(trCreado);
                 });
             }
             window.filtrarTablaCompleta(); 
             calcularKPIs(); 
-            // Después de cargar datos y calcular todos los márgenes, actualizamos los selectores del filtro:
             setTimeout(window.actualizarDatalists, 200);
         }
 
@@ -833,9 +859,12 @@
                 const colIndex = input.getAttribute('data-colindex');
                 const datalist = document.getElementById(`datalist_${colIndex}`);
                 if (!datalist) return;
+                
                 const uniqueValues = new Set();
                 filas.forEach(fila => {
-                    if(!fila.dataset.id) return; 
+                    // Ahora SOLO incluye en la lista a las filas que están VISIBLES actualmente
+                    if(!fila.dataset.id || fila.style.display === 'none') return; 
+                    
                     const celdas = fila.querySelectorAll('td');
                     if (celdas[colIndex]) {
                         let val = ""; const celda = celdas[colIndex];
@@ -845,6 +874,7 @@
                         if (val !== "") uniqueValues.add(val);
                     }
                 });
+                
                 datalist.innerHTML = '';
                 Array.from(uniqueValues).sort().forEach(val => {
                     const option = document.createElement('option'); option.value = val; datalist.appendChild(option);
@@ -873,6 +903,7 @@
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
                                 </div>
                             </div>`;
+                        window.marcarCambios();
                     }; img.src = event.target.result;
                 }; reader.readAsDataURL(file);
             }; input.click();
@@ -880,6 +911,7 @@
 
         window.borrarImagenCelda = function(td) {
             td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarImagenCelda(this.closest('td'))">📷 Agregar</button>`;
+            window.marcarCambios();
         };
 
         window.seleccionarPDFCelda = function(td) {
@@ -898,12 +930,14 @@
                                 <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
                             </div>
                         </div>`;
+                    window.marcarCambios();
                 }; reader.readAsDataURL(file);
             }; input.click();
         };
 
         window.borrarPDFCelda = function(td) {
             td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`;
+            window.marcarCambios();
         };
 
         window.extraerDatosFila = function(tr) {
@@ -943,9 +977,13 @@
                 const colName = colNameOriginal.toUpperCase(); const td = document.createElement('td'); 
                 
                 if(colName === 'LINEA') td.classList.add('col-fija-linea');
-                if(colName === 'REFERENCIA') td.classList.add('col-fija-ref');
+                if(colName === 'REFERENCIA') td.classList.add('col-fija-ref', 'col-referencia');
                 if(colName === 'COLOR COLECCIÓN') td.classList.add('col-fija-color');
                 if(indexGlobal >= colsDiseno.length) { td.className += window.produccionVisible ? ' col-produccion' : ' col-produccion hidden'; }
+                
+                if(colName === 'ESTADO' || colName.includes('OBSERVACION')) {
+                    td.classList.add('multiline-cell');
+                }
                 
                 const valorRaw = datos[indexGlobal] || '';
 
@@ -975,9 +1013,9 @@
                     } else { td.innerHTML = `<button style="background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer;" onclick="window.seleccionarPDFCelda(this.closest('td'))">📄 Subir PDF</button>`; }
                 } else if (colName === 'TIPO DE MONEDA') { 
                     td.contentEditable = "false";
-                    td.innerHTML = `<select class="select-input"><option value=""></option><option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option><option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option><option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option></select>`;
+                    td.innerHTML = `<select class="select-input" onchange="window.marcarCambios()"><option value=""></option><option value="USD" ${valorRaw === 'USD' ? 'selected' : ''}>USD</option><option value="COP" ${valorRaw === 'COP' ? 'selected' : ''}>COP</option><option value="EUR" ${valorRaw === 'EUR' ? 'selected' : ''}>EUR</option></select>`;
                 } else if (colName.startsWith('FECHA')) { 
-                    td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}">`;
+                    td.contentEditable = "false"; td.innerHTML = `<input type="date" class="date-input" value="${window.formatearFecha(valorRaw)}" onchange="window.marcarCambios()">`;
                 
                 } else if (colName === 'MARGEN MÍNIMO') {
                     td.contentEditable = "true";
@@ -1010,7 +1048,6 @@
             `;
             tr.appendChild(tdAcciones); 
             
-            // Auto-calcular fila cuando se crea
             window.calcularMargenesFila(tr);
 
             return tr;
@@ -1160,7 +1197,9 @@
                 if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } 
                 else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
             });
-            actualizarContador(); window.actualizarSeleccion(); 
+            actualizarContador(); 
+            window.actualizarSeleccion(); 
+            window.actualizarDatalists(); // Filtro dinámico: solo lo visible a las listas
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
@@ -1174,6 +1213,7 @@
             if(idDb) {
                 let datosFila = window.extraerDatosFila(tr);
                 await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
+                tr._hashGuardado = JSON.stringify(datosFila);
             }
             window.filtrarTablaCompleta(); window.calcularKPIs();
         };
@@ -1195,6 +1235,7 @@
                 if(idDb) {
                     let datosFila = window.extraerDatosFila(tr);
                     promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb) );
+                    tr._hashGuardado = JSON.stringify(datosFila);
                 }
             }
             if (promesasUpdate.length > 0) {
@@ -1241,8 +1282,11 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-            document.getElementById('tableBody').appendChild(crearFilaHTML(null, datosInic));
+            const newTr = crearFilaHTML(null, datosInic);
+            newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
+            document.getElementById('tableBody').appendChild(newTr);
             window.actualizarContador(); window.calcularKPIs(); 
+            window.marcarCambios();
         };
 
         window.insertarFilaAbajo = function(btn) {
@@ -1250,37 +1294,108 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-            const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', crearFilaHTML(null, datosInic));
+            const newTr = crearFilaHTML(null, datosInic);
+            newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
+            const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', newTr);
             window.actualizarContador(); window.calcularKPIs(); 
+            window.marcarCambios();
         };
 
         window.guardarCambiosVisibles = async function() {
-            const btn = document.getElementById('btnGuardarGlobal'); const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "⏳ Guardando..."; btn.disabled = true;
+            if(!window.hayCambiosSinGuardar && document.getElementById('btnGuardarGlobal').innerText.includes('💾')) return;
+
+            const btn = document.getElementById('btnGuardarGlobal'); 
+            btn.innerHTML = "⏳ Guardando..."; 
+            btn.disabled = true;
+            btn.classList.remove('unsaved');
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            let promesasUpdate = []; let rowsToInsert = []; let filasNuevasDOM = [];
+            let registrosActualizar = []; 
+            let registrosNuevos = []; 
+            let filasNuevasDOM = [];
 
             for (let tr of filas) {
                 if (tr.style.display === 'none') continue; 
                 let datosFila = window.extraerDatosFila(tr);
-                if (tr.dataset.id) { promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id) ); } 
-                else { rowsToInsert.push({ datos: datosFila }); filasNuevasDOM.push(tr); }
+                let hashActual = JSON.stringify(datosFila);
+
+                if (tr.dataset.id) { 
+                    if (tr._hashGuardado === hashActual) continue; 
+                    registrosActualizar.push({ id: tr.dataset.id, datos: datosFila }); 
+                } 
+                else { 
+                    registrosNuevos.push({ datos: datosFila }); 
+                    filasNuevasDOM.push(tr); 
+                }
+            }
+
+            if (registrosActualizar.length === 0 && registrosNuevos.length === 0) {
+                btn.innerHTML = "✅ Cambios Guardados"; 
+                window.resetearCambios();
+                setTimeout(() => { 
+                    if(!window.hayCambiosSinGuardar) {
+                        btn.innerHTML = "💾 Guardar Cambios Visibles"; 
+                    }
+                    btn.disabled = false; 
+                }, 2000);
+                return;
             }
 
             try {
-                if (promesasUpdate.length > 0) { const resultados = await Promise.all(promesasUpdate); for (let res of resultados) { if (res.error) throw res.error; } }
-                if (rowsToInsert.length > 0) {
-                    const { data, error } = await supabase.from('wips_muestras').insert(rowsToInsert).select();
-                    if (error) throw error;
-                    for(let i = 0; i < data.length; i++) filasNuevasDOM[i].dataset.id = data[i].id;
+                // Guardado por paquetes (Chunks) para no saturar 
+                const chunkSize = 5; 
+
+                if(registrosActualizar.length > 0) {
+                    for (let i = 0; i < registrosActualizar.length; i += chunkSize) {
+                        btn.innerHTML = `⏳ Actualizando... (${i + 1} de ${registrosActualizar.length})`;
+                        const chunk = registrosActualizar.slice(i, i + chunkSize);
+                        const { error } = await supabase.from('wips_muestras').upsert(chunk);
+                        if (error) throw error;
+                    }
                 }
-                btn.innerHTML = "✅ ¡Todo guardado!";
-                window.calcularKPIs(); window.actualizarDatalists(); 
+                
+                if(registrosNuevos.length > 0) {
+                    for (let i = 0; i < registrosNuevos.length; i += chunkSize) {
+                        btn.innerHTML = `⏳ Creando nuevos... (${i + 1} de ${registrosNuevos.length})`;
+                        const chunk = registrosNuevos.slice(i, i + chunkSize);
+                        const { data: inserted, error } = await supabase.from('wips_muestras').insert(chunk).select();
+                        if (error) throw error;
+                        
+                        let newRowsIndex = 0;
+                        for (let tr of filas) {
+                            if (tr.style.display !== 'none' && !tr.dataset.id && inserted[newRowsIndex]) {
+                                tr.dataset.id = inserted[newRowsIndex].id;
+                                newRowsIndex++;
+                            }
+                        }
+                    }
+                }
+
+                // Sellar la memoria para saber que ya todo esto guardó
+                for (let tr of filas) {
+                    if (tr.style.display !== 'none' && tr.dataset.id) {
+                        tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
+                    }
+                }
+
+                btn.innerHTML = "✅ Cambios Guardados";
+                window.resetearCambios();
+                window.calcularKPIs(); 
+                window.actualizarDatalists(); 
+
+                setTimeout(() => { 
+                    if(!window.hayCambiosSinGuardar) {
+                        btn.innerHTML = "💾 Guardar Cambios Visibles"; 
+                    }
+                    btn.disabled = false; 
+                }, 3000);
+
             } catch (err) {
-                console.error(err); alert("Hubo un error al guardar masivamente: " + err.message); btn.innerHTML = "❌ Error";
+                console.error(err); 
+                alert("Hubo un error al guardar masivamente: " + err.message); 
+                window.marcarCambios();
+                btn.disabled = false;
             }
-            setTimeout(() => { btn.innerHTML = textoOriginal; btn.disabled = false; }, 3000);
         };
 
         window.eliminarFila = async function(btn) {
