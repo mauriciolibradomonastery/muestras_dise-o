@@ -43,15 +43,16 @@
         .search-input { width: 320px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d1d5db; background-color: #ffffff; color: #111827; outline: none; font-size: 13px; }
         .search-input:focus { border-color: #3b82f6; }
 
-        /* TABLA ESTILO EXCEL CLARO CON ALTURA AMPLIADA */
+        /* TABLA ESTILO EXCEL CLARO CON ALTURA AMPLIADA Y FILAS MÁS ANGOSTAS */
         .table-container { width: 100%; overflow-x: auto; height: calc(100vh - 165px); max-height: calc(100vh - 165px); background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
         table { border-collapse: collapse; width: max-content; }
-        th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; color: #374151; }
-        thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
-        .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; }
+        /* Reducimos el padding de 8px 10px a 4px 8px para hacer las filas más delgadas */
+        th, td { border: 1px solid #e5e7eb; padding: 4px 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; color: inherit; }
+        thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; color: #374151; }
+        .th-title { cursor: pointer; user-select: none; color: inherit; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 8px 10px; }
         .filter-input { width: 100%; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; background: #ffffff; color: #111827; box-sizing: border-box;}
         tbody tr:hover td { filter: brightness(0.96); }
-        td[contenteditable="true"]:focus { background-color: #ffffff; box-shadow: inset 0 0 0 2px #374151; outline: none; color: #111827; z-index: 20;}
+        td[contenteditable="true"]:focus { background-color: #ffffff !important; color: #111827 !important; box-shadow: inset 0 0 0 2px #374151; outline: none; z-index: 20;}
 
         /* CONGELACIÓN DE COLUMNAS */
         .col-checkbox { position: sticky !important; left: 0; background-color: inherit; z-index: 8; border-right: 1px solid #d1d5db !important; text-align: center; }
@@ -68,7 +69,8 @@
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; }
 
         .calc-cell { font-weight: bold; text-align: center; }
-        .estado-cell { font-weight: bold; text-align: center; color: #2563eb; }
+        /* El color ahora se hereda o se sobreescribe en JS para que cambie a blanco si es necesario */
+        .estado-cell { font-weight: bold; text-align: center; } 
 
         /* MODALES */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
@@ -156,7 +158,6 @@
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
         
-        // --- NUEVO ORDEN EXACTO SOLICITADO ---
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'DISEÑADOR:', 'GÉNERO', 'PROVEEDOR:', 'PAIS', 'COLECCIÓN:', 'PRECINTO',
             'NOMBRE / REFERENCIA:', 'TALLA', 'TIPO DE MUESTRA:', 'PINTA:', 'CANTIDAD:', 'DESCRIPCIÓN TIPO DE PRENDA:',
@@ -257,7 +258,7 @@
                     const td = input.closest('td'); const base64 = e.target.result;
                     td.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                            <a href="${base64}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <a href="${base64}" download="Auditoria.pdf" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
                             <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
                             <input type="hidden" value="${base64}" class="pdf-data">
                         </div>`;
@@ -306,14 +307,41 @@
             if (fEntFich !== "") estadoCalculado = "Finalizado";
             celdas[15].textContent = estadoCalculado;
 
-            // COLOR AUTOMÁTICO
+            // COLOR AUTOMÁTICO DE FILA Y LETRA (Roja = Blanco, Resto = Oscuro)
             let bgColor = '#ffffff'; 
-            if (estadoCalculado === 'Pendiente') bgColor = '#ef4444'; 
-            else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') bgColor = '#fef3c7'; 
-            else if (estadoCalculado === 'Finalizado') bgColor = '#4ade80'; 
+            let textColor = '#374151'; // Gris oscuro normal
+            
+            if (estadoCalculado === 'Pendiente') { 
+                bgColor = '#ef4444'; 
+                textColor = '#ffffff'; // Letra Blanca para fondo rojo
+            } else if (estadoCalculado === 'Modelado' || estadoCalculado === 'Asignado') { 
+                bgColor = '#fef3c7'; 
+                textColor = '#111827'; // Letra muy oscura para fondo amarillo
+            } else if (estadoCalculado === 'Finalizado') { 
+                bgColor = '#4ade80'; 
+                textColor = '#111827'; 
+            }
 
             tr.style.backgroundColor = bgColor;
-            celdas.forEach(td => td.style.backgroundColor = bgColor);
+            tr.style.color = textColor;
+            
+            celdas.forEach(td => {
+                td.style.backgroundColor = bgColor;
+                td.style.color = textColor;
+                
+                // Asegurarnos de que los inputs y selects adentro también hereden el color blanco/negro
+                let inps = td.querySelectorAll('input, select');
+                inps.forEach(inp => inp.style.color = textColor);
+
+                // Asegurar que el link del PDF se vea bien
+                let pdfLink = td.querySelector('.pdf-link');
+                if (pdfLink) {
+                    pdfLink.style.color = (estadoCalculado === 'Pendiente') ? '#ffffff' : '#ef4444';
+                }
+            });
+
+            // Color del texto de "Estado"
+            celdas[15].style.color = (estadoCalculado === 'Pendiente') ? '#ffffff' : '#2563eb';
 
             // LEAD TIMES 
             celdas[19].textContent = (fMedicion && fEntAud) ? calcularDiasHabiles(fMedicion, fEntAud) : ""; 
@@ -354,6 +382,7 @@
             const trHeader = document.getElementById('tableHeaderRow');
             if(!trHeader) return;
             const ths = trHeader.querySelectorAll('th');
+            // Como ocultamos FOTO, revisamos la longitud basada en las columnas visibles (restando 1)
             if(ths.length < 15) return;
             
             let leftPrecinto = ths[0].offsetWidth; 
@@ -384,6 +413,11 @@
                 if (col === 'PINTA:') thTitle.classList.add('col-pinta');
                 if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thTitle.classList.add('col-desc');
 
+                // 🔥 OCULTAMOS LA COLUMNA FOTO DESDE LOS ENCABEZADOS
+                if (col === 'FOTO') {
+                    thTitle.style.display = 'none';
+                }
+
                 trHeader.appendChild(thTitle);
                 
                 let resizer = document.createElement('div'); resizer.className = 'resizer'; thTitle.appendChild(resizer);
@@ -403,6 +437,11 @@
                 if (col === 'NOMBRE / REFERENCIA:') thFilter.classList.add('col-nombre');
                 if (col === 'PINTA:') thFilter.classList.add('col-pinta');
                 if (col === 'DESCRIPCIÓN TIPO DE PRENDA:') thFilter.classList.add('col-desc');
+
+                // 🔥 OCULTAMOS LA COLUMNA FOTO DESDE LOS FILTROS
+                if (col === 'FOTO') {
+                    thFilter.style.display = 'none';
+                }
 
                 if (col === 'FOTO' || col === 'PDF AUDITORÍA') { 
                     thFilter.innerHTML = ``; 
@@ -443,6 +482,7 @@
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
             if(!allData || allData.length === 0) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
 
+            // 🔥 ORDEN DE SEMÁFORO CORREGIDO: Rojo(Pendiente) -> Amarillo(Asignado) -> Amarillo(Modelado) -> Verde(Finalizado)
             allData.sort((a, b) => {
                 const getEstadoRank = (datos) => {
                     const fMedicion = datos[15] || '';
@@ -455,8 +495,9 @@
                     if (fEntFich !== "") estado = "Finalizado";
                     
                     if (estado === 'Pendiente') return 1;
-                    if (estado === 'Modelado' || estado === 'Asignado') return 2;
-                    return 3;
+                    if (estado === 'Asignado') return 2;  // Asignado va primero dentro de los amarillos
+                    if (estado === 'Modelado') return 3;  // Modelado va después de Asignado
+                    return 4; // Finalizado al fondo
                 };
 
                 const rankA = getEstadoRank(a.datos);
@@ -532,6 +573,9 @@
                 const valorStr = String(valorRaw);
 
                 if(colName === 'FOTO') { 
+                    // 🔥 OCULTAMOS LA COLUMNA FOTO EN LA TABLA
+                    td.style.display = 'none'; 
+                    
                     td.contentEditable = "false"; td.style.textAlign = "center";
                     let imgSource = (valorStr && valorStr.includes('http') || valorStr.includes('data:image')) ? valorStr : 'logo.png';
                     td.innerHTML = `
@@ -545,8 +589,8 @@
                     td.contentEditable = "false"; td.style.textAlign = "center";
                     if(valorStr && valorStr.startsWith('data:application/pdf')) {
                         td.innerHTML = `<div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                            <a href="${valorStr}" download="Auditoria.pdf" style="color:#ef4444; font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
-                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer;" title="Quitar">❌</button>
+                            <a href="${valorStr}" download="Auditoria.pdf" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
                             <input type="hidden" value="${valorStr}" class="pdf-data">
                         </div>`;
                     } else {
@@ -560,19 +604,19 @@
                 }
                 else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">
-                        <option value=""></option>
-                        <option value="Cumple" ${valorStr === 'Cumple' ? 'selected' : ''}>Cumple</option>
-                        <option value="No Cumple" ${valorStr === 'No Cumple' ? 'selected' : ''}>No Cumple</option>
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; cursor:pointer; outline: none;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">
+                        <option value="" style="color:black;"></option>
+                        <option value="Cumple" style="color:black;" ${valorStr === 'Cumple' ? 'selected' : ''}>Cumple</option>
+                        <option value="No Cumple" style="color:black;" ${valorStr === 'No Cumple' ? 'selected' : ''}>No Cumple</option>
                     </select>`;
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="marcarCambios()" onchange="agregarMotivoDatalist(this.value); recalcularFila(this.closest('tr'));">`;
+                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="marcarCambios()" onchange="agregarMotivoDatalist(this.value); recalcularFila(this.closest('tr'));">`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('INGRESO HÚMEDO') || colName.includes('SALIDA HÚMEDO') || colName.includes('MEDICIÓN:')) { 
                     td.contentEditable = "false"; 
-                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:#111827; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">`;
+                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor: pointer;" onchange="recalcularFila(this.closest('tr')); marcarCambios();">`;
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
                     td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
@@ -610,7 +654,7 @@
                 } else if (td.querySelector('input[type="text"]')) { 
                     datosFila[i-1] = td.querySelector('input[type="text"]').value;
                 } else { 
-                    datosFila[i-1] = td.innerText.trim();
+                    datosFila[i-1] = td.textContent.trim(); // Se cambia innerText por textContent por la celda oculta de Foto
                 }
             } return datosFila;
         };
