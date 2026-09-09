@@ -190,7 +190,7 @@
             </div>
             <input type="hidden" id="edit-foto-actual">
             <div class="grid-form">
-                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto" disabled></div>
+                <div class="form-group"><label>Código Precinto (ID)</label><input type="text" id="edit-precinto"></div>
                 <div class="form-group"><label>Fecha Ingreso</label><input type="date" id="edit-fechaIngreso"></div>
                 <div class="form-group"><label>Registrado Por</label><input type="text" id="edit-registradoPor"></div>
                 <div class="form-group"><label>Referencia</label><input type="text" id="edit-referencia"></div>
@@ -261,7 +261,9 @@
         
         let datosGlobalesSalidas = [];
         let estadoOrden = { columnaID: null, ascendente: true };
-        let idPrendaSeleccionada = null;
+        
+        // 🔥 VARIABLE CLAVE QUE CORRIGE EL BUG: Usaremos siempre el ID único de la BD
+        let idRegistroSeleccionado = null;
 
         // PRESENCIA
         function generarColorHash(str) {
@@ -312,9 +314,6 @@
             }
         }
 
-        // ==========================================
-        // CÁLCULO DE PAGINACIÓN SIN LÍMITE DE 1.000 FILAS
-        // ==========================================
         async function cargarTablaSalidas() {
             const tbody = document.getElementById("tbody-salidas");
             tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Cargando registros...</td></tr>`;
@@ -366,7 +365,8 @@
                 const descripcionGenerada = partesDesc.join(" ") || "-";
 
                 tr.innerHTML = `
-                    <td style="text-align: center;"><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
+                    <!-- 🛠️ CORRECCIÓN: Usamos el ID interno en el valor del checkbox -->
+                    <td style="text-align: center;"><input type="checkbox" class="checkbox-item" value="${item.id}" onchange="actualizarContadorBorrar()"></td>
                     <td>${celdaFotoHTML}</td>
                     <td>${item.salidaFecha || item.fechaSalida || item.fecha_salida || '-'}</td>
                     <td><strong>${codigoPrecinto}</strong></td>
@@ -381,7 +381,8 @@
                         <div class="action-btns">
                             <button class="btn-action btn-view" title="Ver Detalles" onclick="abrirModalVer('${jsonItem}')">👁️</button>
                             <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEdicion('${jsonItem}')">✏️</button>
-                            <button class="btn-action btn-retornar" title="Retornar a Bodega" onclick="retornarAInventario('${codigoPrecinto}')">↩️</button>
+                            <!-- 🛠️ CORRECCIÓN: Botón retornar envía ID interno -->
+                            <button class="btn-action btn-retornar" title="Retornar a Bodega" onclick="retornarAInventario('${item.id}')">↩️</button>
                         </div>
                     </td>
                 `;
@@ -396,12 +397,18 @@
         // ==========================================
         // BOTÓN: RETORNAR (Borra la fecha de salida)
         // ==========================================
-        window.retornarAInventario = async function(idDocumento) {
+        window.retornarAInventario = async function(idBD) {
             if (confirm("¿Quieres reversar esta baja y retornar la prenda como DISPONIBLE EN BODEGA? (Se borrará la fecha de salida)")) {
+                // 🛠️ CORRECCIÓN: Actualiza estrictamente por ID interno
                 const { error } = await client.from('prendas')
                     .update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" })
-                    .eq('precinto', idDocumento);
-                if (error) { await client.from('prendas').update({ estado: "Disponible en inventario", salidaRemision: "", salidaFecha: "", fechaSalida: "", salidaTo: "" }).eq('id', idDocumento); }
+                    .eq('id', idBD);
+                
+                if (error) { 
+                    alert("Error al retornar: " + error.message);
+                    return; 
+                }
+                
                 alert("¡Acción realizada! La prenda regresó al Dashboard (Bodega). 🟢");
                 cargarTablaSalidas();
             }
@@ -463,6 +470,7 @@
 
         // ELIMINACIÓN MASIVA POR LOTES (SOLUCIÓN DE SEGURIDAD PARA MÁS DE 3.000 FILAS)
         async function eliminarSeleccionadosSalidas() {
+            // 🛠️ CORRECCIÓN: cb.value tiene el ID interno
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
             if (seleccionados.length === 0) return;
             if (!confirm(`⚠️ Vas a eliminar ${seleccionados.length} registro(s) permanentemente de la base de datos.\n\n¿Estás seguro de continuar?`)) return;
@@ -479,7 +487,7 @@
                     const lote = seleccionados.slice(i, i + tamañoLote);
                     btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
 
-                    await client.from('prendas').delete().in('precinto', lote);
+                    // 🛠️ CORRECCIÓN: Borrado únicamente por ID interno
                     await client.from('prendas').delete().in('id', lote);
 
                     procesados += lote.length;
@@ -536,9 +544,11 @@
 
         function abrirModalEdicion(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            idPrendaSeleccionada = item.precinto || item.id;
             
-            document.getElementById('edit-precinto').value = idPrendaSeleccionada;
+            // 🛠️ CORRECCIÓN: Guardamos ID interno
+            idRegistroSeleccionado = item.id;
+            
+            document.getElementById('edit-precinto').value = item.precinto || item.id || ''; // Se permite editar el precinto visual
             document.getElementById('edit-fechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || '';
             document.getElementById('edit-registradoPor').value = item.registradoPor || item.registrado_por || '';
             document.getElementById('edit-referencia').value = item.referencia || '';
@@ -578,7 +588,6 @@
         }
 
         async function guardarEdicion() {
-            const precinto = document.getElementById('edit-precinto').value;
             const btnGuardar = document.getElementById('btn-guardar-edicion');
             btnGuardar.disabled = true; btnGuardar.innerHTML = "⏳ Guardando...";
 
@@ -607,6 +616,7 @@
                 let estadoSeleccionado = document.getElementById('edit-estado').value;
 
                 let datosActualizar = {
+                    precinto: document.getElementById('edit-precinto').value.trim(),
                     fechaIngreso: document.getElementById('edit-fechaIngreso').value, registradoPor: document.getElementById('edit-registradoPor').value,
                     referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
                     color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
@@ -622,8 +632,9 @@
                     observaciones: document.getElementById('edit-observaciones').value, fotoUrl: urlFotoFinal
                 };
 
-                const { error } = await client.from('prendas').update(datosActualizar).eq('precinto', idPrendaSeleccionada);
-                if (error) { await client.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada); }
+                // 🛠️ CORRECCIÓN: Actualiza usando el ID interno guardado
+                const { error } = await client.from('prendas').update(datosActualizar).eq('id', idRegistroSeleccionado);
+                if (error) throw error;
 
                 if (fechaSalidaRevisada === "") {
                     alert("✅ Prenda actualizada.\n\nComo le borraste la 'Fecha de Salida', esta prenda ha regresado al Dashboard (Bodega).");
