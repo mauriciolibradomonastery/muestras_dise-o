@@ -177,7 +177,6 @@
             <div class="modal-header">
                 <h3 style="color:#fd7e14;">📤 Registrar Salida</h3>
             </div>
-            <input type="hidden" id="salida-precinto">
             
             <label>Fecha de Salida (OBLIGATORIA):</label><input type="date" id="salidaFecha" required>
             <label>Tipo de Salida:</label>
@@ -303,7 +302,9 @@
         
         let datosGlobales = [];
         let estadoOrden = { columnaID: null, ascendente: true };
-        let idPrendaSeleccionada = null;
+        
+        // 🔥 ESTA ES LA VARIABLE CLAVE QUE CORRIGE EL BUG: Usaremos siempre el ID único de la Base de Datos
+        let idRegistroSeleccionado = null; 
 
         function generarColorHash(str) {
             let hash = 0;
@@ -406,7 +407,8 @@
                 if(item.precio || item.costo) { costoVisual = `$${item.precio || item.costo} ${item.moneda || 'COP'}`; }
 
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="checkbox-item" value="${codigoPrecinto}" onchange="actualizarContadorBorrar()"></td>
+                    <!-- 🛠️ CORRECCIÓN: El checkbox ahora usa el ID de la base de datos -->
+                    <td><input type="checkbox" class="checkbox-item" value="${item.id}" onchange="actualizarContadorBorrar()"></td>
                     <td>${celdaFotoHTML}</td>
                     <td>${item.fechaIngreso || item.fecha_ingreso || item.created_at || '-'}</td>
                     <td><strong>${codigoPrecinto}</strong></td>
@@ -421,7 +423,8 @@
                         <div class="action-btns">
                             <button class="btn-action btn-view" title="Ver Detalles" onclick="verDetalles('${jsonItem}')">👁️</button>
                             <button class="btn-action btn-edit" title="Editar Prenda" onclick="abrirModalEditar('${jsonItem}')">✏️</button>
-                            <button class="btn-action btn-salida" title="Dar Salida" onclick="abrirModalDarSalida('${codigoPrecinto}')">📤</button>
+                            <!-- 🛠️ CORRECCIÓN: El botón de salida envía el ID interno, no el precinto texto -->
+                            <button class="btn-action btn-salida" title="Dar Salida" onclick="abrirModalDarSalida('${item.id}')">📤</button>
                         </div>
                     </td>
                 `;
@@ -488,9 +491,10 @@
         }
 
         // ==========================================
-        // BORRADO MASIVO POR LOTES (SOLUCIÓN PARA 3.500+ REGISTROS)
+        // BORRADO MASIVO POR LOTES (CORREGIDO PARA USAR ID)
         // ==========================================
         async function eliminarSeleccionados() {
+            // cb.value ahora guarda el ID de la base de datos gracias a la corrección en renderizarTabla
             const seleccionados = Array.from(document.querySelectorAll('.checkbox-item:checked')).map(cb => cb.value);
             if (seleccionados.length === 0) return;
             if (!confirm(`⚠️ Vas a eliminar ${seleccionados.length} registro(s) permanentemente de la base de datos.\n\n¿Estás seguro de continuar?`)) return;
@@ -507,7 +511,7 @@
                     const lote = seleccionados.slice(i, i + tamañoLote);
                     btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
 
-                    await client.from('prendas').delete().in('precinto', lote);
+                    // 🛠️ CORRECCIÓN: Borrar estrictamente por ID interno para no borrar duplicados
                     await client.from('prendas').delete().in('id', lote);
 
                     procesados += lote.length;
@@ -527,8 +531,8 @@
         }
 
         // MÓDULO: DAR SALIDA
-        window.abrirModalDarSalida = function(precinto) {
-            idPrendaSeleccionada = precinto;
+        window.abrirModalDarSalida = function(idBD) {
+            idRegistroSeleccionado = idBD; // 🛠️ CORRECCIÓN: Guardamos el ID interno
             document.getElementById('salidaFecha').value = new Date().toISOString().split('T')[0];
             document.getElementById('salidaRemision').value = '';
             document.getElementById('salidaTipo').value = '';
@@ -536,7 +540,7 @@
             document.getElementById('modal-salida').style.display = 'flex';
         }
 
-        window.cerrarModalSalida = function() { document.getElementById('modal-salida').style.display = 'none'; idPrendaSeleccionada = null; }
+        window.cerrarModalSalida = function() { document.getElementById('modal-salida').style.display = 'none'; idRegistroSeleccionado = null; }
 
         window.guardarSalida = async function() {
             const fecha = document.getElementById('salidaFecha').value;
@@ -550,8 +554,9 @@
             const btn = document.getElementById('btn-confirmar-salida');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
-            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('precinto', idPrendaSeleccionada);
-            if (error) { await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idPrendaSeleccionada); }
+            // 🛠️ CORRECCIÓN: Actualizamos usando el ID interno
+            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idRegistroSeleccionado);
+            if (error) throw error;
             
             alert("✅ Salida registrada exitosamente.\n\nLa prenda se ha movido al historial de Bajas/Salidas.");
             cerrarModalSalida(); cargarTabla(); 
@@ -592,9 +597,13 @@
 
         window.abrirModalEditar = function(jsonEncoded) {
             const item = JSON.parse(decodeURIComponent(jsonEncoded));
-            idPrendaSeleccionada = item.precinto || item.id;
             
-            document.getElementById('edPrecinto').value = idPrendaSeleccionada;
+            // 🛠️ CORRECCIÓN: Guardamos el ID interno de la base de datos para no mezclar precintos
+            idRegistroSeleccionado = item.id;
+            
+            // Aquí mostramos el precinto tal cual está escrito para que puedas verlo y cambiarlo si quieres
+            document.getElementById('edPrecinto').value = item.precinto || item.codigo_precinto || item.id || "";
+            
             document.getElementById('edFechaIngreso').value = item.fechaIngreso || item.fecha_ingreso || '';
             document.getElementById('edRegistradoPor').value = item.registradoPor || item.registrado_por || '';
             document.getElementById('edReferencia').value = item.referencia || '';
@@ -674,8 +683,9 @@
                     paisOrigen: document.getElementById('edPaisOrigen').value, fotoUrl: urlFotoFinal
                 };
 
-                const { error } = await client.from('prendas').update(datosActualizar).eq('precinto', idPrendaSeleccionada);
-                if (error) { await client.from('prendas').update(datosActualizar).eq('id', idPrendaSeleccionada); }
+                // 🛠️ CORRECCIÓN: Actualizamos usando el ID interno único, asegurando que solo cambie un registro a la vez
+                const { error } = await client.from('prendas').update(datosActualizar).eq('id', idRegistroSeleccionado);
+                if (error) throw error;
 
                 if (fechaSalidaRevisada !== "") { alert("✅ Prenda actualizada.\n\nComo le asignaste una 'Fecha de Salida', esta prenda se ha movido al Historial de Salidas."); } 
                 else { alert("✅ Información actualizada correctamente."); }
