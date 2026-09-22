@@ -120,8 +120,8 @@
         table { border-collapse: collapse; width: max-content; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; }
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
-        .th-title { cursor: pointer; user-select: none; color: #374151; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #f3f4f6; padding: 10px; transition: background-color 0.2s; }
-        .th-title:hover { background-color: #e5e7eb; }
+        .th-title { cursor: pointer; user-select: none; color: #ffffff; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #091f5c; padding: 10px; transition: background-color 0.2s;border-color: #091f5c !important; }
+        .th-title:hover { background-color: #091f5c; }
         .sort-icon { display: inline-block; margin-left: 5px; font-size: 12px; }
 
         .filter-input { width: 100%; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; }
@@ -144,10 +144,10 @@
 
         .multiline-cell { white-space: pre-wrap !important; word-wrap: break-word; }
 
-        th.col-checkbox { z-index: 19 !important; background-color: #f3f4f6 !important; }
-        th.col-fija-linea { z-index: 18 !important; background-color: #f3f4f6 !important; }
-        th.col-fija-ref { z-index: 17 !important; background-color: #f3f4f6 !important; }
-        th.col-fija-color { z-index: 16 !important; background-color: #f3f4f6 !important; }
+        th.col-checkbox { z-index: 19 !important; background-color: #091f5c !important;color: #ffffff; }
+        th.col-fija-linea { z-index: 18 !important; background-color: #091f5c !important; }
+        th.col-fija-ref { z-index: 17 !important; background-color: #091f5c !important; }
+        th.col-fija-color { z-index: 16 !important; background-color: #091f5c !important; }
         
         #tableFilterRow th.col-checkbox, #tableFilterRow th.col-fija-linea, #tableFilterRow th.col-fija-ref, #tableFilterRow th.col-fija-color { background-color: #f9fafb !important; }
         tbody tr:nth-child(even) td.col-checkbox, tbody tr:nth-child(even) td.col-fija-linea, tbody tr:nth-child(even) td.col-fija-ref, tbody tr:nth-child(even) td.col-fija-color { background-color: #f9fafb; }
