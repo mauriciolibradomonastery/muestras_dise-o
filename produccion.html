@@ -205,6 +205,20 @@
     <div class="nota">Este gráfico siempre muestra el total de la compañía, sin importar los filtros. Clic en un mes para filtrar las tablas por ese mes.</div>
 </div>
 
+<div class="card">
+    <h3>
+        <span>Qué va a ingresar cada mes <span id="chipMesPlan"></span></span>
+        <button class="btn-claro" onclick="exportar('plan')">📥 Exportar</button>
+    </h3>
+    <div class="tabla-scroll" style="max-height: 400px;">
+        <table id="tablaPlan">
+            <thead><tr id="cabezaPlan"></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="nota">Solo lo que aún no ha llegado a bodega, ubicado en el mes de su fecha proyectada. Clic en un mes para ver el detalle abajo. Este cuadro sí responde a los filtros.</div>
+</div>
+
 <div class="tablas">
     <div class="card">
         <h3>
@@ -530,11 +544,82 @@ function refrescar() {
 
     pintarTabla('ing');
     pintarTabla('pen');
+    pintarPlan(pendientes);
     pintarCumplimiento();
     pintarKpis(ingMes, penMes);
     document.getElementById('mesActivo').textContent = mesSeleccionado ? `Mes filtrado: ${nombreMes(mesSeleccionado)}` : '';
     document.getElementById('chipAtrasadas').innerHTML = soloAtrasadas
         ? '<span class="chip" onclick="alternarAtrasadas()">solo atrasadas ✕</span>' : '';
+}
+
+// ---------- Qué va a ingresar cada mes ----------
+let datosPlan = [];
+
+function pintarPlan(pendientes) {
+    const DESTINOS = ['COLOMBIA', 'MEXICO', 'USA'];
+    const caja = d => {
+        const n = (d || '').toString().trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (n.includes('COLOMBIA')) return 'COLOMBIA';
+        if (n.includes('MEXICO')) return 'MEXICO';
+        if (n.includes('USA') || n.includes('ESTADOS UNIDOS') || n === 'US') return 'USA';
+        return 'OTROS';
+    };
+
+    const porMes = {};
+    let hayOtros = false;
+    pendientes.forEach(f => {
+        const c = claveMes(f.fecha_estimada_bodega);
+        const d = caja(f.destino);
+        if (d === 'OTROS') hayOtros = true;
+        porMes[c] = porMes[c] || { COLOMBIA: 0, MEXICO: 0, USA: 0, OTROS: 0, total: 0, refs: new Set() };
+        const u = num(f.unidades_preventa);
+        porMes[c][d] += u;
+        porMes[c].total += u;
+        if (f.descripcion) porMes[c].refs.add(f.descripcion.trim());
+    });
+
+    const columnas = hayOtros ? [...DESTINOS, 'OTROS'] : DESTINOS;
+    const etiqueta = { COLOMBIA: 'Colombia', MEXICO: 'México', USA: 'USA', OTROS: 'Otros' };
+    const mesHoy = hoy.slice(0, 7);
+
+    datosPlan = Object.keys(porMes)
+        .sort((a, b) => a === SIN_FECHA ? 1 : b === SIN_FECHA ? -1 : a.localeCompare(b))
+        .map(c => ({
+            clave: c, mes: nombreMes(c), refs: porMes[c].refs.size,
+            vencido: c !== SIN_FECHA && c < mesHoy,
+            ...Object.fromEntries(columnas.map(d => [d, porMes[c][d]])),
+            total: porMes[c].total,
+        }));
+
+    document.getElementById('cabezaPlan').innerHTML =
+        `<th>Mes proyectado</th><th class="num">Referencias</th>` +
+        columnas.map(d => `<th class="num">${etiqueta[d]}</th>`).join('') +
+        `<th class="num">Total a ingresar</th>`;
+
+    const tbody = document.querySelector('#tablaPlan tbody');
+    if (!datosPlan.length) {
+        tbody.innerHTML = `<tr><td colspan="${columnas.length + 3}" class="vacio">No hay pendientes con estos filtros.</td></tr>`;
+        window.columnasPlan = columnas;
+        return;
+    }
+
+    const suma = campo => datosPlan.reduce((s, d) => s + num(d[campo]), 0);
+    tbody.innerHTML = datosPlan.map(d => `
+        <tr onclick="seleccionarMes('${d.clave}')" ${mesSeleccionado === d.clave ? 'style="background:#eef2ff"' : ''}>
+            <td>${d.mes} ${d.vencido ? '<span class="no-cumple">· vencido</span>' : d.clave === SIN_FECHA ? '<span class="futuro">· sin proyectar</span>' : ''}</td>
+            <td class="num">${fmt(d.refs)}</td>
+            ${columnas.map(c => `<td class="num">${fmt(d[c])}</td>`).join('')}
+            <td class="num"><b>${fmt(d.total)}</b></td>
+        </tr>`).join('') + `
+        <tr class="total-row">
+            <td colspan="2">Total pendiente</td>
+            ${columnas.map(c => `<td class="num">${fmt(suma(c))}</td>`).join('')}
+            <td class="num">${fmt(suma('total'))}</td>
+        </tr>`;
+
+    document.getElementById('chipMesPlan').innerHTML = mesSeleccionado
+        ? `<span class="chip" onclick="event.stopPropagation(); seleccionarMes('${mesSeleccionado}')">${nombreMes(mesSeleccionado)} ✕</span>` : '';
+    window.columnasPlan = columnas;
 }
 
 // ---------- Cumplimiento ----------
@@ -985,6 +1070,16 @@ window.exportar = function(cual) {
             return fila;
         }));
         nombre = `Cumplimiento_${ANIO_PPTO}.xlsx`;
+    } else if (cual === 'plan') {
+        const cols = window.columnasPlan || ['COLOMBIA','MEXICO','USA'];
+        hoja = XLSX.utils.json_to_sheet(datosPlan.map(d => {
+            const fila = { 'MES PROYECTADO': d.mes, 'REFERENCIAS': d.refs };
+            cols.forEach(c => fila[c] = d[c]);
+            fila['TOTAL A INGRESAR'] = d.total;
+            fila['ESTADO'] = d.vencido ? 'VENCIDO' : d.clave === 'sin-fecha' ? 'SIN PROYECTAR' : 'EN PLAN';
+            return fila;
+        }));
+        nombre = 'Plan_de_ingreso.xlsx';
     } else if (cual === 'ingresadas') {
         hoja = XLSX.utils.json_to_sheet(datosIngresadas.map(d => ({
             'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion, 'COLOR': d.color, 'DESTINO': d.destino,
