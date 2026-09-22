@@ -200,8 +200,9 @@ let datosIngresadas = [], datosPendientes = [];
 
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
-const claveMes = f => f ? String(f).slice(0,7) : null;             // "2026-03"
-const nombreMes = c => c ? `${MESES[+c.slice(5,7)-1]} ${c.slice(0,4)}` : 'Sin fecha';
+const SIN_FECHA = 'sin-fecha';
+const claveMes = f => f ? String(f).slice(0,7) : SIN_FECHA;        // "2026-03" o "sin-fecha"
+const nombreMes = c => (!c || c === SIN_FECHA) ? 'Sin fecha' : `${MESES[+c.slice(5,7)-1]} ${c.slice(0,4)}`;
 const hoy = new Date().toISOString().slice(0,10);
 
 // ---------- Carga de datos (por páginas de 1000) ----------
@@ -287,7 +288,8 @@ function refrescar() {
     };
     ingresadas.forEach(f => sumar(claveMes(f.fecha_real_bodega), 'ing', unidadesIngresadas(f)));
     pendientes.forEach(f => sumar(claveMes(f.fecha_estimada_bodega), 'pen', num(f.unidades_preventa)));
-    const meses = Object.keys(porMes).sort();
+    const meses = Object.keys(porMes).sort((a, b) =>
+        a === SIN_FECHA ? 1 : b === SIN_FECHA ? -1 : a.localeCompare(b));
     dibujarGrafico(meses, porMes);
 
     // --- Tablas (respetando el mes seleccionado en el gráfico) ---
@@ -405,8 +407,8 @@ function dibujarGrafico(meses, porMes) {
             <rect x="${x}" y="${tope}" width="${anchoMes - 6}" height="${base - tope}" fill="${activo ? '#eef2ff' : 'transparent'}"/>
             <rect x="${x + 5}" y="${base - hIng}" width="${ancBarra}" height="${hIng}" fill="#1e3a8a" rx="3"><title>${nombreMes(m)} · ingresadas: ${fmt(porMes[m].ing)}</title></rect>
             <rect x="${x + 33}" y="${base - hPen}" width="${ancBarra}" height="${hPen}" fill="#f59e0b" rx="3"><title>${nombreMes(m)} · pendientes: ${fmt(porMes[m].pen)}</title></rect>
-            <text x="${x + 31}" y="${base + 16}" text-anchor="middle" font-size="10" fill="#4b5563">${nombreMes(m).split(' ')[0]}</text>
-            <text x="${x + 31}" y="${base + 29}" text-anchor="middle" font-size="9" fill="#9ca3af">${m.slice(0,4)}</text>
+            <text x="${x + 31}" y="${base + 16}" text-anchor="middle" font-size="10" fill="#4b5563">${m === SIN_FECHA ? 'Sin' : nombreMes(m).split(' ')[0]}</text>
+            <text x="${x + 31}" y="${base + 29}" text-anchor="middle" font-size="9" fill="#9ca3af">${m === SIN_FECHA ? 'fecha' : m.slice(0,4)}</text>
         </g>`;
     }).join('');
 
