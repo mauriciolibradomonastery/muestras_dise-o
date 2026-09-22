@@ -37,6 +37,26 @@
     .filtros { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
     .filtro { display: flex; flex-direction: column; gap: 4px; }
     .filtro label { font-size: 11px; color: #6b7280; font-weight: 600; }
+    .multi { position: relative; min-width: 170px; }
+    .multi-btn { width: 100%; justify-content: space-between; background: #fff; color: #374151;
+        border: 1px solid #d1d5db; font-weight: 500; padding: 8px 10px; }
+    .multi-btn:hover { border-color: #9ca3af; }
+    .multi-btn.activo { border-color: #1e3a8a; color: #1e3a8a; font-weight: 600; background: #eef2ff; }
+    .multi-panel { display: none; position: absolute; top: 105%; left: 0; z-index: 50; width: 250px;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 10px; box-shadow: 0 12px 30px rgba(15,23,42,.18);
+        padding: 8px; }
+    .multi.abierto .multi-panel { display: block; }
+    .multi-buscar { width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
+        font-size: 12px; margin-bottom: 6px; }
+    .multi-lista { max-height: 230px; overflow-y: auto; }
+    .multi-op { display: flex; align-items: center; gap: 8px; padding: 5px 6px; font-size: 13px;
+        border-radius: 6px; cursor: pointer; }
+    .multi-op:hover { background: #f3f4f6; }
+    .multi-op input { width: auto; margin: 0; }
+    .multi-pie { display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9;
+        margin-top: 6px; padding-top: 6px; }
+    .multi-pie button { padding: 4px 8px; font-size: 12px; background: none; color: #1e3a8a; }
+    .multi-pie button:hover { text-decoration: underline; }
     .filtro select, .filtro input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
         font-size: 13px; background: #fff; min-width: 160px; outline: none; }
     .filtro select:focus, .filtro input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 2px rgba(30,58,138,.15); }
@@ -52,6 +72,12 @@
         padding: 16px 18px; box-shadow: 0 6px 18px rgba(17,24,39,.05); }
     .kpi.pendiente { border-left-color: #d97706; }
     .kpi.avance { border-left-color: #059669; }
+    .kpi-clic { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+    .kpi-clic:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(17,24,39,.12); }
+    .kpi-activo { background: #fffbeb; border-color: #f59e0b; }
+    .chip { background: #fef3c7; color: #92400e; border-radius: 999px; padding: 3px 10px; font-size: 12px;
+        font-weight: 600; cursor: pointer; border: 1px solid #fcd34d; }
+    .chip:hover { background: #fde68a; }
     .kpi .valor { font-size: 26px; font-weight: 700; color: #111827; line-height: 1.1; }
     .kpi .etiqueta { font-size: 12px; color: #6b7280; margin-top: 6px; }
 
@@ -136,16 +162,17 @@
 <div class="card">
     <h3>Filtros</h3>
     <div class="filtros">
-        <div class="filtro"><label for="fColeccion">Colección</label><select id="fColeccion"></select></div>
-        <div class="filtro"><label for="fOrigen">Origen</label><select id="fOrigen"></select></div>
-        <div class="filtro"><label for="fDestino">Destino</label><select id="fDestino"></select></div>
-        <div class="filtro"><label for="fCanal">Canal (pestaña)</label><select id="fCanal"></select></div>
-        <div class="filtro"><label for="fLinea">Línea</label><select id="fLinea"></select></div>
-        <div class="filtro"><label for="fSublinea">Sublínea</label><select id="fSublinea"></select></div>
-        <div class="filtro"><label for="fProveedor">Proveedor (Supplier)</label><select id="fProveedor"></select></div>
+        <div class="filtro"><label>Colección</label><div class="multi" id="fColeccion"></div></div>
+        <div class="filtro"><label>Origen</label><div class="multi" id="fOrigen"></div></div>
+        <div class="filtro"><label>Destino</label><div class="multi" id="fDestino"></div></div>
+        <div class="filtro"><label>Canal (pestaña)</label><div class="multi" id="fCanal"></div></div>
+        <div class="filtro"><label>Línea</label><div class="multi" id="fLinea"></div></div>
+        <div class="filtro"><label>Sublínea</label><div class="multi" id="fSublinea"></div></div>
+        <div class="filtro"><label>Proveedor (Supplier)</label><div class="multi" id="fProveedor"></div></div>
         <div class="filtro"><label for="fTexto">Buscar descripción o referencia</label><input type="text" id="fTexto" placeholder="Ej: hoodie"></div>
         <button class="btn-claro" onclick="limpiarFiltros()">Limpiar filtros</button>
     </div>
+</div>
 </div>
 
 <div class="kpis" id="kpis"></div>
@@ -210,7 +237,7 @@
 
     <div class="card">
         <h3>
-            <span>Pendiente por ingresar</span>
+            <span>Pendiente por ingresar <span id="chipAtrasadas"></span></span>
             <button class="btn-claro" onclick="exportar('pendientes')">📥 Exportar</button>
         </h3>
         <div class="tabla-scroll">
@@ -222,6 +249,7 @@
                     <th onclick="ordenar('pen','color')">Color</th>
                     <th onclick="ordenar('pen','destino')">Destino</th>
                     <th onclick="ordenar('pen','fecha')">Fecha proyectada</th>
+                    <th onclick="ordenar('pen','diasAtraso')" class="num">Días de atraso</th>
                     <th onclick="ordenar('pen','total')" class="num">Unidades preventa</th>
                 </tr></thead>
                 <tbody></tbody>
@@ -277,6 +305,7 @@ const MAX_FILAS = 600;
 
 let filas = [], presupuesto = {}, fotos = new Set();
 let mesSeleccionado = null;
+let soloAtrasadas = false;
 let datosIngresadas = [], datosPendientes = [], datosCumplimiento = [];
 let refFicha = null;
 let ultimoOrden = { ing: { col:'fecha', asc:false }, pen: { col:'fecha', asc:true } };
@@ -341,47 +370,109 @@ async function cargarFotos() {
 // ---------- Filtros ----------
 const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
                   fLinea:'linea', fSublinea:'sublinea', fProveedor:'proveedor' };
+// Cada filtro guarda un conjunto de valores elegidos: vacío = todas
+const seleccion = Object.fromEntries(Object.values(SELECTS).map(c => [c, new Set()]));
+let panelAbierto = null;
 
 // Cada lista ofrece solo los valores que existen según los DEMÁS filtros ya elegidos
 function llenarFiltros() {
     const texto = document.getElementById('fTexto').value.trim().toLowerCase();
-    const elegidos = Object.fromEntries(
-        Object.entries(SELECTS).map(([id, campo]) => [campo, document.getElementById(id).value]));
 
     for (const [id, campo] of Object.entries(SELECTS)) {
-        const sel = document.getElementById(id);
-        const elegido = sel.value;
+        const caja = document.getElementById(id);
+        const elegidos = seleccion[campo];
 
         const disponibles = filas.filter(f => {
-            for (const [otroCampo, valor] of Object.entries(elegidos)) {
-                if (otroCampo === campo || !valor) continue;       // el propio campo no se limita a sí mismo
-                if ((f[otroCampo] || '').trim() !== valor) return false;
+            for (const [otroCampo, valores] of Object.entries(seleccion)) {
+                if (otroCampo === campo || !valores.size) continue;
+                if (!valores.has((f[otroCampo] || '').trim())) return false;
             }
             if (texto && !`${f.descripcion || ''} ${f.referencia || ''} ${f.color || ''}`.toLowerCase().includes(texto)) return false;
             return true;
         });
 
-        const valores = [...new Set(disponibles.map(f => (f[campo] || '').trim()).filter(Boolean))].sort();
-        if (elegido && !valores.includes(elegido)) valores.push(elegido);   // no perder lo ya elegido
-        sel.innerHTML = '<option value="">Todas</option>' +
-            valores.sort().map(v => `<option value="${v}"${v === elegido ? ' selected' : ''}>${v}</option>`).join('');
+        const valores = [...new Set(disponibles.map(f => (f[campo] || '').trim()).filter(Boolean))];
+        elegidos.forEach(v => { if (!valores.includes(v)) valores.push(v); });   // no perder lo ya elegido
+        valores.sort();
+
+        const etiqueta = elegidos.size === 0 ? 'Todas'
+            : elegidos.size === 1 ? [...elegidos][0]
+            : `${elegidos.size} seleccionadas`;
+
+        caja.className = 'multi' + (panelAbierto === id ? ' abierto' : '');
+        caja.innerHTML = `
+            <button class="btn-claro multi-btn ${elegidos.size ? 'activo' : ''}" onclick="abrirPanel('${id}', event)">
+                <span>${etiqueta}</span><span>▾</span>
+            </button>
+            <div class="multi-panel" onclick="event.stopPropagation()">
+                <input class="multi-buscar" placeholder="Buscar…" oninput="filtrarOpciones('${id}', this.value)">
+                <div class="multi-lista">
+                    ${valores.map(v => `
+                        <label class="multi-op" data-valor="${v.toLowerCase()}">
+                            <input type="checkbox" ${elegidos.has(v) ? 'checked' : ''}
+                                   onchange="marcarOpcion('${campo}', ${JSON.stringify(v).replace(/"/g, '&quot;')}, this.checked)">
+                            <span>${v}</span>
+                        </label>`).join('') || '<div class="nota">Sin opciones</div>'}
+                </div>
+                <div class="multi-pie">
+                    <button onclick="marcarTodas('${campo}', ${JSON.stringify(valores).replace(/"/g, '&quot;')})">Seleccionar todas</button>
+                    <button onclick="marcarNinguna('${campo}')">Ninguna</button>
+                </div>
+            </div>`;
     }
 }
 
+window.abrirPanel = function(id, evento) {
+    evento.stopPropagation();
+    panelAbierto = (panelAbierto === id) ? null : id;
+    document.querySelectorAll('.multi').forEach(m => m.classList.toggle('abierto', m.id === panelAbierto));
+};
+
+window.filtrarOpciones = function(id, texto) {
+    const t = texto.trim().toLowerCase();
+    document.querySelectorAll(`#${id} .multi-op`).forEach(op =>
+        op.style.display = op.dataset.valor.includes(t) ? 'flex' : 'none');
+};
+
+window.marcarOpcion = function(campo, valor, marcado) {
+    if (marcado) seleccion[campo].add(valor); else seleccion[campo].delete(valor);
+    mesSeleccionado = null;
+    refrescar();
+};
+
+window.marcarTodas = function(campo, valores) {
+    valores.forEach(v => seleccion[campo].add(v));
+    mesSeleccionado = null;
+    refrescar();
+};
+
+window.marcarNinguna = function(campo) {
+    seleccion[campo].clear();
+    mesSeleccionado = null;
+    refrescar();
+};
+
+document.addEventListener('click', () => {
+    if (!panelAbierto) return;
+    panelAbierto = null;
+    document.querySelectorAll('.multi').forEach(m => m.classList.remove('abierto'));
+});
+
 function filtrar() {
     const t = document.getElementById('fTexto').value.trim().toLowerCase();
-    const activos = Object.entries(SELECTS)
-        .map(([id, campo]) => [campo, document.getElementById(id).value]).filter(([, v]) => v);
     return filas.filter(f => {
-        for (const [campo, valor] of activos) if ((f[campo] || '').trim() !== valor) return false;
+        for (const [campo, valores] of Object.entries(seleccion)) {
+            if (valores.size && !valores.has((f[campo] || '').trim())) return false;
+        }
         if (t && !`${f.descripcion || ''} ${f.referencia || ''} ${f.color || ''}`.toLowerCase().includes(t)) return false;
         return true;
     });
 }
 
 window.limpiarFiltros = function() {
-    Object.keys(SELECTS).forEach(id => document.getElementById(id).value = '');
+    Object.values(seleccion).forEach(s => s.clear());
     document.getElementById('fTexto').value = '';
+    panelAbierto = null;
     mesSeleccionado = null;
     refrescar();
 };
@@ -409,7 +500,8 @@ function refrescar() {
     dibujarGrafico(porMes);
 
     const ingMes = mesSeleccionado ? ingresadas.filter(f => claveMes(f.fecha_real_bodega) === mesSeleccionado) : ingresadas;
-    const penMes = mesSeleccionado ? pendientes.filter(f => claveMes(f.fecha_estimada_bodega) === mesSeleccionado) : pendientes;
+    let penMes = mesSeleccionado ? pendientes.filter(f => claveMes(f.fecha_estimada_bodega) === mesSeleccionado) : pendientes;
+    if (soloAtrasadas) penMes = penMes.filter(f => f.fecha_estimada_bodega && f.fecha_estimada_bodega < hoy);
 
     datosIngresadas = ingMes.map(f => {
         const preventa = num(f.unidades_preventa);
@@ -432,6 +524,8 @@ function refrescar() {
         color: f.color, destino: f.destino, fecha: f.fecha_estimada_bodega,
         total: num(f.unidades_preventa),
         atrasada: !!(f.fecha_estimada_bodega && f.fecha_estimada_bodega < hoy),
+        diasAtraso: (f.fecha_estimada_bodega && f.fecha_estimada_bodega < hoy)
+            ? Math.round((new Date(hoy) - new Date(f.fecha_estimada_bodega)) / 86400000) : 0,
     }));
 
     pintarTabla('ing');
@@ -439,6 +533,8 @@ function refrescar() {
     pintarCumplimiento();
     pintarKpis(ingMes, penMes);
     document.getElementById('mesActivo').textContent = mesSeleccionado ? `Mes filtrado: ${nombreMes(mesSeleccionado)}` : '';
+    document.getElementById('chipAtrasadas').innerHTML = soloAtrasadas
+        ? '<span class="chip" onclick="alternarAtrasadas()">solo atrasadas ✕</span>' : '';
 }
 
 // ---------- Cumplimiento ----------
@@ -560,7 +656,9 @@ function pintarKpis(ing, pen) {
     document.getElementById('kpis').innerHTML = `
         <div class="kpi"><div class="valor">${fmt(totalIng)}</div><div class="etiqueta">Unidades ingresadas</div></div>
         <div class="kpi pendiente"><div class="valor">${fmt(totalPen)}</div><div class="etiqueta">Unidades pendientes por ingresar</div></div>
-        <div class="kpi pendiente"><div class="valor">${fmt(atrasadas)}</div><div class="etiqueta">Pendientes con fecha ya vencida</div></div>
+        <div class="kpi pendiente kpi-clic ${soloAtrasadas ? 'kpi-activo' : ''}" onclick="alternarAtrasadas()" title="Clic para ver solo las referencias atrasadas">
+            <div class="valor">${fmt(atrasadas)}</div>
+            <div class="etiqueta">Pendientes con fecha ya vencida · <b>${soloAtrasadas ? 'quitar filtro' : 'ver cuáles'}</b></div></div>
         <div class="kpi avance"><div class="valor">${total ? (totalIng / total * 100).toFixed(1) : '0.0'}%</div><div class="etiqueta">Avance de ingreso</div></div>
         <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas</div></div>
         <div class="kpi avance"><div class="valor">${pct(vtaHasta, pptoHasta)}</div>
@@ -589,7 +687,7 @@ function pintarTabla(cual) {
     });
 
     const tbody = document.querySelector(esIng ? '#tablaIngresadas tbody' : '#tablaPendientes tbody');
-    const columnas = esIng ? 14 : 7;
+    const columnas = esIng ? 14 : 8;
     if (!datos.length) {
         tbody.innerHTML = `<tr><td colspan="${columnas}" class="vacio">Sin resultados para estos filtros.</td></tr>`;
         return;
@@ -624,6 +722,7 @@ function pintarTabla(cual) {
              <td class="minuscula">${texto(d.color)}</td>
              <td class="minuscula">${texto(d.destino)}</td>
              <td class="${d.atrasada ? 'no-cumple' : ''}">${fechaCorta(d.fecha)}</td>
+             <td class="num ${d.diasAtraso ? 'no-cumple' : 'futuro'}">${d.diasAtraso ? fmt(d.diasAtraso) : '—'}</td>
              <td class="num">${fmt(d.total)}</td>
            </tr>`).join('');
 
@@ -649,7 +748,7 @@ function pintarTabla(cual) {
             </tr>`;
           })()
         : `<tr class="total-row">
-                <td colspan="6">Total (${fmt(datos.length)} filas)</td>
+                <td colspan="7">Total (${fmt(datos.length)} filas)</td>
                 <td class="num">${fmt(suma('total'))}</td>
            </tr>`;
 
@@ -658,7 +757,7 @@ function pintarTabla(cual) {
 
 window.ordenar = function(cual, col) {
     const o = ultimoOrden[cual];
-    o.asc = (o.col === col) ? !o.asc : !['total','reales','excedentes','segundas','fecha','preventa','realIngreso','pctExcedente','excedenteCalc'].includes(col);
+    o.asc = (o.col === col) ? !o.asc : !['total','reales','excedentes','segundas','fecha','preventa','realIngreso','pctExcedente','excedenteCalc','diasAtraso'].includes(col);
     o.col = col;
     pintarTabla(cual);
 };
@@ -719,6 +818,12 @@ function dibujarGrafico(porMes) {
         ${rejilla}<line x1="${margenIzq - 8}" y1="${base}" x2="${ancho - margenDer}" y2="${base}" stroke="#9ca3af"/>${barras}
     </svg>`;
 }
+
+window.alternarAtrasadas = function() {
+    soloAtrasadas = !soloAtrasadas;
+    refrescar();
+    if (soloAtrasadas) document.getElementById('tablaPendientes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 
 window.seleccionarMes = function(m) {
     mesSeleccionado = (mesSeleccionado === m) ? null : m;
@@ -894,7 +999,7 @@ window.exportar = function(cual) {
         hoja = XLSX.utils.json_to_sheet(datosPendientes.map(d => ({
             'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion,
             'COLOR': d.color, 'DESTINO': d.destino, 'FECHA PROYECTADA': d.fecha,
-            'UNIDADES PREVENTA': d.total, 'ATRASADA': d.atrasada ? 'SÍ' : 'NO',
+            'DÍAS DE ATRASO': d.diasAtraso || '', 'UNIDADES PREVENTA': d.total, 'ATRASADA': d.atrasada ? 'SÍ' : 'NO',
         })));
         nombre = 'Produccion_pendientes.xlsx';
     }
@@ -904,9 +1009,7 @@ window.exportar = function(cual) {
 };
 
 // ---------- Eventos ----------
-Object.keys(SELECTS).forEach(id =>
-    document.getElementById(id).addEventListener('change', () => { mesSeleccionado = null; refrescar(); }));
-document.getElementById('fTexto').addEventListener('input', () => refrescar());
+document.getElementById('fTexto').addEventListener('input', () => { mesSeleccionado = null; refrescar(); });
 
 cargarDatos();
 </script>
