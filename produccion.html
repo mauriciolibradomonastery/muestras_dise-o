@@ -29,6 +29,23 @@
         background: rgba(255,255,255,.7); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); }
     .btn-back:hover { background: #fff; color: #111827; }
 
+    .cuerpo { display: flex; gap: 22px; align-items: flex-start; }
+    .lateral { width: 230px; flex: none; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+        padding: 14px; box-shadow: 0 6px 18px rgba(17,24,39,.05); position: sticky; top: 20px; }
+    .lateral-titulo { font-size: 11px; color: #9ca3af; font-weight: 700; letter-spacing: .08em;
+        text-transform: uppercase; padding: 4px 8px 10px; }
+    .nav-item { width: 100%; justify-content: flex-start; background: none; color: #374151; font-size: 13.5px;
+        font-weight: 500; padding: 10px 12px; margin-bottom: 3px; text-align: left; }
+    .nav-item:hover { background: #f3f4f6; }
+    .nav-item.activo { background: #eef2ff; color: #1e3a8a; font-weight: 700; }
+    .lateral-nota { font-size: 11px; color: #9ca3af; padding: 12px 8px 4px; border-top: 1px solid #f1f5f9; margin-top: 10px; }
+    .principal { flex: 1; min-width: 0; }
+    @media (max-width: 900px) {
+        .cuerpo { flex-direction: column; }
+        .lateral { width: 100%; position: static; display: flex; gap: 6px; overflow-x: auto; }
+        .lateral-titulo, .lateral-nota { display: none; }
+        .nav-item { width: auto; white-space: nowrap; }
+    }
     .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px;
         margin-bottom: 20px; box-shadow: 0 6px 18px rgba(17,24,39,.05); }
     .card h3 { margin: 0 0 15px; font-size: 16px; color: #1f2937; display: flex; align-items: center;
@@ -159,7 +176,18 @@
     </div>
 </div>
 
-<div class="card">
+<div class="cuerpo">
+<nav class="lateral">
+    <div class="lateral-titulo">Análisis</div>
+    <button class="nav-item activo" data-seccion="resumen" onclick="verSeccion('resumen')">📊 Resumen ejecutivo</button>
+    <button class="nav-item" data-seccion="presupuesto" onclick="verSeccion('presupuesto')">🎯 Presupuesto y ventas</button>
+    <button class="nav-item" data-seccion="plan" onclick="verSeccion('plan')">📅 Plan de ingreso</button>
+    <button class="nav-item" data-seccion="ingresado" onclick="verSeccion('ingresado')">📦 Ingresado</button>
+    <button class="nav-item" data-seccion="pendiente" onclick="verSeccion('pendiente')">⏳ Pendiente por ingresar</button>
+    <div class="lateral-nota">Los filtros de arriba aplican a la sección que estés viendo.</div>
+</nav>
+<main class="principal">
+<div class="card" id="cardFiltros">
     <h3>Filtros</h3>
     <div class="filtros">
         <div class="filtro"><label>Colección</label><div class="multi" id="fColeccion"></div></div>
@@ -177,7 +205,7 @@
 
 <div class="kpis" id="kpis"></div>
 
-<div class="card">
+<div class="card" id="cardCumplimiento">
     <h3>
         <span>Cumplimiento del presupuesto comercial 2026</span>
         <button class="btn-claro" onclick="exportar('cumplimiento')">📥 Exportar</button>
@@ -191,7 +219,7 @@
     <div class="nota">Este cuadro siempre muestra el total de la compañía: no cambia al aplicar filtros. Vendidas = unidades que reportó el área comercial (se editan en la tabla presupuesto_comercial). Ingresado = lo que llegó a bodega, separado por destino.</div>
 </div>
 
-<div class="card">
+<div class="card" id="cardGrafico">
     <h3>
         <span>Unidades por mes</span>
         <span class="leyenda">
@@ -205,7 +233,7 @@
     <div class="nota">Este gráfico siempre muestra el total de la compañía, sin importar los filtros. Clic en un mes para filtrar las tablas por ese mes.</div>
 </div>
 
-<div class="card">
+<div class="card" id="cardPlan">
     <h3>
         <span>Qué va a ingresar cada mes <span id="chipMesPlan"></span></span>
         <button class="btn-claro" onclick="exportar('plan')">📥 Exportar</button>
@@ -220,7 +248,7 @@
 </div>
 
 <div class="tablas">
-    <div class="card">
+    <div class="card" id="cardIngresadas">
         <h3>
             <span>Ingresado por referencia</span>
             <button class="btn-claro" onclick="exportar('ingresadas')">📥 Exportar</button>
@@ -249,7 +277,7 @@
         <div class="nota">Real de ingreso = reales + excedentes. % excedente = cuánto se pasó (o faltó) frente a la preventa. Excedentes calculados = lo que supera el 10 % de la preventa; si no lo supera, queda en cero. Total ingresado = real de ingreso + segundas. Clic en una fila para ver la ficha completa.</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardPendientes">
         <h3>
             <span>Pendiente por ingresar <span id="chipAtrasadas"></span></span>
             <button class="btn-claro" onclick="exportar('pendientes')">📥 Exportar</button>
@@ -271,6 +299,9 @@
         </div>
         <div class="nota">En rojo, las que ya pasaron su fecha proyectada. Clic en una fila para ver la ficha completa.</div>
     </div>
+</div>
+
+</main>
 </div>
 
 <div class="modal-fondo" id="modalFicha" onclick="if(event.target===this) cerrarFicha()">
@@ -906,6 +937,7 @@ function dibujarGrafico(porMes) {
 
 window.alternarAtrasadas = function() {
     soloAtrasadas = !soloAtrasadas;
+    if (soloAtrasadas && !['plan','pendiente'].includes(seccionActual)) verSeccion('pendiente');
     refrescar();
     if (soloAtrasadas) document.getElementById('tablaPendientes').scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
@@ -1103,9 +1135,32 @@ window.exportar = function(cual) {
     XLSX.writeFile(libro, nombre);
 };
 
+// ---------- Secciones del menú lateral ----------
+const SECCIONES = {
+    resumen:     ['kpis', 'cardGrafico', 'cardCumplimiento'],
+    presupuesto: ['kpis', 'cardCumplimiento'],
+    plan:        ['kpis', 'cardPlan', 'cardPendientes'],
+    ingresado:   ['kpis', 'cardIngresadas'],
+    pendiente:   ['kpis', 'cardPlan', 'cardPendientes'],
+};
+let seccionActual = 'resumen';
+
+window.verSeccion = function(seccion) {
+    seccionActual = seccion;
+    const visibles = SECCIONES[seccion] || [];
+    ['kpis','cardGrafico','cardCumplimiento','cardPlan','cardIngresadas','cardPendientes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = visibles.includes(id) ? '' : 'none';
+    });
+    document.querySelectorAll('.nav-item').forEach(b =>
+        b.classList.toggle('activo', b.dataset.seccion === seccion));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 // ---------- Eventos ----------
 document.getElementById('fTexto').addEventListener('input', () => { mesSeleccionado = null; refrescar(); });
 
+verSeccion('resumen');
 cargarDatos();
 </script>
 </body>
