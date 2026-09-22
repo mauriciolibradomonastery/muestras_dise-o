@@ -160,15 +160,17 @@
             <thead><tr>
                 <th>Mes</th>
                 <th class="num">Presupuesto</th>
+                <th class="num">Vendidas</th>
+                <th class="num">Dif. ventas</th>
+                <th class="num">Cumpl. ventas</th>
+                <th class="num">Acum. ventas</th>
                 <th class="num">Ingresado</th>
-                <th class="num">Diferencia</th>
-                <th class="num">Cumplimiento</th>
-                <th class="num">Acumulado</th>
+                <th class="num">Cumpl. ingreso</th>
             </tr></thead>
             <tbody></tbody>
         </table>
     </div>
-    <div class="nota">Los meses que aún no llegan no muestran diferencia ni acumulado. El presupuesto es de toda la compañía, así que solo es comparable sin filtros.</div>
+    <div class="nota">Vendidas = unidades que reportó el área comercial (se actualizan en la tabla presupuesto_comercial). Ingresado = lo que llegó a bodega. Los meses que aún no llegan no muestran diferencia ni acumulado, y el presupuesto es de toda la compañía, así que solo es comparable sin filtros.</div>
 </div>
 
 <div class="card">
@@ -209,7 +211,7 @@
                 <tbody></tbody>
             </table>
         </div>
-        <div class="nota">Total ingresado = reales + excedentes + segundas. Clic en una fila para ver la ficha completa.</div>
+        <div class="nota">Real de ingreso = reales + excedentes. % excedente = cuánto se pasó (o faltó) frente a la preventa. Excedentes calculados = lo que supera el 10 % de la preventa; si no lo supera, queda en cero. Total ingresado = real de ingreso + segundas. Clic en una fila para ver la ficha completa.</div>
     </div>
 
     <div class="card">
@@ -221,7 +223,6 @@
             <table id="tablaPendientes">
                 <thead><tr>
                     <th>Foto</th>
-                    <th onclick="ordenar('pen','referencia')">Referencia</th>
                     <th onclick="ordenar('pen','sublinea')">Sublínea</th>
                     <th onclick="ordenar('pen','descripcion')">Descripción</th>
                     <th onclick="ordenar('pen','color')">Color</th>
@@ -295,7 +296,11 @@ const anioHoy = +hoy.slice(0,4);
 const mesActualPpto = anioHoy > ANIO_PPTO ? 12 : anioHoy < ANIO_PPTO ? 0 : +hoy.slice(5,7);
 const texto = v => (v ?? '').toString().trim() || '—';
 const fechaCorta = f => f ? `${f.slice(8,10)}/${f.slice(5,7)}/${f.slice(0,4)}` : '—';
-const urlFoto = ref => supabase.storage.from(BUCKET).getPublicUrl(`${ref}.jpg`).data.publicUrl;
+// La "referencia" real es la descripción (oltza, kametu...): con ella se guardan las fotos
+const claveFoto = desc => (desc || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sin-descripcion';
+const urlFoto = clave => supabase.storage.from(BUCKET).getPublicUrl(`${clave}.jpg`).data.publicUrl;
 
 // ---------- Carga ----------
 async function cargarDatos() {
@@ -322,10 +327,10 @@ window.cargarDatos = cargarDatos;
 
 async function cargarPresupuesto() {
     const { data, error } = await supabase.from('presupuesto_comercial')
-        .select('anio, mes, unidades, valor').eq('anio', ANIO_PPTO);
+        .select('anio, mes, unidades, valor, vendidas').eq('anio', ANIO_PPTO);
     presupuesto = {};
     if (!error && data) data.forEach(p =>
-        presupuesto[`${p.anio}-${String(p.mes).padStart(2,'0')}`] = { unidades: num(p.unidades), valor: num(p.valor) });
+        presupuesto[`${p.anio}-${String(p.mes).padStart(2,'0')}`] = { unidades: num(p.unidades), valor: num(p.valor), vendidas: num(p.vendidas) });
 }
 
 async function cargarFotos() {
@@ -395,14 +400,24 @@ function refrescar() {
     const ingMes = mesSeleccionado ? ingresadas.filter(f => claveMes(f.fecha_real_bodega) === mesSeleccionado) : ingresadas;
     const penMes = mesSeleccionado ? pendientes.filter(f => claveMes(f.fecha_estimada_bodega) === mesSeleccionado) : pendientes;
 
-    datosIngresadas = ingMes.map(f => ({
-        id: f.id, referencia: f.referencia, sublinea: f.sublinea, descripcion: f.descripcion,
-        color: f.color, destino: f.destino, fecha: f.fecha_real_bodega,
-        reales: num(f.unidades_reales), excedentes: num(f.excedentes), segundas: num(f.segundas),
-        total: totalIngresado(f),
-    }));
+    datosIngresadas = ingMes.map(f => {
+        const preventa = num(f.unidades_preventa);
+        const reales = num(f.unidades_reales);
+        const excedentes = num(f.excedentes);
+        const realIngreso = reales + excedentes;              // lo que realmente entró, sin segundas
+        const tope = preventa * 1.10;                          // 10 % por encima de la preventa
+        return {
+            id: f.id, referencia: f.referencia, sublinea: f.sublinea, descripcion: f.descripcion,
+            color: f.color, destino: f.destino, fecha: f.fecha_real_bodega,
+            preventa, reales, excedentes, realIngreso,
+            pctExcedente: preventa ? (realIngreso - preventa) / preventa * 100 : null,
+            excedenteCalc: (preventa && realIngreso > tope) ? realIngreso - tope : 0,
+            segundas: num(f.segundas),
+            total: totalIngresado(f),
+        };
+    });
     datosPendientes = penMes.map(f => ({
-        id: f.id, referencia: f.referencia, sublinea: f.sublinea, descripcion: f.descripcion,
+        id: f.id, sublinea: f.sublinea, descripcion: f.descripcion,
         color: f.color, destino: f.destino, fecha: f.fecha_estimada_bodega,
         total: num(f.unidades_preventa),
         atrasada: !!(f.fecha_estimada_bodega && f.fecha_estimada_bodega < hoy),
@@ -423,19 +438,23 @@ function pintarCumplimiento(ingresadas) {
         if (c.startsWith(String(ANIO_PPTO))) ingPorMes[c] = (ingPorMes[c] || 0) + totalIngresado(f);
     });
 
-    let acumPpto = 0, acumIng = 0;
+    let acumPpto = 0, acumIng = 0, acumVta = 0;
     datosCumplimiento = [];
     for (let m = 1; m <= 12; m++) {
         const clave = `${ANIO_PPTO}-${String(m).padStart(2,'0')}`;
-        const ppto = (presupuesto[clave] || {}).unidades || 0;
+        const p = presupuesto[clave] || {};
+        const ppto = p.unidades || 0;
+        const vendidas = p.vendidas || 0;
         const ing = ingPorMes[clave] || 0;
         const futuro = m > mesActualPpto;
-        if (!futuro) { acumPpto += ppto; acumIng += ing; }
+        if (!futuro) { acumPpto += ppto; acumIng += ing; acumVta += vendidas; }
         datosCumplimiento.push({
-            mes: MESES[m-1], clave, ppto, ing, futuro,
-            diferencia: futuro ? null : ing - ppto,
+            mes: MESES[m-1], clave, ppto, vendidas, ing, futuro,
+            diferencia: futuro ? null : vendidas - ppto,
+            pctVta: (futuro || !ppto) ? null : vendidas / ppto * 100,
+            pctVtaAcum: (futuro || !acumPpto) ? null : acumVta / acumPpto * 100,
             pct: (futuro || !ppto) ? null : ing / ppto * 100,
-            pctAcum: (futuro || !acumPpto) ? null : acumIng / acumPpto * 100,
+            acumVendidas: futuro ? null : acumVta,
         });
     }
 
@@ -449,24 +468,30 @@ function pintarCumplimiento(ingresadas) {
             <tr style="cursor:default">
                 <td>${d.mes}${d.futuro ? ' <span class="futuro">(por venir)</span>' : ''}</td>
                 <td class="num">${fmt(d.ppto)}</td>
-                <td class="num">${d.futuro && !d.ing ? '<span class="futuro">—</span>' : fmt(d.ing)}</td>
+                <td class="num">${d.futuro ? '<span class="futuro">—</span>' : fmt(d.vendidas)}</td>
                 <td class="num ${d.diferencia === null ? 'futuro' : d.diferencia >= 0 ? 'cumple' : 'no-cumple'}">
                     ${d.diferencia === null ? '—' : (d.diferencia >= 0 ? '+' : '') + fmt(d.diferencia)}</td>
-                <td class="num">${d.pct === null ? '' : `<span class="barra-cump" style="width:${Math.min(60, d.pct * .6)}px; background:${color(d.pct)}"></span>`}${pinta(d.pct)}</td>
-                <td class="num">${pinta(d.pctAcum)}</td>
+                <td class="num">${d.pctVta === null ? '' : `<span class="barra-cump" style="width:${Math.min(60, d.pctVta * .6)}px; background:${color(d.pctVta)}"></span>`}${pinta(d.pctVta)}</td>
+                <td class="num">${d.acumVendidas === null ? '<span class="futuro">—</span>' : fmt(d.acumVendidas) + ' · ' + (d.pctVtaAcum === null ? '' : `<span class="${d.pctVtaAcum >= 100 ? 'cumple' : 'no-cumple'}">${d.pctVtaAcum.toFixed(1)}%</span>`)}</td>
+                <td class="num">${d.futuro && !d.ing ? '<span class="futuro">—</span>' : fmt(d.ing)}</td>
+                <td class="num">${pinta(d.pct)}</td>
             </tr>`).join('') + `
         <tr class="sub-total-row">
             <td>Acumulado a ${mesNombre}</td>
             <td class="num">${fmt(acumPpto)}</td>
+            <td class="num">${fmt(acumVta)}</td>
+            <td class="num">${acumVta - acumPpto >= 0 ? '+' : ''}${fmt(acumVta - acumPpto)}</td>
+            <td class="num" colspan="2">${acumPpto ? (acumVta / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
             <td class="num">${fmt(acumIng)}</td>
-            <td class="num">${acumIng - acumPpto >= 0 ? '+' : ''}${fmt(acumIng - acumPpto)}</td>
-            <td class="num" colspan="2">${acumPpto ? (acumIng / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
+            <td class="num">${acumPpto ? (acumIng / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
         </tr>
         <tr class="total-row">
-            <td>Presupuesto ${ANIO_PPTO} completo</td>
+            <td>Año ${ANIO_PPTO} completo</td>
             <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.ppto, 0))}</td>
-            <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.ing, 0))}</td>
+            <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.vendidas, 0))}</td>
             <td class="num" colspan="3"></td>
+            <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.ing, 0))}</td>
+            <td class="num"></td>
         </tr>`;
 }
 
@@ -481,6 +506,7 @@ function pintarKpis(ing, pen) {
     const hasta = datosCumplimiento.filter(d => !d.futuro);
     const pptoHasta = hasta.reduce((s, d) => s + d.ppto, 0);
     const ingHasta = hasta.reduce((s, d) => s + d.ing, 0);
+    const vtaHasta = hasta.reduce((s, d) => s + d.vendidas, 0);
     const pct = (a, b) => b ? (a / b * 100).toFixed(1) + '%' : '—';
 
     document.getElementById('kpis').innerHTML = `
@@ -489,14 +515,17 @@ function pintarKpis(ing, pen) {
         <div class="kpi pendiente"><div class="valor">${fmt(atrasadas)}</div><div class="etiqueta">Pendientes con fecha ya vencida</div></div>
         <div class="kpi avance"><div class="valor">${total ? (totalIng / total * 100).toFixed(1) : '0.0'}%</div><div class="etiqueta">Avance de ingreso</div></div>
         <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas</div></div>
+        <div class="kpi avance"><div class="valor">${pct(vtaHasta, pptoHasta)}</div>
+            <div class="etiqueta">Cumplimiento en ventas (ene–${MESES[Math.max(0, mesActualPpto - 1)]})</div></div>
         <div class="kpi avance"><div class="valor">${pct(ingHasta, pptoHasta)}</div>
-            <div class="etiqueta">Cumplimiento acumulado (ene–${MESES[Math.max(0, mesActualPpto - 1)]})</div></div>`;
+            <div class="etiqueta">Ingreso vs presupuesto (ene–${MESES[Math.max(0, mesActualPpto - 1)]})</div></div>`;
 }
 
 // ---------- Tablas ----------
-function celdaFoto(ref) {
-    return fotos.has(ref)
-        ? `<img class="foto-mini" loading="lazy" src="${urlFoto(ref)}" alt="">`
+function celdaFoto(descripcion) {
+    const clave = claveFoto(descripcion);
+    return fotos.has(clave)
+        ? `<img class="foto-mini" loading="lazy" src="${urlFoto(clave)}" alt="">`
         : `<div class="sin-foto">📷</div>`;
 }
 
@@ -512,31 +541,36 @@ function pintarTabla(cual) {
     });
 
     const tbody = document.querySelector(esIng ? '#tablaIngresadas tbody' : '#tablaPendientes tbody');
-    const columnas = esIng ? 11 : 8;
+    const columnas = esIng ? 14 : 7;
     if (!datos.length) {
         tbody.innerHTML = `<tr><td colspan="${columnas}" class="vacio">Sin resultados para estos filtros.</td></tr>`;
         return;
     }
 
+    const suma = campo => datos.reduce((s, d) => s + num(d[campo]), 0);
     const visibles = datos.slice(0, MAX_FILAS);
-    const suma = datos.reduce((s, d) => s + d.total, 0);
+    const pctTexto = p => p === null ? '—'
+        : `<span class="${p > 10 ? 'no-cumple' : p < 0 ? 'futuro' : 'cumple'}">${p >= 0 ? '+' : ''}${p.toFixed(1)}%</span>`;
+
     const filasHtml = visibles.map(d => esIng
         ? `<tr onclick="abrirFicha(${d.id})">
-             <td>${celdaFoto(d.referencia)}</td>
-             <td>${texto(d.referencia)}</td>
+             <td>${celdaFoto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.color)}</td>
              <td class="minuscula">${texto(d.destino)}</td>
              <td>${fechaCorta(d.fecha)}</td>
+             <td class="num">${fmt(d.preventa)}</td>
              <td class="num">${fmt(d.reales)}</td>
              <td class="num">${fmt(d.excedentes)}</td>
+             <td class="num"><b>${fmt(d.realIngreso)}</b></td>
+             <td class="num">${pctTexto(d.pctExcedente)}</td>
+             <td class="num ${d.excedenteCalc > 0 ? 'no-cumple' : ''}">${fmt(d.excedenteCalc)}</td>
              <td class="num">${fmt(d.segundas)}</td>
-             <td class="num"><b>${fmt(d.total)}</b></td>
+             <td class="num">${fmt(d.total)}</td>
            </tr>`
         : `<tr onclick="abrirFicha(${d.id})">
-             <td>${celdaFoto(d.referencia)}</td>
-             <td>${texto(d.referencia)}</td>
+             <td>${celdaFoto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.color)}</td>
@@ -549,13 +583,34 @@ function pintarTabla(cual) {
         ? `<tr class="sub-total-row"><td colspan="${columnas}">Se muestran ${fmt(MAX_FILAS)} de ${fmt(datos.length)} filas. Usa los filtros o exporta a Excel para verlas todas.</td></tr>`
         : '';
 
-    tbody.innerHTML = filasHtml + aviso +
-        `<tr class="total-row"><td colspan="${columnas - 1}">Total (${fmt(datos.length)} filas)</td><td class="num">${fmt(suma)}</td></tr>`;
+    // Totales por columna
+    const totales = esIng
+        ? (() => {
+            const preventa = suma('preventa'), realIngreso = suma('realIngreso');
+            const pct = preventa ? (realIngreso - preventa) / preventa * 100 : null;
+            return `<tr class="total-row">
+                <td colspan="6">Total (${fmt(datos.length)} filas)</td>
+                <td class="num">${fmt(preventa)}</td>
+                <td class="num">${fmt(suma('reales'))}</td>
+                <td class="num">${fmt(suma('excedentes'))}</td>
+                <td class="num">${fmt(realIngreso)}</td>
+                <td class="num">${pct === null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'}</td>
+                <td class="num">${fmt(suma('excedenteCalc'))}</td>
+                <td class="num">${fmt(suma('segundas'))}</td>
+                <td class="num">${fmt(suma('total'))}</td>
+            </tr>`;
+          })()
+        : `<tr class="total-row">
+                <td colspan="6">Total (${fmt(datos.length)} filas)</td>
+                <td class="num">${fmt(suma('total'))}</td>
+           </tr>`;
+
+    tbody.innerHTML = filasHtml + aviso + totales;
 }
 
 window.ordenar = function(cual, col) {
     const o = ultimoOrden[cual];
-    o.asc = (o.col === col) ? !o.asc : !['total','reales','excedentes','segundas','fecha'].includes(col);
+    o.asc = (o.col === col) ? !o.asc : !['total','reales','excedentes','segundas','fecha','preventa','realIngreso','pctExcedente','excedenteCalc'].includes(col);
     o.col = col;
     pintarTabla(cual);
 };
@@ -658,9 +713,10 @@ window.abrirFicha = async function(id) {
     const { data: r, error } = await supabase.from('produccion').select('*').eq('id', id).single();
     if (error || !r) { document.getElementById('fichaTitulo').textContent = 'No se pudo cargar la ficha'; return; }
 
-    refFicha = r.referencia;
-    document.getElementById('fichaTitulo').textContent = r.referencia || 'Sin referencia';
-    document.getElementById('fichaSub').textContent = [r.descripcion, r.color, r.hoja].filter(Boolean).join(' · ');
+    refFicha = claveFoto(r.descripcion);
+    document.getElementById('fichaTitulo').textContent = (r.descripcion || 'Sin descripción').toLowerCase();
+    document.getElementById('fichaSub').textContent =
+        [r.sublinea, r.color, r.destino, r.hoja].filter(Boolean).join(' · ');
 
     // "REAL PAY DATE Balance" quedó en extras y cambia de nombre entre archivos
     const extras = r.extras || {};
@@ -691,7 +747,7 @@ window.abrirFicha = async function(id) {
 
 function pintarFotoFicha() {
     document.getElementById('fichaFoto').innerHTML = fotos.has(refFicha)
-        ? `<img class="foto-grande" src="${urlFoto(refFicha)}?t=${Date.now()}" alt="Foto de ${refFicha}">`
+        ? `<img class="foto-grande" src="${urlFoto(refFicha)}?t=${Date.now()}" alt="">`
         : `<div class="foto-vacia">📷<span>Esta referencia todavía no tiene foto</span></div>`;
 }
 
@@ -764,22 +820,28 @@ window.exportar = function(cual) {
     let hoja, nombre;
     if (cual === 'cumplimiento') {
         hoja = XLSX.utils.json_to_sheet(datosCumplimiento.map(d => ({
-            'MES': d.mes, 'PRESUPUESTO': d.ppto, 'INGRESADO': d.ing,
-            'DIFERENCIA': d.diferencia === null ? '' : d.diferencia,
-            'CUMPLIMIENTO %': d.pct === null ? '' : +d.pct.toFixed(1),
-            'ACUMULADO %': d.pctAcum === null ? '' : +d.pctAcum.toFixed(1),
+            'MES': d.mes, 'PRESUPUESTO': d.ppto, 'VENDIDAS': d.futuro ? '' : d.vendidas,
+            'DIFERENCIA VENTAS': d.diferencia === null ? '' : d.diferencia,
+            'CUMPL. VENTAS %': d.pctVta === null ? '' : +d.pctVta.toFixed(1),
+            'VENTAS ACUMULADAS': d.acumVendidas === null ? '' : d.acumVendidas,
+            'ACUM. VENTAS %': d.pctVtaAcum === null ? '' : +d.pctVtaAcum.toFixed(1),
+            'INGRESADO': d.futuro ? '' : d.ing,
+            'CUMPL. INGRESO %': d.pct === null ? '' : +d.pct.toFixed(1),
         })));
         nombre = `Cumplimiento_${ANIO_PPTO}.xlsx`;
     } else if (cual === 'ingresadas') {
         hoja = XLSX.utils.json_to_sheet(datosIngresadas.map(d => ({
-            'REFERENCIA': d.referencia, 'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion,
-            'COLOR': d.color, 'DESTINO': d.destino, 'FECHA INGRESO': d.fecha,
-            'REALES': d.reales, 'EXCEDENTES': d.excedentes, 'SEGUNDAS': d.segundas, 'TOTAL INGRESADO': d.total,
+            'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion, 'COLOR': d.color, 'DESTINO': d.destino,
+            'FECHA INGRESO': d.fecha, 'PREVENTA': d.preventa, 'REALES': d.reales, 'EXCEDENTES': d.excedentes,
+            'REAL DE INGRESO': d.realIngreso,
+            '% EXCEDENTE': d.pctExcedente === null ? '' : +d.pctExcedente.toFixed(1),
+            'EXCEDENTES CALCULADOS': d.excedenteCalc,
+            'SEGUNDAS': d.segundas, 'TOTAL INGRESADO': d.total,
         })));
         nombre = 'Produccion_ingresadas.xlsx';
     } else {
         hoja = XLSX.utils.json_to_sheet(datosPendientes.map(d => ({
-            'REFERENCIA': d.referencia, 'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion,
+            'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion,
             'COLOR': d.color, 'DESTINO': d.destino, 'FECHA PROYECTADA': d.fecha,
             'UNIDADES PREVENTA': d.total, 'ATRASADA': d.atrasada ? 'SÍ' : 'NO',
         })));
