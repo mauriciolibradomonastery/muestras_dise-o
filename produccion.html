@@ -82,6 +82,9 @@
     .total-row td { background: #1f2937 !important; color: #fff; font-weight: 700; position: sticky; bottom: 0; }
     .vacio { padding: 25px; text-align: center; color: #9ca3af; font-size: 13px; }
     .atrasada { color: #b91c1c; font-weight: 600; }
+    .cumple { color: #047857; font-weight: 600; }
+    .no-cumple { color: #b91c1c; font-weight: 600; }
+    .barra-cump { display: inline-block; height: 6px; border-radius: 3px; background: #047857; vertical-align: middle; margin-right: 6px; }
     .pill { background: #eef2ff; color: #3730a3; border-radius: 10px; padding: 1px 8px; font-size: 11px; font-weight: 600; }
     .nota { font-size: 11px; color: #6b7280; margin-top: 8px; }
 
@@ -127,11 +130,33 @@
         <span class="leyenda">
             <span class="llave"><i class="cuadro c-ing"></i> Ingresadas (fecha real)</span>
             <span class="llave"><i class="cuadro c-pen"></i> Pendientes (fecha proyectada)</span>
+            <span class="llave"><i class="cuadro" style="background: repeating-linear-gradient(90deg,#dc2626 0 4px,transparent 4px 7px); height:3px; border-radius:0;"></i> Presupuesto</span>
             <span id="mesActivo" class="mes-activo"></span>
         </span>
     </h3>
     <div class="grafico-wrap"><div id="grafico"></div></div>
     <div class="nota">Clic en una barra para filtrar las tablas por ese mes. Clic de nuevo para quitar el filtro.</div>
+</div>
+
+<div class="card">
+    <h3>
+        <span>Cumplimiento del presupuesto comercial <span class="pill">2026</span></span>
+        <button class="btn-claro" onclick="exportar('cumplimiento')">📥 Exportar</button>
+    </h3>
+    <div class="tabla-scroll" style="max-height: 460px;">
+        <table id="tablaCumplimiento">
+            <thead><tr>
+                <th>Mes</th>
+                <th class="num">Presupuesto</th>
+                <th class="num">Ingresado</th>
+                <th class="num">Diferencia</th>
+                <th class="num">Cumplimiento</th>
+                <th class="num">Acumulado</th>
+            </tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="nota">El presupuesto es del total de la compañía. Si aplicas filtros, el ingresado baja pero el presupuesto no, así que el cumplimiento solo es comparable sin filtros.</div>
 </div>
 
 <div class="tablas">
@@ -196,7 +221,9 @@ const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov'
 let filas = [];                 // todo lo que viene de Supabase
 let mesSeleccionado = null;     // mes al que se hizo clic en el gráfico
 let ultimoOrden = { ing: {col:'unidades', asc:false}, pen: {col:'mes', asc:true} };
-let datosIngresadas = [], datosPendientes = [];
+let datosIngresadas = [], datosPendientes = [], datosCumplimiento = [];
+let presupuesto = {};            // { "2026-01": {unidades, valor}, ... }
+const ANIO_PPTO = 2026;
 
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
@@ -220,6 +247,7 @@ async function cargarDatos() {
         }
         document.getElementById('selloDatos').textContent =
             `${fmt(filas.length)} registros · actualizado ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
+        await cargarPresupuesto();
         llenarFiltros();
         refrescar();
     } catch (e) {
@@ -228,6 +256,15 @@ async function cargarDatos() {
     }
 }
 window.cargarDatos = cargarDatos;
+
+async function cargarPresupuesto() {
+    const { data, error } = await supabase.from('presupuesto_comercial')
+        .select('anio, mes, unidades, valor').eq('anio', ANIO_PPTO);
+    if (error) { presupuesto = {}; return; }
+    presupuesto = {};
+    data.forEach(p => presupuesto[`${p.anio}-${String(p.mes).padStart(2,'0')}`] =
+        { unidades: num(p.unidades), valor: num(p.valor) });
+}
 
 // ---------- Filtros ----------
 const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
@@ -301,6 +338,7 @@ function refrescar() {
 
     pintarTabla('ing');
     pintarTabla('pen');
+    pintarCumplimiento(ingresadas);
     pintarKpis(ingMes, penMes);
 
     document.getElementById('mesActivo').textContent =
@@ -322,6 +360,55 @@ function agrupar(lista, valor, conMes = false) {
     return Object.values(mapa).map(g => ({ ...g, referencias: g.referencias.size }));
 }
 
+// ---------- Cumplimiento del presupuesto ----------
+function pintarCumplimiento(ingresadas) {
+    // Ingresado de cada mes del año del presupuesto (sin el filtro de mes del gráfico)
+    const ingPorMes = {};
+    ingresadas.forEach(f => {
+        const c = claveMes(f.fecha_real_bodega);
+        if (c.startsWith(ANIO_PPTO)) ingPorMes[c] = (ingPorMes[c] || 0) + unidadesIngresadas(f);
+    });
+
+    let acumPpto = 0, acumIng = 0;
+    datosCumplimiento = [];
+    for (let m = 1; m <= 12; m++) {
+        const clave = `${ANIO_PPTO}-${String(m).padStart(2,'0')}`;
+        const ppto = (presupuesto[clave] || {}).unidades || 0;
+        const ing = ingPorMes[clave] || 0;
+        acumPpto += ppto; acumIng += ing;
+        datosCumplimiento.push({
+            mes: MESES[m-1], clave, ppto, ing,
+            diferencia: ing - ppto,
+            pct: ppto ? ing / ppto * 100 : null,
+            pctAcum: acumPpto ? acumIng / acumPpto * 100 : null,
+        });
+    }
+
+    const pinta = p => p === null ? '—' :
+        `<span class="${p >= 100 ? 'cumple' : 'no-cumple'}">${p.toFixed(1)}%</span>`;
+
+    const tbody = document.querySelector('#tablaCumplimiento tbody');
+    tbody.innerHTML = datosCumplimiento.map(d => `
+        <tr>
+            <td>${d.mes}</td>
+            <td class="num">${fmt(d.ppto)}</td>
+            <td class="num">${fmt(d.ing)}</td>
+            <td class="num ${d.diferencia >= 0 ? 'cumple' : 'no-cumple'}">${d.diferencia >= 0 ? '+' : ''}${fmt(d.diferencia)}</td>
+            <td class="num">
+                <span class="barra-cump" style="width:${Math.min(60, (d.pct || 0) * 0.6)}px;
+                      background:${(d.pct || 0) >= 100 ? '#047857' : '#f59e0b'}"></span>${pinta(d.pct)}
+            </td>
+            <td class="num">${pinta(d.pctAcum)}</td>
+        </tr>`).join('') + `
+        <tr class="total-row">
+            <td>Total ${ANIO_PPTO}</td>
+            <td class="num">${fmt(acumPpto)}</td>
+            <td class="num">${fmt(acumIng)}</td>
+            <td class="num">${acumIng - acumPpto >= 0 ? '+' : ''}${fmt(acumIng - acumPpto)}</td>
+            <td class="num" colspan="2">${acumPpto ? (acumIng / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
+        </tr>`;
+}
+
 function pintarKpis(ing, pen) {
     const totalIng = ing.reduce((s, f) => s + unidadesIngresadas(f), 0);
     const totalPen = pen.reduce((s, f) => s + num(f.unidades_preventa), 0);
@@ -330,12 +417,25 @@ function pintarKpis(ing, pen) {
                          .reduce((s, f) => s + num(f.unidades_preventa), 0);
     const refs = new Set(ing.concat(pen).map(f => f.referencia).filter(Boolean)).size;
 
+    // Cumplimiento: acumulado hasta el mes actual y del año completo
+    const mesHoy = hoy.startsWith(String(ANIO_PPTO)) ? +hoy.slice(5,7) : 12;
+    const hasta = datosCumplimiento.filter(d => +d.clave.slice(5,7) <= mesHoy);
+    const pptoHasta = hasta.reduce((s, d) => s + d.ppto, 0);
+    const ingHasta = hasta.reduce((s, d) => s + d.ing, 0);
+    const pptoAnio = datosCumplimiento.reduce((s, d) => s + d.ppto, 0);
+    const ingAnio = datosCumplimiento.reduce((s, d) => s + d.ing, 0);
+    const pct = (a, b) => b ? (a / b * 100).toFixed(1) + '%' : '—';
+
     document.getElementById('kpis').innerHTML = `
         <div class="kpi"><div class="valor">${fmt(totalIng)}</div><div class="etiqueta">Unidades ingresadas</div></div>
         <div class="kpi pendiente"><div class="valor">${fmt(totalPen)}</div><div class="etiqueta">Unidades pendientes por ingresar</div></div>
         <div class="kpi pendiente"><div class="valor">${fmt(atrasadas)}</div><div class="etiqueta">Pendientes con fecha ya vencida</div></div>
         <div class="kpi avance"><div class="valor">${total ? (totalIng / total * 100).toFixed(1) : '0.0'}%</div><div class="etiqueta">Avance de ingreso</div></div>
-        <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas</div></div>`;
+        <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas</div></div>
+        <div class="kpi avance"><div class="valor">${pct(ingHasta, pptoHasta)}</div>
+            <div class="etiqueta">Cumplimiento acumulado (ene–${MESES[mesHoy-1]} ${ANIO_PPTO})</div></div>
+        <div class="kpi avance"><div class="valor">${pct(ingAnio, pptoAnio)}</div>
+            <div class="etiqueta">Cumplimiento del año ${ANIO_PPTO}</div></div>`;
 }
 
 // ---------- Tablas ----------
@@ -388,7 +488,8 @@ function dibujarGrafico(meses, porMes) {
 
     const anchoMes = 74, margenIzq = 70, margenDer = 20, alto = 330, base = alto - 55, tope = 25;
     const ancho = Math.max(700, margenIzq + meses.length * anchoMes + margenDer);
-    const max = Math.max(...meses.map(m => Math.max(porMes[m].ing, porMes[m].pen)), 1);
+    const meta = m => (presupuesto[m] || {}).unidades || 0;
+    const max = Math.max(...meses.map(m => Math.max(porMes[m].ing, porMes[m].pen, meta(m))), 1);
     const escala = v => (v / max) * (base - tope);
 
     const lineas = [0, .25, .5, .75, 1].map(p => {
@@ -407,6 +508,8 @@ function dibujarGrafico(meses, porMes) {
             <rect x="${x}" y="${tope}" width="${anchoMes - 6}" height="${base - tope}" fill="${activo ? '#eef2ff' : 'transparent'}"/>
             <rect x="${x + 5}" y="${base - hIng}" width="${ancBarra}" height="${hIng}" fill="#1e3a8a" rx="3"><title>${nombreMes(m)} · ingresadas: ${fmt(porMes[m].ing)}</title></rect>
             <rect x="${x + 33}" y="${base - hPen}" width="${ancBarra}" height="${hPen}" fill="#f59e0b" rx="3"><title>${nombreMes(m)} · pendientes: ${fmt(porMes[m].pen)}</title></rect>
+            ${meta(m) ? `<line x1="${x + 2}" y1="${base - escala(meta(m))}" x2="${x + 60}" y2="${base - escala(meta(m))}"
+                 stroke="#dc2626" stroke-width="2" stroke-dasharray="5 3"><title>${nombreMes(m)} · presupuesto: ${fmt(meta(m))}</title></line>` : ''}
             <text x="${x + 31}" y="${base + 16}" text-anchor="middle" font-size="10" fill="#4b5563">${m === SIN_FECHA ? 'Sin' : nombreMes(m).split(' ')[0]}</text>
             <text x="${x + 31}" y="${base + 29}" text-anchor="middle" font-size="9" fill="#9ca3af">${m === SIN_FECHA ? 'fecha' : m.slice(0,4)}</text>
         </g>`;
@@ -471,6 +574,18 @@ window.pedirSincronizacion = async function() {
 
 // ---------- Exportar ----------
 window.exportar = function(cual) {
+    if (cual === 'cumplimiento') {
+        const hoja = XLSX.utils.json_to_sheet(datosCumplimiento.map(d => ({
+            'MES': d.mes, 'PRESUPUESTO (UND)': d.ppto, 'INGRESADO (UND)': d.ing,
+            'DIFERENCIA': d.diferencia,
+            'CUMPLIMIENTO %': d.pct === null ? '' : +d.pct.toFixed(1),
+            'ACUMULADO %': d.pctAcum === null ? '' : +d.pctAcum.toFixed(1),
+        })));
+        const libro = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(libro, hoja, 'Cumplimiento');
+        XLSX.writeFile(libro, `Cumplimiento_presupuesto_${ANIO_PPTO}.xlsx`);
+        return;
+    }
     const esIng = cual === 'ingresadas';
     const datos = esIng ? datosIngresadas : datosPendientes;
     const hoja = XLSX.utils.json_to_sheet(datos.map(g => esIng
