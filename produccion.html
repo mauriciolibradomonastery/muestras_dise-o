@@ -163,7 +163,6 @@
                 <th class="num">Vendidas</th>
                 <th class="num">Dif. ventas</th>
                 <th class="num">Cumpl. ventas</th>
-                <th class="num">Acum. ventas</th>
                 <th class="num">Ingresado</th>
                 <th class="num">Cumpl. ingreso</th>
             </tr></thead>
@@ -184,7 +183,7 @@
         </span>
     </h3>
     <div class="grafico-wrap"><div id="grafico"></div></div>
-    <div class="nota">Clic en un mes para filtrar las tablas. Clic de nuevo para quitar el filtro.</div>
+    <div class="nota">Este gráfico siempre muestra el total de la compañía, sin importar los filtros. Clic en un mes para filtrar las tablas por ese mes.</div>
 </div>
 
 <div class="tablas">
@@ -320,7 +319,6 @@ async function cargarDatos() {
         document.getElementById('selloDatos').textContent =
             `${fmt(filas.length)} registros · ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
         await Promise.all([cargarPresupuesto(), cargarFotos()]);
-        llenarFiltros();
         refrescar();
     } catch (e) {
         document.getElementById('grafico').innerHTML = `<div class="cargando">No se pudieron cargar los datos: ${e.message}</div>`;
@@ -352,13 +350,29 @@ async function cargarFotos() {
 const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
                   fLinea:'linea', fSublinea:'sublinea', fProveedor:'proveedor' };
 
+// Cada lista ofrece solo los valores que existen según los DEMÁS filtros ya elegidos
 function llenarFiltros() {
+    const texto = document.getElementById('fTexto').value.trim().toLowerCase();
+    const elegidos = Object.fromEntries(
+        Object.entries(SELECTS).map(([id, campo]) => [campo, document.getElementById(id).value]));
+
     for (const [id, campo] of Object.entries(SELECTS)) {
         const sel = document.getElementById(id);
-        const previo = sel.value;
-        const valores = [...new Set(filas.map(f => (f[campo] || '').trim()).filter(Boolean))].sort();
-        sel.innerHTML = '<option value="">Todas</option>' + valores.map(v => `<option value="${v}">${v}</option>`).join('');
-        if (valores.includes(previo)) sel.value = previo;
+        const elegido = sel.value;
+
+        const disponibles = filas.filter(f => {
+            for (const [otroCampo, valor] of Object.entries(elegidos)) {
+                if (otroCampo === campo || !valor) continue;       // el propio campo no se limita a sí mismo
+                if ((f[otroCampo] || '').trim() !== valor) return false;
+            }
+            if (texto && !`${f.descripcion || ''} ${f.referencia || ''} ${f.color || ''}`.toLowerCase().includes(texto)) return false;
+            return true;
+        });
+
+        const valores = [...new Set(disponibles.map(f => (f[campo] || '').trim()).filter(Boolean))].sort();
+        if (elegido && !valores.includes(elegido)) valores.push(elegido);   // no perder lo ya elegido
+        sel.innerHTML = '<option value="">Todas</option>' +
+            valores.sort().map(v => `<option value="${v}"${v === elegido ? ' selected' : ''}>${v}</option>`).join('');
     }
 }
 
@@ -385,18 +399,20 @@ const totalIngresado = f => num(f.unidades_reales) + num(f.excedentes) + num(f.s
 const esIngresada = f => !!f.fecha_real_bodega;
 
 function refrescar() {
+    llenarFiltros();
     const datos = filtrar();
     const ingresadas = datos.filter(esIngresada);
     const pendientes = datos.filter(f => !esIngresada(f));
 
+    // El gráfico siempre muestra el total de la compañía, sin importar los filtros
     const porMes = {};
     const sumar = (clave, campo, valor) => {
         if (!valor) return;
         porMes[clave] = porMes[clave] || { ing: 0, pen: 0 };
         porMes[clave][campo] += valor;
     };
-    ingresadas.forEach(f => sumar(claveMes(f.fecha_real_bodega), 'ing', totalIngresado(f)));
-    pendientes.forEach(f => sumar(claveMes(f.fecha_estimada_bodega), 'pen', num(f.unidades_preventa)));
+    filas.filter(esIngresada).forEach(f => sumar(claveMes(f.fecha_real_bodega), 'ing', totalIngresado(f)));
+    filas.filter(f => !esIngresada(f)).forEach(f => sumar(claveMes(f.fecha_estimada_bodega), 'pen', num(f.unidades_preventa)));
     Object.keys(presupuesto).forEach(m => { porMes[m] = porMes[m] || { ing: 0, pen: 0 }; });
     dibujarGrafico(porMes);
 
@@ -475,7 +491,6 @@ function pintarCumplimiento(ingresadas) {
                 <td class="num ${d.diferencia === null ? 'futuro' : d.diferencia >= 0 ? 'cumple' : 'no-cumple'}">
                     ${d.diferencia === null ? '—' : (d.diferencia >= 0 ? '+' : '') + fmt(d.diferencia)}</td>
                 <td class="num">${d.pctVta === null ? '' : `<span class="barra-cump" style="width:${Math.min(60, d.pctVta * .6)}px; background:${color(d.pctVta)}"></span>`}${pinta(d.pctVta)}</td>
-                <td class="num">${d.acumVendidas === null ? '<span class="futuro">—</span>' : fmt(d.acumVendidas) + ' · ' + (d.pctVtaAcum === null ? '' : `<span class="${d.pctVtaAcum >= 100 ? 'cumple' : 'no-cumple'}">${d.pctVtaAcum.toFixed(1)}%</span>`)}</td>
                 <td class="num">${d.futuro && !d.ing ? '<span class="futuro">—</span>' : fmt(d.ing)}</td>
                 <td class="num">${pinta(d.pct)}</td>
             </tr>`).join('') + `
@@ -484,7 +499,7 @@ function pintarCumplimiento(ingresadas) {
             <td class="num">${fmt(acumPpto)}</td>
             <td class="num">${fmt(acumVta)}</td>
             <td class="num">${acumVta - acumPpto >= 0 ? '+' : ''}${fmt(acumVta - acumPpto)}</td>
-            <td class="num" colspan="2">${acumPpto ? (acumVta / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
+            <td class="num">${acumPpto ? (acumVta / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
             <td class="num">${fmt(acumIng)}</td>
             <td class="num">${acumPpto ? (acumIng / acumPpto * 100).toFixed(1) + '%' : '—'}</td>
         </tr>
@@ -492,7 +507,7 @@ function pintarCumplimiento(ingresadas) {
             <td>Año ${ANIO_PPTO} completo</td>
             <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.ppto, 0))}</td>
             <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.vendidas, 0))}</td>
-            <td class="num" colspan="3"></td>
+            <td class="num" colspan="2"></td>
             <td class="num">${fmt(datosCumplimiento.reduce((s, d) => s + d.ing, 0))}</td>
             <td class="num"></td>
         </tr>`;
@@ -826,8 +841,6 @@ window.exportar = function(cual) {
             'MES': d.mes, 'PRESUPUESTO': d.ppto, 'VENDIDAS': d.futuro ? '' : d.vendidas,
             'DIFERENCIA VENTAS': d.diferencia === null ? '' : d.diferencia,
             'CUMPL. VENTAS %': d.pctVta === null ? '' : +d.pctVta.toFixed(1),
-            'VENTAS ACUMULADAS': d.acumVendidas === null ? '' : d.acumVendidas,
-            'ACUM. VENTAS %': d.pctVtaAcum === null ? '' : +d.pctVtaAcum.toFixed(1),
             'INGRESADO': d.futuro ? '' : d.ing,
             'CUMPL. INGRESO %': d.pct === null ? '' : +d.pct.toFixed(1),
         })));
