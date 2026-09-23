@@ -74,6 +74,13 @@
         .btn-back { color: #374151; text-decoration: none; font-weight: 600; font-size: 14px; background: rgba(255, 255, 255, 0.7); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.15); transition: all 0.3s ease; }
         .btn-back:hover { background: #ffffff; color: #111827; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
 
+        .btn-toggle-kpi { background: rgba(255, 255, 255, 0.85); color: #374151; border: 1px solid #d1d5db;
+            padding: 9px 18px; font-size: 13px; font-weight: 600; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+        .btn-toggle-kpi:hover { background: #ffffff; color: #111827; border-color: #9ca3af; }
+        .btn-toggle-kpi.activo { background: #1f2937; color: #ffffff; border-color: #1f2937; }
+        /* Con los indicadores ocultos, la tabla gana alto */
+        body.kpi-oculto .table-container { max-height: 76vh; }
         .kpi-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); }
         .kpi-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 17px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
         .kpi-table-container { overflow-x: auto; border-radius: 8px; border: 1px solid #e5e7eb; }
@@ -228,7 +235,11 @@
         </div>
     </div>
 
-    <div class="kpi-card">
+    <div style="margin-bottom: 15px;">
+        <button id="btnToggleKpi" class="btn-toggle-kpi" onclick="toggleIndicadores()">📊 Indicadores de Muestras</button>
+    </div>
+
+    <div class="kpi-card" id="kpiCard">
         <h3>📊 Resumen de Indicadores <span id="kpiTitleContext" style="color: #6b7280; font-size: 14px; font-weight: normal;">(Consolidado General)</span></h3>
         <div class="kpi-table-container">
             <table class="kpi-table">
@@ -331,6 +342,27 @@
         window.vistaActual = 'activas'; 
         window.categoriaActiva = 'todas'; 
         window.hayCambiosSinGuardar = false;
+
+        // ==========================================
+        // 📊 MOSTRAR / OCULTAR LA TABLA DE INDICADORES
+        // Aplica igual en Muestras Activas y en Canceladas.
+        // ==========================================
+        window.toggleIndicadores = function(forzar) {
+            const visible = (forzar !== undefined) ? forzar : !(localStorage.getItem('wips_kpi_visible') !== 'no');
+            localStorage.setItem('wips_kpi_visible', visible ? 'si' : 'no');
+
+            const card = document.getElementById('kpiCard');
+            const btn = document.getElementById('btnToggleKpi');
+            card.style.display = visible ? '' : 'none';
+            document.body.classList.toggle('kpi-oculto', !visible);
+            btn.classList.toggle('activo', visible);
+            btn.innerHTML = visible ? '📊 Ocultar Indicadores de Muestras' : '📊 Indicadores de Muestras';
+        };
+
+        // Al abrir la página se respeta lo que el usuario dejó la última vez
+        document.addEventListener('DOMContentLoaded', () => {
+            window.toggleIndicadores(localStorage.getItem('wips_kpi_visible') !== 'no');
+        });
 
         // ==========================================
         // 🔥 SISTEMA DE ALERTAS (Botón Rojo / Verde)
