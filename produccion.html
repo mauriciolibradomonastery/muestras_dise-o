@@ -66,17 +66,19 @@
     .multi-buscar { width: 100%; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
         font-size: 12px; margin-bottom: 6px; }
     .multi-lista { max-height: 230px; overflow-y: auto; }
-    .multi-op { display: flex; align-items: center; gap: 8px; padding: 5px 6px; font-size: 13px;
-        border-radius: 6px; cursor: pointer; }
+    .multi-op { display: flex; align-items: center; justify-content: flex-start; gap: 9px; padding: 5px 6px;
+        font-size: 13px; border-radius: 6px; cursor: pointer; text-align: left; }
     .multi-op:hover { background: #f3f4f6; }
-    .multi-op input { width: auto; margin: 0; }
+    .multi-op input[type="checkbox"] { width: 15px; min-width: 15px; flex: none; height: 15px; margin: 0; padding: 0; accent-color: #1e3a8a; }
+    .multi-op span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .multi-lista { overflow-x: hidden; }
     .multi-pie { display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9;
         margin-top: 6px; padding-top: 6px; }
     .multi-pie button { padding: 4px 8px; font-size: 12px; background: none; color: #1e3a8a; }
     .multi-pie button:hover { text-decoration: underline; }
-    .filtro select, .filtro input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    .filtro > select, .filtro > input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
         font-size: 13px; background: #fff; min-width: 160px; outline: none; }
-    .filtro select:focus, .filtro input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 2px rgba(30,58,138,.15); }
+    .filtro > select:focus, .filtro > input:focus { border-color: #1e3a8a; box-shadow: 0 0 0 2px rgba(30,58,138,.15); }
     button { padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px;
         font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
     .btn-claro { background: #fff; color: #374151; border: 1px solid #d1d5db; }
@@ -180,8 +182,6 @@
 <nav class="lateral">
     <div class="lateral-titulo">Análisis</div>
     <button class="nav-item activo" data-seccion="resumen" onclick="verSeccion('resumen')">📊 Resumen ejecutivo</button>
-    <button class="nav-item" data-seccion="presupuesto" onclick="verSeccion('presupuesto')">🎯 Presupuesto y ventas</button>
-    <button class="nav-item" data-seccion="plan" onclick="verSeccion('plan')">📅 Plan de ingreso</button>
     <button class="nav-item" data-seccion="ingresado" onclick="verSeccion('ingresado')">📦 Ingresado</button>
     <button class="nav-item" data-seccion="pendiente" onclick="verSeccion('pendiente')">⏳ Pendiente por ingresar</button>
     <div class="lateral-nota">Los filtros de arriba aplican a la sección que estés viendo.</div>
@@ -937,7 +937,7 @@ function dibujarGrafico(porMes) {
 
 window.alternarAtrasadas = function() {
     soloAtrasadas = !soloAtrasadas;
-    if (soloAtrasadas && !['plan','pendiente'].includes(seccionActual)) verSeccion('pendiente');
+    if (soloAtrasadas && seccionActual !== 'pendiente') verSeccion('pendiente');
     refrescar();
     if (soloAtrasadas) document.getElementById('tablaPendientes').scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
@@ -1137,11 +1137,9 @@ window.exportar = function(cual) {
 
 // ---------- Secciones del menú lateral ----------
 const SECCIONES = {
-    resumen:     ['kpis', 'cardGrafico', 'cardCumplimiento'],
-    presupuesto: ['kpis', 'cardCumplimiento'],
-    plan:        ['kpis', 'cardPlan', 'cardPendientes'],
-    ingresado:   ['kpis', 'cardIngresadas'],
-    pendiente:   ['kpis', 'cardPlan', 'cardPendientes'],
+    resumen:   ['kpis', 'cardGrafico', 'cardCumplimiento'],
+    ingresado: ['kpis', 'cardIngresadas'],
+    pendiente: ['kpis', 'cardPlan', 'cardPendientes'],
 };
 let seccionActual = 'resumen';
 
