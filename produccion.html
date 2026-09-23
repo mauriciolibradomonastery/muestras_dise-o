@@ -129,8 +129,8 @@
     .barra-cump { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
     .nota { font-size: 11px; color: #6b7280; margin-top: 8px; }
     .minuscula { text-transform: lowercase; }
-    .foto-mini { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; background: #f3f4f6; display: block; }
-    .sin-foto { width: 34px; height: 34px; border-radius: 5px; background: #f3f4f6; display: flex;
+    .foto-mini { width: 34px; height: 46px; object-fit: contain; border-radius: 5px; background: #f3f4f6; display: block; }
+    .sin-foto { width: 34px; height: 46px; border-radius: 5px; background: #f3f4f6; display: flex;
         align-items: center; justify-content: center; color: #cbd5e1; font-size: 15px; }
     .cargando { padding: 40px; text-align: center; color: #6b7280; }
     .tablas { display: grid; grid-template-columns: 1fr; gap: 20px; }
@@ -148,9 +148,9 @@
     .cerrar:hover { color: #ef4444; }
     .modal-cuerpo { padding: 22px; display: grid; grid-template-columns: 240px 1fr; gap: 22px; }
     .zona-foto { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-    .foto-grande { width: 228px; height: 265px; object-fit: cover; border-radius: 10px; background: #f3f4f6;
+    .foto-grande { width: 228px; height: 300px; object-fit: contain; padding: 6px; border-radius: 10px; background: #f3f4f6;
         border: 1px solid #e5e7eb; }
-    .foto-vacia { width: 228px; height: 265px; border-radius: 10px; background: #f8fafc; border: 2px dashed #cbd5e1;
+    .foto-vacia { width: 228px; height: 300px; border-radius: 10px; background: #f8fafc; border: 2px dashed #cbd5e1;
         display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8;
         font-size: 13px; gap: 8px; text-align: center; padding: 15px; }
     .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 20px; align-content: start; }
@@ -159,6 +159,13 @@
     .grupo-titulo { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: #1e3a8a;
         border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-top: 6px; }
     @media (max-width: 720px) { .modal-cuerpo { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { #rejillaIngreso { grid-template-columns: 1fr !important; } }
+    .barra-col { display: grid; grid-template-columns: 130px 1fr 110px; gap: 10px; align-items: center;
+        padding: 6px 0; font-size: 13px; }
+    .barra-col .pista { background: #eef2f7; border-radius: 4px; height: 12px; overflow: hidden; }
+    .barra-col .relleno { height: 100%; background: #1e3a8a; border-radius: 4px; }
+    .barra-col .nombre-col { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: lowercase; }
+    .barra-col .cifra { text-align: right; font-variant-numeric: tabular-nums; color: #4b5563; }
 </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
@@ -199,6 +206,7 @@
         <div class="filtro"><label>Línea</label><div class="multi" id="fLinea"></div></div>
         <div class="filtro"><label>Sublínea</label><div class="multi" id="fSublinea"></div></div>
         <div class="filtro"><label>Proveedor (Supplier)</label><div class="multi" id="fProveedor"></div></div>
+        <div class="filtro"><label>N° Factura</label><div class="multi" id="fFactura"></div></div>
         <div class="filtro"><label for="fTexto">Buscar descripción o referencia</label><input type="text" id="fTexto" placeholder="Ej: hoodie"></div>
         <button class="btn-claro" onclick="limpiarFiltros()">Limpiar filtros</button>
     </div>
@@ -233,6 +241,18 @@
     </h3>
     <div class="grafico-wrap"><div id="grafico"></div></div>
     <div class="nota">Este gráfico siempre muestra el total de la compañía, sin importar los filtros. Clic en un mes para filtrar las tablas por ese mes.</div>
+</div>
+
+<div class="card" id="cardIngresoMes">
+    <h3>
+        <span>Ingreso por mes y participación por colección</span>
+        <span class="leyenda"><span class="llave"><i class="cuadro c-ing"></i> Unidades ingresadas</span></span>
+    </h3>
+    <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 26px;" id="rejillaIngreso">
+        <div class="grafico-wrap"><div id="graficoIngresoMes"></div></div>
+        <div id="participacionColeccion"></div>
+    </div>
+    <div class="nota">Solo lo que ya llegó a bodega, ubicado en el mes de su fecha real. Este cuadro sí responde a los filtros.</div>
 </div>
 
 <div class="card" id="cardPlan">
@@ -343,7 +363,7 @@ document.getElementById('usuarioActivo').textContent = session?.user?.email || '
 const BUCKET = 'fotos-referencias';
 const COLUMNAS = ['id','linea','sublinea','descripcion','referencia','color','coleccion','origen','destino',
     'proveedor','hoja','unidades_reales','excedentes','segundas','unidades_preventa',
-    'fecha_real_bodega','fecha_estimada_bodega'].join(',');
+    'fecha_real_bodega','fecha_estimada_bodega','numero_factura'].join(',');
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const SIN_FECHA = 'sin-fecha';
@@ -366,10 +386,12 @@ const anioHoy = +hoy.slice(0,4);
 const mesActualPpto = anioHoy > ANIO_PPTO ? 12 : anioHoy < ANIO_PPTO ? 0 : +hoy.slice(5,7);
 const texto = v => (v ?? '').toString().trim() || '—';
 const fechaCorta = f => f ? `${f.slice(8,10)}/${f.slice(5,7)}/${f.slice(0,4)}` : '—';
-// La "referencia" real es la descripción (oltza, kametu...): con ella se guardan las fotos
-const claveFoto = desc => (desc || '').toString().trim().toLowerCase()
+// La foto pertenece a una descripción Y un color: "evenky · blue denim" ≠ "evenky · black"
+const limpiar = t => (t || '').toString().trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sin-descripcion';
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const claveFoto = (desc, color) =>
+    `${limpiar(desc) || 'sin-descripcion'}__${limpiar(color) || 'sin-color'}`;
 const urlFoto = clave => supabase.storage.from(BUCKET).getPublicUrl(`${clave}.jpg`).data.publicUrl;
 
 // ---------- Carga ----------
@@ -416,7 +438,7 @@ async function cargarFotos() {
 
 // ---------- Filtros ----------
 const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
-                  fLinea:'linea', fSublinea:'sublinea', fProveedor:'proveedor' };
+                  fLinea:'linea', fSublinea:'sublinea', fProveedor:'proveedor', fFactura:'numero_factura' };
 // Cada filtro guarda un conjunto de valores elegidos: vacío = todas
 const seleccion = Object.fromEntries(Object.values(SELECTS).map(c => [c, new Set()]));
 let panelAbierto = null;
@@ -578,6 +600,7 @@ function refrescar() {
     pintarTabla('ing');
     pintarTabla('pen');
     pintarPlan(pendientes);
+    pintarIngreso(ingMes);
     pintarCumplimiento();
     pintarKpis(ingMes, penMes);
     document.getElementById('mesActivo').textContent = mesSeleccionado ? `Mes filtrado: ${nombreMes(mesSeleccionado)}` : '';
@@ -653,6 +676,77 @@ function pintarPlan(pendientes) {
     document.getElementById('chipMesPlan').innerHTML = mesSeleccionado
         ? `<span class="chip" onclick="event.stopPropagation(); seleccionarMes('${mesSeleccionado}')">${nombreMes(mesSeleccionado)} ✕</span>` : '';
     window.columnasPlan = columnas;
+}
+
+// ---------- Ingreso por mes y por colección (sección "Ingresado") ----------
+function pintarIngreso(ingresadas) {
+    // a) Unidades por mes de llegada real
+    const porMes = {};
+    ingresadas.forEach(f => {
+        const c = claveMes(f.fecha_real_bodega);
+        porMes[c] = (porMes[c] || 0) + totalIngresado(f);
+    });
+    const meses = Object.keys(porMes).sort((a, b) => a === SIN_FECHA ? 1 : b === SIN_FECHA ? -1 : a.localeCompare(b));
+    const cont = document.getElementById('graficoIngresoMes');
+
+    if (!meses.length) {
+        cont.innerHTML = '<div class="cargando">Sin ingresos con estos filtros.</div>';
+    } else {
+        const anchoMes = 62, margenIzq = 66, margenDer = 16, alto = 300, base = alto - 52, tope = 28;
+        const ancho = Math.max(420, margenIzq + meses.length * anchoMes + margenDer);
+        const max = Math.max(...meses.map(m => porMes[m]), 1);
+        const escala = v => (v / max) * (base - tope);
+
+        const rejilla = [0, .5, 1].map(p => {
+            const y = base - p * (base - tope);
+            return `<line x1="${margenIzq - 8}" y1="${y}" x2="${ancho - margenDer}" y2="${y}" stroke="#e5e7eb"/>
+                    <text x="${margenIzq - 12}" y="${y + 4}" text-anchor="end" font-size="10" fill="#6b7280">${fmt(max * p)}</text>`;
+        }).join('');
+
+        const barras = meses.map((m, i) => {
+            const x = margenIzq + i * anchoMes;
+            const h = escala(porMes[m]);
+            const etiqueta = porMes[m] >= 1000 ? Math.round(porMes[m] / 1000) + 'k' : fmt(porMes[m]);
+            return `<g class="barra" onclick="seleccionarMes('${m}')">
+                <rect x="${x}" y="${tope - 14}" width="${anchoMes - 8}" height="${base - tope + 14}" fill="${mesSeleccionado === m ? '#eef2ff' : 'transparent'}"/>
+                <rect x="${x + 12}" y="${base - h}" width="${anchoMes - 32}" height="${h}" fill="#1e3a8a" rx="3">
+                    <title>${nombreMes(m)}: ${fmt(porMes[m])} unidades</title></rect>
+                <text x="${x + (anchoMes - 8) / 2}" y="${base - h - 5}" text-anchor="middle" font-size="9" fill="#6b7280">${etiqueta}</text>
+                <text x="${x + (anchoMes - 8) / 2}" y="${base + 16}" text-anchor="middle" font-size="10" fill="#4b5563">${m === SIN_FECHA ? 'Sin' : nombreMes(m).split(' ')[0]}</text>
+                <text x="${x + (anchoMes - 8) / 2}" y="${base + 29}" text-anchor="middle" font-size="9" fill="#9ca3af">${m === SIN_FECHA ? 'fecha' : m.slice(0, 4)}</text>
+            </g>`;
+        }).join('');
+
+        cont.innerHTML = `<svg width="${ancho}" height="${alto}" role="img" aria-label="Ingreso por mes">
+            ${rejilla}<line x1="${margenIzq - 8}" y1="${base}" x2="${ancho - margenDer}" y2="${base}" stroke="#9ca3af"/>${barras}
+        </svg>`;
+    }
+
+    // b) Participación por colección
+    const porColeccion = {};
+    let total = 0;
+    ingresadas.forEach(f => {
+        const c = (f.coleccion || 'sin colección').trim();
+        const u = totalIngresado(f);
+        porColeccion[c] = (porColeccion[c] || 0) + u;
+        total += u;
+    });
+    const orden = Object.entries(porColeccion).sort((a, b) => b[1] - a[1]);
+    const caja = document.getElementById('participacionColeccion');
+
+    caja.innerHTML = orden.length
+        ? `<div style="font-size:12px; font-weight:600; color:#6b7280; margin-bottom:8px;">% por colección</div>` +
+          orden.map(([nombre, u]) => {
+              const pct = total ? u / total * 100 : 0;
+              return `<div class="barra-col">
+                  <span class="nombre-col" title="${nombre}">${nombre}</span>
+                  <span class="pista"><span class="relleno" style="width:${pct.toFixed(1)}%"></span></span>
+                  <span class="cifra">${fmt(u)} · ${pct.toFixed(1)}%</span>
+              </div>`;
+          }).join('') +
+          `<div class="barra-col" style="border-top:1px solid #e5e7eb; margin-top:6px; font-weight:700;">
+              <span>Total</span><span></span><span class="cifra">${fmt(total)}</span></div>`
+        : '<div class="cargando">Sin datos.</div>';
 }
 
 // ---------- Cumplimiento ----------
@@ -763,7 +857,9 @@ function pintarKpis(ing, pen) {
     const total = totalIng + totalPen;
     const atrasadas = pen.filter(f => f.fecha_estimada_bodega && f.fecha_estimada_bodega < hoy)
                          .reduce((s, f) => s + num(f.unidades_preventa), 0);
-    const refs = new Set(ing.concat(pen).map(f => f.referencia).filter(Boolean)).size;
+    // Una "referencia" para el negocio es la descripción (evenky, oltza…), no el consecutivo # REF
+    const refs = new Set(ing.concat(pen)
+        .map(f => (f.descripcion || '').trim().toUpperCase()).filter(Boolean)).size;
 
     const hasta = datosCumplimiento.filter(d => !d.futuro);
     const pptoHasta = hasta.reduce((s, d) => s + d.ppto, 0);
@@ -778,7 +874,7 @@ function pintarKpis(ing, pen) {
             <div class="valor">${fmt(atrasadas)}</div>
             <div class="etiqueta">Pendientes con fecha ya vencida · <b>${soloAtrasadas ? 'quitar filtro' : 'ver cuáles'}</b></div></div>
         <div class="kpi avance"><div class="valor">${total ? (totalIng / total * 100).toFixed(1) : '0.0'}%</div><div class="etiqueta">Avance de ingreso</div></div>
-        <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas</div></div>
+        <div class="kpi"><div class="valor">${fmt(refs)}</div><div class="etiqueta">Referencias distintas (descripciones)</div></div>
         <div class="kpi avance"><div class="valor">${pct(vtaHasta, pptoHasta)}</div>
             <div class="etiqueta">Cumplimiento en ventas (ene–${MESES[Math.max(0, mesActualPpto - 1)]})</div></div>
         <div class="kpi avance"><div class="valor">${pct(ingHasta, pptoHasta)}</div>
@@ -786,8 +882,8 @@ function pintarKpis(ing, pen) {
 }
 
 // ---------- Tablas ----------
-function celdaFoto(descripcion) {
-    const clave = claveFoto(descripcion);
+function celdaFoto(descripcion, color) {
+    const clave = claveFoto(descripcion, color);
     return fotos.has(clave)
         ? `<img class="foto-mini" loading="lazy" src="${urlFoto(clave)}" alt="">`
         : `<div class="sin-foto">📷</div>`;
@@ -818,7 +914,7 @@ function pintarTabla(cual) {
 
     const filasHtml = visibles.map(d => esIng
         ? `<tr onclick="abrirFicha(${d.id})">
-             <td>${celdaFoto(d.descripcion)}</td>
+             <td>${celdaFoto(d.descripcion, d.color)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.color)}</td>
@@ -834,7 +930,7 @@ function pintarTabla(cual) {
              <td class="num">${fmt(d.total)}</td>
            </tr>`
         : `<tr onclick="abrirFicha(${d.id})">
-             <td>${celdaFoto(d.descripcion)}</td>
+             <td>${celdaFoto(d.descripcion, d.color)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
              <td class="minuscula">${texto(d.color)}</td>
@@ -985,10 +1081,11 @@ window.abrirFicha = async function(id) {
     const { data: r, error } = await supabase.from('produccion').select('*').eq('id', id).single();
     if (error || !r) { document.getElementById('fichaTitulo').textContent = 'No se pudo cargar la ficha'; return; }
 
-    refFicha = claveFoto(r.descripcion);
-    document.getElementById('fichaTitulo').textContent = (r.descripcion || 'Sin descripción').toLowerCase();
+    refFicha = claveFoto(r.descripcion, r.color);
+    document.getElementById('fichaTitulo').textContent =
+        [(r.descripcion || 'sin descripción'), r.color].filter(Boolean).join(' · ').toLowerCase();
     document.getElementById('fichaSub').textContent =
-        [r.sublinea, r.color, r.destino, r.hoja].filter(Boolean).join(' · ');
+        [r.sublinea, r.destino, r.hoja, r.numero_factura ? 'factura ' + r.numero_factura : ''].filter(Boolean).join(' · ');
 
     // "REAL PAY DATE Balance" quedó en extras y cambia de nombre entre archivos
     const extras = r.extras || {};
@@ -1020,7 +1117,7 @@ window.abrirFicha = async function(id) {
 function pintarFotoFicha() {
     document.getElementById('fichaFoto').innerHTML = fotos.has(refFicha)
         ? `<img class="foto-grande" src="${urlFoto(refFicha)}?t=${Date.now()}" alt="">`
-        : `<div class="foto-vacia">📷<span>Esta referencia todavía no tiene foto</span></div>`;
+        : `<div class="foto-vacia">📷<span>Esta descripción y color todavía no tienen foto</span></div>`;
 }
 
 window.cerrarFicha = function() { document.getElementById('modalFicha').classList.remove('abierto'); };
@@ -1140,7 +1237,7 @@ window.exportar = function(cual) {
 // ---------- Secciones del menú lateral ----------
 const SECCIONES = {
     resumen:   ['kpis', 'cardGrafico', 'cardCumplimiento'],
-    ingresado: ['kpis', 'cardIngresadas'],
+    ingresado: ['kpis', 'cardIngresoMes', 'cardIngresadas'],
     pendiente: ['kpis', 'cardPlan', 'cardPendientes'],
 };
 let seccionActual = 'resumen';
@@ -1148,7 +1245,7 @@ let seccionActual = 'resumen';
 window.verSeccion = function(seccion) {
     seccionActual = seccion;
     const visibles = SECCIONES[seccion] || [];
-    ['kpis','cardGrafico','cardCumplimiento','cardPlan','cardIngresadas','cardPendientes'].forEach(id => {
+    ['kpis','cardGrafico','cardCumplimiento','cardIngresoMes','cardPlan','cardIngresadas','cardPendientes'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = visibles.includes(id) ? '' : 'none';
     });
