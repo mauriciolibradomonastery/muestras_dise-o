@@ -79,7 +79,6 @@
             box-shadow: 0 2px 6px rgba(0,0,0,.05); }
         .btn-toggle-kpi:hover { background: #ffffff; color: #111827; border-color: #9ca3af; }
         .btn-toggle-kpi.activo { background: #1f2937; color: #ffffff; border-color: #1f2937; }
-        /* Con los indicadores ocultos, la tabla gana alto */
         body.kpi-oculto .table-container { max-height: 76vh; }
         .kpi-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); }
         .kpi-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 17px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
@@ -103,12 +102,10 @@
         .btn-add, .btn-toggle, .btn-export, .btn-import { background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
         .btn-add:hover, .btn-toggle:hover, .btn-export:hover, .btn-import:hover { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
 
-        /* Estilos del Botón de Guardado */
         .btn-save-global { background-color: #10b981; color: white; border: none; padding: 9px 18px; font-size: 14px; font-weight: 700; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: all 0.2s ease; }
         .btn-save-global:hover { background-color: #059669; transform: translateY(-1px); }
         .btn-save-global:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
         
-        /* 🔥 CLASE NUEVA: Estado Rojo para Cambios Pendientes */
         .btn-save-global.unsaved { background-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); animation: pulseUnsaved 2s infinite; }
         .btn-save-global.unsaved:hover { background-color: #dc2626; }
         @keyframes pulseUnsaved { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
@@ -125,7 +122,6 @@
 
         .table-container { width: 100%; overflow-x: auto; max-height: 58vh; background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
         table { border-collapse: collapse; width: max-content; }
-        /* El navegador solo dibuja las filas que están a la vista */
         tbody tr { content-visibility: auto; contain-intrinsic-size: 0 38px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; }
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
@@ -151,7 +147,8 @@
 
         .col-fija-color { position: sticky !important; left: var(--l-color) !important; background-color: #ffffff; z-index: 5; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.08); border-right: 2px solid #d1d5db !important; }
 
-        .multiline-cell { white-space: pre-wrap !important; word-wrap: break-word; }
+        /* 🔥 REGLA AJUSTADA: Evita el crecimiento vertical por texto auto-ajustable */
+        .multiline-cell { white-space: pre !important; }
 
         th.col-checkbox { z-index: 19 !important; background-color: #091f5c !important;color: #ffffff; }
         th.col-fija-linea { z-index: 18 !important; background-color: #091f5c !important; }
@@ -318,7 +315,6 @@
         const supabase = createClient(supabaseUrl, supabaseKey, { auth: { storage: window.localStorage } });
         const BUCKET_ARCHIVOS = 'wips-archivos';
 
-        // Sube un archivo a Supabase Storage y devuelve su enlace público
         async function subirArchivo(blob, extension, tipo) {
             const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
             const { error } = await supabase.storage.from(BUCKET_ARCHIVOS)
@@ -345,10 +341,6 @@
         window.categoriaActiva = 'todas'; 
         window.hayCambiosSinGuardar = false;
 
-        // ==========================================
-        // 📊 MOSTRAR / OCULTAR LA TABLA DE INDICADORES
-        // Aplica igual en Muestras Activas y en Canceladas.
-        // ==========================================
         window.toggleIndicadores = function(forzar) {
             const visible = (forzar !== undefined) ? forzar : !(localStorage.getItem('wips_kpi_visible') !== 'no');
             localStorage.setItem('wips_kpi_visible', visible ? 'si' : 'no');
@@ -361,14 +353,10 @@
             btn.innerHTML = visible ? '📊 Ocultar Indicadores de Muestras' : '📊 Indicadores de Muestras';
         };
 
-        // Al abrir la página se respeta lo que el usuario dejó la última vez
         document.addEventListener('DOMContentLoaded', () => {
             window.toggleIndicadores(localStorage.getItem('wips_kpi_visible') !== 'no');
         });
 
-        // ==========================================
-        // 🔥 SISTEMA DE ALERTAS (Botón Rojo / Verde)
-        // ==========================================
         window.marcarCambios = function() {
             window.hayCambiosSinGuardar = true;
             const btn = document.getElementById('btnGuardarGlobal');
@@ -383,9 +371,6 @@
             btn.innerHTML = '💾 Guardar Cambios Visibles';
         };
 
-        // ==========================================
-        // 🔥 ORDENAMIENTO DE COLUMNAS (A-Z / Mayor-Menor)
-        // ==========================================
         let columnaOrdenadaActual = -1; 
         let ordenAscendente = true;
 
@@ -394,7 +379,6 @@
             const filas = Array.from(tbody.querySelectorAll('tr'));
             if (filas.length === 0) return;
 
-            // 1. Cambiar la dirección del orden
             if (columnaOrdenadaActual === colIndex) { 
                 ordenAscendente = !ordenAscendente; 
             } else { 
@@ -402,7 +386,6 @@
                 columnaOrdenadaActual = colIndex; 
             }
 
-            // 2. Actualizar visualmente la flecha en el encabezado
             document.querySelectorAll('.sort-icon').forEach(icon => {
                 icon.innerHTML = '↕';
                 icon.style.color = 'inherit';
@@ -415,7 +398,6 @@
                 thClickeado.style.fontWeight = 'bold';
             }
 
-            // 3. Ordenar filas de manera inteligente
             filas.sort((a, b) => {
                 const tA = a._textos || window.cachearFila(a);
                 const tB = b._textos || window.cachearFila(b);
@@ -423,7 +405,6 @@
                 let valorB = tB[colIndex] || '';
                 const inputA = null, inputB = null;
 
-                // Enviar celdas vacías siempre al final
                 if (valorA === "" && valorB !== "") return 1;
                 if (valorA !== "" && valorB === "") return -1;
                 if (valorA === "" && valorB === "") return 0;
@@ -431,7 +412,6 @@
                 let numA = parseNumeroInteligente(valorA); 
                 let numB = parseNumeroInteligente(valorB);
                 
-                // Detectar si son números (moneda, porcentaje, etc)
                 let esNumA = !isNaN(numA) && /^[0-9.,$% -]+$/.test(valorA);
                 let esNumB = !isNaN(numB) && /^[0-9.,$% -]+$/.test(valorB);
 
@@ -439,16 +419,12 @@
                     return ordenAscendente ? numA - numB : numB - numA;
                 }
                 
-                // Ordenamiento alfabético inteligente
                 return ordenAscendente ? valorA.localeCompare(valorB) : valorB.localeCompare(valorA);
             });
 
             filas.forEach(fila => tbody.appendChild(fila));
         };
 
-        // ==========================================
-        // 🔥 LÓGICA DEL SIMULADOR DE COSTOS Y FORMATOS
-        // ==========================================
         window.trmDolarGlobal = 3500;
 
         window.actualizarTrmGlobal = function(val) {
@@ -633,7 +609,6 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Activar botón de guardar en rojo cuando el usuario teclea algo
             ['input', 'change'].forEach(evt => {
                 document.getElementById('tableBody').addEventListener(evt, function(e) {
                     let td = e.target.closest('td');
@@ -642,7 +617,7 @@
                     window.marcarCambios();
 
                     let tr = td.closest('tr');
-                    window.cachearFila(tr);     // la fila cambió: se actualiza su caché
+                    window.cachearFila(tr);     
                     let colIndex = Array.from(tr.children).indexOf(td);
                     
                     if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
@@ -668,8 +643,6 @@
                 }
             });
         });
-        // ==========================================
-
 
         let miNombre = localStorage.getItem('wips_username');
         if (!miNombre) {
@@ -900,7 +873,7 @@
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 if (colUpper === 'MARGEN REAL') {
-                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span> <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
                 } else {
                     thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span>`;
                 }
@@ -963,7 +936,6 @@
             calcularKPIs();
         }
 
-        // Las sugerencias de una columna se arman solo cuando haces clic en ese filtro
         window.llenarDatalistColumna = function(colIndex) {
             const datalist = document.getElementById(`datalist_${colIndex}`);
             if (!datalist) return;
@@ -981,7 +953,7 @@
         };
 
         window.actualizarDatalists = function() {
-            document.querySelectorAll('datalist').forEach(d => d.innerHTML = '');   // se llenan al usarlos
+            document.querySelectorAll('datalist').forEach(d => d.innerHTML = '');   
         };
 
         window.seleccionarImagenCelda = function(td) {
@@ -994,7 +966,6 @@
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        // Se reduce el tamaño antes de subir, para que pese poco
                         const canvas = document.createElement('canvas');
                         const MAX_WIDTH = 800; let escala = 1;
                         if (img.width > MAX_WIDTH) escala = MAX_WIDTH / img.width;
@@ -1254,11 +1225,6 @@
             document.getElementById('contadorMuestras').textContent = visibles;
         };
 
-        // ==========================================
-        // 🚀 CACHÉ DE FILAS (clave para la velocidad)
-        // Leer .innerText obliga al navegador a recalcular el diseño de toda la página.
-        // Aquí se lee UNA sola vez por fila y se guarda en memoria.
-        // ==========================================
         window.cachearFila = function(tr) {
             const celdas = tr.children;
             const textos = new Array(celdas.length);
@@ -1285,7 +1251,6 @@
             const filas = document.getElementById('tableBody').children;
             const indiceEstado = 44;
 
-            // Los filtros activos se preparan UNA vez, no dentro del bucle de filas
             const activos = [];
             document.querySelectorAll('.col-filter').forEach(input => {
                 const crudo = input.value.trim();
@@ -1333,16 +1298,14 @@
                 }
 
                 const oculto = fila.style.display === 'none';
-                if (mostrar === oculto) fila.style.display = mostrar ? '' : 'none';   // solo se escribe si cambia
+                if (mostrar === oculto) fila.style.display = mostrar ? '' : 'none'; 
                 if (mostrar) visibles++; else { const cb = fila.firstElementChild.firstElementChild; if (cb) cb.checked = false; }
             }
 
             document.getElementById('contadorMuestras').textContent = visibles;
             window.actualizarSeleccion();
-            // Las listas de sugerencias ya NO se reconstruyen en cada tecla (ver actualizarDatalists)
         };
 
-        // Espera a que el usuario deje de escribir antes de filtrar
         let temporizadorFiltro = null;
         window.filtrarConEspera = function() {
             clearTimeout(temporizadorFiltro);
@@ -1456,7 +1419,6 @@
 
                 if (tr.dataset.id) { 
                     if (tr._hashGuardado === hashActual) continue; 
-                    // CORRECCIÓN: Usamos UPDATE directamente para evitar el error del ID en la base de datos
                     promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id) );
                     filasActualizadasDOM.push(tr);
                 } 
@@ -1479,14 +1441,12 @@
             }
 
             try {
-                // 1. Guardar las filas editadas (Updates)
                 if (promesasUpdate.length > 0) {
                     btn.innerHTML = `⏳ Actualizando (${promesasUpdate.length})...`;
                     const resultados = await Promise.all(promesasUpdate);
                     for (let res of resultados) { if (res.error) throw res.error; }
                 }
                 
-                // 2. Guardar las filas nuevas (Insert) por lotes
                 if(registrosNuevos.length > 0) {
                     const chunkSize = 5; 
                     for (let i = 0; i < registrosNuevos.length; i += chunkSize) {
@@ -1501,7 +1461,6 @@
                     }
                 }
 
-                // 3. Sellar la memoria para saber que ya todo esto guardó
                 for (let tr of filasActualizadasDOM) {
                     tr._hashGuardado = JSON.stringify(window.extraerDatosFila(tr));
                 }
@@ -1596,7 +1555,6 @@
             }; reader.readAsArrayBuffer(file);
         };
 
-        // Sin sesión no se pueden subir archivos a Storage
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) console.warn('Sin sesión iniciada: podrás ver la información, pero no subir fotos ni PDF.');
         });
