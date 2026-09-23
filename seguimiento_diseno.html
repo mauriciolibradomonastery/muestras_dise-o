@@ -118,6 +118,8 @@
 
         .table-container { width: 100%; overflow-x: auto; max-height: 58vh; background: #ffffff; border-radius: 10px; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06); }
         table { border-collapse: collapse; width: max-content; }
+        /* El navegador solo dibuja las filas que están a la vista */
+        tbody tr { content-visibility: auto; contain-intrinsic-size: 0 38px; }
         th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; position: relative; }
         thead { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
         .th-title { cursor: pointer; user-select: none; color: #ffffff; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #091f5c; padding: 10px; transition: background-color 0.2s;border-color: #091f5c !important; }
@@ -300,7 +302,17 @@
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(supabaseUrl, supabaseKey, { auth: { storage: window.localStorage } });
+        const BUCKET_ARCHIVOS = 'wips-archivos';
+
+        // Sube un archivo a Supabase Storage y devuelve su enlace público
+        async function subirArchivo(blob, extension, tipo) {
+            const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
+            const { error } = await supabase.storage.from(BUCKET_ARCHIVOS)
+                .upload(nombre, blob, { contentType: tipo, upsert: true });
+            if (error) throw error;
+            return supabase.storage.from(BUCKET_ARCHIVOS).getPublicUrl(nombre).data.publicUrl;
+        }
 
         const colsDiseno = ['IMAGEN', 'COLECCIÓN', 'LINEA', 'RESPONSABLE', 'PAIS ORIGEN', 'PROVEEDOR', 'GÉNERO', 'FAMILIA', 'CARACTERISTICA', 'REFERENCIA', 'CÓDIGO SKU', 'DISEÑADOR', 'COLOR COLECCIÓN', 'COLOR SKU', 'BASE TEXTIL', 'INSUMO ARTE', 'PRECIO', 'MONEDA', 'FECHA INICIAL DE ENVÍO DE FICHA TÉCNICA', 'FECHA CAMBIO #1', 'OBSERVACIONES CAMBIO #1', 'FECHA CAMBIO #2', 'OBSERVACIONES CAMBIO #2', 'FECHA LLEGADA STRIKE OFF O PROTO', 'FECHA APROBACIÓN STRIKE OFF O PROTO', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 'FECHA LLEGADA PP SAMPLE', 'OBSERVACIONES DE DISEÑO', 'FECHA ENTREGA PP SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PP SAMPLE', 'OBSERVACIONES', 'FECHA LLEGADA SEGUNDA PP SAMPLE', 'OBSERVACIONES DE DISEÑO2', 'FECHA ENTREGA SEGUNDA PP SAMPLE A CALIDAD2', 'FECHA INFORME CALIDAD SEGUNDA PP SAMPLE2', 'OBSERVACIONES2', 'Pp Sample aprobado por CALIDAD', 'FECHA LLEGADA PHOTO SAMPLE', 'OBSERVACIONES DE DISEÑO23', 'FECHA ENTREGA PHOTO SAMPLE A CALIDAD', 'FECHA INFORME CALIDAD PHOTO SAMPLE', 'OBERVACIONES', 'FECHA DE ENTREGA A MERCADEO PARA FOTOS', 'ESTADO', 'SEMÁFORO (Colores)', 'FECHA LIBERACIÓN', 'FECHA PROFORMA', 'SOPORTE PROFORMA (IMAGEN)', 'PRECINTO', 'VALOR', 'FICHA TECNICA'];
         const colsProduccion = ['ORDEN', 'FECHA TENTATIVA LLEGADA DE MUESTRA', 'FECHA LLEGADA DE MUESTRA', 'VENTA DISTRIBUIDOR', 'CANAL PROPIO', 'COSTO UNITARIO INICIAL', 'COSTO UNITARIO FINAL', 'TIPO DE MONEDA', 'PVP UNITARIO', 'PVP PACK', 'OBSERVACIONES WIP', 'MARGEN MÍNIMO', 'MARGEN REAL'];
@@ -371,13 +383,11 @@
 
             // 3. Ordenar filas de manera inteligente
             filas.sort((a, b) => {
-                let valorA = a.cells[colIndex].innerText.trim(); 
-                let valorB = b.cells[colIndex].innerText.trim();
-                
-                const inputA = a.cells[colIndex].querySelector('input[type="date"], select'); 
-                const inputB = b.cells[colIndex].querySelector('input[type="date"], select');
-                if(inputA) valorA = inputA.value; 
-                if(inputB) valorB = inputB.value;
+                const tA = a._textos || window.cachearFila(a);
+                const tB = b._textos || window.cachearFila(b);
+                let valorA = tA[colIndex] || '';
+                let valorB = tB[colIndex] || '';
+                const inputA = null, inputB = null;
 
                 // Enviar celdas vacías siempre al final
                 if (valorA === "" && valorB !== "") return 1;
@@ -598,6 +608,7 @@
                     window.marcarCambios();
 
                     let tr = td.closest('tr');
+                    window.cachearFila(tr);     // la fila cambió: se actualiza su caché
                     let colIndex = Array.from(tr.children).indexOf(td);
                     
                     if ([3, 5, 7, 8, 55, 56, 58, 59, 60, 63].includes(colIndex)) {
@@ -873,10 +884,10 @@
                 if (colUpper === 'IMAGEN' || colUpper === 'SOPORTE PROFORMA (IMAGEN)' || colsSinFiltro.includes(colUpper)) {
                     thFilter.innerHTML = ``;
                 } else if (colUpper.startsWith('FECHA')) {
-                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx}" oninput="filtrarTablaCompleta()">`;
+                    thFilter.innerHTML = `<input type="date" class="filter-input col-filter" data-colindex="${idx}" oninput="filtrarConEspera()">`;
                 } else {
                     thFilter.innerHTML = `
-                        <input type="text" class="filter-input col-filter" list="datalist_${idx}" data-colindex="${idx}" placeholder="Filtrar..." oninput="filtrarTablaCompleta()">
+                        <input type="text" class="filter-input col-filter" list="datalist_${idx}" data-colindex="${idx}" placeholder="Filtrar..." oninput="filtrarConEspera()" onfocus="llenarDatalistColumna(${idx})">
                         <datalist id="datalist_${idx}"></datalist>
                     `;
                 }
@@ -913,63 +924,67 @@
                     tbody.appendChild(trCreado);
                 });
             }
+            window.cachearTodo();
             window.filtrarTablaCompleta(); 
-            calcularKPIs(); 
-            setTimeout(window.actualizarDatalists, 200);
+            calcularKPIs();
         }
 
+        // Las sugerencias de una columna se arman solo cuando haces clic en ese filtro
+        window.llenarDatalistColumna = function(colIndex) {
+            const datalist = document.getElementById(`datalist_${colIndex}`);
+            if (!datalist) return;
+            const filas = document.getElementById('tableBody').children;
+            const unicos = new Set();
+            for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                if (!fila.dataset.id || fila.style.display === 'none') continue;
+                const textos = fila._textos || window.cachearFila(fila);
+                const val = textos[colIndex];
+                if (val) unicos.add(val);
+            }
+            datalist.innerHTML = [...unicos].sort()
+                .map(v => `<option value="${v.replace(/"/g, '&quot;')}"></option>`).join('');
+        };
+
         window.actualizarDatalists = function() {
-            const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
-            const inputsColumnas = document.querySelectorAll('.col-filter[type="text"]');
-            inputsColumnas.forEach(input => {
-                const colIndex = input.getAttribute('data-colindex');
-                const datalist = document.getElementById(`datalist_${colIndex}`);
-                if (!datalist) return;
-                
-                const uniqueValues = new Set();
-                filas.forEach(fila => {
-                    // Ahora SOLO incluye en la lista a las filas que están VISIBLES actualmente
-                    if(!fila.dataset.id || fila.style.display === 'none') return; 
-                    
-                    const celdas = fila.querySelectorAll('td');
-                    if (celdas[colIndex]) {
-                        let val = ""; const celda = celdas[colIndex];
-                        if (celda.querySelector('select')) { val = celda.querySelector('select').value; } 
-                        else if (celda.querySelector('input[type="date"]')) { val = celda.querySelector('input[type="date"]').value; } 
-                        else { val = celda.innerText.trim(); }
-                        if (val !== "") uniqueValues.add(val);
-                    }
-                });
-                
-                datalist.innerHTML = '';
-                Array.from(uniqueValues).sort().forEach(val => {
-                    const option = document.createElement('option'); option.value = val; datalist.appendChild(option);
-                });
-            });
+            document.querySelectorAll('datalist').forEach(d => d.innerHTML = '');   // se llenan al usarlos
         };
 
         window.seleccionarImagenCelda = function(td) {
             const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
             input.onchange = function(e) {
                 const file = e.target.files[0]; if (!file) return;
+                const original = td.innerHTML;
+                td.innerHTML = '<span style="font-size:11px; color:#6b7280;">⏳ Subiendo…</span>';
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let scaleSize = 1;
-                        if(img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        const base64Mini = canvas.toDataURL('image/jpeg', 0.85);
-                        td.innerHTML = `
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <img src="${base64Mini}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
-                                <div style="display: flex; flex-direction: column; gap: 2px;">
-                                    <span class="img-action-btn" title="Cambiar foto" onclick="window.seleccionarImagenCelda(this.closest('td'))">🔄</span>
-                                    <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
-                                </div>
-                            </div>`;
-                        window.marcarCambios();
+                        // Se reduce el tamaño antes de subir, para que pese poco
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; let escala = 1;
+                        if (img.width > MAX_WIDTH) escala = MAX_WIDTH / img.width;
+                        canvas.width = img.width * escala; canvas.height = img.height * escala;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        canvas.toBlob(async function(blob) {
+                            try {
+                                const url = await subirArchivo(blob, 'jpg', 'image/jpeg');
+                                td.innerHTML = `
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <img src="${url}" loading="lazy" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span class="img-action-btn" title="Cambiar foto" onclick="window.seleccionarImagenCelda(this.closest('td'))">🔄</span>
+                                            <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
+                                        </div>
+                                    </div>`;
+                                window.cachearFila(td.closest('tr'));
+                                window.marcarCambios();
+                            } catch (err) {
+                                alert('No se pudo subir la imagen: ' + err.message);
+                                td.innerHTML = original;
+                            }
+                        }, 'image/jpeg', 0.85);
                     }; img.src = event.target.result;
                 }; reader.readAsDataURL(file);
             }; input.click();
@@ -982,22 +997,27 @@
 
         window.seleccionarPDFCelda = function(td) {
             const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/pdf';
-            input.onchange = function(e) {
+            input.onchange = async function(e) {
                 const file = e.target.files[0]; if (!file) return;
-                if (file.size > 2 * 1024 * 1024) { alert("El PDF es muy pesado (máximo 2MB)."); return; }
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const base64PDF = event.target.result;
+                if (file.size > 20 * 1024 * 1024) { alert("El PDF es muy pesado (máximo 20MB)."); return; }
+                const original = td.innerHTML;
+                td.innerHTML = '<span style="font-size:11px; color:#6b7280;">⏳ Subiendo…</span>';
+                try {
+                    const url = await subirArchivo(file, 'pdf', 'application/pdf');
                     td.innerHTML = `
                         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <a href="${base64PDF}" download="Ficha_Tecnica.pdf" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Descargar PDF">📥 Ver PDF</a>
+                            <a href="${url}" target="_blank" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Abrir PDF">📥 Ver PDF</a>
                             <div style="display: flex; flex-direction: column; gap: 2px;">
                                 <span class="img-action-btn" title="Cambiar PDF" onclick="window.seleccionarPDFCelda(this.closest('td'))">🔄</span>
                                 <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
                             </div>
                         </div>`;
+                    window.cachearFila(td.closest('tr'));
                     window.marcarCambios();
-                }; reader.readAsDataURL(file);
+                } catch (err) {
+                    alert('No se pudo subir el PDF: ' + err.message);
+                    td.innerHTML = original;
+                }
             }; input.click();
         };
 
@@ -1058,7 +1078,7 @@
                     if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <img src="${valorRaw}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
+                                <img src="${valorRaw}" loading="lazy" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <span class="img-action-btn" title="Cambiar foto" onclick="window.seleccionarImagenCelda(this.closest('td'))">🔄</span>
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
@@ -1070,7 +1090,7 @@
                     if(valorRaw.startsWith('data:application/pdf') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <a href="${valorRaw}" download="Ficha_Tecnica.pdf" target="_blank" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Descargar PDF">📥 Ver PDF</a>
+                                <a href="${valorRaw}" target="_blank" class="ficha-link" style="color: #2563eb; font-weight: bold; text-decoration: none;" title="Descargar PDF">📥 Ver PDF</a>
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <span class="img-action-btn" title="Cambiar PDF" onclick="window.seleccionarPDFCelda(this.closest('td'))">🔄</span>
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar PDF" onclick="window.borrarPDFCelda(this.closest('td'))">❌</span>
@@ -1121,17 +1141,18 @@
 
         window.calcularKPIs = function() {
             const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
+            filas.forEach(f => { if (!f._textos) window.cachearFila(f); });
             const datosKpi = {};
             const totales = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
 
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
-                const celdas = fila.querySelectorAll('td'); if (celdas.length < 64) return; 
-                const estado = (celdas[44].textContent || '').trim().toUpperCase(); if (estado === 'CANCELADO') return; 
+                const textos = fila._textos; if (!textos || textos.length < 64) return;
+                const estado = (textos[44] || '').toUpperCase(); if (estado === 'CANCELADO') return; 
 
                 let coincideCategoria = true;
-                const genero = (celdas[7].textContent || '').trim().toUpperCase();
-                const familia = (celdas[8].textContent || '').trim().toUpperCase();
+                const genero = (textos[7] || '').toUpperCase();
+                const familia = (textos[8] || '').toUpperCase();
                 const esPrenda = (familia === 'PRENDAS' || familia === 'PRENDAS SET');
 
                 if (window.categoriaActiva === 'femenina') { coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO'); } 
@@ -1139,16 +1160,14 @@
                 else if (window.categoriaActiva === 'accesorios') { coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO'); }
                 if (!coincideCategoria) return; 
 
-                const coleccion = (celdas[2].textContent || '').trim().toUpperCase() || '(SIN COLECCIÓN)'; 
-                const referencia = (celdas[10].textContent || '').trim(); 
+                const coleccion = (textos[2] || '').toUpperCase() || '(SIN COLECCIÓN)';
+                const referencia = textos[10] || '';
                 
-                const inputTentativa = celdas[53].querySelector('input[type="date"]');
-                const fechaTentativa = (inputTentativa ? inputTentativa.value : celdas[53].textContent).trim(); 
-                const inputLlegada = celdas[54].querySelector('input[type="date"]');
-                const fechaLlegada = (inputLlegada ? inputLlegada.value : celdas[54].textContent).trim(); 
+                const fechaTentativa = textos[53] || '';
+                const fechaLlegada = textos[54] || '';
 
-                const costoUnitario = (celdas[58].textContent || '').trim(); 
-                const pvpUnitario = (celdas[60].textContent || '').trim(); 
+                const costoUnitario = textos[58] || '';
+                const pvpUnitario = textos[60] || '';
 
                 if (!datosKpi[coleccion]) datosKpi[coleccion] = { referencias: new Set(), totalMuestras: 0, fisicas: 0, transito: 0, conCostos: 0, conPvp: 0 };
                 if (referencia) { datosKpi[coleccion].referencias.add(referencia); totales.referencias.add(referencia); }
@@ -1201,71 +1220,99 @@
             document.getElementById('contadorMuestras').textContent = visibles;
         };
 
+        // ==========================================
+        // 🚀 CACHÉ DE FILAS (clave para la velocidad)
+        // Leer .innerText obliga al navegador a recalcular el diseño de toda la página.
+        // Aquí se lee UNA sola vez por fila y se guarda en memoria.
+        // ==========================================
+        window.cachearFila = function(tr) {
+            const celdas = tr.children;
+            const textos = new Array(celdas.length);
+            for (let i = 0; i < celdas.length; i++) {
+                const celda = celdas[i];
+                const sel = celda.firstElementChild;
+                if (sel && sel.tagName === 'SELECT') textos[i] = sel.value.trim();
+                else if (sel && sel.tagName === 'INPUT' && sel.type === 'date') textos[i] = sel.value.trim();
+                else textos[i] = (celda.textContent || '').trim();
+            }
+            tr._textos = textos;
+            tr._minusculas = textos.map(t => t.toLowerCase());
+            tr._todo = tr._minusculas.join(' ');
+            return textos;
+        };
+
+        window.cachearTodo = function() {
+            const filas = document.getElementById('tableBody').children;
+            for (let i = 0; i < filas.length; i++) window.cachearFila(filas[i]);
+        };
+
         window.filtrarTablaCompleta = function() {
-            const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
-            const inputsColumnas = document.querySelectorAll('.col-filter');
-            const filas = document.getElementById('tableBody').querySelectorAll('tr');
-            const indiceEstado = 44; 
+            const textoGlobal = document.getElementById('inputBusquedaGlobal').value.trim().toLowerCase();
+            const filas = document.getElementById('tableBody').children;
+            const indiceEstado = 44;
 
-            filas.forEach(fila => {
-                const celdas = fila.querySelectorAll('td');
-                const estadoCelda = (celdas[indiceEstado].innerText || '').trim().toUpperCase();
-                const esCancelado = estadoCelda === 'CANCELADO';
-
-                let coincideVista = (window.vistaActual === 'activas' && !esCancelado) || (window.vistaActual === 'canceladas' && esCancelado);
-                if (!coincideVista) { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; return; }
-
-                let coincideCategoria = true; const esFilaNuevaSinGuardar = !fila.dataset.id;
-                
-                if (!esFilaNuevaSinGuardar) {
-                    const genero = (celdas[7].innerText || '').trim().toUpperCase();
-                    const familia = (celdas[8].innerText || '').trim().toUpperCase();
-                    const esPrenda = (familia === 'PRENDAS' || familia === 'PRENDAS SET');
-
-                    if (window.categoriaActiva === 'femenina') { coincideCategoria = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO'); } 
-                    else if (window.categoriaActiva === 'masculina') { coincideCategoria = esPrenda && (genero === 'MEN' || genero === 'MASCULINO'); } 
-                    else if (window.categoriaActiva === 'accesorios') { coincideCategoria = (familia === 'ACCESORIOS' || familia === 'CALZADO'); }
+            // Los filtros activos se preparan UNA vez, no dentro del bucle de filas
+            const activos = [];
+            document.querySelectorAll('.col-filter').forEach(input => {
+                const crudo = input.value.trim();
+                if (crudo === "") return;
+                const colIndex = +input.getAttribute('data-colindex');
+                const texto = crudo.toLowerCase();
+                let modo = 'contiene', termino = texto;
+                if (crudo.startsWith('"') && crudo.endsWith('"')) { modo = 'exacto'; termino = texto.slice(1, -1).trim(); }
+                else {
+                    const datalist = document.getElementById(`datalist_${colIndex}`);
+                    if (datalist && Array.from(datalist.options).some(o => o.value.toLowerCase() === texto)) modo = 'exacto';
                 }
-                if (!coincideCategoria) { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; return; }
-
-                let coincideGlobal = true;
-                if (textoGlobal !== "") coincideGlobal = fila.innerText.toLowerCase().includes(textoGlobal);
-
-                let coincidenColumnas = true;
-                inputsColumnas.forEach(input => {
-                    const textoFiltroRaw = input.value.trim(); const textoFiltroLower = textoFiltroRaw.toLowerCase();
-                    
-                    if (textoFiltroRaw !== "") {
-                        const colIndex = input.getAttribute('data-colindex'); const celda = celdas[colIndex]; let celdaTexto = "";
-                        
-                        if (celda.querySelector('select')) { celdaTexto = celda.querySelector('select').value; } 
-                        else if (celda.querySelector('input[type="date"]')) { celdaTexto = celda.querySelector('input[type="date"]').value; } 
-                        else { celdaTexto = celda.innerText.trim(); }
-                        const celdaTextoLower = celdaTexto.toLowerCase();
-
-                        const datalist = document.getElementById(`datalist_${colIndex}`); let isExactOption = false;
-                        if (datalist) {
-                            const options = Array.from(datalist.options).map(o => o.value.toLowerCase());
-                            if (options.includes(textoFiltroLower)) isExactOption = true;
-                        }
-
-                        if (textoFiltroRaw.startsWith('"') && textoFiltroRaw.endsWith('"')) {
-                            let exactTerm = textoFiltroLower.slice(1, -1).trim(); 
-                            if (exactTerm !== celdaTextoLower) coincidenColumnas = false; 
-                        } else if (isExactOption) {
-                            if (celdaTextoLower !== textoFiltroLower) coincidenColumnas = false;
-                        } else {
-                            if (!celdaTextoLower.includes(textoFiltroLower)) coincidenColumnas = false;
-                        }
-                    }
-                });
-
-                if (coincideGlobal && coincidenColumnas) { fila.style.display = ''; } 
-                else { fila.style.display = 'none'; const cb = fila.querySelector('.row-checkbox'); if(cb) cb.checked = false; }
+                activos.push({ colIndex, termino, modo });
             });
-            actualizarContador(); 
-            window.actualizarSeleccion(); 
-            window.actualizarDatalists(); // Filtro dinámico: solo lo visible a las listas
+
+            const cat = window.categoriaActiva;
+            const verActivas = window.vistaActual === 'activas';
+            let visibles = 0;
+
+            for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                const textos = fila._textos || window.cachearFila(fila);
+                let mostrar = true;
+
+                const esCancelado = (textos[indiceEstado] || '').toUpperCase() === 'CANCELADO';
+                if (verActivas === esCancelado) mostrar = false;
+
+                if (mostrar && cat !== 'todas' && fila.dataset.id) {
+                    const genero = (textos[7] || '').toUpperCase();
+                    const familia = (textos[8] || '').toUpperCase();
+                    const esPrenda = familia === 'PRENDAS' || familia === 'PRENDAS SET';
+                    if (cat === 'femenina') mostrar = esPrenda && (genero === 'WOMEN' || genero === 'FEMENINO');
+                    else if (cat === 'masculina') mostrar = esPrenda && (genero === 'MEN' || genero === 'MASCULINO');
+                    else if (cat === 'accesorios') mostrar = familia === 'ACCESORIOS' || familia === 'CALZADO';
+                }
+
+                if (mostrar && textoGlobal) mostrar = fila._todo.includes(textoGlobal);
+
+                if (mostrar) {
+                    for (let k = 0; k < activos.length; k++) {
+                        const f = activos[k];
+                        const valor = fila._minusculas[f.colIndex] || '';
+                        if (f.modo === 'exacto' ? valor !== f.termino : !valor.includes(f.termino)) { mostrar = false; break; }
+                    }
+                }
+
+                const oculto = fila.style.display === 'none';
+                if (mostrar === oculto) fila.style.display = mostrar ? '' : 'none';   // solo se escribe si cambia
+                if (mostrar) visibles++; else { const cb = fila.firstElementChild.firstElementChild; if (cb) cb.checked = false; }
+            }
+
+            document.getElementById('contadorMuestras').textContent = visibles;
+            window.actualizarSeleccion();
+            // Las listas de sugerencias ya NO se reconstruyen en cada tecla (ver actualizarDatalists)
+        };
+
+        // Espera a que el usuario deje de escribir antes de filtrar
+        let temporizadorFiltro = null;
+        window.filtrarConEspera = function() {
+            clearTimeout(temporizadorFiltro);
+            temporizadorFiltro = setTimeout(window.filtrarTablaCompleta, 180);
         };
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
@@ -1336,6 +1383,7 @@
             const newTr = crearFilaHTML(null, datosInic);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             document.getElementById('tableBody').appendChild(newTr);
+            window.cachearFila(newTr);
             window.actualizarContador(); window.calcularKPIs(); 
             window.marcarCambios();
         };
@@ -1348,6 +1396,7 @@
             const newTr = crearFilaHTML(null, datosInic);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', newTr);
+            window.cachearFila(newTr);
             window.actualizarContador(); window.calcularKPIs(); 
             window.marcarCambios();
         };
@@ -1512,6 +1561,11 @@
                 } catch (err) { console.error(err); alert("Error: " + err.message); btn.innerHTML = textoOriginal; btn.disabled = false; document.getElementById('fileCSV').value = ""; }
             }; reader.readAsArrayBuffer(file);
         };
+
+        // Sin sesión no se pueden subir archivos a Storage
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) console.warn('Sin sesión iniciada: podrás ver la información, pero no subir fotos ni PDF.');
+        });
 
         // --- SCRIPTS DE INICIO ---
         inicializarEncabezados();
