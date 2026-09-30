@@ -55,9 +55,9 @@
     .grafico-caja h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 20px; margin: 0 0 20px 0; width: 100%; text-align: left; color: var(--tinta);}
     .canvas-container { position: relative; width: 100%; height: 320px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;}
-    th { padding: 14px 10px; border-bottom: 2px solid var(--borde); color: var(--texto-claro); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em;}
-    td { padding: 14px 10px; border-bottom: 1px solid #F4F1EB; color: var(--texto);}
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;}
+    th { padding: 10px 8px; border-bottom: 2px solid var(--borde); color: var(--texto-claro); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.03em; background: #FDFBF7;}
+    td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; color: var(--texto);}
     .num { text-align: right; }
     
     .fila-clic { cursor: pointer; transition: var(--transicion); }
@@ -69,7 +69,7 @@
     /* Modal Detalles Pro */
     .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
     .fondo.abierto { display: flex; opacity: 1;}
-    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 880px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
+    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
     .fondo.abierto .hoja { transform: translateY(0); }
     .hoja-cabeza { padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;}
     .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta);}
@@ -79,25 +79,26 @@
 
     .cerrar { background: #F4F1EB; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; color: var(--texto-claro); cursor: pointer; transition: var(--transicion); display: flex; align-items: center; justify-content: center;}
     .cerrar:hover { background: #E6E1D8; color: var(--vino); }
-    .hoja-cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 24px; background: #fff;}
+    .hoja-cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 20px; background: #fff;}
     
     /* Formato PDF e Impresión */
-    .pdf-encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--tinta); padding-bottom: 16px; margin-bottom: 20px; }
-    .pdf-encabezado .marca h3 { font-family: 'Cormorant Garamond', serif; font-size: 28px; margin: 0; font-weight: 600; letter-spacing: 0.05em; color: var(--tinta); }
-    .pdf-encabezado .marca p { margin: 2px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--texto-claro); }
-    .pdf-encabezado img { height: 60px; object-fit: contain; }
+    .pdf-encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--tinta); padding-bottom: 14px; margin-bottom: 16px; }
+    .pdf-encabezado .marca h3 { font-family: 'Cormorant Garamond', serif; font-size: 26px; margin: 0; font-weight: 600; letter-spacing: 0.05em; color: var(--tinta); }
+    .pdf-encabezado .marca p { margin: 2px 0 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--texto-claro); font-weight: 600;}
+    .pdf-encabezado img { height: 50px; object-fit: contain; }
 
-    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;}
-    .detalle-item { background: #FDFBF7; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--borde);}
-    .detalle-item b { display: block; font-size: 10px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em;}
+    .detalle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px;}
+    .detalle-item { background: #FDFBF7; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--borde);}
+    .detalle-item b { display: block; font-size: 9px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.05em;}
+    .detalle-item.ancho { grid-column: 1 / -1; }
+
+    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 14px; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 600; margin: 0 0 10px 0; font-size: 18px; color: var(--tinta); page-break-after: avoid !important; break-after: avoid !important;}
     
-    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 16px; page-break-inside: avoid !important; break-inside: avoid !important; }
-    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 600; margin: 0 0 12px 0; font-size: 20px; color: var(--tinta); page-break-after: avoid !important; break-after: avoid !important;}
-    
-    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
     .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; page-break-inside: avoid !important; break-inside: avoid !important; }
-    .foto-card img { width: 100%; height: 150px; object-fit: cover; display: block;}
-    .foto-card p { margin: 0; padding: 8px; font-size: 11px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-card img { width: 100%; height: 130px; object-fit: cover; display: block;}
+    .foto-card p { margin: 0; padding: 6px; font-size: 10px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA;}
     
     .pastilla { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase;}
     .pastilla.pass { background: #EEF7F2; color: var(--verde); }
@@ -108,8 +109,6 @@
     .pastilla.critico { background: #FCF0F0; color: var(--vino); }
 
     .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 12px; page-break-inside: avoid !important; break-inside: avoid !important; }
-    .tabla-aql-comparativa th { background: #FDFBF7; }
-    
     tr { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
@@ -199,7 +198,7 @@ async function init() {
     if (!session) { location.replace('index.html'); return; }
 
     const [ resAuds, resUsuarios ] = await Promise.all([
-        supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)').eq('estado', 'finalizada').order('fecha_auditoria', { ascending: false }),
+        supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre), auditoria_defectos(defecto, cantidad)').eq('estado', 'finalizada').order('fecha_auditoria', { ascending: false }),
         supabase.from('auditoria_usuarios').select('id, nombre')
     ]);
 
@@ -309,13 +308,14 @@ window.verDetalle = async function(id) {
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
     
     try {
-        const [ resDet, resDefs, resEvis, resMed, resPrue, resUsuarios ] = await Promise.all([
-            supabase.from('auditorias').select('*, auditoria_proveedores(nombre)').eq('id', id).single(),
+        const [ resDet, resDefs, resEvis, resMed, resPrue, resCants, resUsuarios ] = await Promise.all([
+            supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre)').eq('id', id).single(),
             supabase.from('auditoria_defectos').select('*').eq('auditoria_id', id),
             supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', id),
             supabase.from('auditoria_medidas').select('*').eq('auditoria_id', id),
             supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', id),
-            supabase.from('auditoria_usuarios').select('id, nombre')
+            supabase.from('auditoria_cantidades').select('*').eq('auditoria_id', id),
+            supabase.from('auditoria_usuarios').select('id, nombre, rol')
         ]);
 
         const det = resDet.data;
@@ -323,10 +323,17 @@ window.verDetalle = async function(id) {
         const evis = resEvis.data || [];
         const med = resMed.data || [];
         const prue = resPrue.data || [];
-        const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
+        const cants = resCants.data || [];
+        const usuarios = resUsuarios.data || [];
+
+        const auditora = usuarios.find(u => u.id === det.auditora_id);
+        const programo = usuarios.find(u => u.id === det.programada_por);
         refActual = det.referencia || 'Monastery';
 
         const auditada = Number(det.cantidad_auditada) || 50;
+        const totalLote = Number(det.cantidad_produccion) || 0;
+        const pctMuestra = totalLote > 0 ? ((auditada / totalLote) * 100).toFixed(1) : '0';
+
         const maxMayor = auditada >= 50 ? 3 : 2;
         const maxMenor = auditada >= 50 ? 5 : 3;
 
@@ -334,27 +341,83 @@ window.verDetalle = async function(id) {
         const realMayores = defs.filter(d => d.severidad === 'mayor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
         const realMenores = defs.filter(d => d.severidad === 'menor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
 
+        // Agrupar cantidades por color y talla
+        const mapaLote = {};
+        const ordenTallas = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44'];
+        const tallasSet = new Set();
+
+        cants.forEach(c => {
+            mapaLote[c.color] = mapaLote[c.color] || {};
+            mapaLote[c.color][c.talla] = Number(c.cantidad || 0);
+            tallasSet.add(c.talla);
+        });
+
+        const tallasLista = Array.from(tallasSet).sort((a, b) => {
+            const ia = ordenTallas.indexOf(a), ib = ordenTallas.indexOf(b);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+        });
+
+        // Buscar evidencias especiales
+        const fotoPrenda = evis.find(e => e.nombre === 'Foto Prenda Referencia');
+        const pdfPatronaje = evis.find(e => e.nombre === 'Informe de Patronaje');
+
         let html = `
         <div class="pdf-encabezado">
             <div class="marca">
                 <h3>MONASTERY</h3>
-                <p>INFORME TÉCNICO DE AUDITORÍA DE CALIDAD</p>
+                <p>INFORME TÉCNICO DE AUDITORÍA DE CALIDAD · AUDITORÍA ${det.auditoria_tipos ? det.auditoria_tipos.nombre.toUpperCase() : 'DE PRENDA'}</p>
             </div>
             <img src="logo.png" alt="Logo Monastery" onerror="this.style.display='none'">
         </div>
 
         <div class="detalle-grid">
-            <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small style="color:var(--texto-claro);">(${det.sku || 'N/A'})</small></div>
+            <div class="detalle-item"><b>Referencia</b>${det.referencia || 'N/A'}</div>
+            <div class="detalle-item"><b>SKU</b>${det.sku || 'N/A'}</div>
+            <div class="detalle-item"><b>Colección / Sublínea</b>${det.coleccion || 'N/A'} / ${det.sublinea || 'N/A'}</div>
+            
             <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
-            <div class="detalle-item"><b>Auditora Responsable</b>${auditora ? auditora.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>Lote / Muestra AQL</b>${det.cantidad_produccion || 0} unds / ${auditada} unds</div>
             <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
+            <div class="detalle-item"><b>Tipo de Auditoría</b>${det.auditoria_tipos ? det.auditoria_tipos.nombre : 'Inicial'}</div>
+
+            <div class="detalle-item"><b>Fecha de Programación</b>${det.fecha_programada || 'N/A'} (${det.hora_programada ? det.hora_programada.slice(0,5) : ''})</div>
+            <div class="detalle-item"><b>Fecha de Ejecución</b>${det.fecha_auditoria || 'N/A'}</div>
+            <div class="detalle-item"><b>Auditora Responsable</b>${auditora ? auditora.nombre : 'N/A'}</div>
+
+            <div class="detalle-item"><b>Programada Por</b>${programo ? programo.nombre : 'Coordinación'}</div>
+            <div class="detalle-item"><b>Lote / Muestra AQL</b>${totalLote} unds / ${auditada} unds (${pctMuestra}%)</div>
             <div class="detalle-item"><b>Veredicto Final</b><span class="estado-${det.resultado}">${(det.resultado || 'N/A').toUpperCase()}</span></div>
-            <div class="detalle-item"><b>Sugerencia de Sistema AQL</b><span style="font-weight:600; color:var(--tinta);">${det.sugerencia_aql || 'Evaluado por AQL ISO 2859-1'}</span></div>
+
+            ${det.nota_programacion ? `<div class="detalle-item ancho"><b>Nota de Coordinación</b>${det.nota_programacion}</div>` : ''}
+            ${det.sugerencia_aql ? `<div class="detalle-item ancho"><b>Análisis Automático AQL</b>${det.sugerencia_aql}</div>` : ''}
         </div>`;
 
-        // 1. COMPARATIVA DE LÍMITES AQL VS LO REAL
+        // ADJUNTOS ESPECIALES (PDF Y FOTO DE REFERENCIA)
+        if (fotoPrenda || pdfPatronaje) {
+            html += `<div class="seccion-detalle">
+                <h4>Archivos Adjuntos de la Auditoría</h4>
+                <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                    ${pdfPatronaje ? `<a href="${pdfPatronaje.url}" target="_blank" style="padding:10px 14px; background:#EFF4FE; border:1px solid #C2D6FF; border-radius:8px; color:var(--azul); font-size:12px; font-weight:600; text-decoration:none;">📄 Ver Informe de Patronaje (PDF)</a>` : ''}
+                    ${fotoPrenda ? `<a href="${fotoPrenda.url}" target="_blank" style="padding:10px 14px; background:#FEF8EE; border:1px solid #FCE4C6; border-radius:8px; color:var(--ambar); font-size:12px; font-weight:600; text-decoration:none;">📷 Ver Fotografía de Prenda Patronaje</a>` : ''}
+                </div>
+            </div>`;
+        }
+
+        // 1. DESGLOSE COMPLETO DE CANTIDADES Y TALLAS
+        html += `<div class="seccion-detalle">
+            <h4>Desglose de Unidades Producidas por Color y Talla (Total Lote: ${totalLote} unds)</h4>`;
+        if (Object.keys(mapaLote).length > 0) {
+            html += `<div class="tabla-aql-comparativa"><table><thead><tr><th>Color</th>${tallasLista.map(t => `<th class="num">${t}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>`;
+            Object.entries(mapaLote).forEach(([col, tOb]) => {
+                const subTot = Object.values(tOb).reduce((s, v) => s + v, 0);
+                html += `<tr><td><b>${col}</b></td>${tallasLista.map(t => `<td class="num">${tOb[t] !== undefined ? tOb[t] : 0}</td>`).join('')}<td class="num"><b>${subTot}</b></td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+        } else {
+            html += `<p style="font-size:12px; color:var(--texto-claro);">Sin cantidades registradas por talla.</p>`;
+        }
+        html += `</div>`;
+
+        // 2. COMPARATIVA DE LÍMITES AQL VS LO REAL
         html += `<div class="seccion-detalle">
             <h4>Análisis Comparativo AQL (ISO 2859-1)</h4>
             <div class="tabla-aql-comparativa">
@@ -386,7 +449,7 @@ window.verDetalle = async function(id) {
             </div>
         </div>`;
 
-        // 2. TABLA DE CONTROL DE MEDIDAS (POM)
+        // 3. TABLA DE CONTROL DE MEDIDAS (POM)
         html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
         if (med.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>`;
@@ -401,10 +464,10 @@ window.verDetalle = async function(id) {
                 </tr>`;
             });
             html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
+        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
         html += `</div>`;
 
-        // 3. CHECKLIST DE PRUEBAS FÍSICAS
+        // 4. CHECKLIST DE PRUEBAS FÍSICAS
         html += `<div class="seccion-detalle"><h4>Pruebas Físicas e Inspección de Empaque (${prue.length})</h4>`;
         if (prue.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica / Chequeo</th><th>Resultado</th></tr></thead><tbody>`;
@@ -412,10 +475,10 @@ window.verDetalle = async function(id) {
                 html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado ? p.resultado.toLowerCase() : 'na'}">${p.resultado || 'N/A'}</span></td></tr>`;
             });
             html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
+        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
         html += `</div>`;
 
-        // 4. DETALLE DE DEFECTOS ENCONTRADOS
+        // 5. DETALLE DE DEFECTOS ENCONTRADOS
         html += `<div class="seccion-detalle"><h4>Detalle de Defectos Físicos (${defs.length} tipos)</h4>`;
         if (defs.length > 0) {
             html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
@@ -423,18 +486,20 @@ window.verDetalle = async function(id) {
                 html += `<tr><td><span class="pastilla ${d.severidad}">${d.severidad}</span></td><td><b>${d.defecto}</b></td><td>${d.color || '-'} / ${d.talla || '-'}</td><td class="num"><b>${d.cantidad}</b></td></tr>`;
             });
             html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
+        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
         html += `</div>`;
 
-        // 5. OBSERVACIONES Y FOTOGRAFÍAS
-        html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:14px; background:#F9F8F6; padding:16px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
+        // 6. OBSERVACIONES Y FOTOGRAFÍAS
+        html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:13px; background:#F9F8F6; padding:14px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
         
-        html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
-        if (evis.length > 0) {
+        // Galería excluyendo archivos de patronaje para no duplicar
+        const fotosGaleria = evis.filter(e => !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(e.nombre));
+        html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas de Auditoría (${fotosGaleria.length})</h4>`;
+        if (fotosGaleria.length > 0) {
             html += `<div class="foto-grid">`;
-            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}" crossorigin="anonymous"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
+            fotosGaleria.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}" crossorigin="anonymous"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
             html += `</div>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se adjuntaron fotografías.</p>`; }
+        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se adjuntaron fotografías de evidencia.</p>`; }
         html += `</div>`;
 
         $('cuerpoDetalle').innerHTML = html;
@@ -443,7 +508,7 @@ window.verDetalle = async function(id) {
     }
 };
 
-// Generador de PDF ultra-estable sin hojas en blanco
+// Generador de PDF ultra-estable
 $('btnDescargarPdf').addEventListener('click', async () => {
     const btn = $('btnDescargarPdf');
     const modalHoja = document.querySelector('#modalDetalle .hoja');
@@ -452,26 +517,17 @@ $('btnDescargarPdf').addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = '⏳ Generando PDF...';
 
-    // 1. Ocultar la barra superior del modal durante la captura
     cabeza.style.display = 'none';
-    
-    // 2. Extender temporalmente la altura para captura completa en pantalla
     const maxHOriginal = modalHoja.style.maxHeight;
     const overflowOriginal = modalHoja.style.overflow;
     modalHoja.style.maxHeight = 'none';
     modalHoja.style.overflow = 'visible';
 
     const opt = {
-        margin:       [12, 12, 12, 12],
+        margin:       [10, 10, 10, 10],
         filename:     `Informe_Auditoria_${refActual}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-            scale: 2, 
-            useCORS: true, 
-            allowTaint: true,
-            scrollX: 0,
-            scrollY: 0
-        },
+        html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
@@ -482,7 +538,6 @@ $('btnDescargarPdf').addEventListener('click', async () => {
         console.error('Error generando PDF:', err);
         alert('Ocurrió un error al generar el PDF. Intenta nuevamente.');
     } finally {
-        // 3. Restablecer estilos de la modal
         cabeza.style.display = 'flex';
         modalHoja.style.maxHeight = maxHOriginal;
         modalHoja.style.overflow = overflowOriginal;
