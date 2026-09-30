@@ -78,9 +78,11 @@
     .pastilla.critico { background:#FCF0F0; color:var(--vino); }
 
     /* Estilos Multi-talla */
-    .tallas-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;}
-    .talla-btn { padding: 8px 12px; border: 1px solid var(--borde); border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit;}
-    .talla-btn.activa { background: var(--laton); color: #fff; border-color: var(--laton); }
+    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px; }
+    .talla-item span { font-size: 11px; font-weight: 600; color: #6F675F; margin-bottom: 4px; }
+    .talla-item input { width: 45px; padding: 6px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 4px; background: #F6F4F1;}
+    .talla-item input:focus { border-color: var(--laton); background: #fff; outline: none; }
 
     /* Fotos con observaciones */
     .fotos { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:12px; }
@@ -154,7 +156,6 @@ let defectos = [];
 let evidencias = [];     
 let tallas = [];         
 let paso = 1;
-let tallasSel = new Set(); // Para el paso 3 (multitalla)
 
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
@@ -219,8 +220,6 @@ function recalcularTallas() {
 }
 
 const totalLote = () => cantidades.reduce((s, c) => s + Object.values(c.tallas).reduce((x, v) => x + num(v), 0), 0);
-const totalSeveridad = sev => defectos.filter(d => d.severidad === sev).reduce((s, d) => s + num(d.cantidad), 0);
-const totalDefectos = () => defectos.reduce((s, d) => s + num(d.cantidad), 0);
 const colores = () => cantidades.map(c => c.color);
 
 function pintar() {
@@ -288,7 +287,6 @@ window.calcularPct = l => $('pctAuditado').textContent = (l ? num($('eAuditada')
 function pasoDefectos() {
     const cols = colores();
     const autoColor = cols.length === 1 ? cols[0] : '';
-    tallasSel.clear(); // Resetear seleccion visual de tallas
 
     $('contenido').innerHTML = `
     <div class="tarjeta">
@@ -299,13 +297,18 @@ function pasoDefectos() {
         </div>
         <div class="fila">
             <div><label>Color</label><select id="dColor">${cols.length!==1?'<option value="">Elegir...</option>':''}${cols.map(c => `<option ${c===autoColor?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-            <div><label>Cant. por talla</label><input id="dCantidad" type="number" min="1" value="1"></div>
         </div>
-        <label>Tallas afectadas (puedes elegir varias)</label>
-        <div class="tallas-grid">
-            ${tallas.map(t => `<button type="button" class="talla-btn" onclick="toggleTalla(this, '${t}')">${t}</button>`).join('')}
+        
+        <label>Cantidades por talla</label>
+        <div class="tallas-inputs">
+            ${tallas.map(t => `
+                <div class="talla-item">
+                    <span>${t}</span>
+                    <input type="number" min="0" class="input-talla-defecto" data-talla="${t}">
+                </div>
+            `).join('')}
         </div>
-        <button class="btn btn-oscuro" style="width:100%; margin-top:8px;" onclick="agregarDefecto()">+ Agregar Defecto a tallas seleccionadas</button>
+        <button class="btn btn-oscuro" style="width:100%; margin-top:8px;" onclick="agregarDefecto()">+ Agregar Defecto</button>
     </div>
 
     <div class="tarjeta">
@@ -321,23 +324,34 @@ function pasoDefectos() {
     </div>`;
 }
 
-window.toggleTalla = (btn, t) => {
-    btn.classList.toggle('activa');
-    if (tallasSel.has(t)) tallasSel.delete(t); else tallasSel.add(t);
-};
-
 window.agregarDefecto = () => {
     const defecto = $('dDefecto').value.trim();
-    const cantidad = num($('dCantidad').value);
     const color = $('dColor').value;
-    if (!defecto || cantidad <= 0 || !color) return alert('Verifica defecto, cantidad y color.');
-    if (tallasSel.size === 0) return alert('Selecciona al menos una talla.');
+    const severidad = $('dSeveridad').value;
 
-    tallasSel.forEach(talla => {
-        defectos.push({ severidad: $('dSeveridad').value, defecto: defecto.toLowerCase(), color, talla, cantidad });
+    if (!defecto || !color) return alert('Verifica que el defecto y el color estén seleccionados.');
+
+    const inputsTallas = document.querySelectorAll('.input-talla-defecto');
+    let agregados = 0;
+
+    inputsTallas.forEach(input => {
+        const cantidad = num(input.value);
+        if (cantidad > 0) {
+            defectos.push({ 
+                severidad: severidad, 
+                defecto: defecto.toLowerCase(), 
+                color: color, 
+                talla: input.dataset.talla, 
+                cantidad: cantidad 
+            });
+            agregados++;
+        }
     });
+
+    if (agregados === 0) return alert('Ingresa la cantidad en al menos una de las tallas.');
     pintar();
 };
+
 window.quitarDefecto = i => { defectos.splice(i, 1); pintar(); };
 
 // --- Paso 4 ---
@@ -376,7 +390,7 @@ window.subirFotos = async function(e) {
     for (let i = 0; i < archivos.length; i++) {
         $('avisoFoto').textContent = `Subiendo ${i + 1} de ${archivos.length}…`;
         const nombre = `${idAuditoria}/${Date.now()}_${i}.jpg`;
-        const { error } = await supabase.storage.from(BUCKET).upload(nombre, archivos[i]); // Simplificado para PWA rápida
+        const { error } = await supabase.storage.from(BUCKET).upload(nombre, archivos[i]);
         if (!error) {
             const url = supabase.storage.from(BUCKET).getPublicUrl(nombre).data.publicUrl;
             const { data } = await supabase.from('auditoria_evidencias').insert({ auditoria_id: idAuditoria, url, nombre: archivos[i].name, observacion: '' }).select().single();
