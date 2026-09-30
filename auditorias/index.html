@@ -3,224 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Auditorías · Monastery</title>
+<title>Acceso · Auditorías</title>
 <link rel="icon" type="image/png" href="icono-192.png">
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#15100E">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="apple-touch-icon" href="icono-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
     :root {
-        --tinta: #15100E; --hueso: #EDE7DD; --vino: #6E1F24; --laton: #B08945;
-        --humo: rgba(237,231,221,.55); --linea: rgba(237,231,221,.14);
+        --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
+        --borde: #E6E1D8; --texto: #2A2421; --texto-claro: #736961;
+        --transicion: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; }
+    * { box-sizing: border-box; }
     body {
-        margin: 0;
-        font-family: 'Inter', 'Segoe UI', sans-serif;
-        background: var(--tinta);
-        color: var(--hueso);
-        display: flex; align-items: center; justify-content: center;
-        padding: 24px calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom))
-                 calc(24px + env(safe-area-inset-left));
-        padding-top: calc(24px + env(safe-area-inset-top));
+        margin: 0; font-family: 'Inter', sans-serif; background: #EAE6DF;
+        color: var(--texto); display: flex; align-items: center; justify-content: center;
+        min-height: 100vh; background-image: radial-gradient(circle at top, #FDFBF7 0%, #EAE6DF 100%);
     }
-
-    .caja { width: 100%; max-width: 380px; }
-
-    .marca { text-align: center; margin-bottom: 34px; }
-    .marca img { width: 78px; margin-bottom: 18px; }
-    .marca h1 {
-        font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300;
-        font-size: 34px; margin: 0 0 6px; line-height: 1.1;
+    .login-caja {
+        background: #fff; width: 100%; max-width: 400px; padding: 40px;
+        border-radius: 16px; box-shadow: 0 12px 32px rgba(21,16,14,0.08);
+        text-align: center; border: 1px solid #fff;
     }
-    .marca p { margin: 0; color: var(--humo); font-size: 13px; letter-spacing: .04em; }
-
-    label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .1em;
-        text-transform: uppercase; color: var(--humo); margin-bottom: 7px; }
-
-    .campo { margin-bottom: 18px; position: relative; }
-    input {
-        width: 100%; padding: 15px 14px; font-size: 16px;   /* 16px evita el zoom en iOS */
-        background: rgba(237,231,221,.06); border: 1px solid var(--linea);
-        border-radius: 4px; color: var(--hueso); font-family: inherit; outline: none;
-        transition: border-color .2s, background .2s;
+    .logo {
+        font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 400;
+        letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 8px 0; color: var(--tinta);
     }
-    input:focus { border-color: var(--laton); background: rgba(237,231,221,.1); }
-    .ojo {
-        position: absolute; right: 6px; bottom: 5px; background: none; border: none;
-        color: var(--humo); font-size: 17px; cursor: pointer; padding: 10px 12px;
+    .subtitulo { font-size: 13px; color: var(--texto-claro); margin-bottom: 32px; letter-spacing: 0.05em; text-transform: uppercase; }
+    
+    .campo { text-align: left; margin-bottom: 20px; }
+    .campo label { display: block; font-size: 11px; font-weight: 600; color: var(--texto-claro); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .campo input {
+        width: 100%; padding: 14px 16px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; background: #FAFAFA; color: var(--texto); font-family: inherit;
+        transition: var(--transicion); outline: none;
     }
-
-    button.principal {
-        width: 100%; padding: 16px; margin-top: 8px;
-        background: var(--laton); color: #1a1512; border: none; border-radius: 4px;
-        font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: .06em;
-        text-transform: uppercase; cursor: pointer; transition: background .2s;
+    .campo input:focus { border-color: var(--laton); background: #fff; box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    
+    .btn {
+        width: 100%; padding: 14px; font-size: 15px; font-weight: 600; font-family: inherit;
+        background: var(--tinta); color: var(--hueso); border: none; border-radius: 8px;
+        cursor: pointer; transition: var(--transicion); margin-top: 10px;
     }
-    button.principal:hover { background: #c49a52; }
-    button.principal:disabled { background: #4b4340; color: var(--humo); cursor: not-allowed; }
-
-    .aviso { display: none; padding: 12px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 18px; }
-    .aviso.error { display: block; background: rgba(110,31,36,.3); border: 1px solid var(--vino); color: #f7c9cb; }
-    .aviso.ok    { display: block; background: rgba(16,120,80,.22); border: 1px solid #1d7a53; color: #b6ecd0; }
-
-    .enlace { background: none; border: none; color: var(--laton); font-family: inherit;
-        font-size: 13px; cursor: pointer; padding: 10px 0; text-decoration: underline; }
-
-    .instalar {
-        display: none; margin-top: 26px; padding: 14px; border: 1px dashed var(--linea);
-        border-radius: 4px; font-size: 13px; color: var(--humo); text-align: center;
-    }
-    .instalar button { margin-top: 10px; background: none; border: 1px solid var(--laton);
-        color: var(--laton); padding: 9px 16px; border-radius: 4px; font-family: inherit;
-        font-size: 13px; cursor: pointer; }
-
-    .pie { margin-top: 30px; text-align: center; font-size: 11px; color: rgba(237,231,221,.3); }
+    .btn:hover { background: #000; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+    .btn:disabled { background: #A39C94; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .mensaje { margin-top: 20px; font-size: 13px; padding: 12px; border-radius: 8px; display: none; }
+    .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
 </style>
 </head>
 <body>
 
-<div class="caja">
-    <div class="marca">
-        <img src="logo.png" alt="Monastery" onerror="this.style.display='none'">
-        <h1>Auditorías</h1>
-        <p>Control de calidad a proveedores</p>
+<div class="login-caja">
+    <h1 class="logo">Monastery</h1>
+    <div class="subtitulo">Sistema de Auditorías</div>
+    
+    <div class="campo">
+        <label>Correo Electrónico</label>
+        <input type="email" id="email" placeholder="usuario@monastery.com" autocomplete="email">
     </div>
-
-    <div id="aviso" class="aviso"></div>
-
-    <div id="vistaEntrar">
-        <div class="campo">
-            <label for="correo">Correo</label>
-            <input type="email" id="correo" inputmode="email" autocomplete="username" placeholder="nombre@monastery.com.co">
-        </div>
-        <div class="campo">
-            <label for="clave">Contraseña</label>
-            <input type="password" id="clave" autocomplete="current-password" placeholder="••••••••">
-            <button class="ojo" id="btnOjo" type="button" aria-label="Ver contraseña">👁</button>
-        </div>
-        <button class="principal" id="btnEntrar">Entrar</button>
-        <div style="text-align:center"><button class="enlace" id="btnOlvide">Olvidé mi contraseña</button></div>
+    <div class="campo">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
     </div>
-
-    <div id="vistaRecuperar" style="display:none">
-        <div class="campo">
-            <label for="correoRec">Correo</label>
-            <input type="email" id="correoRec" inputmode="email" placeholder="nombre@monastery.com.co">
-        </div>
-        <button class="principal" id="btnEnviar">Enviar enlace</button>
-        <div style="text-align:center"><button class="enlace" id="btnVolver">Volver</button></div>
-    </div>
-
-    <div class="instalar" id="cajaInstalar">
-        Instala la aplicación en tu celular para abrirla como cualquier otra.
-        <br><button id="btnInstalar">Instalar</button>
-    </div>
-
-    <div class="pie">Monastery Couture</div>
+    
+    <button class="btn" id="btnIngresar">Ingresar</button>
+    <div id="errorMsg" class="mensaje"></div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
-const supabase = createClient(
-    'https://emljzsxypeqecevffmwr.supabase.co',
-    'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W',
-    { auth: { storage: window.localStorage } }
-);
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W');
 
 const $ = id => document.getElementById(id);
-const aviso = $('aviso');
-const mostrar = (tipo, texto) => { aviso.className = 'aviso ' + tipo; aviso.textContent = texto; };
-const limpiar = () => { aviso.className = 'aviso'; aviso.textContent = ''; };
 
-// Si ya hay sesión, entra directo
+// Redirigir si ya hay sesión
 const { data: { session } } = await supabase.auth.getSession();
 if (session) location.replace('agenda.html');
 
-$('btnOjo').addEventListener('click', () => {
-    const c = $('clave');
-    c.type = c.type === 'password' ? 'text' : 'password';
-    $('btnOjo').textContent = c.type === 'password' ? '👁' : '🙈';
-});
-
-async function entrar() {
-    limpiar();
-    const correo = $('correo').value.trim();
-    const clave = $('clave').value;
-    if (!correo || !clave) return mostrar('error', 'Escribe tu correo y tu contraseña.');
-
-    const btn = $('btnEntrar');
-    btn.disabled = true; btn.textContent = 'Entrando…';
-
-    const { error } = await supabase.auth.signInWithPassword({ email: correo, password: clave });
-
-    if (error) {
-        btn.disabled = false; btn.textContent = 'Entrar';
-        mostrar('error', error.message.includes('Invalid login')
-            ? 'Correo o contraseña incorrectos.'
-            : 'No se pudo entrar: ' + error.message);
+$('btnIngresar').addEventListener('click', async () => {
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    const btn = $('btnIngresar');
+    const msg = $('errorMsg');
+    
+    msg.className = 'mensaje';
+    if (!email || !password) {
+        msg.textContent = 'Por favor ingresa correo y contraseña.';
+        msg.className = 'mensaje error';
         return;
     }
 
-    // Debe estar registrada en la tabla de usuarios del sistema
-    const { data: perfil } = await supabase.from('auditoria_usuarios')
-        .select('nombre, rol, activo').eq('id', (await supabase.auth.getUser()).data.user.id).maybeSingle();
+    btn.disabled = true; btn.textContent = 'Verificando...';
 
-    if (!perfil || !perfil.activo) {
-        await supabase.auth.signOut();
-        btn.disabled = false; btn.textContent = 'Entrar';
-        return mostrar('error', 'Tu usuario no está habilitado en el sistema de auditorías. Avisa al coordinador.');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+        msg.textContent = 'Credenciales incorrectas. Verifica tus datos.';
+        msg.className = 'mensaje error';
+        btn.disabled = false; btn.textContent = 'Ingresar';
+    } else {
+        location.replace('agenda.html');
     }
-
-    localStorage.setItem('auditoria_perfil', JSON.stringify(perfil));
-    location.replace('agenda.html');
-}
-
-$('btnEntrar').addEventListener('click', entrar);
-$('clave').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
-
-$('btnOlvide').addEventListener('click', () => {
-    limpiar(); $('vistaEntrar').style.display = 'none'; $('vistaRecuperar').style.display = '';
-    $('correoRec').value = $('correo').value;
-});
-$('btnVolver').addEventListener('click', () => {
-    limpiar(); $('vistaRecuperar').style.display = 'none'; $('vistaEntrar').style.display = '';
 });
 
-$('btnEnviar').addEventListener('click', async () => {
-    limpiar();
-    const correo = $('correoRec').value.trim();
-    if (!correo) return mostrar('error', 'Escribe tu correo.');
-    const btn = $('btnEnviar');
-    btn.disabled = true; btn.textContent = 'Enviando…';
-    const { error } = await supabase.auth.resetPasswordForEmail(correo);
-    btn.disabled = false; btn.textContent = 'Enviar enlace';
-    mostrar(error ? 'error' : 'ok', error ? error.message : 'Listo. Revisa tu correo, incluida la carpeta de spam.');
-});
-
-// ---------- Instalación en Android ----------
-let instalador = null;
-window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    instalador = e;
-    $('cajaInstalar').style.display = 'block';
-});
-$('btnInstalar').addEventListener('click', async () => {
-    if (!instalador) return;
-    instalador.prompt();
-    await instalador.userChoice;
-    instalador = null;
-    $('cajaInstalar').style.display = 'none';
-});
-
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// Permitir Enter
+$('password').addEventListener('keypress', e => { if (e.key === 'Enter') $('btnIngresar').click(); });
 </script>
 </body>
 </html>

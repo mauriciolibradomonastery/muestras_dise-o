@@ -9,126 +9,168 @@
 <meta name="theme-color" content="#15100E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
     :root {
-        --tinta: #15100E; --hueso: #EDE7DD; --vino: #6E1F24; --laton: #B08945;
-        --humo: rgba(237,231,221,.55); --linea: rgba(237,231,221,.14);
-        --papel: #F6F4F1; --texto: #241E1A; --borde: #E2DCD4;
-        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309;
+        --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
+        --papel: #F4F1EB; --texto: #2A2421; --texto-claro: #736961; --borde: #E6E1D8;
+        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309; --vino: #8C2026;
+        --sombra-card: 0 4px 12px rgba(21,16,14,0.04);
+        --sombra-hover: 0 8px 24px rgba(21,16,14,0.08);
+        --transicion: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
-        margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif;
-        background: var(--papel); color: var(--texto);
-        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+        margin: 0; font-family: 'Inter', sans-serif; background: var(--papel);
+        color: var(--texto); padding-bottom: calc(30px + env(safe-area-inset-bottom));
     }
 
-    /* ---------- Barra superior ---------- */
+    /* Barra Superior Premium (Glassmorphism) */
     .barra {
-        background: var(--tinta); color: var(--hueso);
-        padding: calc(14px + env(safe-area-inset-top)) 18px 14px;
-        display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 30;
+        background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
+        display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 30;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .barra h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300;
-        font-size: 24px; margin: 0; flex: 1; }
-    .quien { font-size: 12px; color: var(--humo); text-align: right; line-height: 1.4; }
-    .quien b { color: var(--hueso); display: block; font-weight: 500; }
-    .btn-nav { background: none; border: 1px solid var(--linea); color: var(--hueso);
-        border-radius: 4px; padding: 8px 12px; font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: none;}
-    .btn-nav:hover { border-color: var(--laton); background: rgba(176,137,69,.2); }
-    .salir:hover { border-color: var(--vino); background: rgba(110,31,36,.3); }
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 24px; margin: 0; flex: 1; letter-spacing: 0.02em; }
+    .quien { font-size: 12px; color: rgba(253,251,247,0.7); text-align: right; line-height: 1.4; letter-spacing: 0.03em; }
+    .quien b { color: var(--hueso); display: block; font-weight: 500; font-size: 13px; }
+    .btn-nav { 
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+        color: var(--hueso); border-radius: 6px; padding: 8px 14px; font-family: inherit; 
+        font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; transition: var(--transicion);
+    }
+    .btn-nav:hover { background: var(--laton); border-color: var(--laton); color: #fff; }
+    .salir:hover { background: var(--vino); border-color: var(--vino); }
 
-    .contenido { padding: 18px; max-width: 1400px; margin: 0 auto; }
+    .contenido { padding: 24px; max-width: 1400px; margin: 0 auto; }
 
-    /* ---------- Resumen ---------- */
-    .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 10px; margin-bottom: 18px; }
-    .dato { background: #fff; border: 1px solid var(--borde); border-left: 3px solid var(--azul);
-        border-radius: 6px; padding: 12px 14px; }
-    .dato.vencidas { border-left-color: var(--vino); }
-    .dato.curso    { border-left-color: var(--ambar); }
-    .dato.listas   { border-left-color: var(--verde); }
-    .dato .n { font-size: 24px; font-weight: 600; line-height: 1; }
-    .dato .t { font-size: 11px; color: #6F675F; margin-top: 5px; }
+    /* Tarjetas de Resumen */
+    .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .dato { 
+        background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 20px; 
+        box-shadow: var(--sombra-card); transition: var(--transicion); border-top: 4px solid var(--azul);
+    }
+    .dato:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
+    .dato.vencidas { border-top-color: var(--vino); }
+    .dato.curso    { border-top-color: var(--ambar); }
+    .dato.listas   { border-top-color: var(--verde); }
+    .dato .n { font-size: 32px; font-weight: 600; line-height: 1; color: var(--tinta); }
+    .dato .t { font-size: 12px; color: var(--texto-claro); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
 
-    /* ---------- Controles ---------- */
-    .controles { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-    .semana { display: flex; align-items: center; gap: 8px; background: #fff;
-        border: 1px solid var(--borde); border-radius: 6px; padding: 5px; }
-    .semana button { background: none; border: none; font-size: 17px; cursor: pointer;
-        padding: 6px 11px; border-radius: 4px; color: var(--texto); }
-    .semana button:hover { background: var(--papel); }
-    .semana .rango { font-size: 13px; font-weight: 500; min-width: 172px; text-align: center; }
+    /* Controles */
+    .controles { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .semana { 
+        display: flex; align-items: center; gap: 8px; background: #fff;
+        border: 1px solid var(--borde); border-radius: 8px; padding: 6px; box-shadow: var(--sombra-card);
+    }
+    .semana button { 
+        background: #F9F8F6; border: none; font-size: 18px; cursor: pointer;
+        padding: 6px 12px; border-radius: 6px; color: var(--texto); transition: var(--transicion);
+    }
+    .semana button:hover { background: #E6E1D8; }
+    .semana .rango { font-size: 14px; font-weight: 600; min-width: 180px; text-align: center; color: var(--tinta); }
+    
     select, .btn {
-        font-family: inherit; font-size: 13px; padding: 10px 12px; border-radius: 6px;
-        border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer;
+        font-family: inherit; font-size: 14px; padding: 12px 16px; border-radius: 8px; font-weight: 500;
+        border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion);
+        box-shadow: var(--sombra-card);
     }
-    .btn-nueva { background: var(--tinta); color: var(--hueso); border-color: var(--tinta);
-        font-weight: 500; padding: 11px 18px; }
-    .btn-nueva:hover { background: #241c18; }
+    select:focus { outline: none; border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    
+    .btn:hover { background: #F9F8F6; }
+    .btn-nueva { background: var(--laton); color: #fff; border-color: var(--laton); box-shadow: 0 4px 12px rgba(176,137,69,0.2); }
+    .btn-nueva:hover { background: var(--laton-hover); border-color: var(--laton-hover); transform: translateY(-1px); }
 
-    /* ---------- Semana ---------- */
-    .grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .dia { background: #fff; border: 1px solid var(--borde); border-radius: 6px; min-height: 130px;
-        display: flex; flex-direction: column; }
-    .dia.hoy { border-color: var(--laton); box-shadow: 0 0 0 1px var(--laton); }
-    .dia-cabeza { padding: 9px 10px; border-bottom: 1px solid var(--borde); font-size: 11px;
-        color: #6F675F; display: flex; justify-content: space-between; align-items: baseline; }
-    .dia-cabeza b { font-size: 15px; color: var(--texto); }
-    .dia-cuerpo { padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+    /* Grilla de la Semana */
+    .grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+    .dia { 
+        background: #fff; border: 1px solid var(--borde); border-radius: 12px; min-height: 160px;
+        display: flex; flex-direction: column; box-shadow: var(--sombra-card); overflow: hidden;
+    }
+    .dia.hoy { border-color: var(--laton); box-shadow: 0 0 0 1px var(--laton), var(--sombra-card); }
+    .dia-cabeza { 
+        padding: 12px 14px; background: #FDFBF7; border-bottom: 1px solid var(--borde); font-size: 12px;
+        color: var(--texto-claro); display: flex; justify-content: space-between; align-items: baseline; 
+        text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+    }
+    .dia-cabeza b { font-size: 18px; color: var(--tinta); font-weight: 600; }
+    .dia-cuerpo { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; background: #fff; }
 
-    .cita { border-radius: 5px; padding: 8px 9px; font-size: 12px; cursor: pointer;
-        border-left: 3px solid var(--azul); background: #F2F5FC; transition: transform .12s; }
-    .cita:hover { transform: translateX(2px); }
-    .cita.vencida    { background: #FCF0F0; border-left-color: var(--vino); }
-    .cita.en_curso   { background: #FEF6E7; border-left-color: var(--ambar); }
-    .cita.cancelada  { background: #F3F1EF; border-left-color: #A39C94; opacity: .65; text-decoration: line-through; }
-    .cita .hora { font-weight: 600; }
-    .cita .prov { font-weight: 500; }
-    .cita .ref, .cita .aud { color: #6F675F; font-size: 11px; }
-    .vacio-dia { color: #C3BCB4; font-size: 11px; padding: 6px; text-align: center; }
+    /* Tarjetas de Cita */
+    .cita { 
+        border-radius: 8px; padding: 12px; font-size: 13px; cursor: pointer;
+        background: #fff; border: 1px solid var(--borde); border-left: 4px solid var(--azul); 
+        transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative;
+    }
+    .cita:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); border-color: #D4CDC3; }
+    .cita.vencida    { border-left-color: var(--vino); background: #FFF9F9; }
+    .cita.en_curso   { border-left-color: var(--ambar); background: #FFFCF7; }
+    .cita.cancelada  { border-left-color: #A39C94; background: #F9F8F6; opacity: .6; text-decoration: line-through; }
+    
+    .cita .hora { font-weight: 700; color: var(--tinta); margin-bottom: 4px; font-size: 12px; }
+    .cita .prov { font-weight: 600; color: var(--texto); margin-bottom: 2px; }
+    .cita .ref { color: var(--texto-claro); font-size: 11px; text-transform: uppercase; }
+    .cita .aud { color: var(--texto-claro); font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .cita .aud::before { content: '👤'; font-size: 10px; }
+    .vacio-dia { color: #C3BCB4; font-size: 12px; padding: 12px; text-align: center; font-style: italic; }
 
-    /* ---------- Formulario ---------- */
-    .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,.72); z-index: 60;
-        align-items: center; justify-content: center; padding: 16px; }
-    .fondo.abierto { display: flex; }
-    .hoja { background: #fff; border-radius: 10px; width: 100%; max-width: 560px;
-        max-height: 92vh; overflow: auto; }
-    .hoja-cabeza { padding: 16px 20px; border-bottom: 1px solid var(--borde); position: sticky; top: 0;
-        background: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
-    .hoja-cabeza h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500;
-        font-size: 22px; margin: 0; }
-    .cerrar { background: none; border: none; font-size: 20px; color: #9C958D; cursor: pointer; padding: 4px 8px; }
-    .hoja-cuerpo { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    /* Modal Programación */
+    .fondo { 
+        display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); 
+        backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60;
+        align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s;
+    }
+    .fondo.abierto { display: flex; opacity: 1; }
+    .hoja { 
+        background: #fff; border-radius: 16px; width: 100%; max-width: 600px;
+        max-height: 90vh; overflow: auto; box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .fondo.abierto .hoja { transform: translateY(0); }
+    
+    .hoja-cabeza { 
+        padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0;
+        background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;
+    }
+    .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta); }
+    .cerrar { background: #F4F1EB; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; color: var(--texto-claro); cursor: pointer; transition: var(--transicion); display: flex; align-items: center; justify-content: center;}
+    .cerrar:hover { background: #E6E1D8; color: var(--vino); }
+    
+    .hoja-cuerpo { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #FDFBF7;}
     .hoja-cuerpo .ancho { grid-column: 1 / -1; }
-    .campo label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em;
-        text-transform: uppercase; color: #6F675F; margin-bottom: 6px; }
+    .campo label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-claro); margin-bottom: 8px; }
     .campo input, .campo select, .campo textarea {
-        width: 100%; padding: 11px 12px; font-size: 16px; border: 1px solid var(--borde);
-        border-radius: 6px; font-family: inherit; color: var(--texto); background: #fff; outline: none;
+        width: 100%; padding: 12px 14px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
     }
-    .campo input[type="file"] { padding: 8px; font-size: 13px; }
-    .campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--laton); }
-    .campo textarea { min-height: 74px; resize: vertical; }
-    .pista { font-size: 11px; color: #8A8279; margin-top: 5px; }
-    .hoja-pie { padding: 16px 20px; border-top: 1px solid var(--borde); display: flex;
-        gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; background: #fff; z-index: 10;}
-    .btn-guardar { background: var(--laton); color: #1a1512; border: none; border-radius: 6px;
-        padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .btn-guardar:disabled { background: #D6CFC6; color: #8A8279; cursor: not-allowed; }
-    .mensaje { display: none; margin: 0 20px; padding: 11px 13px; border-radius: 6px; font-size: 13px; }
+    .campo input[type="file"] { padding: 8px; font-size: 13px; background: #F9F8F6; }
+    .campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    .campo textarea { min-height: 80px; resize: vertical; }
+    .pista { font-size: 11px; color: #9C958D; margin-top: 6px; }
+    
+    .hoja-pie { 
+        padding: 20px 24px; border-top: 1px solid var(--borde); display: flex;
+        gap: 12px; justify-content: flex-end; position: sticky; bottom: 0; background: #fff; z-index: 10;
+    }
+    .btn-guardar { 
+        background: var(--tinta); color: #fff; border: none; border-radius: 8px;
+        padding: 12px 24px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transicion); 
+    }
+    .btn-guardar:hover { background: #000; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .btn-guardar:disabled { background: #D6CFC6; color: #8A8279; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .mensaje { display: none; margin: 0 24px; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; }
     .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
-    .mensaje.ok    { display: block; background: #EEF7F2; color: #14663F; border: 1px solid #BFE2D0; }
-    .cargando { padding: 40px; text-align: center; color: #8A8279; }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-size: 16px; font-weight: 500; }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1024px) {
         .grilla { grid-template-columns: 1fr; }
-        .dia { min-height: auto; }
-        .dia:has(.vacio-dia) { display: none; }
+        .dia { min-height: auto; margin-bottom: 12px; }
+        .dia:has(.vacio-dia) { display: none; } /* Ocultar días vacíos en móvil */
         .hoja-cuerpo { grid-template-columns: 1fr; }
-        .contenido { padding: 14px; }
-        .semana .rango { min-width: 130px; font-size: 12px; }
+        .contenido { padding: 16px; }
+        .semana .rango { min-width: 140px; font-size: 13px; }
     }
 </style>
 </head>
@@ -155,7 +197,7 @@
         <button class="btn btn-nueva" id="btnNueva">+ Programar auditoría</button>
     </div>
 
-    <div class="grilla" id="grilla"><div class="cargando">Cargando…</div></div>
+    <div class="grilla" id="grilla"><div class="cargando">Cargando la agenda…</div></div>
 </div>
 
 <!-- Formulario de programación -->
@@ -196,16 +238,15 @@
                 <input type="text" id="fSku" placeholder="Código SKU"></div>
             <div class="campo"><label for="fFotoRef">Fotografía de la prenda</label>
                 <input type="file" id="fFotoRef" accept="image/*">
-                <div id="previewFoto" style="margin-top: 8px; display: none;"></div>
+                <div id="previewFoto" style="margin-top: 10px; display: none;"></div>
             </div>
 
             <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
                 <textarea id="fNota" placeholder="Opcional: qué revisar con especial atención"></textarea></div>
         </div>
         <div class="hoja-pie">
-            <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56;">▶ Realizar auditoría</button>
+            <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56; box-shadow: 0 4px 12px rgba(25,122,86,0.2);">▶ Realizar auditoría</button>
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
-            <button class="btn" id="btnCerrar2">Cerrar</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
         </div>
     </div>
@@ -220,10 +261,10 @@ const supabase = createClient(
     { auth: { storage: window.localStorage } }
 );
 
-const $ = id => document.getElementById(id);
-const DIAS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+const $ = function(id) { return document.getElementById(id); };
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const iso = f => f.toLocaleDateString('sv');                       
+const iso = function(f) { return f.toLocaleDateString('sv'); };                       
 const hoyISO = iso(new Date());
 
 let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
@@ -240,7 +281,7 @@ if (!session) location.replace('index.html');
     if (!data || !data.activo) { await supabase.auth.signOut(); location.replace('index.html'); }
     yo = data;
     $('miNombre').textContent = yo.nombre;
-    $('miRol').textContent = yo.rol === 'jefe' ? 'coordinación' : 'auditora';
+    $('miRol').textContent = yo.rol === 'jefe' ? 'Coordinación' : 'Auditora';
 }
 
 $('btnSalir').addEventListener('click', async () => {
@@ -257,14 +298,14 @@ function inicioSemana(fecha) {
     f.setHours(0, 0, 0, 0);
     return f;
 }
-const sumarDias = (f, n) => { const x = new Date(f); x.setDate(x.getDate() + n); return x; };
+const sumarDias = function(f, n) { const x = new Date(f); x.setDate(x.getDate() + n); return x; };
 
 function pintarRango() {
     const fin = sumarDias(lunes, 6);
     const mismoMes = lunes.getMonth() === fin.getMonth();
     $('rango').textContent = mismoMes
-        ? `${lunes.getDate()} – ${fin.getDate()} de ${MESES[fin.getMonth()]}`
-        : `${lunes.getDate()} ${MESES[lunes.getMonth()].slice(0,3)} – ${fin.getDate()} ${MESES[fin.getMonth()].slice(0,3)}`;
+        ? lunes.getDate() + ' – ' + fin.getDate() + ' de ' + MESES[fin.getMonth()]
+        : lunes.getDate() + ' ' + MESES[lunes.getMonth()].slice(0,3) + ' – ' + fin.getDate() + ' ' + MESES[fin.getMonth()].slice(0,3);
 }
 
 // ---------- Catálogos ----------
@@ -279,27 +320,27 @@ async function cargarCatalogos() {
     usuarios = usu.data || [];
 
     $('fProveedor').innerHTML = '<option value="">Elegir…</option>' +
-        proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-    $('fTipo').innerHTML = tipos.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+        proveedores.map(function(p) { return '<option value="' + p.id + '">' + p.nombre + '</option>'; }).join('');
+    $('fTipo').innerHTML = tipos.map(function(t) { return '<option value="' + t.id + '">' + t.nombre + '</option>'; }).join('');
 
-    const soloAuditoras = usuarios.filter(u => u.rol === 'auditora');
+    const soloAuditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
     $('fAuditora').innerHTML = (soloAuditoras.length ? soloAuditoras : usuarios)
-        .map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+        .map(function(u) { return '<option value="' + u.id + '">' + u.nombre + '</option>'; }).join('');
     $('filtroAuditora').innerHTML = '<option value="">Todas las auditoras</option>' +
-        usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+        usuarios.map(function(u) { return '<option value="' + u.id + '">' + u.nombre + '</option>'; }).join('');
 }
 
 async function cargarReferencias() {
     const { data } = await supabase.from('produccion')
         .select('descripcion, coleccion, linea, sublinea, sku, proveedor').limit(5000);
     const mapa = new Map();
-    (data || []).forEach(r => {
+    (data || []).forEach(function(r) {
         const nombre = (r.descripcion || '').trim();
         if (nombre && !mapa.has(nombre.toUpperCase())) mapa.set(nombre.toUpperCase(), r);
     });
-    referencias = [...mapa.values()];
+    referencias = Array.from(mapa.values());
     $('listaReferencias').innerHTML = referencias
-        .map(r => `<option value="${(r.descripcion || '').trim()}">`).join('');
+        .map(function(r) { return '<option value="' + (r.descripcion || '').trim() + '">'; }).join('');
 }
 
 // ---------- Auditorías ----------
@@ -308,7 +349,7 @@ async function cargarAuditorias() {
     const { data, error } = await supabase.from('v_agenda_auditorias')
         .select('*').gte('fecha_programada', desde).lte('fecha_programada', hasta)
         .order('hora_programada');
-    if (error) { $('grilla').innerHTML = `<div class="cargando">Error: ${error.message}</div>`; return; }
+    if (error) { $('grilla').innerHTML = '<div class="cargando">Error: ' + error.message + '</div>'; return; }
     auditorias = data || [];
     pintar();
 }
@@ -316,74 +357,93 @@ async function cargarAuditorias() {
 function pintar() {
     pintarRango();
     const a = $('filtroAuditora').value;
-    const listaTotal = auditorias.filter(x => (!a || x.auditora_id === a));
+    const listaTotal = auditorias.filter(function(x) { return (!a || x.auditora_id === a); });
     
-    // Contadores superiores incluyen finalizadas
-    const cuenta = est => listaTotal.filter(x => x.estado === est).length;
-    $('resumen').innerHTML = `
-        <div class="dato"><div class="n">${cuenta('programada')}</div><div class="t">Programadas</div></div>
-        <div class="dato vencidas"><div class="n">${listaTotal.filter(x => x.vencida && x.estado !== 'finalizada').length}</div><div class="t">Vencidas</div></div>
-        <div class="dato curso"><div class="n">${cuenta('en_curso')}</div><div class="t">En curso</div></div>
-        <div class="dato listas"><div class="n">${cuenta('finalizada')}</div><div class="t">Finalizadas</div></div>`;
+    const cuenta = function(est) { return listaTotal.filter(function(x) { return x.estado === est; }).length; };
+    
+    $('resumen').innerHTML = 
+        '<div class="dato"><div class="n">' + cuenta('programada') + '</div><div class="t">Programadas</div></div>' +
+        '<div class="dato vencidas"><div class="n">' + listaTotal.filter(function(x) { return x.vencida && x.estado !== 'finalizada'; }).length + '</div><div class="t">Vencidas</div></div>' +
+        '<div class="dato curso"><div class="n">' + cuenta('en_curso') + '</div><div class="t">En curso</div></div>' +
+        '<div class="dato listas"><div class="n">' + cuenta('finalizada') + '</div><div class="t">Finalizadas</div></div>';
 
-    // El calendario OCULTA las finalizadas
-    $('grilla').innerHTML = DIAS.map((nombre, i) => {
+    $('grilla').innerHTML = DIAS.map(function(nombre, i) {
         const fecha = sumarDias(lunes, i);
         const clave = iso(fecha);
-        const delDia = listaTotal.filter(x => x.fecha_programada === clave && x.estado !== 'finalizada');
-        return `
-        <div class="dia ${clave === hoyISO ? 'hoy' : ''}">
-            <div class="dia-cabeza"><span>${nombre}</span><b>${fecha.getDate()}</b></div>
-            <div class="dia-cuerpo">
-                ${delDia.length ? delDia.map(c => `
-                    <div class="cita ${c.vencida ? 'vencida' : c.estado}" onclick="abrirCita(${c.id})">
-                        <div class="hora">${(c.hora_programada || '').slice(0,5)}</div>
-                        <div class="prov">${c.proveedor}</div>
-                        <div class="ref">${c.referencia || 'sin ref.'}</div>
-                        <div class="aud">${c.auditora || ''}</div>
-                    </div>`).join('')
-                : '<div class="vacio-dia">—</div>'}
-            </div>
-        </div>`;
+        const delDia = listaTotal.filter(function(x) { return x.fecha_programada === clave && x.estado !== 'finalizada'; });
+        
+        let htmlDia = '<div class="dia ' + (clave === hoyISO ? 'hoy' : '') + '">' +
+            '<div class="dia-cabeza"><span>' + nombre + '</span><b>' + fecha.getDate() + '</b></div>' +
+            '<div class="dia-cuerpo">';
+            
+        if (delDia.length) {
+            htmlDia += delDia.map(function(c) {
+                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" onclick="abrirCita(' + c.id + ')">' +
+                    '<div class="hora">' + (c.hora_programada || '').slice(0,5) + '</div>' +
+                    '<div class="prov">' + c.proveedor + '</div>' +
+                    '<div class="ref">' + (c.referencia || 'sin ref.') + '</div>' +
+                    '<div class="aud">' + (c.auditora || '') + '</div>' +
+                '</div>';
+            }).join('');
+        } else {
+            htmlDia += '<div class="vacio-dia">Sin auditorías programadas</div>';
+        }
+        
+        htmlDia += '</div></div>';
+        return htmlDia;
     }).join('');
 }
 
 // ---------- Formulario ----------
 function abrirHoja(cita) {
     editando = cita || null;
-    $('mensajeHoja').className = 'mensaje';$('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
+    $('mensajeHoja').className = 'mensaje';
+    $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
     $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
-    $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';$('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar' : '▶ Realizar';
+    $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
+    $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar auditoría' : '▶ Iniciar auditoría';
 
     if (cita) {
         $('fProveedor').value = cita.proveedor_id || '';
-        $('fTipo').value = cita.tipo_id || '';$('fFecha').value = cita.fecha_programada;
-        $('fHora').value = (cita.hora_programada || '08:00').slice(0, 5);$('fAuditora').value = cita.auditora_id || '';
-        $('fFactura').value = cita.numero_factura || '';$('fReferencia').value = cita.referencia || '';
-        $('fColeccion').value = cita.coleccion || '';$('fSublinea').value = cita.sublinea || '';
-        $('fSku').value = cita.sku || '';$('fNota').value = cita.nota_programacion || '';
+        $('fTipo').value = cita.tipo_id || '';
+        $('fFecha').value = cita.fecha_programada || '';
+        $('fHora').value = (cita.hora_programada || '08:00').slice(0, 5);
+        $('fAuditora').value = cita.auditora_id || '';
+        $('fFactura').value = cita.numero_factura || '';
+        $('fReferencia').value = cita.referencia || '';
+        $('fColeccion').value = cita.coleccion || '';
+        $('fSublinea').value = cita.sublinea || '';
+        $('fSku').value = cita.sku || '';
+        $('fNota').value = cita.nota_programacion || '';
 
-        // Mostrar la miniatura si ya hay foto guardada
         if (cita.fotoUrl) {
-            $('previewFoto').innerHTML = `<a href="${cita.fotoUrl}" target="_blank"><img src="${cita.fotoUrl}" style="height: 60px; border-radius: 4px; border: 1px solid var(--borde); object-fit: cover;"></a><br><small style="color:#8A8279">Foto actual guardada. Sube otra si deseas reemplazarla.</small>`;
+            $('previewFoto').innerHTML = '<a href="' + cita.fotoUrl + '" target="_blank"><img src="' + cita.fotoUrl + '" style="height: 80px; border-radius: 8px; border: 1px solid var(--borde); object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></a><br><small style="color:var(--texto-claro)">Foto guardada. Sube otra para reemplazarla.</small>';
             $('previewFoto').style.display = 'block';
         } else {
             $('previewFoto').style.display = 'none';
         }
     } else {
-        $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
-        $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
-        ['fFactura','fReferencia','fColeccion','fSublinea','fSku','fNota'].forEach(id => $(id).value = '');$('previewFoto').style.display = 'none';
+        $('fProveedor').value = ''; 
+        $('fFecha').value = hoyISO; 
+        $('fHora').value = '08:00';
+        $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0] ? $('fAuditora').options[0].value : '');
+        $('fFactura').value = '';
+        $('fReferencia').value = '';
+        $('fColeccion').value = '';
+        $('fSublinea').value = '';
+        $('fSku').value = '';
+        $('fNota').value = '';
+        $('previewFoto').style.display = 'none';
     }
-    $('fFotoRef').value = '';$('modal').classList.add('abierto');
+    $('fFotoRef').value = ''; 
+    $('modal').classList.add('abierto');
 }
 
 window.abrirCita = async function(id) {
     const { data: cita } = await supabase.from('auditorias').select('*').eq('id', id).maybeSingle();
     if (!cita) return;
 
-    // Buscar si ya tiene foto guardada en evidencias
     const { data: foto } = await supabase.from('auditoria_evidencias')
         .select('url')
         .eq('auditoria_id', id)
@@ -394,21 +454,22 @@ window.abrirCita = async function(id) {
     abrirHoja(cita);
 };
 
-const cerrarHoja = () => $('modal').classList.remove('abierto');
-$('btnCerrar').addEventListener('click', cerrarHoja);$('btnCerrar2').addEventListener('click', cerrarHoja);
-$('btnNueva').addEventListener('click', () => abrirHoja(null));$('btnEjecutar').addEventListener('click', () => { if (editando) location.href = `auditoria.html?id=${editando.id}`; });
+const cerrarHoja = function() { $('modal').classList.remove('abierto'); };
+$('btnCerrar').addEventListener('click', cerrarHoja);
+$('btnNueva').addEventListener('click', function() { abrirHoja(null); });
+$('btnEjecutar').addEventListener('click', function() { if (editando) location.href = 'auditoria.html?id=' + editando.id; });
 
-// Auto-completar sublinea y SKU
-$('fReferencia').addEventListener('change', () => {
+// Auto-completar
+$('fReferencia').addEventListener('change', function() {
     const buscada = $('fReferencia').value.trim().toUpperCase();
-    const r = referencias.find(x => (x.descripcion || '').trim().toUpperCase() === buscada);
+    const r = referencias.find(function(x) { return (x.descripcion || '').trim().toUpperCase() === buscada; });
     if (!r) return;
     if (r.coleccion) $('fColeccion').value = r.coleccion;
     if (r.sublinea) $('fSublinea').value = r.sublinea;
     if (r.sku) $('fSku').value = r.sku;
-    const prov = proveedores.find(p => p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase());
-    if (prov && !$('fProveedor').value)$('fProveedor').value = prov.id;
-    $('pistaRef').textContent = `SKU: ${r.sku || '—'} · Proveedor: ${r.proveedor || '—'}`;
+    const prov = proveedores.find(function(p) { return p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase(); });
+    if (prov && !$('fProveedor').value) $('fProveedor').value = prov.id;
+    $('pistaRef').textContent = 'SKU: ' + (r.sku || '—') + ' · Proveedor: ' + (r.proveedor || '—');
 });
 
 $('btnGuardar').addEventListener('click', async () => {
@@ -436,7 +497,6 @@ $('btnGuardar').addEventListener('click', async () => {
     const btn = $('btnGuardar');
     btn.disabled = true; btn.textContent = 'Guardando…';
 
-    // Guardar auditoría
     let idGuardado = editando ? editando.id : null;
     if (editando) {
         const { error } = await supabase.from('auditorias').update(datos).eq('id', editando.id);
@@ -447,15 +507,14 @@ $('btnGuardar').addEventListener('click', async () => {
         idGuardado = data.id;
     }
 
-    // Subir foto si hay una
     const archivo = $('fFotoRef').files[0];
     if (archivo && idGuardado) {
         btn.textContent = 'Subiendo foto...';
-        const nombreExt = `${idGuardado}/ref_${Date.now()}.jpg`;
+        const nombreExt = idGuardado + '/ref_' + Date.now() + '.jpg';
         const { error: errUp } = await supabase.storage.from('auditorias-evidencias').upload(nombreExt, archivo);
         if (!errUp) {
             const url = supabase.storage.from('auditorias-evidencias').getPublicUrl(nombreExt).data.publicUrl;
-            await supabase.from('auditoria_evidencias').insert({ auditoria_id: idGuardado, url, nombre: 'Foto Prenda Referencia', observacion: 'Foto subida en programación' });
+            await supabase.from('auditoria_evidencias').insert({ auditoria_id: idGuardado, url: url, nombre: 'Foto Prenda Referencia', observacion: 'Foto subida en programación' });
         }
     }
 
@@ -465,15 +524,17 @@ $('btnGuardar').addEventListener('click', async () => {
 });
 
 $('btnCancelarCita').addEventListener('click', async () => {
-    if (!editando || !confirm('¿Cancelar esta auditoría?')) return;
+    if (!editando || !confirm('¿Cancelar esta auditoría de forma permanente?')) return;
     await supabase.from('auditorias').update({ estado: 'cancelada' }).eq('id', editando.id);
     cerrarHoja(); await cargarAuditorias();
 });
 
-$('antes').addEventListener('click', () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });$('despues').addEventListener('click', () => { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
-$('hoy').addEventListener('click', () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });$('filtroAuditora').addEventListener('change', pintar);
+$('antes').addEventListener('click', function() { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
+$('despues').addEventListener('click', function() { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
+$('hoy').addEventListener('click', function() { lunes = inicioSemana(new Date()); cargarAuditorias(); });
+$('filtroAuditora').addEventListener('change', pintar);
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 await cargarCatalogos(); await cargarAuditorias(); cargarReferencias();
 </script>
 </body>
