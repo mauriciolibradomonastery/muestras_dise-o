@@ -3,365 +3,628 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Reportes · Auditorías Monastery Pro</title>
+<title>Ejecución · Auditoría Monastery Pro</title>
 <link rel="icon" type="image/png" href="icono-192.png">
 <link rel="apple-touch-icon" href="icono-192.png">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#15100E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
         --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
         --papel: #F4F1EB; --texto: #2A2421; --texto-claro: #736961; --borde: #E6E1D8;
         --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309; --vino: #8C2026;
         --sombra-card: 0 4px 12px rgba(21,16,14,0.04);
-        --sombra-hover: 0 8px 24px rgba(21,16,14,0.08);
         --transicion: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--papel); color: var(--texto); padding-bottom: 40px;}
-    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; font-family: 'Inter', sans-serif; background: var(--papel);
+        color: var(--texto); padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+
     .barra {
         background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
-        display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30; border-bottom: 1px solid rgba(255,255,255,0.08);
+        position: sticky; top: 0; z-index: 30; border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 24px; margin: 0; letter-spacing: 0.02em;}
-    .volver { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--hueso); padding: 8px 14px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 13px; font-weight: 500; transition: var(--transicion);}
+    .barra-fila { display: flex; align-items: center; gap: 16px; }
+    .volver { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--hueso); font-size: 20px; cursor: pointer; padding: 4px 12px; transition: var(--transicion); }
     .volver:hover { background: rgba(255,255,255,0.15); }
-    
-    .contenido { padding: 24px; max-width: 1300px; margin: 0 auto; }
-    
-    .seccion { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: var(--sombra-card);}
-    .seccion h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; margin: 0 0 20px 0; font-size: 24px; color: var(--tinta);}
-    
-    .filtros-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-    .filtros-grid label { font-size: 11px; font-weight: 700; color: var(--texto-claro); letter-spacing: 0.05em; display: block; margin-bottom: 8px; text-transform: uppercase;}
-    select { padding: 12px 14px; border: 1px solid var(--borde); border-radius: 8px; font-family: inherit; font-size: 14px; width: 100%; transition: var(--transicion); outline: none; background: #F9F8F6; color: var(--texto);}
-    select:focus { border-color: var(--laton); background: #fff; box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
-    
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;}
-    .kpi { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 20px; border-top: 4px solid var(--laton); box-shadow: var(--sombra-card); transition: var(--transicion);}
-    .kpi:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
-    .kpi .num { font-size: 32px; font-weight: 600; margin-bottom: 6px; color: var(--tinta);}
-    .kpi .titulo { font-size: 12px; color: var(--texto-claro); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 22px; margin: 0; flex: 1; letter-spacing: 0.02em; line-height: 1.2;}
+    .barra .sub { font-size: 12px; color: rgba(253,251,247,0.7); margin-top: 4px; letter-spacing: 0.03em; }
 
-    .graficos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-    .grafico-caja { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; align-items: center; box-shadow: var(--sombra-card);}
-    .grafico-caja h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 20px; margin: 0 0 20px 0; width: 100%; text-align: left; color: var(--tinta);}
-    .canvas-container { position: relative; width: 100%; height: 320px; }
+    .pasos { display: flex; gap: 8px; margin-top: 16px; }
+    .paso-punto { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; transition: var(--transicion);}
+    .paso-punto.activo { background: var(--laton); box-shadow: 0 0 8px rgba(176,137,69,0.5); }
+    .paso-punto.hecho { background: rgba(176,137,69,0.4); }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;}
-    th { padding: 14px 10px; border-bottom: 2px solid var(--borde); color: var(--texto-claro); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em;}
-    td { padding: 14px 10px; border-bottom: 1px solid #F4F1EB; color: var(--texto);}
-    .num { text-align: right; }
+    .contenido { padding: 24px; max-width: 900px; margin: 0 auto; }
+    .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--sombra-card); }
+    .tarjeta h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 0 0 16px 0; color: var(--tinta); }
     
-    .fila-clic { cursor: pointer; transition: var(--transicion); }
-    .fila-clic:hover { background: #F9F8F6; }
-    
-    .estado-aprobado { color: var(--verde); font-weight: 700; background: #EEF7F2; padding: 4px 10px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;}
-    .estado-rechazado { color: var(--vino); font-weight: 700; background: #FCF0F0; padding: 4px 10px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;}
+    label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-claro); margin-bottom: 8px; }
+    input, select, textarea {
+        width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    textarea { min-height: 90px; resize: vertical; }
+    .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 
-    /* Modal Detalles */
-    .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
-    .fondo.abierto { display: flex; opacity: 1;}
-    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 800px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
-    .fondo.abierto .hoja { transform: translateY(0); }
-    .hoja-cabeza { padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;}
-    .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta);}
-    .cerrar { background: #F4F1EB; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; color: var(--texto-claro); cursor: pointer; transition: var(--transicion); display: flex; align-items: center; justify-content: center;}
-    .cerrar:hover { background: #E6E1D8; color: var(--vino); }
-    .hoja-cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 24px; background: #FDFBF7;}
-    
-    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px;}
-    .detalle-item { background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--borde); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
-    .detalle-item b { display: block; font-size: 11px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;}
-    
-    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 20px; }
-    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 500; margin: 0 0 16px 0; font-size: 20px; color: var(--tinta);}
-    
-    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-    .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; box-shadow: var(--sombra-card);}
-    .foto-card img { width: 100%; height: 160px; object-fit: cover; display: block;}
-    .foto-card p { margin: 0; padding: 10px; font-size: 12px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA; font-weight: 500;}
-    
-    .pastilla { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
+    .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+    .btn:hover { background: #F9F8F6; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+    .btn-oscuro { background: var(--tinta); color: var(--hueso); border-color: var(--tinta); }
+    .btn-oscuro:hover { background: #000; }
+    .btn-laton { background: var(--laton); color: #fff; border-color: var(--laton); box-shadow: 0 4px 12px rgba(176,137,69,0.2);}
+    .btn-laton:hover { background: var(--laton-hover); border-color: var(--laton-hover); }
+    .btn-chico { padding: 8px 12px; font-size: 13px; font-weight: 500;}
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; padding: 12px 8px; border-bottom: 1px solid var(--borde); letter-spacing: 0.03em;}
+    td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; }
+    td input { padding: 8px; font-size: 14px; text-align: center; }
+    .tabla-scroll { overflow-x: auto; margin: 0 -8px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .quitar { background: #F9F8F6; border: none; border-radius: 6px; color: var(--texto-claro); font-size: 14px; cursor: pointer; padding: 6px 10px; transition: var(--transicion);}
+    .quitar:hover { background: #FCF0F0; color: var(--vino); }
+
+    .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+    .cifra { background: #F9F8F6; border-radius: 8px; padding: 16px; text-align: center; border: 1px solid var(--borde);}
+    .cifra .n { font-size: 24px; font-weight: 600; line-height: 1; color: var(--tinta); }
+    .cifra .t { font-size: 11px; color: var(--texto-claro); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
+
+    .pastilla { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;}
+    .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
+    .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
+    .pastilla.critico { background: #FCF0F0; color: var(--vino); }
     .pastilla.pass { background: #EEF7F2; color: var(--verde); }
     .pastilla.fail { background: #FCF0F0; color: var(--vino); }
-    .pastilla.na   { background: #F3F4F6; color: #4B5563; }
 
-    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
+    .checklist-grid { display: flex; flex-direction: column; gap: 12px; }
+    .checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; gap: 12px; }
+    .checklist-info { flex: 1; }
+    .checklist-nombre { font-size: 14px; font-weight: 600; color: var(--tinta); }
+    .checklist-opciones { display: flex; gap: 6px; }
+    .btn-opt { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--borde); background: #F9F8F6; font-size: 12px; font-weight: 700; cursor: pointer; transition: var(--transicion); }
+    .btn-opt.sel-pass { background: #EEF7F2; color: var(--verde); border-color: var(--verde); }
+    .btn-opt.sel-fail { background: #FCF0F0; color: var(--vino); border-color: var(--vino); }
+    .btn-opt.sel-na   { background: #F3F4F6; color: #4B5563; border-color: #9CA3AF; }
 
-    @media (max-width: 768px) {
-        .graficos-grid { grid-template-columns: 1fr; }
-        .detalle-grid { grid-template-columns: 1fr; }
-        .contenido { padding: 16px; }
+    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; transition: var(--transicion);}
+    .talla-item span { font-size: 11px; font-weight: 700; color: var(--texto-claro); margin-bottom: 6px; }
+    .talla-item input { width: 50px; padding: 8px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 6px; background: #F9F8F6;}
+
+    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
+    .foto-box { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--sombra-card);}
+    .foto { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #F9F8F6; }
+    .foto img { width: 100%; height: 100%; object-fit: cover; }
+    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-obs input { font-size: 12px; padding: 6px; }
+    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 160px;}
+
+    .sugerencia-aql-box { padding: 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; border: 1px solid; }
+    .sugerencia-aql-box.aprobado { background: #EEF7F2; color: var(--verde); border-color: #BFE2D0; }
+    .sugerencia-aql-box.rechazado { background: #FCF0F0; color: var(--vino); border-color: #F2C8C9; }
+
+    .resultado-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
+    .resultado-botones button { padding: 18px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
+    .resultado-botones button.sel-aprobado { border-color: var(--verde); background: #EEF7F2; color: var(--verde); box-shadow: 0 4px 12px rgba(25,122,86,0.15);}
+    .resultado-botones button.sel-rechazado { border-color: var(--vino); background: #FCF0F0; color: var(--vino); box-shadow: 0 4px 12px rgba(140,32,38,0.15);}
+
+    .pie-fijo { 
+        position: fixed; left: 0; right: 0; bottom: 0; 
+        background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(0,0,0,0.08); padding: 16px 24px calc(16px + env(safe-area-inset-bottom)); 
+        display: flex; gap: 12px; justify-content: space-between; z-index: 25;
     }
+    .pie-fijo .btn, .pie-fijo .btn-laton { flex: 1; max-width: 240px; padding: 16px; font-size: 16px;}
+    .mensaje { display: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .mensaje.info { display: block; background: #F2F5FC; color: #1E3A8A; border: 1px solid #CBD9F5; }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
+    .oculto { display: none !important; }
+
+    @media (max-width: 640px) { .fila { grid-template-columns: 1fr; gap: 12px;} .contenido { padding: 16px; } .tarjeta { padding: 16px; } }
 </style>
 </head>
 <body>
 
 <div class="barra">
-    <h1>Reportes y Desempeño Pro</h1>
-    <a href="agenda.html" class="volver">Volver a la Agenda</a>
+    <div class="barra-fila">
+        <button class="volver" id="btnVolver">‹</button>
+        <div style="flex: 1">
+            <h1 id="titulo">Auditoría Pro</h1>
+            <div class="sub" id="subtitulo"></div>
+        </div>
+    </div>
+    <div class="pasos" id="pasos"></div>
 </div>
 
-<div class="contenido">
-    <div class="seccion" style="padding-bottom: 24px;">
-        <div class="filtros-grid">
-            <div><label>Filtrar por Proveedor</label><select id="filtroProv"><option value="ALL">Todos los proveedores</option></select></div>
-            <div><label>Filtrar por Referencia</label><select id="filtroRef"><option value="ALL">Todas las referencias</option></select></div>
-            <div><label>Filtrar por Auditora</label><select id="filtroAuditor"><option value="ALL">Todas las auditoras</option></select></div>
-        </div>
-    </div>
+<div class="contenido" id="contenido"><div class="cargando">Cargando datos de la auditoría…</div></div>
 
-    <div class="kpis" id="panelKpis">
-        <div class="kpi"><div class="num">...</div><div class="titulo">Cargando datos</div></div>
-    </div>
-
-    <div class="graficos-grid">
-        <div class="grafico-caja">
-            <h3>Ranking de Proveedores (Calificación)</h3>
-            <div class="canvas-container"><canvas id="chartRanking"></canvas></div>
-        </div>
-        <div class="grafico-caja">
-            <h3>Top 5 Motivos de Defecto</h3>
-            <div class="canvas-container"><canvas id="chartDefectos"></canvas></div>
-        </div>
-    </div>
-
-    <div class="grafico-caja" style="margin-bottom: 24px;">
-        <h3>Evolución Mensual (Aprobadas vs Rechazadas)</h3>
-        <div class="canvas-container"><canvas id="chartMeses"></canvas></div>
-    </div>
-
-    <div class="seccion">
-        <h2>Historial de Auditorías</h2>
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Auditadas</th><th>Resultado</th><th></th></tr>
-                </thead>
-                <tbody id="tablaAuditorias">
-                    <tr><td colspan="7">Cargando datos...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div class="fondo" id="modalDetalle">
-    <div class="hoja">
-        <div class="hoja-cabeza">
-            <h2>Detalle de Auditoría Pro</h2>
-            <button class="cerrar" id="btnCerrarDetalle">✕</button>
-        </div>
-        <div class="hoja-cuerpo" id="cuerpoDetalle"></div>
-    </div>
+<div class="pie-fijo oculto" id="pieFijo">
+    <button class="btn" id="btnAtras">Atrás</button>
+    <button class="btn-laton btn" id="btnSiguiente">Siguiente</button>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W');
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
+const $ = function(id) { return document.getElementById(id); };
+const BUCKET = 'auditorias-evidencias';
+const SEVERIDADES = [['menor','Menor'], ['mayor','Mayor'], ['critico','Crítico']];
+const PRUEBAS_BASE = [
+    'Resistencia de Costuras (Seam Strength)',
+    'Simetría y Calce (Symmetry / Fitting)',
+    'Solidez del Color / Frote (Rubbing Test)',
+    'Tracción de Broches / Botones (Pull Test)',
+    'Tono y Matiz de Color (Color Shade)',
+    'Adherencia de Estampado / Marquilla (Tape Test)',
+    'Prueba de Olor (Smell Test)',
+    'Verificación de Código de Barras / QR',
+    'Estado de Empaque y Silica Gel'
+];
 
-const $ = id => document.getElementById(id);
-let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasMap = {};
-let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
+const idAuditoria = +new URLSearchParams(location.search).get('id');
 
-async function init() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { location.replace('index.html'); return; }
+let yo = null, auditoria = null, catalogo = [], cantidades = [], defectos = [], evidencias = [], medidas = [], pruebas = [], tallas = [], paso = 1;
+const num = function(v) { const n = Number(v); return isNaN(n) ? 0 : n; };
+const fmt = function(n) { return Math.round(n).toLocaleString('es-CO'); };
+const esc = function(t) { return String(t || '').replace(/[<>"]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); };
 
-    const [ resAuds, resUsuarios ] = await Promise.all([
-        supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)').eq('estado', 'finalizada').order('fecha_auditoria', { ascending: false }),
-        supabase.from('auditoria_usuarios').select('id, nombre')
-    ]);
+const resSession = await supabase.auth.getSession();
+if (!resSession.data || !resSession.data.session) location.replace('index.html');
 
-    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
-    
-    const usuariosNombres = {};
-    if (resUsuarios.data) resUsuarios.data.forEach(u => usuariosNombres[u.id] = u.nombre);
-    auditorias = resAuds.data || [];
-    
-    auditorias.forEach(a => {
-        if (a.auditora_id && usuariosNombres[a.auditora_id]) a.auditoria_usuarios = { nombre: usuariosNombres[a.auditora_id] };
-        if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
-        if(a.auditoria_usuarios) auditorasMap[a.auditora_id] = a.auditoria_usuarios.nombre;
-        if(a.referencia) referenciasSet.add(a.referencia);
-    });
-    
-    $('filtroProv').innerHTML = '<option value="ALL">Todos los proveedores</option>' + Object.entries(proveedoresMap).map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
-    $('filtroRef').innerHTML = '<option value="ALL">Todas las referencias</option>' + Array.from(referenciasSet).sort().map(ref => `<option value="${ref}">${ref}</option>`).join('');
-    $('filtroAuditor').innerHTML = '<option value="ALL">Todas las auditoras</option>' + Object.entries(auditorasMap).map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+$('btnVolver').addEventListener('click', function() { location.href = 'agenda.html'; });
 
-    renderData();
-}
+async function cargar() {
+    if (!idAuditoria) {
+        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">No se encontró el ID de auditoría. Redirigiendo...</div>';
+        setTimeout(() => location.href = 'agenda.html', 2000);
+        return;
+    }
 
-function renderData() {
-    const valProv = $('filtroProv').value, valRef = $('filtroRef').value, valAud =$('filtroAuditor').value;
-    const list = auditorias.filter(a => {
-        return (valProv === 'ALL' || String(a.proveedor_id) === String(valProv)) && (valRef === 'ALL' || a.referencia === valRef) && (valAud === 'ALL' || String(a.auditora_id) === String(valAud));
-    });
-    
-    let totalLote = 0, totalAuditado = 0, totalDefectos = 0, aprobadas = 0, htmlTabla = '';
-    const defectosCount = {}, mesesCount = {};
-
-    list.forEach(a => {
-        totalLote += Number(a.cantidad_produccion) || 0; totalAuditado += Number(a.cantidad_auditada) || 0;
-        if (a.auditoria_defectos) {
-            a.auditoria_defectos.forEach(d => {
-                const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
-                const cant = Number(d.cantidad) || 0;
-                totalDefectos += cant; defectosCount[defName] = (defectosCount[defName] || 0) + cant;
-            });
-        }
-        
-        const mes = a.fecha_auditoria ? a.fecha_auditoria.substring(0, 7) : 'Sin fecha';
-        if (!mesesCount[mes]) mesesCount[mes] = { aprobadas: 0, rechazadas: 0 };
-        if(a.resultado === 'aprobado') { aprobadas++; mesesCount[mes].aprobadas++; } else { mesesCount[mes].rechazadas++; }
-
-        const skuHtml = a.sku ? ` <small style="color:#A39C94">(${a.sku})</small>` : '';
-        htmlTabla += `<tr class="fila-clic" onclick="verDetalle(${a.id})">
-            <td><strong style="color:var(--tinta); font-weight:500;">${a.fecha_auditoria || '—'}</strong></td>
-            <td>${a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A'}</td>
-            <td>${a.referencia || ''}${skuHtml}</td>
-            <td>${a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A'}</td>
-            <td>${a.cantidad_auditada || 0}</td>
-            <td><span class="estado-${a.resultado ? a.resultado.toLowerCase() : ''}">${a.resultado ? a.resultado.toUpperCase() : 'N/A'}</span></td>
-            <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver Pro ›</td>
-        </tr>`;
-    });
-
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados.</td></tr>';
-
-    const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
-    const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
-    const calificacion = list.length > 0 ? ((aprobadas / list.length) * 100).toFixed(0) : 0;
-
-    $('panelKpis').innerHTML = `<div class="kpi"><div class="num">${list.length}</div><div class="titulo">Auditorías Realizadas</div></div>
-        <div class="kpi" style="border-top-color: ${calificacion >= 80 ? '#197A56' : '#B45309'}"><div class="num">${calificacion}/100</div><div class="titulo">Calificación (Aprob.)</div></div>
-        <div class="kpi"><div class="num">${indiceDefectos}%</div><div class="titulo">Índice de Defectos</div></div>
-        <div class="kpi"><div class="num">${tamanoMuestra}%</div><div class="titulo">Tamaño de Muestra</div></div>`;
-
-    const topDefectos = Object.entries(defectosCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const provScores = {};
-    list.forEach(a => {
-        const pName = a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'Desconocido';
-        if(!provScores[pName]) provScores[pName] = { total: 0, aprobadas: 0 };
-        provScores[pName].total++; if(a.resultado === 'aprobado') provScores[pName].aprobadas++;
-    });
-    const ranking = Object.entries(provScores).map(([nombre, datos]) => ({ nombre, score: Math.round((datos.aprobadas / datos.total) * 100) })).sort((a, b) => b.score - a.score);
-
-    actualizarGraficos(ranking, topDefectos, mesesCount);
-}
-
-function actualizarGraficos(ranking, topDefectos, mesesCount) {
-    if (chartRankingInst) chartRankingInst.destroy(); if (chartDefectosInst) chartDefectosInst.destroy(); if (chartMesesInst) chartMesesInst.destroy();
-    Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#736961';
-
-    chartRankingInst = new Chart($('chartRanking').getContext('2d'), {
-        type: 'bar',
-        data: { labels: ranking.map(r => r.nombre), datasets: [{ label: 'Calificación', data: ranking.map(r => r.score), backgroundColor: ranking.map(r => r.score >= 80 ? '#197A56' : (r.score >= 50 ? '#B45309' : '#6E1F24')), borderRadius: 6 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { callback: v => v + "%" } } } }
-    });
-
-    chartDefectosInst = new Chart($('chartDefectos').getContext('2d'), {
-        type: 'doughnut',
-        data: topDefectos.length === 0 ? { labels: ['Sin defectos'], datasets: [{ data: [1], backgroundColor: ['#E6E1D8'] }] } : { labels: topDefectos.map(d => d[0]), datasets: [{ data: topDefectos.map(d => d[1]), backgroundColor: ['#8C2026', '#B45309', '#B08945', '#1E3A8A', '#197A56'], borderWidth: 2, borderColor: '#fff' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12, weight: 500 } } } } }
-    });
-
-    const mesesLabels = Object.keys(mesesCount).sort();
-    chartMesesInst = new Chart($('chartMeses').getContext('2d'), {
-        type: 'bar',
-        data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(m => mesesCount[m].aprobadas), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(m => mesesCount[m].rechazadas), backgroundColor: '#8C2026', borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
-}
-
-window.verDetalle = async function(id) {
-    $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
-    
     try {
-        const [ resDet, resDefs, resEvis, resMed, resPrue, resUsuarios ] = await Promise.all([
-            supabase.from('auditorias').select('*, auditoria_proveedores(nombre)').eq('id', id).single(),
-            supabase.from('auditoria_defectos').select('*').eq('auditoria_id', id),
-            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', id),
-            supabase.from('auditoria_medidas').select('*').eq('auditoria_id', id),
-            supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', id),
-            supabase.from('auditoria_usuarios').select('id, nombre')
+        const [resAud, resProv, resTip, resCat, resCant, resDef, resEvi] = await Promise.all([
+            supabase.from('auditorias').select('*').eq('id', idAuditoria).maybeSingle(),
+            supabase.from('auditoria_proveedores').select('id, nombre'),
+            supabase.from('auditoria_tipos').select('id, nombre'),
+            supabase.from('auditoria_catalogo_defectos').select('nombre, severidad').eq('activo', true).order('nombre'),
+            supabase.from('auditoria_cantidades').select('*').eq('auditoria_id', idAuditoria),
+            supabase.from('auditoria_defectos').select('*').eq('auditoria_id', idAuditoria).order('id'),
+            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id')
         ]);
 
-        const det = resDet.data, defs = resDefs.data || [], evis = resEvis.data || [], med = resMed.data || [], prue = resPrue.data || [];
-        const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
+        if (resAud.error || !resAud.data) {
+            $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">Error al cargar la auditoría solicitada.</div>';
+            return;
+        }
 
-        let html = `
-        ${det.sugerencia_aql ? `<div style="padding:14px; background:#F9F8F6; border:1px solid var(--borde); border-radius:8px; font-size:13px;"><b>🤖 Análisis Automático AQL:</b> ${det.sugerencia_aql}</div>` : ''}
+        auditoria = resAud.data;
+        catalogo = resCat.data || [];
+        defectos = (resDef.data || []).map(function(d) { return Object.assign({}, d); });
+        evidencias = (resEvi.data || []).map(function(e) { return Object.assign({}, e); });
 
-        <div class="detalle-grid">
-            <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small style="color:var(--texto-claro);">(${det.sku || 'N/A'})</small></div>
-            <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
-            <div class="detalle-item"><b>Auditora</b>${auditora ? auditora.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>Lote / Muestra AQL</b>${det.cantidad_produccion || 0} unds / ${det.cantidad_auditada || 0} unds</div>
-            <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${(det.resultado || 'N/A').toUpperCase()}</span></div>
-        </div>`;
+        // Carga opcional resiliente de medidas y pruebas
+        try {
+            const resMed = await supabase.from('auditoria_medidas').select('*').eq('auditoria_id', idAuditoria).order('id');
+            medidas = (resMed.data || []).map(function(m) { return Object.assign({}, m); });
+        } catch (e) { medidas = []; }
 
-        // Puntos de Medida (POM)
-        html += `<div class="seccion-detalle"><h4>Control de Medidas (POM) (${med.length})</h4>`;
-        if (med.length > 0) {
-            html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol.</th><th class="num">Real</th><th>Cumple</th></tr></thead><tbody>`;
-            med.forEach(m => {
-                html += `<tr><td><b>${m.punto_medida}</b></td><td>${m.talla}</td><td class="num">${m.medida_teorica} cm</td><td class="num">±${m.tolerancia}</td><td class="num"><b>${m.medida_real} cm</b></td><td><span class="pastilla ${m.cumple?'pass':'fail'}">${m.cumple?'CUMPLE':'FUERA'}</span></td></tr>`;
+        try {
+            const resPrue = await supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', idAuditoria).order('id');
+            const pruebasBD = resPrue.data || [];
+            pruebas = PRUEBAS_BASE.map(function(pNombre) {
+                const existe = pruebasBD.find(function(x) { return x.prueba === pNombre; });
+                return existe ? Object.assign({}, existe) : { prueba: pNombre, resultado: 'PASS', observacion: '' };
             });
-            html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas para esta auditoría.</p>`; }
-        html += `</div>`;
+        } catch (e) {
+            pruebas = PRUEBAS_BASE.map(function(pNombre) { return { prueba: pNombre, resultado: 'PASS', observacion: '' }; });
+        }
 
-        // Checklist de Pruebas
-        html += `<div class="seccion-detalle"><h4>Pruebas Físicas y Calidad (${prue.length})</h4>`;
-        if (prue.length > 0) {
-            html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica</th><th>Resultado</th></tr></thead><tbody>`;
-            prue.forEach(p => {
-                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado.toLowerCase()}">${p.resultado}</span></td></tr>`;
+        const prov = (resProv.data || []).find(function(p) { return p.id === auditoria.proveedor_id; });
+        const tipo = (resTip.data || []).find(function(t) { return t.id === auditoria.tipo_id; });
+
+        if (resCant.data && resCant.data.length) {
+            const mapa = {};
+            resCant.data.forEach(function(c) {
+                mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} };
+                mapa[c.color].tallas[c.talla] = num(c.cantidad);
             });
-            html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
-        html += `</div>`;
+            cantidades = Object.values(mapa);
+        } else {
+            cantidades = await traerDeProduccion(auditoria.referencia);
+        }
+        recalcularTallas();
 
-        // Defectos
-        html += `<div class="seccion-detalle"><h4>Defectos Registrados (${defs.length})</h4>`;
-        if (defs.length > 0) {
-            html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
-            defs.forEach(d => {
-                html += `<tr><td><span class="pastilla ${d.severidad}">${d.severidad}</span></td><td><b>${d.defecto}</b></td><td>${d.color || '-'} / ${d.talla || '-'}</td><td class="num"><b>${d.cantidad}</b></td></tr>`;
-            });
-            html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin defectos registrados.</p>`; }
-        html += `</div>`;
+        $('titulo').textContent = auditoria.referencia || 'Auditoría Pro';
+        $('subtitulo').textContent = [prov ? prov.nombre : '', tipo ? tipo.nombre : ''].filter(Boolean).join(' · ');
 
-        // Observaciones y Fotos
-        html += `<div class="seccion-detalle"><h4>Observaciones</h4><p style="font-size:14px; background:#F9F8F6; padding:12px; border-radius:8px; border:1px solid var(--borde);">${det.observaciones || 'Sin observaciones.'}</p></div>`;
-        html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
-        if (evis.length > 0) {
-            html += `<div class="foto-grid">`;
-            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank"><img src="${e.url}"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
-            html += `</div>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin fotografías.</p>`; }
-        html += `</div>`;
-
-        $('cuerpoDetalle').innerHTML = html;
+        if (auditoria.estado === 'programada') {
+            await supabase.from('auditorias').update({ estado: 'en_curso', fecha_auditoria: new Date().toLocaleDateString('sv') }).eq('id', idAuditoria);
+            auditoria.estado = 'en_curso';
+        }
+        $('pieFijo').classList.remove('oculto');
+        pintar();
     } catch (err) {
-        $('cuerpoDetalle').innerHTML = `<div class="cargando" style="color:var(--vino)">Error al cargar detalle: ${err.message}</div>`;
+        console.error(err);
+        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">Error general: ' + (err.message || 'Error de conexión') + '</div>';
+    }
+}
+
+async function traerDeProduccion(referencia) {
+    if (!referencia) return [];
+    const { data } = await supabase.from('produccion').select('color, tallas').ilike('descripcion', referencia.trim());
+    const mapa = {};
+    (data || []).forEach(function(r) {
+        const color = (r.color || 'sin color').trim();
+        mapa[color] = mapa[color] || { color: color, tallas: {} };
+        Object.entries(r.tallas || {}).forEach(function([t, c]) { mapa[color].tallas[t] = (mapa[color].tallas[t] || 0) + num(c); });
+    });
+    return Object.values(mapa);
+}
+
+function recalcularTallas() {
+    const orden = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44'];
+    const usadas = new Set();
+    cantidades.forEach(function(c) { Object.keys(c.tallas).forEach(function(t) { usadas.add(t); }); });
+    tallas = Array.from(usadas).sort(function(a, b) {
+        const ia = orden.indexOf(a), ib = orden.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+}
+
+const totalLote = function() { return cantidades.reduce(function(s, c) { return s + Object.values(c.tallas).reduce(function(x, v) { return x + num(v); }, 0); }, 0); };
+const colores = function() { return cantidades.map(function(c) { return c.color; }); };
+
+function pintar() {
+    $('pasos').innerHTML = [1,2,3,4,5].map(function(p) { return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>'; }).join('');
+    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
+    $('btnSiguiente').textContent = paso === 5 ? 'Finalizar auditoría' : 'Siguiente';
+    ({ 1: pasoLote, 2: pasoMuestraAQL, 3: pasoMedidas, 4: pasoDefectosYPruebas, 5: pasoCierre })[paso]();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Paso 1
+function pasoLote() {
+    $('contenido').innerHTML = 
+    '<div class="tarjeta">' +
+        '<h2>1. Información del lote</h2>' +
+        '<div class="fila">' +
+            '<div><label>Referencia</label><input id="eRef" value="' + esc(auditoria.referencia || '') + '"></div>' +
+            '<div><label>SKU</label><input id="eSku" value="' + esc(auditoria.sku || '') + '"></div>' +
+        '</div>' +
+        '<div class="fila">' +
+            '<div><label>Sublínea</label><input id="eSublinea" value="' + esc(auditoria.sublinea || '') + '"></div>' +
+            '<div><label>N° factura</label><input id="eFactura" value="' + esc(auditoria.numero_factura || '') + '"></div>' +
+        '</div>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Unidades producidas por color y talla</h2>' +
+        '<div class="tabla-scroll">' +
+            '<table>' +
+                '<thead><tr><th>Color</th>' + tallas.map(function(t) { return '<th class="num">' + t + '</th>'; }).join('') + '<th class="num">Total</th><th></th></tr></thead>' +
+                '<tbody>' +
+                cantidades.map(function(c, i) {
+                    return '<tr>' +
+                        '<td><input value="' + esc(c.color) + '" onchange="cambiarColor(' + i + ', this.value)" style="min-width:110px"></td>' +
+                        tallas.map(function(t) { return '<td><input type="number" min="0" style="width:65px" value="' + (c.tallas[t] !== undefined ? c.tallas[t] : '') + '" onchange="cambiarCantidad(' + i + ',\'' + t + '\',this.value)"></td>'; }).join('') +
+                        '<td class="num"><b>' + fmt(Object.values(c.tallas).reduce(function(s,v) { return s + num(v); }, 0)) + '</b></td>' +
+                        '<td><button class="quitar" onclick="quitarColor(' + i + ')">✕</button></td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody>' +
+            '</table>' +
+        '</div>' +
+        '<div style="display:flex; gap:12px; margin-top:16px;">' +
+            '<button class="btn btn-chico" onclick="agregarColor()">+ Color</button>' +
+            '<button class="btn btn-chico" onclick="agregarTalla()">+ Talla</button>' +
+        '</div>' +
+    '</div>';
+}
+window.cambiarColor = function(i, v) { cantidades[i].color = v.trim().toUpperCase(); };
+window.cambiarCantidad = function(i, t, v) { if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v); pintar(); };
+window.quitarColor = function(i) { cantidades.splice(i, 1); recalcularTallas(); pintar(); };
+window.agregarColor = function() { cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
+window.agregarTalla = function() { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
+
+// Paso 2
+function pasoMuestraAQL() {
+    const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada) || Math.min(lote, 50);
+    const maxMayor = auditada >= 50 ? 3 : 2;
+    const maxMenor = auditada >= 50 ? 5 : 3;
+
+    $('contenido').innerHTML = 
+    '<div class="tarjeta">' +
+        '<h2>2. Muestra de Inspección AQL (ISO 2859-1)</h2>' +
+        '<label>Unidades a auditar de la muestra</label>' +
+        '<input id="eAuditada" type="number" min="1" value="' + auditada + '" oninput="calcularPct(' + lote + ')" style="font-size:24px; font-weight:600; text-align:center; padding:16px; color:var(--tinta);">' +
+        '<div class="cifras">' +
+            '<div class="cifra"><div class="n" id="pctAuditado">' + (lote ? (auditada / lote * 100).toFixed(1) : '0') + ' %</div><div class="t">Muestra del Lote (' + fmt(lote) + ')</div></div>' +
+            '<div class="cifra"><div class="n">' + maxMayor + '</div><div class="t">Límite AQL Mayores</div></div>' +
+            '<div class="cifra"><div class="n">' + maxMenor + '</div><div class="t">Límite AQL Menores</div></div>' +
+        '</div>' +
+        '<div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">' +
+            [10, 20, 50, 80, 125].map(function(m) { return '<button class="btn btn-chico" onclick="document.getElementById(\'eAuditada\').value=' + m + ';calcularPct(' + lote + ')">' + m + ' unds</button>'; }).join('') +
+        '</div>' +
+    '</div>';
+}
+window.calcularPct = function(l) { $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %'; };
+
+// Paso 3
+function pasoMedidas() {
+    $('contenido').innerHTML = 
+    '<div class="tarjeta">' +
+        '<h2>3. Tabla de Medidas Real vs. Patronaje (POM)</h2>' +
+        '<div class="fila">' +
+            '<div><label>Punto de Medida</label><input id="mPunto" placeholder="Ej: Ancho Pecho / Largo Total"></div>' +
+            '<div><label>Talla</label><select id="mTalla">' + tallas.map(function(t) { return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+        '</div>' +
+        '<div class="fila">' +
+            '<div><label>Medida Teórica (cm)</label><input type="number" step="0.1" id="mTeorica" placeholder="Ej: 50.0"></div>' +
+            '<div><label>Tolerancia (+/- cm)</label><input type="number" step="0.1" id="mTolerancia" value="0.5"></div>' +
+        '</div>' +
+        '<div><label>Medida Real Tomada (cm)</label><input type="number" step="0.1" id="mReal" placeholder="Ej: 51.2"></div>' +
+        '<button class="btn btn-oscuro" style="width:100%; margin-top:16px;" onclick="agregarMedida()">+ Registrar Medida</button>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Medidas Evaluadas (' + medidas.length + ')</h2>' +
+        '<div class="tabla-scroll"><table>' +
+            '<thead><tr><th>Punto</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol.</th><th class="num">Real</th><th>Cumple</th><th></th></tr></thead>' +
+            '<tbody>' + medidas.map(function(m, i) {
+                return '<tr>' +
+                    '<td style="font-weight:500;">' + esc(m.punto_medida) + '</td>' +
+                    '<td>' + esc(m.talla) + '</td>' +
+                    '<td class="num">' + m.medida_teorica + ' cm</td>' +
+                    '<td class="num">±' + m.tolerancia + '</td>' +
+                    '<td class="num" style="font-weight:700;">' + m.medida_real + ' cm</td>' +
+                    '<td><span class="pastilla ' + (m.cumple ? 'pass' : 'fail') + '">' + (m.cumple ? 'CUMPLE' : 'FUERA') + '</span></td>' +
+                    '<td><button class="quitar" onclick="quitarMedida(' + i + ')">✕</button></td>' +
+                '</tr>';
+            }).join('') + '</tbody>' +
+        '</table></div>' +
+    '</div>';
+}
+window.agregarMedida = function() {
+    const punto = $('mPunto').value.trim(); const talla = $('mTalla').value;
+    const teorica = num($('mTeorica').value); const tol = num($('mTolerancia').value) || 0.5; const real = num($('mReal').value);
+    if (!punto || !teorica || !real) return alert('Por favor ingresa punto de medida, medida teórica y medida real.');
+    const cumple = Math.abs(real - teorica) <= tol;
+    medidas.push({ punto_medida: punto, talla: talla, medida_teorica: teorica, tolerancia: tol, medida_real: real, cumple: cumple });
+    pintar();
+};
+window.quitarMedida = function(i) { medidas.splice(i, 1); pintar(); };
+
+// Paso 4
+function pasoDefectosYPruebas() {
+    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : '';
+    $('contenido').innerHTML = 
+    '<div class="tarjeta">' +
+        '<h2>4. Registro de Defectos Físicos</h2>' +
+        '<div class="fila">' +
+            '<div><label>Severidad</label><select id="dSeveridad">' + SEVERIDADES.map(function(s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('') + '</select></div>' +
+            '<div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">' + catalogo.map(function(c) { return '<option value="' + esc(c.nombre) + '">'; }).join('') + '</datalist></div>' +
+        '</div>' +
+        '<div class="fila">' +
+            '<div><label>Color</label><select id="dColor">' + (cols.length!==1?'<option value="">Elegir...</option>':'') + cols.map(function(c) { return '<option ' + (c===autoColor?'selected':'') + '>' + esc(c) + '</option>'; }).join('') + '</select></div>' +
+        '</div>' +
+        '<label>Cantidades por talla</label>' +
+        '<div class="tallas-inputs">' +
+            tallas.map(function(t) { return '<div class="talla-item"><span>' + t + '</span><input type="number" min="0" class="input-talla-defecto" data-talla="' + t + '"></div>'; }).join('') +
+        '</div>' +
+        '<button class="btn btn-oscuro" style="width:100%; margin-top:12px;" onclick="agregarDefecto()">+ Guardar Defecto</button>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Defectos Registrados (' + defectos.length + ')</h2>' +
+        '<div class="tabla-scroll"><table>' +
+            '<thead><tr><th>Sev.</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>' +
+            '<tbody>' + defectos.map(function(d, i) {
+                return '<tr>' +
+                    '<td><span class="pastilla ' + d.severidad + '">' + d.severidad + '</span></td>' +
+                    '<td style="font-weight:500;">' + esc(d.defecto) + '</td><td>' + esc(d.color) + '</td><td>' + esc(d.talla) + '</td><td class="num" style="font-weight:600;">' + fmt(d.cantidad) + '</td>' +
+                    '<td><button class="quitar" onclick="quitarDefecto(' + i + ')">✕</button></td>' +
+                '</tr>';
+            }).join('') + '</tbody>' +
+        '</table></div>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Checklist de Pruebas Físicas y Calidad</h2>' +
+        '<div class="checklist-grid">' +
+            pruebas.map(function(p, i) {
+                return '<div class="checklist-item">' +
+                    '<div class="checklist-info"><div class="checklist-nombre">' + esc(p.prueba) + '</div></div>' +
+                    '<div class="checklist-opciones">' +
+                        '<button class="btn-opt ' + (p.resultado==='PASS'?'sel-pass':'') + '" onclick="setPrueba(' + i + ',\'PASS\')">PASS</button>' +
+                        '<button class="btn-opt ' + (p.resultado==='FAIL'?'sel-fail':'') + '" onclick="setPrueba(' + i + ',\'FAIL\')">FAIL</button>' +
+                        '<button class="btn-opt ' + (p.resultado==='N/A'?'sel-na':'') + '" onclick="setPrueba(' + i + ',\'N/A\')">N/A</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('') +
+        '</div>' +
+    '</div>';
+}
+window.agregarDefecto = function() {
+    const defecto = $('dDefecto').value.trim(); const color = $('dColor').value; const severidad = $('dSeveridad').value;
+    if (!defecto || !color) return alert('Selecciona el defecto y el color.');
+    let agregados = 0;
+    document.querySelectorAll('.input-talla-defecto').forEach(function(input) {
+        const cantidad = num(input.value);
+        if (cantidad > 0) { defectos.push({ severidad: severidad, defecto: defecto.toLowerCase(), color: color, talla: input.dataset.talla, cantidad: cantidad }); agregados++; }
+    });
+    if (agregados === 0) return alert('Ingresa cantidad en al menos una talla.');
+    pintar();
+};
+window.quitarDefecto = function(i) { defectos.splice(i, 1); pintar(); };
+window.setPrueba = function(i, res) { pruebas[i].resultado = res; pintar(); };
+
+// Paso 5
+function pasoCierre() {
+    const auditada = num(auditoria.cantidad_auditada) || 50;
+    const maxMayor = auditada >= 50 ? 3 : 2;
+    const maxMenor = auditada >= 50 ? 5 : 3;
+
+    const tCritico = defectos.filter(function(d) { return d.severidad === 'critico'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
+    const tMayor = defectos.filter(function(d) { return d.severidad === 'mayor'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
+    const tMenor = defectos.filter(function(d) { return d.severidad === 'menor'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
+    const hayPruebaFallida = pruebas.some(function(p) { return p.resultado === 'FAIL'; });
+    const hayMedidaFallida = medidas.some(function(m) { return !m.cumple; });
+
+    let sugerencia = 'aprobado';
+    let motivo = 'El lote cumple con las especificaciones AQL y pruebas de calidad.';
+
+    if (tCritico > 0 || tMayor > maxMayor || tMenor > maxMenor || hayPruebaFallida || hayMedidaFallida) {
+        sugerencia = 'rechazado';
+        const motivos = [];
+        if (tCritico > 0) motivos.push(tCritico + ' defecto(s) crítico(s)');
+        if (tMayor > maxMayor) motivos.push('Exceso de defectos mayores (' + tMayor + ' encontrados vs. ' + maxMayor + ' máximo)');
+        if (tMenor > maxMenor) motivos.push('Exceso de defectos menores (' + tMenor + ' encontrados vs. ' + maxMenor + ' máximo)');
+        if (hayPruebaFallida) motivos.push('Prueba física fallida');
+        if (hayMedidaFallida) motivos.push('Punto de medida fuera de tolerancia');
+        motivo = 'Sugerencia AQL: ' + motivos.join(' · ');
+    }
+
+    if (!auditoria.resultado) auditoria.resultado = sugerencia;
+    auditoria.sugerencia_aql = motivo;
+
+    $('contenido').innerHTML = 
+    '<div class="sugerencia-aql-box ' + sugerencia + '">' +
+        '<strong>🤖 Dictamen Automático AQL: ' + sugerencia.toUpperCase() + '</strong>' +
+        '<div style="margin-top:4px; font-size:13px; opacity:0.9;">' + motivo + '</div>' +
+    '</div>' +
+    '<div class="tarjeta"><h2>Observaciones Generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">' + esc(auditoria.observaciones || '') + '</textarea></div>' +
+    '<div class="tarjeta">' +
+        '<h2>Evidencias Fotográficas (' + evidencias.length + ')</h2>' +
+        '<input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">' +
+        '<div class="fotos">' +
+            evidencias.map(function(e, i) {
+                return '<div class="foto-box">' +
+                    '<div class="foto"><img src="' + e.url + '"><button onclick="quitarEvidencia(' + i + ')">✕</button></div>' +
+                    '<div class="foto-obs"><input type="text" placeholder="Nota..." value="' + esc(e.observacion) + '" onchange="guardarObsFoto(' + i + ', this.value)"></div>' +
+                '</div>';
+            }).join('') +
+            '<button class="agregar-foto" onclick="document.getElementById(\'archivoFoto\').click()"><span>📷</span>Tomar / Subir Foto</button>' +
+        '</div>' +
+        '<div class="mensaje" id="avisoFoto" style="margin-top:16px;"></div>' +
+    '</div>' +
+    '<div class="tarjeta"><h2>Decisión Final de la Auditora</h2>' +
+        '<div class="resultado-botones">' +
+            '<button id="btnAprobado" class="' + (auditoria.resultado === 'aprobado' ? 'sel-aprobado' : '') + '" onclick="elegirResultado(\'aprobado\')">Aprobado</button>' +
+            '<button id="btnRechazado" class="' + (auditoria.resultado === 'rechazado' ? 'sel-rechazado' : '') + '" onclick="elegirResultado(\'rechazado\')">Rechazado</button>' +
+        '</div>' +
+    '</div>';
+}
+window.elegirResultado = function(r) { auditoria.resultado = r; $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : ''; $('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : ''; };
+window.guardarObsFoto = function(i, val) { evidencias[i].observacion = val; };
+window.subirFotos = async function(e) {
+    const archivos = Array.from(e.target.files); if (!archivos.length) return;
+    $('avisoFoto').className = 'mensaje info';
+    for (let i = 0; i < archivos.length; i++) {
+        $('avisoFoto').textContent = 'Subiendo ' + (i + 1) + ' de ' + archivos.length + '…';
+        const nombre = idAuditoria + '/' + Date.now() + '_' + i + '.jpg';
+        const { error } = await supabase.storage.from(BUCKET).upload(nombre, archivos[i]);
+        if (!error) {
+            const url = supabase.storage.from(BUCKET).getPublicUrl(nombre).data.publicUrl;
+            const { data } = await supabase.from('auditoria_evidencias').insert({ auditoria_id: idAuditoria, url: url, nombre: archivos[i].name, observacion: '' }).select().single();
+            evidencias.push(data || { url: url, observacion: '' });
+        }
+    }
+    $('archivoFoto').value = ''; pintar();
+};
+window.quitarEvidencia = async function(i) {
+    if(confirm('¿Eliminar esta evidencia?')) {
+        if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id);
+        evidencias.splice(i, 1); pintar();
     }
 };
 
-const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
-$('btnCerrarDetalle').addEventListener('click', cerrarModal);$('modalDetalle').addEventListener('click', e => { if (e.target === $('modalDetalle')) cerrarModal(); });$('filtroProv').addEventListener('change', renderData); $('filtroRef').addEventListener('change', renderData);$('filtroAuditor').addEventListener('change', renderData);
+// Guardado
+async function guardarPaso() {
+    if (paso === 1) {
+        auditoria.referencia = ($('eRef').value || '').toUpperCase();
+        auditoria.sku = ($('eSku').value || '').toUpperCase();
+        auditoria.sublinea = ($('eSublinea').value || '').toUpperCase();
+        auditoria.numero_factura = ($('eFactura').value || '').trim();
+        auditoria.cantidad_produccion = totalLote();
+        
+        await supabase.from('auditorias').update({
+            referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
+            numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion
+        }).eq('id', idAuditoria);
+        
+        await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
+        const filas = [];
+        cantidades.forEach(function(c) {
+            Object.entries(c.tallas).forEach(function([t, cant]) {
+                if (num(cant) > 0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) });
+            });
+        });
+        if (filas.length) await supabase.from('auditoria_cantidades').insert(filas);
+    }
+    if (paso === 2) {
+        auditoria.cantidad_auditada = num($('eAuditada').value);
+        await supabase.from('auditorias').update({ cantidad_auditada: auditoria.cantidad_auditada }).eq('id', idAuditoria);
+    }
+    if (paso === 3) {
+        try {
+            await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
+            if (medidas.length) {
+                await supabase.from('auditoria_medidas').insert(medidas.map(function(m) {
+                    return { auditoria_id: idAuditoria, punto_medida: m.punto_medida, talla: m.talla, medida_teorica: m.medida_teorica, tolerancia: m.tolerancia, medida_real: m.medida_real, cumple: m.cumple };
+                }));
+            }
+        } catch(e){}
+    }
+    if (paso === 4) {
+        await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
+        if (defectos.length) {
+            await supabase.from('auditoria_defectos').insert(defectos.map(function(d) {
+                return { auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad };
+            }));
+        }
+        try {
+            await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
+            if (pruebas.length) {
+                await supabase.from('auditoria_pruebas').insert(pruebas.map(function(p) {
+                    return { auditoria_id: idAuditoria, prueba: p.prueba, resultado: p.resultado, observacion: p.observacion };
+                }));
+            }
+        } catch(e){}
+    }
+    if (paso === 5) {
+        auditoria.observaciones = $('eObservaciones').value;
+        try {
+            await supabase.from('auditorias').update({ observaciones: auditoria.observaciones, sugerencia_aql: auditoria.sugerencia_aql }).eq('id', idAuditoria);
+        } catch(e) {
+            await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
+        }
+        await Promise.all(evidencias.map(function(e) {
+            if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
+        }));
+    }
+}
 
-init();
+$('btnAtras').addEventListener('click', async function() { await guardarPaso(); paso--; pintar(); });
+$('btnSiguiente').addEventListener('click', async function() {
+    $('btnSiguiente').disabled = true; $('btnSiguiente').textContent = 'Guardando...';
+    await guardarPaso();
+    if (paso === 5) {
+        if (!auditoria.resultado) {
+            $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría';
+            return alert('Elige si el lote fue Aprobado o Rechazado.');
+        }
+        await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
+        location.href = 'agenda.html';
+        return;
+    }
+    paso++; $('btnSiguiente').disabled = false; pintar();
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+await cargar();
 </script>
 </body>
 </html>
