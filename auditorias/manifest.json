@@ -1,17 +1,16 @@
 {
-  "name": "Auditorías Monastery",
   "short_name": "Auditorías",
-  "description": "Control de calidad a proveedores · Monastery Couture",
-  "start_url": "index.html",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
+  "name": "Monastery Auditorías",
+  "icons": [
+    {
+      "src": "icono-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "./index.html",
   "background_color": "#15100E",
   "theme_color": "#15100E",
-  "lang": "es",
-  "icons": [
-    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+  "display": "standalone",
+  "orientation": "portrait"
 }
