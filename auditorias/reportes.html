@@ -29,6 +29,10 @@
     .seccion { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; margin-bottom: 20px;}
     .seccion h2 { font-family: 'Cormorant Garamond', serif; margin: 0 0 16px 0; font-size: 22px;}
     
+    .filtros-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .filtros-grid label { font-size: 11px; font-weight: 700; color: #6F675F; letter-spacing: 0.05em; display: block; margin-bottom: 6px;}
+    select { padding: 10px; border: 1px solid var(--borde); border-radius: 6px; font-family: inherit; width: 100%;}
+    
     .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;}
     .kpi { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 18px; border-top: 4px solid var(--laton);}
     .kpi .num { font-size: 28px; font-weight: 600; margin-bottom: 4px;}
@@ -40,8 +44,6 @@
     .grafico-caja h3 { font-family: 'Cormorant Garamond', serif; font-size: 18px; margin: 0 0 16px 0; width: 100%; text-align: left;}
     .canvas-container { position: relative; width: 100%; height: 300px; }
 
-    select { padding: 10px; border: 1px solid var(--borde); border-radius: 6px; font-family: inherit; width: 100%; max-width: 300px;}
-    
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;}
     th { padding: 10px; border-bottom: 2px solid var(--borde); color: #6F675F; }
     td { padding: 10px; border-bottom: 1px solid #F1EEEA; }
@@ -75,9 +77,25 @@
     
     .cargando { padding: 40px; text-align: center; color: #8A8279; }
 
+    /* Tarjetas de Resumen de Defectos */
+    .resumen-defectos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+    .caja-resumen { padding: 10px; border-radius: 6px; text-align: center; border: 1px solid; }
+    .caja-resumen.menor { background: #FEF6E7; border-color: #B45309; }
+    .caja-resumen.mayor { background: #FDEDE4; border-color: #C2410C; }
+    .caja-resumen.critico { background: #FCF0F0; border-color: #6E1F24; }
+    .caja-resumen.total { background: #f0f0f0; border-color: #ccc; }
+    .caja-resumen b { display: block; font-size: 20px; line-height: 1; margin-bottom: 4px; }
+    .caja-resumen span { font-size: 10px; text-transform: uppercase; font-weight: 600; }
+    
+    .caja-resumen.menor b, .caja-resumen.menor span { color: #B45309; }
+    .caja-resumen.mayor b, .caja-resumen.mayor span { color: #C2410C; }
+    .caja-resumen.critico b, .caja-resumen.critico span { color: #6E1F24; }
+    .caja-resumen.total b, .caja-resumen.total span { color: #333; }
+
     @media (max-width: 768px) {
         .graficos-grid { grid-template-columns: 1fr; }
         .detalle-grid { grid-template-columns: 1fr; }
+        .resumen-defectos { grid-template-columns: 1fr 1fr; }
     }
 </style>
 </head>
@@ -89,9 +107,21 @@
 </div>
 
 <div class="contenido">
-    <div class="seccion" style="padding-bottom: 10px;">
-        <label style="font-size: 12px; font-weight: bold; color: #6F675F;">FILTRAR POR PROVEEDOR:</label><br>
-        <select id="filtroProv"><option value="ALL">Consolidado General (Todos)</option></select>
+    <div class="seccion" style="padding-bottom: 20px;">
+        <div class="filtros-grid">
+            <div>
+                <label>FILTRAR POR PROVEEDOR</label>
+                <select id="filtroProv"><option value="ALL">Todos los proveedores</option></select>
+            </div>
+            <div>
+                <label>FILTRAR POR REFERENCIA</label>
+                <select id="filtroRef"><option value="ALL">Todas las referencias</option></select>
+            </div>
+            <div>
+                <label>FILTRAR POR AUDITORA</label>
+                <select id="filtroAuditor"><option value="ALL">Todas las auditoras</option></select>
+            </div>
+        </div>
     </div>
 
     <div class="kpis" id="panelKpis">
@@ -113,6 +143,13 @@
         </div>
     </div>
 
+    <div class="grafico-caja" style="margin-bottom: 20px;">
+        <h3>Evolución Mensual (Aprobadas vs Rechazadas)</h3>
+        <div class="canvas-container">
+            <canvas id="chartMeses"></canvas>
+        </div>
+    </div>
+
     <div class="seccion">
         <h2>Historial de Auditorías</h2>
         <div style="overflow-x: auto;">
@@ -122,13 +159,14 @@
                         <th>Fecha</th>
                         <th>Proveedor</th>
                         <th>Referencia (SKU)</th>
+                        <th>Auditora</th>
                         <th>Auditadas</th>
                         <th>Resultado</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="tablaAuditorias">
-                    <tr><td colspan="6">Cargando datos...</td></tr>
+                    <tr><td colspan="7">Cargando datos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -155,48 +193,75 @@ const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_pu
 const $ = id => document.getElementById(id);
 let auditorias = [];
 let proveedoresMap = {};
+let referenciasSet = new Set();
+let auditorasMap = {};
+
 let chartRankingInst = null;
 let chartDefectosInst = null;
+let chartMesesInst = null;
 
 async function init() {
-    // Traer auditorías finalizadas (solo con la relación estricta del proveedor y los defectos para los gráficos)
+    // Traer auditorías finalizadas con todas las relaciones necesarias
     const { data: auds } = await supabase.from('auditorias')
-        .select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)')
+        .select('*, auditoria_proveedores(nombre), auditoria_usuarios(nombre), auditoria_defectos(defecto, cantidad)')
         .eq('estado', 'finalizada')
         .order('fecha_auditoria', { ascending: false });
     
     auditorias = auds || [];
     
-    // Poblar filtro de proveedores
+    // Poblar mapas de filtros
     auditorias.forEach(a => {
         if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
+        if(a.auditoria_usuarios) auditorasMap[a.auditora_id] = a.auditoria_usuarios.nombre;
+        if(a.referencia) referenciasSet.add(a.referencia);
     });
     
-    let htmlProv = '<option value="ALL">Consolidado General (Todos)</option>';
-    Object.entries(proveedoresMap).forEach(([id, nombre]) => {
-        htmlProv += `<option value="${id}">${nombre}</option>`;
-    });
+    // Llenar Select de Proveedores
+    let htmlProv = '<option value="ALL">Todos los proveedores</option>';
+    Object.entries(proveedoresMap).forEach(([id, nombre]) => { htmlProv += `<option value="${id}">${nombre}</option>`; });
     $('filtroProv').innerHTML = htmlProv;
 
-    renderData('ALL');
+    // Llenar Select de Referencias
+    let htmlRef = '<option value="ALL">Todas las referencias</option>';
+    [...referenciasSet].sort().forEach(ref => { htmlRef += `<option value="${ref}">${ref}</option>`; });
+    $('filtroRef').innerHTML = htmlRef;
+
+    // Llenar Select de Auditoras
+    let htmlAud = '<option value="ALL">Todas las auditoras</option>';
+    Object.entries(auditorasMap).forEach(([id, nombre]) => { htmlAud += `<option value="${id}">${nombre}</option>`; });
+    $('filtroAuditor').innerHTML = htmlAud;
+
+    renderData();
 }
 
-function renderData(provId) {
-    const list = provId === 'ALL' ? auditorias : auditorias.filter(a => String(a.proveedor_id) === String(provId));
+function renderData() {
+    // Leer valores de los 3 filtros
+    const valProv = $('filtroProv').value;
+    const valRef = $('filtroRef').value;
+    const valAud = $('filtroAuditor').value;
+
+    const list = auditorias.filter(a => {
+        const matchProv = valProv === 'ALL' || String(a.proveedor_id) === String(valProv);
+        const matchRef = valRef === 'ALL' || a.referencia === valRef;
+        const matchAud = valAud === 'ALL' || String(a.auditora_id) === String(valAud);
+        return matchProv && matchRef && matchAud;
+    });
     
     let totalLote = 0;
     let totalAuditado = 0;
     let totalDefectos = 0;
     let aprobadas = 0;
     let htmlTabla = '';
+    
     const defectosCount = {};
+    const mesesCount = {};
 
     list.forEach(a => {
         // Acumular KPIs
         totalLote += Number(a.cantidad_produccion || 0);
         totalAuditado += Number(a.cantidad_auditada || 0);
         
-        // Contar defectos para el gráfico de dona
+        // Contar defectos
         if (a.auditoria_defectos) {
             a.auditoria_defectos.forEach(d => {
                 const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
@@ -206,20 +271,30 @@ function renderData(provId) {
             });
         }
         
-        if(a.resultado === 'aprobado') aprobadas++;
+        // Agrupación mensual
+        const mes = a.fecha_auditoria ? a.fecha_auditoria.substring(0, 7) : 'Sin fecha';
+        if (!mesesCount[mes]) mesesCount[mes] = { aprobadas: 0, rechazadas: 0 };
 
-        // Fila de la tabla con evento CLIC
+        if(a.resultado === 'aprobado') {
+            aprobadas++;
+            mesesCount[mes].aprobadas++;
+        } else {
+            mesesCount[mes].rechazadas++;
+        }
+
+        // Fila de la tabla
         htmlTabla += `<tr class="fila-clic" title="Clic para ver detalles" onclick="verDetalle(${a.id})">
             <td>${a.fecha_auditoria}</td>
             <td>${a.auditoria_proveedores?.nombre || 'N/A'}</td>
             <td>${a.referencia || ''} <small style="color:gray">${a.sku ? `(${a.sku})` : ''}</small></td>
+            <td>${a.auditoria_usuarios?.nombre || 'N/A'}</td>
             <td>${a.cantidad_auditada || 0}</td>
             <td><span class="estado-${a.resultado}">${a.resultado?.toUpperCase()}</span></td>
             <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver ›</td>
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="6">No hay auditorías registradas para este proveedor.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para estos filtros.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -234,16 +309,13 @@ function renderData(provId) {
         <div class="kpi"><div class="num">${tamanoMuestra}%</div><div class="titulo">Tamaño de Muestra</div></div>
     `;
 
-    // Preparar datos para Top Defectos
-    const topDefectos = Object.entries(defectosCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
+    // Top Defectos
+    const topDefectos = Object.entries(defectosCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    // Preparar datos para Ranking
+    // Ranking Proveedores
     const provScores = {};
-    const fuenteRanking = provId === 'ALL' ? auditorias : list;
-    
-    fuenteRanking.forEach(a => {
+    // El ranking siempre evaluará sobre los filtros actuales aplicados
+    list.forEach(a => {
         const pName = a.auditoria_proveedores?.nombre || 'Desconocido';
         if(!provScores[pName]) provScores[pName] = { total: 0, aprobadas: 0 };
         provScores[pName].total++;
@@ -255,14 +327,15 @@ function renderData(provId) {
         score: Math.round((datos.aprobadas / datos.total) * 100)
     })).sort((a, b) => b.score - a.score);
 
-    actualizarGraficos(ranking, topDefectos);
+    actualizarGraficos(ranking, topDefectos, mesesCount);
 }
 
-function actualizarGraficos(ranking, topDefectos) {
+function actualizarGraficos(ranking, topDefectos, mesesCount) {
     if (chartRankingInst) chartRankingInst.destroy();
     if (chartDefectosInst) chartDefectosInst.destroy();
+    if (chartMesesInst) chartMesesInst.destroy();
 
-    // Gráfico Ranking
+    // 1. Gráfico Ranking
     const ctxRanking = document.getElementById('chartRanking').getContext('2d');
     chartRankingInst = new Chart(ctxRanking, {
         type: 'bar',
@@ -277,14 +350,13 @@ function actualizarGraficos(ranking, topDefectos) {
         },
         options: {
             indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { x: { max: 100, ticks: { callback: function(value){return value+"%"} } } }
         }
     });
 
-    // Gráfico Defectos
+    // 2. Gráfico Defectos
     const ctxDefectos = document.getElementById('chartDefectos').getContext('2d');
     if (topDefectos.length === 0) {
         chartDefectosInst = new Chart(ctxDefectos, {
@@ -309,14 +381,35 @@ function actualizarGraficos(ranking, topDefectos) {
             }
         });
     }
+
+    // 3. Gráfico Evolución Mensual
+    const ctxMeses = document.getElementById('chartMeses').getContext('2d');
+    const mesesLabels = Object.keys(mesesCount).sort(); // Orden cronológico
+    const dataAprob = mesesLabels.map(m => mesesCount[m].aprobadas);
+    const dataRech = mesesLabels.map(m => mesesCount[m].rechazadas);
+
+    chartMesesInst = new Chart(ctxMeses, {
+        type: 'bar',
+        data: {
+            labels: mesesLabels,
+            datasets: [
+                { label: 'Aprobadas', data: dataAprob, backgroundColor: '#197A56', borderRadius: 4 },
+                { label: 'Rechazadas', data: dataRech, backgroundColor: '#6E1F24', borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
 }
 
-// Mostrar Detalle Completo de Auditoría (Resiliente a fallos de relaciones foráneas múltiples)
+// Mostrar Detalle Completo de Auditoría
 window.verDetalle = async function(id) {
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Descargando detalles...</div>';
     
     try {
-        // Se descargan en hilos paralelos para evitar colapsos de consultas JOIN anidadas en Supabase
         const [ { data: det, error }, { data: defs }, { data: evis }, { data: usuarios } ] = await Promise.all([
             supabase.from('auditorias').select('*, auditoria_proveedores(nombre)').eq('id', id).single(),
             supabase.from('auditoria_defectos').select('*').eq('auditoria_id', id),
@@ -326,26 +419,44 @@ window.verDetalle = async function(id) {
 
         if (error || !det) throw error;
 
-        // Encontrar el nombre de la auditora basado en el ID
         const auditora = (usuarios || []).find(u => u.id === det.auditora_id);
         const nombreAuditora = auditora ? auditora.nombre : 'N/A';
         
+        const lote = Number(det.cantidad_produccion) || 0;
+        const auditadas = Number(det.cantidad_auditada) || 0;
+        let tMenor = 0, tMayor = 0, tCritico = 0, tTotal = 0;
+        
+        if (defs) {
+            defs.forEach(d => {
+                const cant = Number(d.cantidad) || 0;
+                tTotal += cant;
+                if (d.severidad === 'menor') tMenor += cant;
+                else if (d.severidad === 'mayor') tMayor += cant;
+                else if (d.severidad === 'critico') tCritico += cant;
+            });
+        }
+        
+        const pctDefectos = auditadas > 0 ? ((tTotal / auditadas) * 100).toFixed(2) : 0;
+        const pctMuestra = lote > 0 ? ((auditadas / lote) * 100).toFixed(2) : 0;
+
         $('cuerpoDetalle').innerHTML = `
             <div class="detalle-grid">
                 <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small>(${det.sku || 'N/A'})</small></div>
                 <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores?.nombre || 'N/A'}</div>
                 <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
                 <div class="detalle-item"><b>Auditora</b>${nombreAuditora}</div>
-                <div class="detalle-item"><b>Producción (Lote)</b>${det.cantidad_produccion || 0} unidades</div>
-                <div class="detalle-item"><b>Unidades Auditadas</b>${det.cantidad_auditada || 0} unidades</div>
+                <div class="detalle-item"><b>Producción (Lote)</b>${lote} unidades</div>
+                <div class="detalle-item"><b>Unidades Auditadas</b>${auditadas} unidades</div>
+                <div class="detalle-item"><b>% Índice de Defectos</b>${pctDefectos}%</div>
+                <div class="detalle-item"><b>% Tamaño de Muestra</b>${pctMuestra}%</div>
                 <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${det.resultado?.toUpperCase() || 'N/A'}</span></div>
                 <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
             </div>
             
             <div class="seccion-detalle">
-                <h4>Defectos Registrados (${defs ? defs.length : 0})</h4>
+                <h4>Defectos Registrados (${defs ? defs.length : 0} tipos)</h4>
                 ${(defs && defs.length) ? `
-                    <table>
+                    <table style="margin-bottom: 16px;">
                         <thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead>
                         <tbody>
                             ${defs.map(d => `<tr>
@@ -356,7 +467,17 @@ window.verDetalle = async function(id) {
                             </tr>`).join('')}
                         </tbody>
                     </table>
-                ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se registraron defectos en esta auditoría.</p>'}
+                ` : '<p style="font-size:13px; color:#8A8279; margin:0 0 16px 0;">No se registraron defectos en esta auditoría.</p>'}
+            </div>
+
+            <div class="seccion-detalle">
+                <h4>Resumen de Defectos</h4>
+                <div class="resumen-defectos">
+                    <div class="caja-resumen menor"><b>${tMenor}</b><span>Menores</span></div>
+                    <div class="caja-resumen mayor"><b>${tMayor}</b><span>Mayores</span></div>
+                    <div class="caja-resumen critico"><b>${tCritico}</b><span>Críticos</span></div>
+                    <div class="caja-resumen total"><b>${tTotal}</b><span>Total</span></div>
+                </div>
             </div>
 
             <div class="seccion-detalle">
@@ -384,8 +505,12 @@ window.verDetalle = async function(id) {
 };
 
 // Cerrar Modal
-const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
-$('btnCerrarDetalle').addEventListener('click', cerrarModal);$('modalDetalle').addEventListener('click', e => { if (e.target === $('modalDetalle')) cerrarModal(); });$('filtroProv').addEventListener('change', (e) => renderData(e.target.value));
+const cerrarModal = () => $('modalDetalle').classList.remove('abierto');$('btnCerrarDetalle').addEventListener('click', cerrarModal);
+$('modalDetalle').addEventListener('click', e => { if (e.target ===$('modalDetalle')) cerrarModal(); });
+
+// Eventos de los filtros
+$('filtroProv').addEventListener('change', renderData);
+$('filtroRef').addEventListener('change', renderData);$('filtroAuditor').addEventListener('change', renderData);
 
 init();
 </script>
