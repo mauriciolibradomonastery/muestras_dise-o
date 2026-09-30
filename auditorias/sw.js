@@ -1,7 +1,7 @@
 // Service worker mínimo: permite instalar la aplicación y guarda en caché
 // solo lo estático. Los datos siempre se piden a internet, nunca a la caché.
-const CACHE = 'auditorias-v1';
-const BASICOS = ['index.html', 'agenda.html', 'manifest.json', 'logo.png', 'icono-192.png', 'icono-512.png'];
+const CACHE = 'auditorias-v2';
+const BASICOS = ['index.html', 'agenda.html', 'auditoria.html', 'manifest.json', 'logo.png', 'icono-192.png', 'icono-512.png'];
 
 self.addEventListener('install', e => {
     e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASICOS).catch(() => {})));

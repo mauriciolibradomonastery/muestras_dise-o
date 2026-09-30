@@ -195,13 +195,14 @@
 
             <div class="campo"><label for="fColeccion">Colección</label>
                 <input type="text" id="fColeccion"></div>
-            <div class="campo"><label for="fLinea">Línea</label>
-                <input type="text" id="fLinea"></div>
+            <div class="campo"><label for="fSublinea">Sublínea</label>
+                <input type="text" id="fSublinea" placeholder="t-shirt, jean, crop top…"></div>
 
             <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
                 <textarea id="fNota" placeholder="Opcional: qué revisar con especial atención"></textarea></div>
         </div>
         <div class="hoja-pie">
+            <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56;">▶ Realizar auditoría</button>
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
             <button class="btn" id="btnCerrar2">Cerrar</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
@@ -282,7 +283,7 @@ async function cargarCatalogos() {
 
     const soloAuditoras = usuarios.filter(u => u.rol === 'auditora');
     $('fAuditora').innerHTML = (soloAuditoras.length ? soloAuditoras : usuarios)
-        .map(u => `<option value="${u.id}"${u.id === yo.id ? ' selected' : ''}>${u.nombre}</option>`).join('');
+        .map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
     $('filtroAuditora').innerHTML = '<option value="">Todas las auditoras</option>' +
         usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
 
@@ -295,7 +296,7 @@ async function cargarCatalogos() {
 // Referencias reales, tomadas de la tabla de producción
 async function cargarReferencias() {
     const { data } = await supabase.from('produccion')
-        .select('descripcion, coleccion, linea, sku, proveedor').limit(5000);
+        .select('descripcion, coleccion, linea, sublinea, sku, proveedor').limit(5000);
     const mapa = new Map();
     (data || []).forEach(r => {
         const nombre = (r.descripcion || '').trim();
@@ -361,6 +362,8 @@ function abrirHoja(cita) {
     $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
     $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
+    $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
+    $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar auditoría' : '▶ Realizar auditoría';
 
     if (cita) {
         $('fProveedor').value = cita.proveedor_id || '';
@@ -371,12 +374,12 @@ function abrirHoja(cita) {
         $('fFactura').value = cita.numero_factura || '';
         $('fReferencia').value = cita.referencia || '';
         $('fColeccion').value = cita.coleccion || '';
-        $('fLinea').value = cita.linea || '';
+        $('fSublinea').value = cita.sublinea || '';
         $('fNota').value = cita.nota_programacion || '';
     } else {
         $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
         $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
-        ['fFactura','fReferencia','fColeccion','fLinea','fNota'].forEach(id => $(id).value = '');
+        ['fFactura','fReferencia','fColeccion','fSublinea','fNota'].forEach(id => $(id).value = '');
     }
     $('modal').classList.add('abierto');
 }
@@ -391,6 +394,7 @@ $('btnCerrar').addEventListener('click', cerrarHoja);
 $('btnCerrar2').addEventListener('click', cerrarHoja);
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) cerrarHoja(); });
 $('btnNueva').addEventListener('click', () => abrirHoja(null));
+$('btnEjecutar').addEventListener('click', () => { if (editando) location.href = `auditoria.html?id=${editando.id}`; });
 
 // Al elegir una referencia se completan los demás datos
 $('fReferencia').addEventListener('change', () => {
@@ -398,7 +402,7 @@ $('fReferencia').addEventListener('change', () => {
     const r = referencias.find(x => (x.descripcion || '').trim().toUpperCase() === buscada);
     if (!r) return;
     if (r.coleccion) $('fColeccion').value = r.coleccion;
-    if (r.linea) $('fLinea').value = r.linea;
+    if (r.sublinea) $('fSublinea').value = r.sublinea;
     const prov = proveedores.find(p => p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase());
     if (prov && !$('fProveedor').value) $('fProveedor').value = prov.id;
     $('pistaRef').textContent = `SKU ${r.sku || '—'} · proveedor en producción: ${r.proveedor || '—'}`;
@@ -417,7 +421,7 @@ $('btnGuardar').addEventListener('click', async () => {
         numero_factura: $('fFactura').value.trim() || null,
         referencia: $('fReferencia').value.trim().toUpperCase() || null,
         coleccion: $('fColeccion').value.trim().toUpperCase() || null,
-        linea: $('fLinea').value.trim().toUpperCase() || null,
+        sublinea: $('fSublinea').value.trim().toUpperCase() || null,
         nota_programacion: $('fNota').value.trim() || null,
     };
 
