@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Reportes · Auditorías</title>
+<title>Reportes · Auditorías Monastery Pro</title>
 <link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
 <meta name="theme-color" content="#15100E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- Importar Chart.js para los gráficos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
@@ -56,6 +56,7 @@
     table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;}
     th { padding: 14px 10px; border-bottom: 2px solid var(--borde); color: var(--texto-claro); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em;}
     td { padding: 14px 10px; border-bottom: 1px solid #F4F1EB; color: var(--texto);}
+    .num { text-align: right; }
     
     .fila-clic { cursor: pointer; transition: var(--transicion); }
     .fila-clic:hover { background: #F9F8F6; }
@@ -66,7 +67,7 @@
     /* Modal Detalles */
     .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
     .fondo.abierto { display: flex; opacity: 1;}
-    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 700px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
+    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 800px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
     .fondo.abierto .hoja { transform: translateY(0); }
     .hoja-cabeza { padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;}
     .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta);}
@@ -86,26 +87,16 @@
     .foto-card img { width: 100%; height: 160px; object-fit: cover; display: block;}
     .foto-card p { margin: 0; padding: 10px; font-size: 12px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA; font-weight: 500;}
     
-    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
+    .pastilla { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
+    .pastilla.pass { background: #EEF7F2; color: var(--verde); }
+    .pastilla.fail { background: #FCF0F0; color: var(--vino); }
+    .pastilla.na   { background: #F3F4F6; color: #4B5563; }
 
-    .resumen-defectos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
-    .caja-resumen { padding: 14px; border-radius: 8px; text-align: center; border: 1px solid; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
-    .caja-resumen.menor { border-color: var(--ambar); }
-    .caja-resumen.mayor { border-color: #C2410C; }
-    .caja-resumen.critico { border-color: var(--vino); }
-    .caja-resumen.total { border-color: var(--borde); background: #F9F8F6;}
-    .caja-resumen b { display: block; font-size: 24px; line-height: 1; margin-bottom: 6px; font-weight: 600;}
-    .caja-resumen span { font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;}
-    
-    .caja-resumen.menor b, .caja-resumen.menor span { color: var(--ambar); }
-    .caja-resumen.mayor b, .caja-resumen.mayor span { color: #C2410C; }
-    .caja-resumen.critico b, .caja-resumen.critico span { color: var(--vino); }
-    .caja-resumen.total b, .caja-resumen.total span { color: var(--tinta); }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
     @media (max-width: 768px) {
         .graficos-grid { grid-template-columns: 1fr; }
         .detalle-grid { grid-template-columns: 1fr; }
-        .resumen-defectos { grid-template-columns: 1fr 1fr; }
         .contenido { padding: 16px; }
     }
 </style>
@@ -113,7 +104,7 @@
 <body>
 
 <div class="barra">
-    <h1>Reportes y Desempeño</h1>
+    <h1>Reportes y Desempeño Pro</h1>
     <a href="agenda.html" class="volver">Volver a la Agenda</a>
 </div>
 
@@ -164,12 +155,10 @@
 <div class="fondo" id="modalDetalle">
     <div class="hoja">
         <div class="hoja-cabeza">
-            <h2>Detalle de Revisión</h2>
+            <h2>Detalle de Auditoría Pro</h2>
             <button class="cerrar" id="btnCerrarDetalle">✕</button>
         </div>
-        <div class="hoja-cuerpo" id="cuerpoDetalle">
-            <!-- Aquí se inyectan los detalles -->
-        </div>
+        <div class="hoja-cuerpo" id="cuerpoDetalle"></div>
     </div>
 </div>
 
@@ -177,7 +166,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W');
 
-const $ = function(id) { return document.getElementById(id); };
+const $ = id => document.getElementById(id);
 let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasMap = {};
 let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
 
@@ -190,47 +179,39 @@ async function init() {
         supabase.from('auditoria_usuarios').select('id, nombre')
     ]);
 
-    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error al cargar: ' + resAuds.error.message + '</td></tr>'; return; }
+    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
     
     const usuariosNombres = {};
-    if (resUsuarios.data) resUsuarios.data.forEach(function(u) { usuariosNombres[u.id] = u.nombre; });
+    if (resUsuarios.data) resUsuarios.data.forEach(u => usuariosNombres[u.id] = u.nombre);
     auditorias = resAuds.data || [];
     
-    auditorias.forEach(function(a) {
+    auditorias.forEach(a => {
         if (a.auditora_id && usuariosNombres[a.auditora_id]) a.auditoria_usuarios = { nombre: usuariosNombres[a.auditora_id] };
         if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
         if(a.auditoria_usuarios) auditorasMap[a.auditora_id] = a.auditoria_usuarios.nombre;
         if(a.referencia) referenciasSet.add(a.referencia);
     });
     
-    let htmlProv = '<option value="ALL">Todos los proveedores</option>';
-    Object.entries(proveedoresMap).forEach(function([id, nombre]) { htmlProv += '<option value="' + id + '">' + nombre + '</option>'; });
-    $('filtroProv').innerHTML = htmlProv;
-
-    let htmlRef = '<option value="ALL">Todas las referencias</option>';
-    Array.from(referenciasSet).sort().forEach(function(ref) { htmlRef += '<option value="' + ref + '">' + ref + '</option>'; });
-    $('filtroRef').innerHTML = htmlRef;
-
-    let htmlAud = '<option value="ALL">Todas las auditoras</option>';
-    Object.entries(auditorasMap).forEach(function([id, nombre]) { htmlAud += '<option value="' + id + '">' + nombre + '</option>'; });
-    $('filtroAuditor').innerHTML = htmlAud;
+    $('filtroProv').innerHTML = '<option value="ALL">Todos los proveedores</option>' + Object.entries(proveedoresMap).map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    $('filtroRef').innerHTML = '<option value="ALL">Todas las referencias</option>' + Array.from(referenciasSet).sort().map(ref => `<option value="${ref}">${ref}</option>`).join('');
+    $('filtroAuditor').innerHTML = '<option value="ALL">Todas las auditoras</option>' + Object.entries(auditorasMap).map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
 
     renderData();
 }
 
 function renderData() {
-    const valProv = $('filtroProv').value, valRef = $('filtroRef').value, valAud = $('filtroAuditor').value;
-    const list = auditorias.filter(function(a) {
+    const valProv = $('filtroProv').value, valRef = $('filtroRef').value, valAud =$('filtroAuditor').value;
+    const list = auditorias.filter(a => {
         return (valProv === 'ALL' || String(a.proveedor_id) === String(valProv)) && (valRef === 'ALL' || a.referencia === valRef) && (valAud === 'ALL' || String(a.auditora_id) === String(valAud));
     });
     
     let totalLote = 0, totalAuditado = 0, totalDefectos = 0, aprobadas = 0, htmlTabla = '';
     const defectosCount = {}, mesesCount = {};
 
-    list.forEach(function(a) {
+    list.forEach(a => {
         totalLote += Number(a.cantidad_produccion) || 0; totalAuditado += Number(a.cantidad_auditada) || 0;
         if (a.auditoria_defectos) {
-            a.auditoria_defectos.forEach(function(d) {
+            a.auditoria_defectos.forEach(d => {
                 const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
                 const cant = Number(d.cantidad) || 0;
                 totalDefectos += cant; defectosCount[defName] = (defectosCount[defName] || 0) + cant;
@@ -241,152 +222,144 @@ function renderData() {
         if (!mesesCount[mes]) mesesCount[mes] = { aprobadas: 0, rechazadas: 0 };
         if(a.resultado === 'aprobado') { aprobadas++; mesesCount[mes].aprobadas++; } else { mesesCount[mes].rechazadas++; }
 
-        const skuHtml = a.sku ? ' <small style="color:#A39C94">(' + a.sku + ')</small>' : '';
-        htmlTabla += '<tr class="fila-clic" onclick="verDetalle(' + a.id + ')">' +
-            '<td><strong style="color:var(--tinta); font-weight:500;">' + a.fecha_auditoria + '</strong></td>' +
-            '<td>' + (a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A') + '</td>' +
-            '<td>' + (a.referencia || '') + skuHtml + '</td>' +
-            '<td>' + (a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A') + '</td>' +
-            '<td>' + (a.cantidad_auditada || 0) + '</td>' +
-            '<td><span class="estado-' + (a.resultado ? a.resultado.toLowerCase() : '') + '">' + (a.resultado ? a.resultado.toUpperCase() : 'N/A') + '</span></td>' +
-            '<td style="color: var(--laton); text-align:right; font-weight: 600;">Ver ›</td>' +
-        '</tr>';
+        const skuHtml = a.sku ? ` <small style="color:#A39C94">(${a.sku})</small>` : '';
+        htmlTabla += `<tr class="fila-clic" onclick="verDetalle(${a.id})">
+            <td><strong style="color:var(--tinta); font-weight:500;">${a.fecha_auditoria || '—'}</strong></td>
+            <td>${a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A'}</td>
+            <td>${a.referencia || ''}${skuHtml}</td>
+            <td>${a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A'}</td>
+            <td>${a.cantidad_auditada || 0}</td>
+            <td><span class="estado-${a.resultado ? a.resultado.toLowerCase() : ''}">${a.resultado ? a.resultado.toUpperCase() : 'N/A'}</span></td>
+            <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver Pro ›</td>
+        </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para estos filtros.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
     const calificacion = list.length > 0 ? ((aprobadas / list.length) * 100).toFixed(0) : 0;
 
-    $('panelKpis').innerHTML = '<div class="kpi"><div class="num">' + list.length + '</div><div class="titulo">Auditorías Realizadas</div></div>' +
-        '<div class="kpi" style="border-top-color: ' + (calificacion >= 80 ? '#197A56' : '#B45309') + '"><div class="num">' + calificacion + '/100</div><div class="titulo">Calificación (Aprob.)</div></div>' +
-        '<div class="kpi"><div class="num">' + indiceDefectos + '%</div><div class="titulo">Índice de Defectos</div></div>' +
-        '<div class="kpi"><div class="num">' + tamanoMuestra + '%</div><div class="titulo">Tamaño de Muestra</div></div>';
+    $('panelKpis').innerHTML = `<div class="kpi"><div class="num">${list.length}</div><div class="titulo">Auditorías Realizadas</div></div>
+        <div class="kpi" style="border-top-color: ${calificacion >= 80 ? '#197A56' : '#B45309'}"><div class="num">${calificacion}/100</div><div class="titulo">Calificación (Aprob.)</div></div>
+        <div class="kpi"><div class="num">${indiceDefectos}%</div><div class="titulo">Índice de Defectos</div></div>
+        <div class="kpi"><div class="num">${tamanoMuestra}%</div><div class="titulo">Tamaño de Muestra</div></div>`;
 
-    const topDefectos = Object.entries(defectosCount).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5);
+    const topDefectos = Object.entries(defectosCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const provScores = {};
-    list.forEach(function(a) {
+    list.forEach(a => {
         const pName = a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'Desconocido';
         if(!provScores[pName]) provScores[pName] = { total: 0, aprobadas: 0 };
         provScores[pName].total++; if(a.resultado === 'aprobado') provScores[pName].aprobadas++;
     });
-    const ranking = Object.entries(provScores).map(function([nombre, datos]) { return { nombre: nombre, score: Math.round((datos.aprobadas / datos.total) * 100) }; }).sort(function(a, b) { return b.score - a.score; });
+    const ranking = Object.entries(provScores).map(([nombre, datos]) => ({ nombre, score: Math.round((datos.aprobadas / datos.total) * 100) })).sort((a, b) => b.score - a.score);
 
     actualizarGraficos(ranking, topDefectos, mesesCount);
 }
 
 function actualizarGraficos(ranking, topDefectos, mesesCount) {
     if (chartRankingInst) chartRankingInst.destroy(); if (chartDefectosInst) chartDefectosInst.destroy(); if (chartMesesInst) chartMesesInst.destroy();
-    
-    // Gráfica por defecto: Tipografía de Chart.js sincronizada con Inter
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color = '#736961';
+    Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#736961';
 
     chartRankingInst = new Chart($('chartRanking').getContext('2d'), {
         type: 'bar',
-        data: { labels: ranking.map(function(r) { return r.nombre; }), datasets: [{ label: 'Calificación', data: ranking.map(function(r) { return r.score; }), backgroundColor: ranking.map(function(r) { return r.score >= 80 ? '#197A56' : (r.score >= 50 ? '#B45309' : '#6E1F24'); }), borderRadius: 6 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { callback: function(value){return value+"%"} } } } }
+        data: { labels: ranking.map(r => r.nombre), datasets: [{ label: 'Calificación', data: ranking.map(r => r.score), backgroundColor: ranking.map(r => r.score >= 80 ? '#197A56' : (r.score >= 50 ? '#B45309' : '#6E1F24')), borderRadius: 6 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { callback: v => v + "%" } } } }
     });
 
     chartDefectosInst = new Chart($('chartDefectos').getContext('2d'), {
         type: 'doughnut',
-        data: topDefectos.length === 0 ? { labels: ['Sin defectos'], datasets: [{ data: [1], backgroundColor: ['#E6E1D8'] }] } : { labels: topDefectos.map(function(d) { return d[0]; }), datasets: [{ data: topDefectos.map(function(d) { return d[1]; }), backgroundColor: ['#8C2026', '#B45309', '#B08945', '#1E3A8A', '#197A56'], borderWidth: 2, borderColor: '#fff' }] },
+        data: topDefectos.length === 0 ? { labels: ['Sin defectos'], datasets: [{ data: [1], backgroundColor: ['#E6E1D8'] }] } : { labels: topDefectos.map(d => d[0]), datasets: [{ data: topDefectos.map(d => d[1]), backgroundColor: ['#8C2026', '#B45309', '#B08945', '#1E3A8A', '#197A56'], borderWidth: 2, borderColor: '#fff' }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12, weight: 500 } } } } }
     });
 
     const mesesLabels = Object.keys(mesesCount).sort();
     chartMesesInst = new Chart($('chartMeses').getContext('2d'), {
         type: 'bar',
-        data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(function(m) { return mesesCount[m].aprobadas; }), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(function(m) { return mesesCount[m].rechazadas; }), backgroundColor: '#8C2026', borderRadius: 4 }] },
+        data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(m => mesesCount[m].aprobadas), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(m => mesesCount[m].rechazadas), backgroundColor: '#8C2026', borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 }
 
 window.verDetalle = async function(id) {
-    $('modalDetalle').classList.add('abierto');
-    $('cuerpoDetalle').innerHTML = '<div class="cargando">Descargando detalles...</div>';
+    $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
     
     try {
-        const [ resDet, resDefs, resEvis, resUsuarios ] = await Promise.all([
+        const [ resDet, resDefs, resEvis, resMed, resPrue, resUsuarios ] = await Promise.all([
             supabase.from('auditorias').select('*, auditoria_proveedores(nombre)').eq('id', id).single(),
             supabase.from('auditoria_defectos').select('*').eq('auditoria_id', id),
             supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', id),
+            supabase.from('auditoria_medidas').select('*').eq('auditoria_id', id),
+            supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', id),
             supabase.from('auditoria_usuarios').select('id, nombre')
         ]);
 
-        const det = resDet.data, defs = resDefs.data, evis = resEvis.data, usuarios = resUsuarios.data;
-        if (resDet.error || !det) throw resDet.error;
+        const det = resDet.data, defs = resDefs.data || [], evis = resEvis.data || [], med = resMed.data || [], prue = resPrue.data || [];
+        const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
 
-        let nombreAuditora = 'N/A';
-        if (usuarios) { const auditora = usuarios.find(function(u) { return u.id === det.auditora_id; }); if (auditora) nombreAuditora = auditora.nombre; }
-        
-        const lote = Number(det.cantidad_produccion) || 0, auditadas = Number(det.cantidad_auditada) || 0;
-        let tMenor = 0, tMayor = 0, tCritico = 0, tTotal = 0;
-        
-        if (defs) {
-            defs.forEach(function(d) {
-                const cant = Number(d.cantidad) || 0; tTotal += cant;
-                if (d.severidad === 'menor') tMenor += cant; else if (d.severidad === 'mayor') tMayor += cant; else if (d.severidad === 'critico') tCritico += cant;
+        let html = `
+        ${det.sugerencia_aql ? `<div style="padding:14px; background:#F9F8F6; border:1px solid var(--borde); border-radius:8px; font-size:13px;"><b>🤖 Análisis Automático AQL:</b> ${det.sugerencia_aql}</div>` : ''}
+
+        <div class="detalle-grid">
+            <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small style="color:var(--texto-claro);">(${det.sku || 'N/A'})</small></div>
+            <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
+            <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
+            <div class="detalle-item"><b>Auditora</b>${auditora ? auditora.nombre : 'N/A'}</div>
+            <div class="detalle-item"><b>Lote / Muestra AQL</b>${det.cantidad_produccion || 0} unds / ${det.cantidad_auditada || 0} unds</div>
+            <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${(det.resultado || 'N/A').toUpperCase()}</span></div>
+        </div>`;
+
+        // Puntos de Medida (POM)
+        html += `<div class="seccion-detalle"><h4>Control de Medidas (POM) (${med.length})</h4>`;
+        if (med.length > 0) {
+            html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol.</th><th class="num">Real</th><th>Cumple</th></tr></thead><tbody>`;
+            med.forEach(m => {
+                html += `<tr><td><b>${m.punto_medida}</b></td><td>${m.talla}</td><td class="num">${m.medida_teorica} cm</td><td class="num">±${m.tolerancia}</td><td class="num"><b>${m.medida_real} cm</b></td><td><span class="pastilla ${m.cumple?'pass':'fail'}">${m.cumple?'CUMPLE':'FUERA'}</span></td></tr>`;
             });
-        }
-        
-        const pctDefectos = auditadas > 0 ? ((tTotal / auditadas) * 100).toFixed(2) : 0;
-        const pctMuestra = lote > 0 ? ((auditadas / lote) * 100).toFixed(2) : 0;
+            html += `</tbody></table>`;
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas para esta auditoría.</p>`; }
+        html += `</div>`;
 
-        let html = '<div class="detalle-grid">' +
-            '<div class="detalle-item"><b>Referencia / SKU</b>' + (det.referencia || 'N/A') + ' <small style="color:var(--texto-claro);">(' + (det.sku || 'N/A') + ')</small></div>' +
-            '<div class="detalle-item"><b>Proveedor</b>' + (det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A') + '</div>' +
-            '<div class="detalle-item"><b>Fecha de Revisión</b>' + (det.fecha_auditoria || 'N/A') + '</div>' +
-            '<div class="detalle-item"><b>Auditora</b>' + nombreAuditora + '</div>' +
-            '<div class="detalle-item"><b>Producción (Lote)</b>' + lote + ' unidades</div>' +
-            '<div class="detalle-item"><b>Unidades Auditadas</b>' + auditadas + ' unidades</div>' +
-            '<div class="detalle-item"><b>% Índice de Defectos</b>' + pctDefectos + '%</div>' +
-            '<div class="detalle-item"><b>% Tamaño de Muestra</b>' + pctMuestra + '%</div>' +
-            '<div class="detalle-item"><b>Resultado Final</b><span class="estado-' + (det.resultado || '') + '">' + (det.resultado ? det.resultado.toUpperCase() : 'N/A') + '</span></div>' +
-            '<div class="detalle-item"><b>N° Factura</b>' + (det.numero_factura || 'N/A') + '</div>' +
-        '</div>';
-
-        html += '<div class="seccion-detalle"><h4>Defectos Registrados (' + (defs ? defs.length : 0) + ' tipos)</h4>';
-        if (defs && defs.length > 0) {
-            html += '<table style="margin-bottom: 16px;"><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>';
-            defs.forEach(function(d) {
-                let colPastilla = d.severidad==='critico'?'color:var(--vino); background:#FCF0F0;':(d.severidad==='mayor'?'color:#C2410C; background:#FDEDE4;':'color:var(--ambar); background:#FEF6E7;');
-                html += '<tr><td><span class="pastilla" style="' + colPastilla + ' padding:4px 8px; border-radius:6px; font-size:10px;">' + d.severidad + '</span></td><td><strong style="color:var(--tinta);font-weight:500;">' + d.defecto + '</strong></td><td>' + (d.color || '-') + ' / ' + (d.talla || '-') + '</td><td class="num"><strong>' + d.cantidad + '</strong></td></tr>';
+        // Checklist de Pruebas
+        html += `<div class="seccion-detalle"><h4>Pruebas Físicas y Calidad (${prue.length})</h4>`;
+        if (prue.length > 0) {
+            html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica</th><th>Resultado</th></tr></thead><tbody>`;
+            prue.forEach(p => {
+                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado.toLowerCase()}">${p.resultado}</span></td></tr>`;
             });
-            html += '</tbody></table>';
-        } else { html += '<p style="font-size:13px; color:var(--texto-claro); margin:0 0 16px 0;">No se registraron defectos en esta auditoría.</p>'; }
-        html += '</div>';
+            html += `</tbody></table>`;
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
+        html += `</div>`;
 
-        html += '<div class="seccion-detalle"><h4>Resumen de Defectos</h4><div class="resumen-defectos">' +
-                '<div class="caja-resumen menor"><b>' + tMenor + '</b><span>Menores</span></div>' +
-                '<div class="caja-resumen mayor"><b>' + tMayor + '</b><span>Mayores</span></div>' +
-                '<div class="caja-resumen critico"><b>' + tCritico + '</b><span>Críticos</span></div>' +
-                '<div class="caja-resumen total"><b>' + tTotal + '</b><span>Total</span></div>' +
-            '</div></div>';
+        // Defectos
+        html += `<div class="seccion-detalle"><h4>Defectos Registrados (${defs.length})</h4>`;
+        if (defs.length > 0) {
+            html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
+            defs.forEach(d => {
+                html += `<tr><td><span class="pastilla ${d.severidad}">${d.severidad}</span></td><td><b>${d.defecto}</b></td><td>${d.color || '-'} / ${d.talla || '-'}</td><td class="num"><b>${d.cantidad}</b></td></tr>`;
+            });
+            html += `</tbody></table>`;
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin defectos registrados.</p>`; }
+        html += `</div>`;
 
-        let obs = det.observaciones ? det.observaciones.replace(/\n/g, '<br>') : '<i style="color:var(--texto-claro);">Sin observaciones registradas en el cierre.</i>';
-        html += '<div class="seccion-detalle"><h4>Observaciones Generales</h4><p style="font-size: 15px; margin: 0; line-height: 1.6; color: var(--tinta); background: #F9F8F6; padding: 16px; border-radius: 8px;">' + obs + '</p></div>';
-
-        html += '<div class="seccion-detalle"><h4>Evidencias Fotográficas (' + (evis ? evis.length : 0) + ')</h4>';
-        if (evis && evis.length > 0) {
-            html += '<div class="foto-grid">';
-            evis.forEach(function(e) { html += '<div class="foto-card"><a href="' + e.url + '" target="_blank" title="Clic para ampliar"><img src="' + e.url + '"></a><p>' + (e.observacion || 'Sin nota adjunta') + '</p></div>'; });
-            html += '</div>';
-        } else { html += '<p style="font-size:13px; color:var(--texto-claro); margin:0;">No se adjuntaron fotografías.</p>'; }
-        html += '</div>';
+        // Observaciones y Fotos
+        html += `<div class="seccion-detalle"><h4>Observaciones</h4><p style="font-size:14px; background:#F9F8F6; padding:12px; border-radius:8px; border:1px solid var(--borde);">${det.observaciones || 'Sin observaciones.'}</p></div>`;
+        html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
+        if (evis.length > 0) {
+            html += `<div class="foto-grid">`;
+            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank"><img src="${e.url}"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
+            html += `</div>`;
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin fotografías.</p>`; }
+        html += `</div>`;
 
         $('cuerpoDetalle').innerHTML = html;
     } catch (err) {
-        let errMsg = err ? err.message : '';
-        $('cuerpoDetalle').innerHTML = '<div class="cargando" style="color:var(--vino);">No se pudo cargar la información.<br><small>' + errMsg + '</small></div>';
+        $('cuerpoDetalle').innerHTML = `<div class="cargando" style="color:var(--vino)">Error al cargar detalle: ${err.message}</div>`;
     }
 };
 
-const cerrarModal = function() { $('modalDetalle').classList.remove('abierto'); };
-$('btnCerrarDetalle').addEventListener('click', cerrarModal);
-$('modalDetalle').addEventListener('click', function(e) { if (e.target === $('modalDetalle')) { cerrarModal(); } });
-$('filtroProv').addEventListener('change', renderData); $('filtroRef').addEventListener('change', renderData); $('filtroAuditor').addEventListener('change', renderData);
+const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
+$('btnCerrarDetalle').addEventListener('click', cerrarModal);$('modalDetalle').addEventListener('click', e => { if (e.target === $('modalDetalle')) cerrarModal(); });$('filtroProv').addEventListener('change', renderData); $('filtroRef').addEventListener('change', renderData);$('filtroAuditor').addEventListener('change', renderData);
 
 init();
 </script>
