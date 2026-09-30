@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Importar Chart.js para los gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
         --tinta: #15100E; --hueso: #EDE7DD; --vino: #6E1F24; --laton: #B08945;
@@ -18,44 +20,95 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Inter', sans-serif; background: var(--papel); color: var(--texto); padding-bottom: 30px;}
     
-    .barra { background: var(--tinta); color: var(--hueso); padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .barra { background: var(--tinta); color: var(--hueso); padding: 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30;}
     .barra h1 { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin: 0; }
     .volver { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px;}
     
     .contenido { padding: 18px; max-width: 1200px; margin: 0 auto; }
     
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;}
+    .seccion { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; margin-bottom: 20px;}
+    .seccion h2 { font-family: 'Cormorant Garamond', serif; margin: 0 0 16px 0; font-size: 22px;}
+    
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;}
     .kpi { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 18px; border-top: 4px solid var(--laton);}
     .kpi .num { font-size: 28px; font-weight: 600; margin-bottom: 4px;}
     .kpi .titulo { font-size: 12px; color: #6F675F; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
 
-    .seccion { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; margin-bottom: 20px;}
-    .seccion h2 { font-family: 'Cormorant Garamond', serif; margin: 0 0 16px 0; font-size: 22px;}
-    
-    select, input { padding: 10px; border: 1px solid var(--borde); border-radius: 6px; font-family: inherit; width: 100%; max-width: 300px; margin-bottom: 16px;}
+    /* Contenedor de gráficos */
+    .graficos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .grafico-caja { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; align-items: center;}
+    .grafico-caja h3 { font-family: 'Cormorant Garamond', serif; font-size: 18px; margin: 0 0 16px 0; width: 100%; text-align: left;}
+    .canvas-container { position: relative; width: 100%; height: 300px; }
+
+    select { padding: 10px; border: 1px solid var(--borde); border-radius: 6px; font-family: inherit; width: 100%; max-width: 300px;}
     
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;}
     th { padding: 10px; border-bottom: 2px solid var(--borde); color: #6F675F; }
     td { padding: 10px; border-bottom: 1px solid #F1EEEA; }
+    
+    .fila-clic { cursor: pointer; transition: background 0.2s; }
+    .fila-clic:hover { background: #f9f8f6; }
+    
     .estado-aprobado { color: var(--verde); font-weight: 600; background: #EEF7F2; padding: 4px 8px; border-radius: 4px;}
     .estado-rechazado { color: var(--vino); font-weight: 600; background: #FCF0F0; padding: 4px 8px; border-radius: 4px;}
+
+    /* Estilos del Modal de Detalles */
+    .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,.75); z-index: 60; align-items: center; justify-content: center; padding: 16px; }
+    .fondo.abierto { display: flex; }
+    .hoja { background: #fff; border-radius: 10px; width: 100%; max-width: 650px; max-height: 92vh; overflow: auto; display: flex; flex-direction: column;}
+    .hoja-cabeza { padding: 16px 20px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
+    .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin: 0; }
+    .cerrar { background: none; border: none; font-size: 20px; color: #9C958D; cursor: pointer; padding: 4px 8px; }
+    .hoja-cuerpo { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+    
+    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px;}
+    .detalle-item { background: var(--papel); padding: 12px; border-radius: 6px; border: 1px solid var(--borde);}
+    .detalle-item b { display: block; font-size: 11px; color: #6F675F; text-transform: uppercase; margin-bottom: 4px;}
+    
+    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 16px; }
+    .seccion-detalle h4 { margin: 0 0 10px 0; font-size: 12px; color: #6F675F; text-transform: uppercase; letter-spacing: 0.05em;}
+    
+    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+    .foto-card { border: 1px solid var(--borde); border-radius: 6px; overflow: hidden; background: #fff; }
+    .foto-card img { width: 100%; height: 140px; object-fit: cover; display: block;}
+    .foto-card p { margin: 0; padding: 8px; font-size: 12px; color: #6F675F; text-align: center; border-top: 1px solid var(--borde); background: #faf9f8;}
+
+    @media (max-width: 768px) {
+        .graficos-grid { grid-template-columns: 1fr; }
+        .detalle-grid { grid-template-columns: 1fr; }
+    }
 </style>
 </head>
 <body>
 
 <div class="barra">
-    <h1>Reportes y KPIs</h1>
+    <h1>Reportes y Desempeño</h1>
     <a href="agenda.html" class="volver">Volver a la Agenda</a>
 </div>
 
 <div class="contenido">
-    <div class="seccion">
+    <div class="seccion" style="padding-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #6F675F;">FILTRAR POR PROVEEDOR:</label><br>
-        <select id="filtroProv"><option value="ALL">Todos los proveedores</option></select>
+        <select id="filtroProv"><option value="ALL">Consolidado General (Todos)</option></select>
     </div>
 
     <div class="kpis" id="panelKpis">
-        <div class="kpi"><div class="num">Cargando...</div><div class="titulo">Auditorías Finalizadas</div></div>
+        <div class="kpi"><div class="num">...</div><div class="titulo">Cargando datos</div></div>
+    </div>
+
+    <div class="graficos-grid">
+        <div class="grafico-caja">
+            <h3>Ranking de Proveedores (Calificación)</h3>
+            <div class="canvas-container">
+                <canvas id="chartRanking"></canvas>
+            </div>
+        </div>
+        <div class="grafico-caja">
+            <h3>Top 5 Motivos de Defecto</h3>
+            <div class="canvas-container">
+                <canvas id="chartDefectos"></canvas>
+            </div>
+        </div>
     </div>
 
     <div class="seccion">
@@ -69,12 +122,26 @@
                         <th>Referencia (SKU)</th>
                         <th>Auditadas</th>
                         <th>Resultado</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="tablaAuditorias">
-                    <tr><td colspan="5">Cargando datos...</td></tr>
+                    <tr><td colspan="6">Cargando datos...</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalles de Auditoría -->
+<div class="fondo" id="modalDetalle">
+    <div class="hoja">
+        <div class="hoja-cabeza">
+            <h2>Detalle de Revisión</h2>
+            <button class="cerrar" id="btnCerrarDetalle">✕</button>
+        </div>
+        <div class="hoja-cuerpo" id="cuerpoDetalle">
+            <!-- Aquí se inyectan los detalles -->
         </div>
     </div>
 </div>
@@ -86,22 +153,24 @@ const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_pu
 const $ = id => document.getElementById(id);
 let auditorias = [];
 let proveedoresMap = {};
+let chartRankingInst = null;
+let chartDefectosInst = null;
 
 async function init() {
-    // Traer todas las auditorias finalizadas y sus defectos
+    // Traer auditorías finalizadas
     const { data: auds } = await supabase.from('auditorias')
-        .select('*, auditoria_proveedores(nombre), auditoria_defectos(cantidad)')
+        .select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)')
         .eq('estado', 'finalizada')
         .order('fecha_auditoria', { ascending: false });
     
     auditorias = auds || [];
     
-    // Poblar filtro proveedores
+    // Poblar filtro de proveedores
     auditorias.forEach(a => {
         if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
     });
     
-    let htmlProv = '<option value="ALL">Todos los proveedores</option>';
+    let htmlProv = '<option value="ALL">Consolidado General (Todos)</option>';
     Object.entries(proveedoresMap).forEach(([id, nombre]) => {
         htmlProv += `<option value="${id}">${nombre}</option>`;
     });
@@ -117,27 +186,36 @@ function renderData(provId) {
     let totalAuditado = 0;
     let totalDefectos = 0;
     let aprobadas = 0;
-    
     let htmlTabla = '';
+    const defectosCount = {};
 
     list.forEach(a => {
+        // Acumular KPIs
         totalLote += Number(a.cantidad_produccion || 0);
         totalAuditado += Number(a.cantidad_auditada || 0);
-        const defs = a.auditoria_defectos.reduce((acc, curr) => acc + Number(curr.cantidad), 0);
-        totalDefectos += defs;
+        
+        // Contar defectos para el gráfico de dona
+        a.auditoria_defectos.forEach(d => {
+            const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
+            const cant = Number(d.cantidad) || 0;
+            totalDefectos += cant;
+            defectosCount[defName] = (defectosCount[defName] || 0) + cant;
+        });
         
         if(a.resultado === 'aprobado') aprobadas++;
 
-        htmlTabla += `<tr>
+        // Fila de la tabla con evento CLIC
+        htmlTabla += `<tr class="fila-clic" title="Clic para ver detalles" onclick="verDetalle(${a.id})">
             <td>${a.fecha_auditoria}</td>
             <td>${a.auditoria_proveedores?.nombre || 'N/A'}</td>
             <td>${a.referencia || ''} <small style="color:gray">${a.sku ? `(${a.sku})` : ''}</small></td>
             <td>${a.cantidad_auditada || 0}</td>
             <td><span class="estado-${a.resultado}">${a.resultado.toUpperCase()}</span></td>
+            <td style="color: var(--laton); text-align:right;">Ver ›</td>
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="5">No hay auditorías registradas para este proveedor.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="6">No hay auditorías registradas para este proveedor.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -145,15 +223,160 @@ function renderData(provId) {
 
     $('panelKpis').innerHTML = `
         <div class="kpi"><div class="num">${list.length}</div><div class="titulo">Auditorías Realizadas</div></div>
-        <div class="kpi" style="border-top-color: ${calificacion > 80 ? '#197A56' : '#B45309'}">
+        <div class="kpi" style="border-top-color: ${calificacion >= 80 ? '#197A56' : '#B45309'}">
             <div class="num">${calificacion}/100</div><div class="titulo">Calificación (Aprobaciones)</div>
         </div>
         <div class="kpi"><div class="num">${indiceDefectos}%</div><div class="titulo">Índice de Defectos</div></div>
         <div class="kpi"><div class="num">${tamanoMuestra}%</div><div class="titulo">Tamaño de Muestra</div></div>
     `;
+
+    // Preparar datos para Top Defectos
+    const topDefectos = Object.entries(defectosCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    // Preparar datos para Ranking
+    const provScores = {};
+    const fuenteRanking = provId === 'ALL' ? auditorias : list;
+    
+    fuenteRanking.forEach(a => {
+        const pName = a.auditoria_proveedores?.nombre || 'Desconocido';
+        if(!provScores[pName]) provScores[pName] = { total: 0, aprobadas: 0 };
+        provScores[pName].total++;
+        if(a.resultado === 'aprobado') provScores[pName].aprobadas++;
+    });
+
+    const ranking = Object.entries(provScores).map(([nombre, datos]) => ({
+        nombre,
+        score: Math.round((datos.aprobadas / datos.total) * 100)
+    })).sort((a, b) => b.score - a.score);
+
+    actualizarGraficos(ranking, topDefectos);
 }
 
-$('filtroProv').addEventListener('change', (e) => renderData(e.target.value));
+function actualizarGraficos(ranking, topDefectos) {
+    if (chartRankingInst) chartRankingInst.destroy();
+    if (chartDefectosInst) chartDefectosInst.destroy();
+
+    // Gráfico Ranking
+    const ctxRanking = document.getElementById('chartRanking').getContext('2d');
+    chartRankingInst = new Chart(ctxRanking, {
+        type: 'bar',
+        data: {
+            labels: ranking.map(r => r.nombre),
+            datasets: [{
+                label: 'Calificación',
+                data: ranking.map(r => r.score),
+                backgroundColor: ranking.map(r => r.score >= 80 ? '#197A56' : (r.score >= 50 ? '#B45309' : '#6E1F24')),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { max: 100, ticks: { callback: function(value){return value+"%"} } } }
+        }
+    });
+
+    // Gráfico Defectos
+    const ctxDefectos = document.getElementById('chartDefectos').getContext('2d');
+    if (topDefectos.length === 0) {
+        chartDefectosInst = new Chart(ctxDefectos, {
+            type: 'doughnut',
+            data: { labels: ['Sin defectos'], datasets: [{ data: [1], backgroundColor: ['#E2DCD4'] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: {enabled: false} } }
+        });
+    } else {
+        chartDefectosInst = new Chart(ctxDefectos, {
+            type: 'doughnut',
+            data: {
+                labels: topDefectos.map(d => d[0]),
+                datasets: [{
+                    data: topDefectos.map(d => d[1]),
+                    backgroundColor: ['#6E1F24', '#B45309', '#B08945', '#1E3A8A', '#197A56'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } }
+            }
+        });
+    }
+}
+
+// Mostrar Detalle Completo
+window.verDetalle = async function(id) {
+    $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Descargando detalles...</div>';
+    
+    // Consultar todos los datos relacionados a esta auditoría
+    const { data: det, error } = await supabase.from('auditorias')
+        .select('*, auditoria_proveedores(nombre), auditoria_usuarios(nombre), auditoria_defectos(*), auditoria_evidencias(*)')
+        .eq('id', id).single();
+        
+    if (error || !det) {
+        $('cuerpoDetalle').innerHTML = '<div class="cargando" style="color:#8C2026;">No se pudo cargar la información.</div>';
+        return;
+    }
+
+    const defs = det.auditoria_defectos || [];
+    const evis = det.auditoria_evidencias || [];
+    
+    $('cuerpoDetalle').innerHTML = `
+        <div class="detalle-grid">
+            <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small>(${det.sku || 'N/A'})</small></div>
+            <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores?.nombre || 'N/A'}</div>
+            <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria}</div>
+            <div class="detalle-item"><b>Auditora</b>${det.auditoria_usuarios?.nombre || 'N/A'}</div>
+            <div class="detalle-item"><b>Producción (Lote)</b>${det.cantidad_produccion || 0} unidades</div>
+            <div class="detalle-item"><b>Unidades Auditadas</b>${det.cantidad_auditada || 0} unidades</div>
+            <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${det.resultado?.toUpperCase()}</span></div>
+            <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
+        </div>
+        
+        <div class="seccion-detalle">
+            <h4>Defectos Registrados (${defs.length})</h4>
+            ${defs.length ? `
+                <table>
+                    <thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead>
+                    <tbody>
+                        ${defs.map(d => `<tr>
+                            <td><span class="pastilla" style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:11px;">${d.severidad}</span></td>
+                            <td>${d.defecto}</td>
+                            <td>${d.color || '-'} / ${d.talla || '-'}</td>
+                            <td class="num">${d.cantidad}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se registraron defectos en esta auditoría.</p>'}
+        </div>
+
+        <div class="seccion-detalle">
+            <h4>Observaciones Generales</h4>
+            <p style="font-size: 14px; margin: 0; line-height: 1.5;">${det.observaciones ? det.observaciones.replace(/\n/g, '<br>') : '<i style="color:#8A8279">Sin observaciones.</i>'}</p>
+        </div>
+        
+        <div class="seccion-detalle">
+            <h4>Evidencias Fotográficas (${evis.length})</h4>
+            ${evis.length ? `
+                <div class="foto-grid">
+                    ${evis.map(e => `
+                        <div class="foto-card">
+                            <a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}"></a>
+                            <p>${e.observacion || 'Sin nota adjunta'}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se adjuntaron fotografías.</p>'}
+        </div>
+    `;
+};
+
+// Cerrar Modal
+const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
+$('btnCerrarDetalle').addEventListener('click', cerrarModal);$('modalDetalle').addEventListener('click', e => { if (e.target === $('modalDetalle')) cerrarModal(); });$('filtroProv').addEventListener('change', (e) => renderData(e.target.value));
 
 init();
 </script>
