@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda · Auditorías Monastery</title>
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#15100E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --tinta: #15100E; --hueso: #EDE7DD; --vino: #6E1F24; --laton: #B08945;
+        --humo: rgba(237,231,221,.55); --linea: rgba(237,231,221,.14);
+        --papel: #F6F4F1; --texto: #241E1A; --borde: #E2DCD4;
+        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif;
+        background: var(--papel); color: var(--texto);
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+
+    /* ---------- Barra superior ---------- */
+    .barra {
+        background: var(--tinta); color: var(--hueso);
+        padding: calc(14px + env(safe-area-inset-top)) 18px 14px;
+        display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 30;
+    }
+    .barra h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 300;
+        font-size: 24px; margin: 0; flex: 1; }
+    .quien { font-size: 12px; color: var(--humo); text-align: right; line-height: 1.4; }
+    .quien b { color: var(--hueso); display: block; font-weight: 500; }
+    .salir { background: none; border: 1px solid var(--linea); color: var(--hueso);
+        border-radius: 4px; padding: 8px 12px; font-family: inherit; font-size: 12px; cursor: pointer; }
+    .salir:hover { border-color: var(--vino); background: rgba(110,31,36,.3); }
+
+    .contenido { padding: 18px; max-width: 1400px; margin: 0 auto; }
+
+    /* ---------- Resumen ---------- */
+    .resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px; margin-bottom: 18px; }
+    .dato { background: #fff; border: 1px solid var(--borde); border-left: 3px solid var(--azul);
+        border-radius: 6px; padding: 12px 14px; }
+    .dato.vencidas { border-left-color: var(--vino); }
+    .dato.curso    { border-left-color: var(--ambar); }
+    .dato.listas   { border-left-color: var(--verde); }
+    .dato .n { font-size: 24px; font-weight: 600; line-height: 1; }
+    .dato .t { font-size: 11px; color: #6F675F; margin-top: 5px; }
+
+    /* ---------- Controles ---------- */
+    .controles { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .semana { display: flex; align-items: center; gap: 8px; background: #fff;
+        border: 1px solid var(--borde); border-radius: 6px; padding: 5px; }
+    .semana button { background: none; border: none; font-size: 17px; cursor: pointer;
+        padding: 6px 11px; border-radius: 4px; color: var(--texto); }
+    .semana button:hover { background: var(--papel); }
+    .semana .rango { font-size: 13px; font-weight: 500; min-width: 172px; text-align: center; }
+    select, .btn {
+        font-family: inherit; font-size: 13px; padding: 10px 12px; border-radius: 6px;
+        border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer;
+    }
+    .btn-nueva { background: var(--tinta); color: var(--hueso); border-color: var(--tinta);
+        font-weight: 500; padding: 11px 18px; }
+    .btn-nueva:hover { background: #241c18; }
+
+    /* ---------- Semana ---------- */
+    .grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .dia { background: #fff; border: 1px solid var(--borde); border-radius: 6px; min-height: 130px;
+        display: flex; flex-direction: column; }
+    .dia.hoy { border-color: var(--laton); box-shadow: 0 0 0 1px var(--laton); }
+    .dia-cabeza { padding: 9px 10px; border-bottom: 1px solid var(--borde); font-size: 11px;
+        color: #6F675F; display: flex; justify-content: space-between; align-items: baseline; }
+    .dia-cabeza b { font-size: 15px; color: var(--texto); }
+    .dia-cuerpo { padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+
+    .cita { border-radius: 5px; padding: 8px 9px; font-size: 12px; cursor: pointer;
+        border-left: 3px solid var(--azul); background: #F2F5FC; transition: transform .12s; }
+    .cita:hover { transform: translateX(2px); }
+    .cita.vencida    { background: #FCF0F0; border-left-color: var(--vino); }
+    .cita.en_curso   { background: #FEF6E7; border-left-color: var(--ambar); }
+    .cita.finalizada { background: #EEF7F2; border-left-color: var(--verde); }
+    .cita.cancelada  { background: #F3F1EF; border-left-color: #A39C94; opacity: .65; text-decoration: line-through; }
+    .cita .hora { font-weight: 600; }
+    .cita .prov { font-weight: 500; }
+    .cita .ref, .cita .aud { color: #6F675F; font-size: 11px; }
+    .vacio-dia { color: #C3BCB4; font-size: 11px; padding: 6px; text-align: center; }
+
+    /* ---------- Formulario ---------- */
+    .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,.72); z-index: 60;
+        align-items: center; justify-content: center; padding: 16px; }
+    .fondo.abierto { display: flex; }
+    .hoja { background: #fff; border-radius: 10px; width: 100%; max-width: 560px;
+        max-height: 92vh; overflow: auto; }
+    .hoja-cabeza { padding: 16px 20px; border-bottom: 1px solid var(--borde); position: sticky; top: 0;
+        background: #fff; display: flex; justify-content: space-between; align-items: center; }
+    .hoja-cabeza h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500;
+        font-size: 22px; margin: 0; }
+    .cerrar { background: none; border: none; font-size: 20px; color: #9C958D; cursor: pointer; padding: 4px 8px; }
+    .hoja-cuerpo { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .hoja-cuerpo .ancho { grid-column: 1 / -1; }
+    .campo label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em;
+        text-transform: uppercase; color: #6F675F; margin-bottom: 6px; }
+    .campo input, .campo select, .campo textarea {
+        width: 100%; padding: 11px 12px; font-size: 16px; border: 1px solid var(--borde);
+        border-radius: 6px; font-family: inherit; color: var(--texto); background: #fff; outline: none;
+    }
+    .campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--laton); }
+    .campo textarea { min-height: 74px; resize: vertical; }
+    .pista { font-size: 11px; color: #8A8279; margin-top: 5px; }
+    .hoja-pie { padding: 16px 20px; border-top: 1px solid var(--borde); display: flex;
+        gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; background: #fff; }
+    .btn-guardar { background: var(--laton); color: #1a1512; border: none; border-radius: 6px;
+        padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-guardar:disabled { background: #D6CFC6; color: #8A8279; cursor: not-allowed; }
+    .mensaje { display: none; margin: 0 20px; padding: 11px 13px; border-radius: 6px; font-size: 13px; }
+    .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
+    .mensaje.ok    { display: block; background: #EEF7F2; color: #14663F; border: 1px solid #BFE2D0; }
+
+    .cargando { padding: 40px; text-align: center; color: #8A8279; }
+
+    @media (max-width: 900px) {
+        .grilla { grid-template-columns: 1fr; }
+        .dia { min-height: auto; }
+        .dia:has(.vacio-dia) { display: none; }      /* en el celular, los días vacíos no ocupan espacio */
+        .hoja-cuerpo { grid-template-columns: 1fr; }
+        .contenido { padding: 14px; }
+        .semana .rango { min-width: 130px; font-size: 12px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="barra">
+    <h1>Agenda de auditorías</h1>
+    <div class="quien"><b id="miNombre">…</b><span id="miRol"></span></div>
+    <button class="salir" id="btnSalir">Salir</button>
+</div>
+
+<div class="contenido">
+    <div class="resumen" id="resumen"></div>
+
+    <div class="controles">
+        <div class="semana">
+            <button id="antes" aria-label="Semana anterior">‹</button>
+            <span class="rango" id="rango"></span>
+            <button id="despues" aria-label="Semana siguiente">›</button>
+        </div>
+        <button class="btn" id="hoy">Hoy</button>
+        <select id="filtroAuditora"><option value="">Todas las auditoras</option></select>
+        <select id="filtroEstado">
+            <option value="">Todos los estados</option>
+            <option value="programada">Programadas</option>
+            <option value="en_curso">En curso</option>
+            <option value="finalizada">Finalizadas</option>
+            <option value="cancelada">Canceladas</option>
+        </select>
+        <button class="btn btn-nueva" id="btnNueva">+ Programar auditoría</button>
+    </div>
+
+    <div class="grilla" id="grilla"><div class="cargando">Cargando…</div></div>
+</div>
+
+<!-- Formulario de programación -->
+<div class="fondo" id="modal">
+    <div class="hoja">
+        <div class="hoja-cabeza">
+            <h2 id="tituloHoja">Programar auditoría</h2>
+            <button class="cerrar" id="btnCerrar">✕</button>
+        </div>
+        <div class="mensaje" id="mensajeHoja"></div>
+        <div class="hoja-cuerpo">
+            <div class="campo"><label for="fProveedor">Proveedor</label>
+                <select id="fProveedor"></select></div>
+            <div class="campo"><label for="fTipo">Tipo de auditoría</label>
+                <select id="fTipo"></select></div>
+
+            <div class="campo"><label for="fFecha">Fecha</label>
+                <input type="date" id="fFecha"></div>
+            <div class="campo"><label for="fHora">Hora</label>
+                <input type="time" id="fHora" value="08:00"></div>
+
+            <div class="campo"><label for="fAuditora">Auditora asignada</label>
+                <select id="fAuditora"></select></div>
+            <div class="campo"><label for="fFactura">N° factura</label>
+                <input type="text" id="fFactura" placeholder="Opcional"></div>
+
+            <div class="campo ancho"><label for="fReferencia">Referencia a auditar</label>
+                <input type="text" id="fReferencia" list="listaReferencias" placeholder="Escribe para buscar: kametu, evenky…" autocomplete="off">
+                <datalist id="listaReferencias"></datalist>
+                <div class="pista" id="pistaRef">Se toma de la base de producción. Al elegirla se llenan colección, línea y SKU.</div></div>
+
+            <div class="campo"><label for="fColeccion">Colección</label>
+                <input type="text" id="fColeccion"></div>
+            <div class="campo"><label for="fLinea">Línea</label>
+                <input type="text" id="fLinea"></div>
+
+            <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
+                <textarea id="fNota" placeholder="Opcional: qué revisar con especial atención"></textarea></div>
+        </div>
+        <div class="hoja-pie">
+            <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
+            <button class="btn" id="btnCerrar2">Cerrar</button>
+            <button class="btn-guardar" id="btnGuardar">Programar</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+    'https://emljzsxypeqecevffmwr.supabase.co',
+    'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W',
+    { auth: { storage: window.localStorage } }
+);
+
+const $ = id => document.getElementById(id);
+const DIAS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const iso = f => f.toLocaleDateString('sv');                       // 2026-09-28
+const hoyISO = iso(new Date());
+
+let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
+let lunes = inicioSemana(new Date());
+let editando = null;
+
+// ---------- Sesión ----------
+const { data: { session } } = await supabase.auth.getSession();
+if (!session) location.replace('index.html');
+
+{
+    const { data } = await supabase.from('auditoria_usuarios')
+        .select('id, nombre, rol, activo').eq('id', session.user.id).maybeSingle();
+    if (!data || !data.activo) { await supabase.auth.signOut(); location.replace('index.html'); }
+    yo = data;
+    $('miNombre').textContent = yo.nombre;
+    $('miRol').textContent = yo.rol === 'jefe' ? 'coordinación' : 'auditora';
+}
+
+$('btnSalir').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('auditoria_perfil');
+    location.replace('index.html');
+});
+
+// ---------- Semana ----------
+function inicioSemana(fecha) {
+    const f = new Date(fecha);
+    const dia = (f.getDay() + 6) % 7;          // lunes = 0
+    f.setDate(f.getDate() - dia);
+    f.setHours(0, 0, 0, 0);
+    return f;
+}
+const sumarDias = (f, n) => { const x = new Date(f); x.setDate(x.getDate() + n); return x; };
+
+function pintarRango() {
+    const fin = sumarDias(lunes, 6);
+    const mismoMes = lunes.getMonth() === fin.getMonth();
+    $('rango').textContent = mismoMes
+        ? `${lunes.getDate()} – ${fin.getDate()} de ${MESES[fin.getMonth()]}`
+        : `${lunes.getDate()} ${MESES[lunes.getMonth()].slice(0,3)} – ${fin.getDate()} ${MESES[fin.getMonth()].slice(0,3)}`;
+}
+
+// ---------- Catálogos ----------
+async function cargarCatalogos() {
+    const [prov, tip, usu] = await Promise.all([
+        supabase.from('auditoria_proveedores').select('id, nombre').eq('activo', true).order('nombre'),
+        supabase.from('auditoria_tipos').select('id, nombre').eq('activo', true).order('nombre'),
+        supabase.from('auditoria_usuarios').select('id, nombre, rol').eq('activo', true).order('nombre'),
+    ]);
+    proveedores = prov.data || [];
+    tipos = tip.data || [];
+    usuarios = usu.data || [];
+
+    $('fProveedor').innerHTML = '<option value="">Elegir…</option>' +
+        proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    $('fTipo').innerHTML = tipos.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+
+    const soloAuditoras = usuarios.filter(u => u.rol === 'auditora');
+    $('fAuditora').innerHTML = (soloAuditoras.length ? soloAuditoras : usuarios)
+        .map(u => `<option value="${u.id}"${u.id === yo.id ? ' selected' : ''}>${u.nombre}</option>`).join('');
+    $('filtroAuditora').innerHTML = '<option value="">Todas las auditoras</option>' +
+        usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+    if (!proveedores.length) {
+        $('mensajeHoja').className = 'mensaje error';
+        $('mensajeHoja').textContent = 'Todavía no hay proveedores cargados. El coordinador debe agregarlos primero.';
+    }
+}
+
+// Referencias reales, tomadas de la tabla de producción
+async function cargarReferencias() {
+    const { data } = await supabase.from('produccion')
+        .select('descripcion, coleccion, linea, sku, proveedor').limit(5000);
+    const mapa = new Map();
+    (data || []).forEach(r => {
+        const nombre = (r.descripcion || '').trim();
+        if (nombre && !mapa.has(nombre.toUpperCase())) mapa.set(nombre.toUpperCase(), r);
+    });
+    referencias = [...mapa.values()];
+    $('listaReferencias').innerHTML = referencias
+        .map(r => `<option value="${(r.descripcion || '').trim()}">`).join('');
+}
+
+// ---------- Auditorías ----------
+async function cargarAuditorias() {
+    const desde = iso(lunes), hasta = iso(sumarDias(lunes, 6));
+    const { data, error } = await supabase.from('v_agenda_auditorias')
+        .select('*').gte('fecha_programada', desde).lte('fecha_programada', hasta)
+        .order('hora_programada');
+    if (error) { $('grilla').innerHTML = `<div class="cargando">No se pudo cargar: ${error.message}</div>`; return; }
+    auditorias = data || [];
+    pintar();
+}
+
+function filtradas() {
+    const a = $('filtroAuditora').value, e = $('filtroEstado').value;
+    return auditorias.filter(x => (!a || x.auditora_id === a) && (!e || x.estado === e));
+}
+
+function pintar() {
+    pintarRango();
+    const lista = filtradas();
+
+    const cuenta = est => lista.filter(x => x.estado === est).length;
+    $('resumen').innerHTML = `
+        <div class="dato"><div class="n">${cuenta('programada')}</div><div class="t">Programadas esta semana</div></div>
+        <div class="dato vencidas"><div class="n">${lista.filter(x => x.vencida).length}</div><div class="t">Vencidas sin realizar</div></div>
+        <div class="dato curso"><div class="n">${cuenta('en_curso')}</div><div class="t">En curso</div></div>
+        <div class="dato listas"><div class="n">${cuenta('finalizada')}</div><div class="t">Finalizadas</div></div>`;
+
+    $('grilla').innerHTML = DIAS.map((nombre, i) => {
+        const fecha = sumarDias(lunes, i);
+        const clave = iso(fecha);
+        const delDia = lista.filter(x => x.fecha_programada === clave);
+        return `
+        <div class="dia ${clave === hoyISO ? 'hoy' : ''}">
+            <div class="dia-cabeza"><span>${nombre}</span><b>${fecha.getDate()}</b></div>
+            <div class="dia-cuerpo">
+                ${delDia.length ? delDia.map(c => `
+                    <div class="cita ${c.vencida ? 'vencida' : c.estado}" onclick="abrirCita(${c.id})">
+                        <div class="hora">${(c.hora_programada || '').slice(0,5)}</div>
+                        <div class="prov">${c.proveedor}</div>
+                        <div class="ref">${c.referencia || 'sin referencia'} · ${c.tipo}</div>
+                        <div class="aud">${c.auditora || ''}</div>
+                    </div>`).join('')
+                : '<div class="vacio-dia">—</div>'}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ---------- Formulario ----------
+function abrirHoja(cita) {
+    editando = cita || null;
+    $('mensajeHoja').className = 'mensaje';
+    $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
+    $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
+    $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
+
+    if (cita) {
+        $('fProveedor').value = cita.proveedor_id || '';
+        $('fTipo').value = cita.tipo_id || '';
+        $('fFecha').value = cita.fecha_programada;
+        $('fHora').value = (cita.hora_programada || '08:00').slice(0, 5);
+        $('fAuditora').value = cita.auditora_id || '';
+        $('fFactura').value = cita.numero_factura || '';
+        $('fReferencia').value = cita.referencia || '';
+        $('fColeccion').value = cita.coleccion || '';
+        $('fLinea').value = cita.linea || '';
+        $('fNota').value = cita.nota_programacion || '';
+    } else {
+        $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
+        $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
+        ['fFactura','fReferencia','fColeccion','fLinea','fNota'].forEach(id => $(id).value = '');
+    }
+    $('modal').classList.add('abierto');
+}
+
+window.abrirCita = async function(id) {
+    const { data } = await supabase.from('auditorias').select('*').eq('id', id).maybeSingle();
+    if (data) abrirHoja(data);
+};
+
+const cerrarHoja = () => $('modal').classList.remove('abierto');
+$('btnCerrar').addEventListener('click', cerrarHoja);
+$('btnCerrar2').addEventListener('click', cerrarHoja);
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) cerrarHoja(); });
+$('btnNueva').addEventListener('click', () => abrirHoja(null));
+
+// Al elegir una referencia se completan los demás datos
+$('fReferencia').addEventListener('change', () => {
+    const buscada = $('fReferencia').value.trim().toUpperCase();
+    const r = referencias.find(x => (x.descripcion || '').trim().toUpperCase() === buscada);
+    if (!r) return;
+    if (r.coleccion) $('fColeccion').value = r.coleccion;
+    if (r.linea) $('fLinea').value = r.linea;
+    const prov = proveedores.find(p => p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase());
+    if (prov && !$('fProveedor').value) $('fProveedor').value = prov.id;
+    $('pistaRef').textContent = `SKU ${r.sku || '—'} · proveedor en producción: ${r.proveedor || '—'}`;
+});
+
+$('btnGuardar').addEventListener('click', async () => {
+    const msg = $('mensajeHoja');
+    msg.className = 'mensaje';
+
+    const datos = {
+        proveedor_id: +$('fProveedor').value || null,
+        tipo_id: +$('fTipo').value || null,
+        auditora_id: $('fAuditora').value || null,
+        fecha_programada: $('fFecha').value,
+        hora_programada: $('fHora').value,
+        numero_factura: $('fFactura').value.trim() || null,
+        referencia: $('fReferencia').value.trim().toUpperCase() || null,
+        coleccion: $('fColeccion').value.trim().toUpperCase() || null,
+        linea: $('fLinea').value.trim().toUpperCase() || null,
+        nota_programacion: $('fNota').value.trim() || null,
+    };
+
+    if (!datos.proveedor_id || !datos.tipo_id || !datos.auditora_id || !datos.fecha_programada || !datos.hora_programada) {
+        msg.className = 'mensaje error';
+        msg.textContent = 'Faltan datos: proveedor, tipo, auditora, fecha y hora son obligatorios.';
+        return;
+    }
+
+    const btn = $('btnGuardar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    const { error } = editando
+        ? await supabase.from('auditorias').update(datos).eq('id', editando.id)
+        : await supabase.from('auditorias').insert({ ...datos, programada_por: yo.id });
+
+    btn.disabled = false; btn.textContent = editando ? 'Guardar cambios' : 'Programar';
+
+    if (error) { msg.className = 'mensaje error'; msg.textContent = 'No se pudo guardar: ' + error.message; return; }
+
+    cerrarHoja();
+    await cargarAuditorias();
+});
+
+$('btnCancelarCita').addEventListener('click', async () => {
+    if (!editando || !confirm('¿Cancelar esta auditoría programada?')) return;
+    const { error } = await supabase.from('auditorias').update({ estado: 'cancelada' }).eq('id', editando.id);
+    if (error) { $('mensajeHoja').className = 'mensaje error'; $('mensajeHoja').textContent = error.message; return; }
+    cerrarHoja();
+    await cargarAuditorias();
+});
+
+// ---------- Navegación ----------
+$('antes').addEventListener('click',   () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
+$('despues').addEventListener('click', () => { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
+$('hoy').addEventListener('click',     () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });
+$('filtroAuditora').addEventListener('change', pintar);
+$('filtroEstado').addEventListener('change', pintar);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+await cargarCatalogos();
+await cargarAuditorias();
+cargarReferencias();     // en segundo plano: es la consulta más pesada
+</script>
+</body>
+</html>
