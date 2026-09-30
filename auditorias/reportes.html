@@ -91,11 +91,11 @@
     .detalle-item { background: #FDFBF7; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--borde);}
     .detalle-item b { display: block; font-size: 10px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em;}
     
-    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 16px; page-break-inside: avoid; }
-    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 600; margin: 0 0 12px 0; font-size: 20px; color: var(--tinta);}
+    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 16px; page-break-inside: avoid !important; break-inside: avoid !important; }
+    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 600; margin: 0 0 12px 0; font-size: 20px; color: var(--tinta); page-break-after: avoid !important; break-after: avoid !important;}
     
     .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-    .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; page-break-inside: avoid; }
+    .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; page-break-inside: avoid !important; break-inside: avoid !important; }
     .foto-card img { width: 100%; height: 150px; object-fit: cover; display: block;}
     .foto-card p { margin: 0; padding: 8px; font-size: 11px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA;}
     
@@ -107,8 +107,10 @@
     .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
     .pastilla.critico { background: #FCF0F0; color: var(--vino); }
 
-    .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+    .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 12px; page-break-inside: avoid !important; break-inside: avoid !important; }
     .tabla-aql-comparativa th { background: #FDFBF7; }
+    
+    tr { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
@@ -441,42 +443,52 @@ window.verDetalle = async function(id) {
     }
 };
 
-// Generador de PDF que evita cortes
-$('btnDescargarPdf').addEventListener('click', () => {
+// Generador de PDF ultra-estable sin hojas en blanco
+$('btnDescargarPdf').addEventListener('click', async () => {
     const btn = $('btnDescargarPdf');
+    const modalHoja = document.querySelector('#modalDetalle .hoja');
+    const cabeza = document.querySelector('#modalDetalle .hoja-cabeza');
+    
     btn.disabled = true;
     btn.textContent = '⏳ Generando PDF...';
 
-    // Clonar contenido fuera de pantalla para desplegar todo sin el scroll del modal
-    const clon = $('cuerpoDetalle').cloneNode(true);
-    clon.style.width = '790px';
-    clon.style.padding = '20px';
-    clon.style.background = '#fff';
-    clon.style.position = 'absolute';
-    clon.style.left = '-9999px';
-    clon.style.top = '0px';
-    document.body.appendChild(clon);
+    // 1. Ocultar la barra superior del modal durante la captura
+    cabeza.style.display = 'none';
+    
+    // 2. Extender temporalmente la altura para captura completa en pantalla
+    const maxHOriginal = modalHoja.style.maxHeight;
+    const overflowOriginal = modalHoja.style.overflow;
+    modalHoja.style.maxHeight = 'none';
+    modalHoja.style.overflow = 'visible';
 
     const opt = {
-        margin:       [10, 10, 10, 10],
+        margin:       [12, 12, 12, 12],
         filename:     `Informe_Auditoria_${refActual}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            allowTaint: true,
+            scrollX: 0,
+            scrollY: 0
+        },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    html2pdf().set(opt).from(clon).save().then(() => {
-        document.body.removeChild(clon);
+    try {
+        await html2pdf().set(opt).from($('cuerpoDetalle')).save();
+    } catch (err) {
+        console.error('Error generando PDF:', err);
+        alert('Ocurrió un error al generar el PDF. Intenta nuevamente.');
+    } finally {
+        // 3. Restablecer estilos de la modal
+        cabeza.style.display = 'flex';
+        modalHoja.style.maxHeight = maxHOriginal;
+        modalHoja.style.overflow = overflowOriginal;
         btn.disabled = false;
         btn.textContent = '📄 Descargar PDF';
-    }).catch(err => {
-        console.error(err);
-        if (document.body.contains(clon)) document.body.removeChild(clon);
-        btn.disabled = false;
-        btn.textContent = '📄 Descargar PDF';
-        alert('Hubo un inconveniente al generar el PDF. Intenta nuevamente.');
-    });
+    }
 });
 
 const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
