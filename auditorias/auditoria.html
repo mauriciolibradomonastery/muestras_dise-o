@@ -53,7 +53,6 @@
     .btn-oscuro { background:var(--tinta); color:var(--hueso); border-color:var(--tinta); }
     .btn-laton { background:var(--laton); color:#1a1512; border:none; font-weight:600; }
     .btn-chico { padding:7px 11px; font-size:12.5px; }
-    .btn-rojo { color:#8C2026; border-color:#E8C4C6; background:#FCF0F0; }
 
     table { width:100%; border-collapse:collapse; font-size:13.5px; }
     th { text-align:left; font-size:11px; font-weight:600; color:#6F675F; text-transform:uppercase;
@@ -78,16 +77,24 @@
     .pastilla.mayor { background:#FDEDE4; color:#C2410C; }
     .pastilla.critico { background:#FCF0F0; color:var(--vino); }
 
-    .fotos { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; margin-top:12px; }
-    .foto { position:relative; aspect-ratio:3/4; border-radius:6px; overflow:hidden; background:var(--papel);
-        border:1px solid var(--borde); }
-    .foto img { width:100%; height:100%; object-fit:cover; }
-    .foto button { position:absolute; top:4px; right:4px; background:rgba(21,16,14,.75); color:#fff;
-        border:none; border-radius:50%; width:24px; height:24px; font-size:13px; cursor:pointer; }
-    .agregar-foto { aspect-ratio:3/4; border:2px dashed var(--borde); border-radius:6px; background:none;
-        color:#9C958D; font-size:12px; cursor:pointer; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; gap:6px; font-family:inherit; }
-    .agregar-foto span { font-size:22px; }
+    /* Estilos Multi-talla */
+    .tallas-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;}
+    .talla-btn { padding: 8px 12px; border: 1px solid var(--borde); border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit;}
+    .talla-btn.activa { background: var(--laton); color: #fff; border-color: var(--laton); }
+
+    /* Fotos con observaciones */
+    .fotos { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:12px; }
+    .foto-box { background: var(--papel); border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;}
+    .foto { position:relative; aspect-ratio:3/4; overflow:hidden; background:#000; }
+    .foto img { width:100%; height:100%; object-fit:contain; }
+    .foto button { position:absolute; top:6px; right:6px; background:rgba(21,16,14,.8); color:#fff;
+        border:none; border-radius:50%; width:28px; height:28px; font-size:14px; cursor:pointer; }
+    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); }
+    .foto-obs input { font-size: 12px; padding: 6px 8px; border: none; border-radius: 4px; background: #fff; width: 100%; }
+    
+    .agregar-foto { aspect-ratio:3/4; border:2px dashed var(--borde); border-radius:8px; background:none;
+        color:#9C958D; font-size:13px; cursor:pointer; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:6px; font-family:inherit; min-height: 160px;}
 
     .resultado-botones { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .resultado-botones button { padding:18px; border-radius:8px; border:2px solid var(--borde); background:#fff;
@@ -99,26 +106,19 @@
         padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:10px;
         justify-content:space-between; z-index:25; }
     .pie-fijo .btn, .pie-fijo .btn-laton { flex:1; max-width:220px; }
-
     .mensaje { display:none; padding:11px 13px; border-radius:6px; font-size:13px; margin-bottom:12px; }
-    .mensaje.error { display:block; background:#FCF0F0; color:#8C2026; border:1px solid #E8C4C6; }
-    .mensaje.ok { display:block; background:#EEF7F2; color:#14663F; border:1px solid #BFE2D0; }
     .mensaje.info { display:block; background:#F2F5FC; color:#1E3A8A; border:1px solid #CBD9F5; }
-
     .cargando { padding:50px; text-align:center; color:#8A8279; }
     .oculto { display:none !important; }
 
-    @media (max-width:640px) {
-        .fila, .fila-3 { grid-template-columns:1fr; }
-        .contenido { padding:14px; }
-    }
+    @media (max-width:640px) { .fila, .fila-3 { grid-template-columns:1fr; } .contenido { padding:14px; } }
 </style>
 </head>
 <body>
 
 <div class="barra">
     <div class="barra-fila">
-        <button class="volver" id="btnVolver" aria-label="Volver">‹</button>
+        <button class="volver" id="btnVolver">‹</button>
         <div style="flex:1">
             <h1 id="titulo">Auditoría</h1>
             <div class="sub" id="subtitulo"></div>
@@ -149,31 +149,26 @@ const SEVERIDADES = [['menor','Menor'], ['mayor','Mayor'], ['critico','Crítico'
 const idAuditoria = +new URLSearchParams(location.search).get('id');
 
 let yo = null, auditoria = null, catalogo = [];
-let cantidades = [];     // { color, tallas: {S:10, M:12} }
-let defectos = [];       // { id?, severidad, defecto, color, talla, cantidad }
-let evidencias = [];     // { id?, url, nombre }
-let tallas = [];         // columnas de talla en uso
+let cantidades = [];     
+let defectos = [];       
+let evidencias = [];     
+let tallas = [];         
 let paso = 1;
+let tallasSel = new Set(); // Para el paso 3 (multitalla)
 
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
 const esc = t => String(t ?? '').replace(/[<>"]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-// ---------- Sesión y carga ----------
 const { data: { session } } = await supabase.auth.getSession();
 if (!session) location.replace('index.html');
-
-{
-    const { data } = await supabase.from('auditoria_usuarios')
-        .select('id, nombre, rol, activo').eq('id', session.user.id).maybeSingle();
-    if (!data || !data.activo) { await supabase.auth.signOut(); location.replace('index.html'); }
-    yo = data;
-}
+const { data } = await supabase.from('auditoria_usuarios').select('id, nombre, rol, activo').eq('id', session.user.id).maybeSingle();
+yo = data;
 
 $('btnVolver').addEventListener('click', () => location.href = 'agenda.html');
 
 async function cargar() {
-    if (!idAuditoria) { $('contenido').innerHTML = '<div class="cargando">No se indicó la auditoría.</div>'; return; }
+    if (!idAuditoria) return;
 
     const [{ data: aud }, { data: cat }, { data: cant }, { data: def }, { data: evi }] = await Promise.all([
         supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre)').eq('id', idAuditoria).maybeSingle(),
@@ -183,20 +178,12 @@ async function cargar() {
         supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id'),
     ]);
 
-    if (!aud) { $('contenido').innerHTML = '<div class="cargando">No se encontró la auditoría.</div>'; return; }
+    auditoria = aud; catalogo = cat || [];
+    defectos = (def || []).map(d => ({ ...d })); evidencias = (evi || []).map(e => ({ ...e }));
 
-    auditoria = aud;
-    catalogo = cat || [];
-    defectos = (def || []).map(d => ({ ...d }));
-    evidencias = (evi || []).map(e => ({ ...e }));
-
-    // Cantidades: de la base, o traídas de producción la primera vez
     if (cant && cant.length) {
         const mapa = {};
-        cant.forEach(c => {
-            mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} };
-            mapa[c.color].tallas[c.talla] = num(c.cantidad);
-        });
+        cant.forEach(c => { mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} }; mapa[c.color].tallas[c.talla] = num(c.cantidad); });
         cantidades = Object.values(mapa);
     } else {
         cantidades = await traerDeProduccion(aud.referencia);
@@ -204,428 +191,241 @@ async function cargar() {
     recalcularTallas();
 
     $('titulo').textContent = auditoria.referencia || 'Auditoría';
-    $('subtitulo').textContent = [
-        auditoria.auditoria_proveedores?.nombre,
-        auditoria.auditoria_tipos?.nombre,
-        auditoria.fecha_programada,
-    ].filter(Boolean).join(' · ');
+    $('subtitulo').textContent = [auditoria.auditoria_proveedores?.nombre, auditoria.auditoria_tipos?.nombre].filter(Boolean).join(' · ');
 
     if (auditoria.estado === 'programada') {
-        await supabase.from('auditorias').update({
-            estado: 'en_curso',
-            fecha_auditoria: auditoria.fecha_auditoria || new Date().toLocaleDateString('sv'),
-        }).eq('id', idAuditoria);
+        await supabase.from('auditorias').update({ estado: 'en_curso', fecha_auditoria: new Date().toLocaleDateString('sv') }).eq('id', idAuditoria);
         auditoria.estado = 'en_curso';
     }
-
-    $('pieFijo').classList.remove('oculto');
-    pintar();
+    $('pieFijo').classList.remove('oculto'); pintar();
 }
 
-// Las cantidades del lote salen de la tabla de producción
 async function traerDeProduccion(referencia) {
     if (!referencia) return [];
-    const { data } = await supabase.from('produccion')
-        .select('color, tallas, unidades_preventa')
-        .ilike('descripcion', referencia.trim());
+    const { data } = await supabase.from('produccion').select('color, tallas').ilike('descripcion', referencia.trim());
     const mapa = {};
     (data || []).forEach(r => {
         const color = (r.color || 'sin color').trim();
         mapa[color] = mapa[color] || { color, tallas: {} };
-        const t = r.tallas || {};
-        Object.entries(t).forEach(([talla, cant]) => {
-            mapa[color].tallas[talla] = (mapa[color].tallas[talla] || 0) + num(cant);
-        });
+        Object.entries(r.tallas || {}).forEach(([t, c]) => mapa[color].tallas[t] = (mapa[color].tallas[t] || 0) + num(c));
     });
     return Object.values(mapa);
 }
 
 function recalcularTallas() {
-    const orden = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16',
-                   '28','30','32','34','36','37','38','39','40','41','42','43','44','45'];
-    const usadas = new Set();
-    cantidades.forEach(c => Object.keys(c.tallas).forEach(t => usadas.add(t)));
-    tallas = [...usadas].sort((a, b) => {
-        const ia = orden.indexOf(a), ib = orden.indexOf(b);
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
-    });
+    const orden = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44'];
+    const usadas = new Set(); cantidades.forEach(c => Object.keys(c.tallas).forEach(t => usadas.add(t)));
+    tallas = [...usadas].sort((a, b) => { const ia = orden.indexOf(a), ib = orden.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
 }
 
-const totalLote = () => cantidades.reduce((s, c) =>
-    s + Object.values(c.tallas).reduce((x, v) => x + num(v), 0), 0);
+const totalLote = () => cantidades.reduce((s, c) => s + Object.values(c.tallas).reduce((x, v) => x + num(v), 0), 0);
 const totalSeveridad = sev => defectos.filter(d => d.severidad === sev).reduce((s, d) => s + num(d.cantidad), 0);
 const totalDefectos = () => defectos.reduce((s, d) => s + num(d.cantidad), 0);
 const colores = () => cantidades.map(c => c.color);
 
-// ---------- Pintado ----------
 function pintar() {
-    $('pasos').innerHTML = [1,2,3,4].map(p =>
-        `<div class="paso-punto ${p === paso ? 'activo' : p < paso ? 'hecho' : ''}"></div>`).join('');
-    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
-    $('btnSiguiente').textContent = paso === 4 ? 'Finalizar auditoría' : 'Siguiente';
+    $('pasos').innerHTML = [1,2,3,4].map(p => `<div class="paso-punto ${p === paso ? 'activo' : p < paso ? 'hecho' : ''}"></div>`).join('');
+    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';$('btnSiguiente').textContent = paso === 4 ? 'Finalizar auditoría' : 'Siguiente';
     ({ 1: pasoLote, 2: pasoAuditado, 3: pasoDefectos, 4: pasoCierre })[paso]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- Paso 1: el lote ---
+// --- Paso 1 ---
 function pasoLote() {
     $('contenido').innerHTML = `
     <div class="tarjeta">
         <h2>1 · Datos del lote</h2>
-        <div class="ayuda">Confirma la referencia y las cantidades que envió el proveedor.</div>
         <div class="fila">
-            <div><label for="eRef">Referencia</label><input id="eRef" value="${esc(auditoria.referencia || '')}"></div>
-            <div><label for="eFactura">N° factura</label><input id="eFactura" value="${esc(auditoria.numero_factura || '')}"></div>
+            <div><label>Referencia</label><input id="eRef" value="${esc(auditoria.referencia || '')}"></div>
+            <div><label>SKU</label><input id="eSku" value="${esc(auditoria.sku || '')}"></div>
         </div>
         <div class="fila">
-            <div><label for="eColeccion">Colección</label><input id="eColeccion" value="${esc(auditoria.coleccion || '')}"></div>
-            <div><label for="eSublinea">Sublínea</label><input id="eSublinea" value="${esc(auditoria.sublinea || '')}"></div>
+            <div><label>Sublínea</label><input id="eSublinea" value="${esc(auditoria.sublinea || '')}"></div>
+            <div><label>N° factura</label><input id="eFactura" value="${esc(auditoria.numero_factura || '')}"></div>
         </div>
     </div>
-
     <div class="tarjeta">
         <h2>Cantidades por color y talla</h2>
-        <div class="ayuda">${cantidades.length ? 'Se tomaron de producción. Ajusta lo que haga falta.' : 'Agrega los colores del lote.'}</div>
         <div class="tabla-scroll">
             <table>
                 <thead><tr><th>Color</th>${tallas.map(t => `<th class="num">${t}</th>`).join('')}<th class="num">Total</th><th></th></tr></thead>
                 <tbody>
-                ${cantidades.map((c, i) => `
-                    <tr>
-                        <td><input value="${esc(c.color)}" onchange="cambiarColor(${i}, this.value)" style="min-width:110px"></td>
-                        ${tallas.map(t => `<td><input type="number" inputmode="numeric" min="0" style="width:72px"
-                            value="${c.tallas[t] ?? ''}" onchange="cambiarCantidad(${i},'${t}',this.value)"></td>`).join('')}
-                        <td class="num"><b>${fmt(Object.values(c.tallas).reduce((s,v) => s + num(v), 0))}</b></td>
-                        <td><button class="quitar" onclick="quitarColor(${i})">✕</button></td>
-                    </tr>`).join('')}
+                ${cantidades.map((c, i) => `<tr>
+                    <td><input value="${esc(c.color)}" onchange="cambiarColor(${i}, this.value)" style="min-width:110px"></td>
+                    ${tallas.map(t => `<td><input type="number" min="0" style="width:72px" value="${c.tallas[t] ?? ''}" onchange="cambiarCantidad(${i},'${t}',this.value)"></td>`).join('')}
+                    <td class="num"><b>${fmt(Object.values(c.tallas).reduce((s,v) => s + num(v), 0))}</b></td>
+                    <td><button class="quitar" onclick="quitarColor(${i})">✕</button></td>
+                </tr>`).join('')}
                 </tbody>
             </table>
         </div>
-        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
+        <div style="display:flex; gap:8px; margin-top:12px;">
             <button class="btn btn-chico" onclick="agregarColor()">+ Color</button>
             <button class="btn btn-chico" onclick="agregarTalla()">+ Talla</button>
-        </div>
-        <div class="cifras">
-            <div class="cifra"><div class="n">${fmt(totalLote())}</div><div class="t">Total del lote</div></div>
-            <div class="cifra"><div class="n">${cantidades.length}</div><div class="t">Colores</div></div>
         </div>
     </div>`;
 }
 
 window.cambiarColor = (i, v) => { cantidades[i].color = v.trim().toUpperCase(); };
-window.cambiarCantidad = (i, talla, v) => {
-    if (v === '' ) delete cantidades[i].tallas[talla]; else cantidades[i].tallas[talla] = num(v);
-    pintar();
-};
+window.cambiarCantidad = (i, t, v) => { if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v); pintar(); };
 window.quitarColor = i => { cantidades.splice(i, 1); recalcularTallas(); pintar(); };
-window.agregarColor = () => {
-    const nombre = (prompt('Color:') || '').trim().toUpperCase();
-    if (!nombre) return;
-    const base = {};
-    tallas.forEach(t => base[t] = '');
-    cantidades.push({ color: nombre, tallas: base });
-    pintar();
-};
-window.agregarTalla = () => {
-    const t = (prompt('Talla (XS, S, M, L, XL, U…):') || '').trim().toUpperCase();
-    if (!t || tallas.includes(t)) return;
-    tallas.push(t);
-    if (!cantidades.length) cantidades.push({ color: 'ÚNICO', tallas: {} });
-    pintar();
-};
+window.agregarColor = () => { cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
+window.agregarTalla = () => { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
 
-// --- Paso 2: cuánto se revisó ---
+// --- Paso 2 ---
 function pasoAuditado() {
-    const lote = totalLote();
-    const auditada = num(auditoria.cantidad_auditada);
+    const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada);
     $('contenido').innerHTML = `
-    <div class="tarjeta">
-        <h2>2 · Cantidad auditada</h2>
-        <div class="ayuda">Cuántas unidades revisaste de las ${fmt(lote)} del lote.</div>
-        <label for="eAuditada">Unidades revisadas</label>
-        <input id="eAuditada" type="number" inputmode="numeric" min="0" value="${auditada || ''}"
-               oninput="calcularPorcentajeAuditado(${lote})" style="font-size:22px; text-align:center; padding:16px">
-        <div class="cifras">
-            <div class="cifra"><div class="n">${fmt(lote)}</div><div class="t">Total producido</div></div>
-            <div class="cifra"><div class="n" id="pctAuditado">${lote ? (auditada / lote * 100).toFixed(1) : '0.0'} %</div><div class="t">Del lote</div></div>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap">
-            ${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="ponerPorcentaje(${lote}, ${p})">${p} %</button>`).join('')}
-        </div>
+    <div class="tarjeta"><h2>2 · Cantidad auditada</h2>
+        <input id="eAuditada" type="number" min="0" value="${auditada || ''}" oninput="calcularPct(${lote})" style="font-size:22px; text-align:center; padding:16px">
+        <div class="cifras"><div class="cifra"><div class="n" id="pctAuditado">${lote ? (auditada / lote * 100).toFixed(1) : '0'} %</div><div class="t">Del lote (${fmt(lote)})</div></div></div>
+        <div style="display:flex; gap:8px; margin-top:14px;">${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="$('eAuditada').value=${Math.round(lote*p/100)};calcularPct(${lote})">${p} %</button>`).join('')}</div>
     </div>`;
 }
+window.calcularPct = l => $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %';
 
-window.calcularPorcentajeAuditado = lote => {
-    const v = num($('eAuditada').value);
-    $('pctAuditado').textContent = (lote ? v / lote * 100 : 0).toFixed(1) + ' %';
-};
-window.ponerPorcentaje = (lote, pct) => {
-    $('eAuditada').value = Math.round(lote * pct / 100);
-    window.calcularPorcentajeAuditado(lote);
-};
-
-// --- Paso 3: los defectos ---
+// --- Paso 3 ---
 function pasoDefectos() {
-    const auditada = num(auditoria.cantidad_auditada);
-    const t = totalDefectos();
+    const cols = colores();
+    const autoColor = cols.length === 1 ? cols[0] : '';
+    tallasSel.clear(); // Resetear seleccion visual de tallas
+
     $('contenido').innerHTML = `
     <div class="tarjeta">
-        <h2>3 · Defectos encontrados</h2>
-        <div class="ayuda">Agrega cada defecto con su color, talla y cantidad.</div>
-
-        <div class="fila-3">
-            <div><label for="dSeveridad">Severidad</label>
-                <select id="dSeveridad">${SEVERIDADES.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
-            <div><label for="dDefecto">Defecto</label>
-                <input id="dDefecto" list="listaDefectos" placeholder="sucio, roto…">
-                <datalist id="listaDefectos">${catalogo.map(c => `<option value="${esc(c.nombre)}">`).join('')}</datalist></div>
-            <div><label for="dColor">Color</label>
-                <select id="dColor"><option value="">—</option>${colores().map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+        <h2>3 · Agregar defectos</h2>
+        <div class="fila">
+            <div><label>Severidad</label><select id="dSeveridad">${SEVERIDADES.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
+            <div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">${catalogo.map(c => `<option value="${esc(c.nombre)}">`).join('')}</datalist></div>
         </div>
-        <div class="fila-3">
-            <div><label for="dTalla">Talla</label>
-                <select id="dTalla"><option value="">—</option>${tallas.map(t => `<option>${t}</option>`).join('')}</select></div>
-            <div><label for="dCantidad">Cantidad</label>
-                <input id="dCantidad" type="number" inputmode="numeric" min="1" value="1"></div>
-            <div style="display:flex; align-items:flex-end">
-                <button class="btn btn-oscuro" style="width:100%" onclick="agregarDefecto()">+ Agregar</button></div>
+        <div class="fila">
+            <div><label>Color</label><select id="dColor">${cols.length!==1?'<option value="">Elegir...</option>':''}${cols.map(c => `<option ${c===autoColor?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+            <div><label>Cant. por talla</label><input id="dCantidad" type="number" min="1" value="1"></div>
         </div>
+        <label>Tallas afectadas (puedes elegir varias)</label>
+        <div class="tallas-grid">
+            ${tallas.map(t => `<button type="button" class="talla-btn" onclick="toggleTalla(this, '${t}')">${t}</button>`).join('')}
+        </div>
+        <button class="btn btn-oscuro" style="width:100%; margin-top:8px;" onclick="agregarDefecto()">+ Agregar Defecto a tallas seleccionadas</button>
     </div>
 
     <div class="tarjeta">
         <h2>Registrados (${defectos.length})</h2>
-        ${defectos.length ? `
         <div class="tabla-scroll"><table>
-            <thead><tr><th>Severidad</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>
-            <tbody>${defectos.map((d, i) => `
-                <tr>
-                    <td><span class="pastilla ${d.severidad}">${d.severidad}</span></td>
-                    <td>${esc(d.defecto)}</td>
-                    <td>${esc(d.color || '—')}</td>
-                    <td>${esc(d.talla || '—')}</td>
-                    <td class="num">${fmt(d.cantidad)}</td>
-                    <td><button class="quitar" onclick="quitarDefecto(${i})">✕</button></td>
-                </tr>`).join('')}</tbody>
-        </table></div>` : '<div class="ayuda">Todavía no hay defectos registrados.</div>'}
-
-        <div class="cifras">
-            <div class="cifra menor"><div class="n">${fmt(totalSeveridad('menor'))}</div><div class="t">Menores</div></div>
-            <div class="cifra mayor"><div class="n">${fmt(totalSeveridad('mayor'))}</div><div class="t">Mayores</div></div>
-            <div class="cifra critico"><div class="n">${fmt(totalSeveridad('critico'))}</div><div class="t">Críticos</div></div>
-            <div class="cifra"><div class="n">${fmt(t)}</div><div class="t">Total con defectos</div></div>
-            <div class="cifra"><div class="n">${auditada ? (t / auditada * 100).toFixed(2) : '0.00'} %</div><div class="t">Del total auditado</div></div>
-        </div>
+            <thead><tr><th>Sev.</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>
+            <tbody>${defectos.map((d, i) => `<tr>
+                <td><span class="pastilla ${d.severidad}">${d.severidad}</span></td>
+                <td>${esc(d.defecto)}</td><td>${esc(d.color)}</td><td>${esc(d.talla)}</td><td class="num">${fmt(d.cantidad)}</td>
+                <td><button class="quitar" onclick="quitarDefecto(${i})">✕</button></td>
+            </tr>`).join('')}</tbody>
+        </table></div>
     </div>`;
 }
+
+window.toggleTalla = (btn, t) => {
+    btn.classList.toggle('activa');
+    if (tallasSel.has(t)) tallasSel.delete(t); else tallasSel.add(t);
+};
 
 window.agregarDefecto = () => {
     const defecto = $('dDefecto').value.trim();
     const cantidad = num($('dCantidad').value);
-    if (!defecto || cantidad <= 0) return alert('Escribe el defecto y una cantidad mayor que cero.');
-    defectos.push({
-        severidad: $('dSeveridad').value,
-        defecto: defecto.toLowerCase(),
-        color: $('dColor').value || null,
-        talla: $('dTalla').value || null,
-        cantidad,
+    const color = $('dColor').value;
+    if (!defecto || cantidad <= 0 || !color) return alert('Verifica defecto, cantidad y color.');
+    if (tallasSel.size === 0) return alert('Selecciona al menos una talla.');
+
+    tallasSel.forEach(talla => {
+        defectos.push({ severidad: $('dSeveridad').value, defecto: defecto.toLowerCase(), color, talla, cantidad });
     });
     pintar();
 };
 window.quitarDefecto = i => { defectos.splice(i, 1); pintar(); };
 
-// --- Paso 4: cierre ---
+// --- Paso 4 ---
 function pasoCierre() {
-    const auditada = num(auditoria.cantidad_auditada);
-    const t = totalDefectos();
     $('contenido').innerHTML = `
-    <div class="tarjeta">
-        <h2>4 · Cierre</h2>
-        <div class="cifras">
-            <div class="cifra"><div class="n">${fmt(totalLote())}</div><div class="t">Lote</div></div>
-            <div class="cifra"><div class="n">${fmt(auditada)}</div><div class="t">Auditadas</div></div>
-            <div class="cifra"><div class="n">${fmt(t)}</div><div class="t">Con defecto</div></div>
-            <div class="cifra"><div class="n">${auditada ? (t / auditada * 100).toFixed(2) : '0.00'} %</div><div class="t">% con defectos</div></div>
-        </div>
+    <div class="tarjeta"><h2>Observaciones Generales</h2>
+        <textarea id="eObservaciones">${esc(auditoria.observaciones || '')}</textarea>
     </div>
-
-    <div class="tarjeta">
-        <h2>Observaciones</h2>
-        <textarea id="eObservaciones" placeholder="Qué se encontró, qué se autorizó, qué queda pendiente…">${esc(auditoria.observaciones || '')}</textarea>
-    </div>
-
     <div class="tarjeta">
         <h2>Evidencias (${evidencias.length})</h2>
-        <div class="ayuda">Fotos de los defectos y del lote. Se reducen solas antes de subirse.</div>
         <input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">
         <div class="fotos">
             ${evidencias.map((e, i) => `
-                <div class="foto">
-                    <img src="${e.url}" loading="lazy" alt="">
-                    <button onclick="quitarEvidencia(${i})">✕</button>
+                <div class="foto-box">
+                    <div class="foto"><img src="${e.url}"><button onclick="quitarEvidencia(${i})">✕</button></div>
+                    <div class="foto-obs"><input type="text" placeholder="Nota a esta foto..." value="${esc(e.observacion)}" onchange="guardarObsFoto(${i}, this.value)"></div>
                 </div>`).join('')}
-            <button class="agregar-foto" onclick="document.getElementById('archivoFoto').click()">
-                <span>📷</span>Agregar</button>
+            <button class="agregar-foto" onclick="$('archivoFoto').click()"><span>📷</span>Agregar Foto</button>
         </div>
         <div class="mensaje" id="avisoFoto"></div>
     </div>
-
-    <div class="tarjeta">
-        <h2>Resultado</h2>
-        <div class="ayuda">Lo define la auditora según lo encontrado.</div>
+    <div class="tarjeta"><h2>Resultado</h2>
         <div class="resultado-botones">
-            <button id="btnAprobado" class="${auditoria.resultado === 'aprobado' ? 'sel-aprobado' : ''}"
-                onclick="elegirResultado('aprobado')">Aprobado</button>
-            <button id="btnRechazado" class="${auditoria.resultado === 'rechazado' ? 'sel-rechazado' : ''}"
-                onclick="elegirResultado('rechazado')">Rechazado</button>
+            <button id="btnAprobado" class="${auditoria.resultado === 'aprobado' ? 'sel-aprobado' : ''}" onclick="elegirResultado('aprobado')">Aprobado</button>
+            <button id="btnRechazado" class="${auditoria.resultado === 'rechazado' ? 'sel-rechazado' : ''}" onclick="elegirResultado('rechazado')">Rechazado</button>
         </div>
     </div>`;
 }
 
-window.elegirResultado = r => {
-    auditoria.resultado = r;
-    $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : '';
-    $('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : '';
-};
+window.elegirResultado = r => { auditoria.resultado = r; $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : '';$('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : ''; };
+window.guardarObsFoto = (i, val) => { evidencias[i].observacion = val; };
 
-window.subirFotos = async function(evento) {
-    const archivos = [...evento.target.files];
-    if (!archivos.length) return;
-    const aviso = $('avisoFoto');
-    aviso.className = 'mensaje info';
-
+window.subirFotos = async function(e) {
+    const archivos = [...e.target.files]; if (!archivos.length) return;
+    $('avisoFoto').className = 'mensaje info';
     for (let i = 0; i < archivos.length; i++) {
-        aviso.textContent = `Subiendo ${i + 1} de ${archivos.length}…`;
-        try {
-            const blob = await comprimir(archivos[i]);
-            const nombre = `${idAuditoria}/${Date.now()}_${i}.jpg`;
-            const { error } = await supabase.storage.from(BUCKET)
-                .upload(nombre, blob, { contentType: 'image/jpeg', upsert: true });
-            if (error) throw error;
+        $('avisoFoto').textContent = `Subiendo ${i + 1} de ${archivos.length}…`;
+        const nombre = `${idAuditoria}/${Date.now()}_${i}.jpg`;
+        const { error } = await supabase.storage.from(BUCKET).upload(nombre, archivos[i]); // Simplificado para PWA rápida
+        if (!error) {
             const url = supabase.storage.from(BUCKET).getPublicUrl(nombre).data.publicUrl;
-            const { data } = await supabase.from('auditoria_evidencias')
-                .insert({ auditoria_id: idAuditoria, url, nombre: archivos[i].name }).select().single();
-            evidencias.push(data || { url, nombre: archivos[i].name });
-        } catch (e) {
-            aviso.className = 'mensaje error';
-            aviso.textContent = 'No se pudo subir una foto: ' + e.message;
-            break;
+            const { data } = await supabase.from('auditoria_evidencias').insert({ auditoria_id: idAuditoria, url, nombre: archivos[i].name, observacion: '' }).select().single();
+            evidencias.push(data || { url, observacion: '' });
         }
     }
-    evento.target.value = '';
-    pintar();
+    $('archivoFoto').value = ''; pintar();
 };
-
-function comprimir(archivo) {
-    return new Promise((resolver, rechazar) => {
-        const lector = new FileReader();
-        lector.onload = e => {
-            const img = new Image();
-            img.onload = () => {
-                const MAX = 1280;
-                const escala = img.width > MAX ? MAX / img.width : 1;
-                const lienzo = document.createElement('canvas');
-                lienzo.width = img.width * escala;
-                lienzo.height = img.height * escala;
-                lienzo.getContext('2d').drawImage(img, 0, 0, lienzo.width, lienzo.height);
-                lienzo.toBlob(b => b ? resolver(b) : rechazar(new Error('No se pudo procesar')), 'image/jpeg', 0.8);
-            };
-            img.onerror = () => rechazar(new Error('Imagen no válida'));
-            img.src = e.target.result;
-        };
-        lector.onerror = () => rechazar(new Error('No se pudo leer el archivo'));
-        lector.readAsDataURL(archivo);
-    });
-}
-
-window.quitarEvidencia = async i => {
-    const e = evidencias[i];
-    if (!confirm('¿Quitar esta foto?')) return;
-    if (e.id) await supabase.from('auditoria_evidencias').delete().eq('id', e.id);
-    evidencias.splice(i, 1);
-    pintar();
-};
+window.quitarEvidencia = async i => { if(confirm('¿Quitar foto?')) { if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id); evidencias.splice(i, 1); pintar(); } };
 
 // ---------- Guardado ----------
 async function guardarPaso() {
     if (paso === 1) {
-        auditoria.referencia = ($('eRef').value || '').trim().toUpperCase() || null;
-        auditoria.numero_factura = ($('eFactura').value || '').trim() || null;
-        auditoria.coleccion = ($('eColeccion').value || '').trim().toUpperCase() || null;
-        auditoria.sublinea = ($('eSublinea').value || '').trim().toUpperCase() || null;
+        auditoria.referencia = ($('eRef').value || '').toUpperCase();
+        auditoria.sku = ($('eSku').value || '').toUpperCase();
+        auditoria.sublinea = ($('eSublinea').value || '').toUpperCase();
         auditoria.cantidad_produccion = totalLote();
-
-        await supabase.from('auditorias').update({
-            referencia: auditoria.referencia, numero_factura: auditoria.numero_factura,
-            coleccion: auditoria.coleccion, sublinea: auditoria.sublinea,
-            cantidad_produccion: auditoria.cantidad_produccion,
-        }).eq('id', idAuditoria);
-
+        await supabase.from('auditorias').update({ referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea, cantidad_produccion: auditoria.cantidad_produccion }).eq('id', idAuditoria);
         await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
-        const filas = [];
-        cantidades.forEach(c => Object.entries(c.tallas).forEach(([talla, cant]) => {
-            if (num(cant) > 0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla, cantidad: num(cant) });
-        }));
+        const filas = []; cantidades.forEach(c => Object.entries(c.tallas).forEach(([t, cant]) => { if (num(cant)>0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) }); }));
         if (filas.length) await supabase.from('auditoria_cantidades').insert(filas);
     }
-
-    if (paso === 2) {
-        auditoria.cantidad_auditada = num($('eAuditada').value);
-        await supabase.from('auditorias')
-            .update({ cantidad_auditada: auditoria.cantidad_auditada }).eq('id', idAuditoria);
-    }
-
+    if (paso === 2) { auditoria.cantidad_auditada = num($('eAuditada').value); await supabase.from('auditorias').update({ cantidad_auditada: auditoria.cantidad_auditada }).eq('id', idAuditoria); }
     if (paso === 3) {
         await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
-        if (defectos.length) {
-            await supabase.from('auditoria_defectos').insert(defectos.map(d => ({
-                auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto,
-                color: d.color, talla: d.talla, cantidad: num(d.cantidad),
-            })));
-        }
+        if (defectos.length) await supabase.from('auditoria_defectos').insert(defectos.map(d => ({ auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad })));
     }
-
     if (paso === 4) {
-        auditoria.observaciones = ($('eObservaciones').value || '').trim() || null;
+        auditoria.observaciones = $('eObservaciones').value;
         await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
+        // Guardar observaciones de cada foto individual
+        await Promise.all(evidencias.map(e => {
+            if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
+        }));
     }
 }
 
-$('btnAtras').addEventListener('click', async () => {
+$('btnAtras').addEventListener('click', async () => { await guardarPaso(); paso--; pintar(); });
+$('btnSiguiente').addEventListener('click', async () => {$('btnSiguiente').disabled = true;
     await guardarPaso();
-    paso = Math.max(1, paso - 1);
-    pintar();
-});
-
-$('btnSiguiente').addEventListener('click', async () => {
-    const btn = $('btnSiguiente');
-    btn.disabled = true;
-
-    if (paso === 1 && !totalLote()) { btn.disabled = false; return alert('Falta cargar las cantidades del lote.'); }
-    if (paso === 2 && !num($('eAuditada').value)) { btn.disabled = false; return alert('Escribe cuántas unidades revisaste.'); }
-
-    await guardarPaso();
-
     if (paso === 4) {
-        if (!auditoria.resultado) { btn.disabled = false; return alert('Elige el resultado: aprobado o rechazado.'); }
-        if (!confirm('¿Finalizar la auditoría? Después queda cerrada.')) { btn.disabled = false; return; }
-        const { error } = await supabase.from('auditorias').update({
-            estado: 'finalizada',
-            resultado: auditoria.resultado,
-            fecha_auditoria: auditoria.fecha_auditoria || new Date().toLocaleDateString('sv'),
-        }).eq('id', idAuditoria);
-        btn.disabled = false;
-        if (error) return alert('No se pudo finalizar: ' + error.message);
-        location.href = 'agenda.html';
-        return;
+        if (!auditoria.resultado) { $('btnSiguiente').disabled = false; return alert('Elige el resultado.'); }
+        await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
+        location.href = 'agenda.html'; return;
     }
-
-    paso++;
-    btn.disabled = false;
-    pintar();
+    paso++; $('btnSiguiente').disabled = false; pintar();
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-
 await cargar();
 </script>
 </body>

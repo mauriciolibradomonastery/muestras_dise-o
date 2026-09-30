@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reportes · Auditorías</title>
+<link rel="icon" type="image/png" href="icono-192.png">
+<meta name="theme-color" content="#15100E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --tinta: #15100E; --hueso: #EDE7DD; --vino: #6E1F24; --laton: #B08945;
+        --papel: #F6F4F1; --texto: #241E1A; --borde: #E2DCD4;
+        --verde: #197A56; 
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--papel); color: var(--texto); padding-bottom: 30px;}
+    
+    .barra { background: var(--tinta); color: var(--hueso); padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin: 0; }
+    .volver { background: none; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 13px;}
+    
+    .contenido { padding: 18px; max-width: 1200px; margin: 0 auto; }
+    
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;}
+    .kpi { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 18px; border-top: 4px solid var(--laton);}
+    .kpi .num { font-size: 28px; font-weight: 600; margin-bottom: 4px;}
+    .kpi .titulo { font-size: 12px; color: #6F675F; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
+
+    .seccion { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 20px; margin-bottom: 20px;}
+    .seccion h2 { font-family: 'Cormorant Garamond', serif; margin: 0 0 16px 0; font-size: 22px;}
+    
+    select, input { padding: 10px; border: 1px solid var(--borde); border-radius: 6px; font-family: inherit; width: 100%; max-width: 300px; margin-bottom: 16px;}
+    
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;}
+    th { padding: 10px; border-bottom: 2px solid var(--borde); color: #6F675F; }
+    td { padding: 10px; border-bottom: 1px solid #F1EEEA; }
+    .estado-aprobado { color: var(--verde); font-weight: 600; background: #EEF7F2; padding: 4px 8px; border-radius: 4px;}
+    .estado-rechazado { color: var(--vino); font-weight: 600; background: #FCF0F0; padding: 4px 8px; border-radius: 4px;}
+</style>
+</head>
+<body>
+
+<div class="barra">
+    <h1>Reportes y KPIs</h1>
+    <a href="agenda.html" class="volver">Volver a la Agenda</a>
+</div>
+
+<div class="contenido">
+    <div class="seccion">
+        <label style="font-size: 12px; font-weight: bold; color: #6F675F;">FILTRAR POR PROVEEDOR:</label><br>
+        <select id="filtroProv"><option value="ALL">Todos los proveedores</option></select>
+    </div>
+
+    <div class="kpis" id="panelKpis">
+        <div class="kpi"><div class="num">Cargando...</div><div class="titulo">Auditorías Finalizadas</div></div>
+    </div>
+
+    <div class="seccion">
+        <h2>Historial de Auditorías</h2>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Proveedor</th>
+                        <th>Referencia (SKU)</th>
+                        <th>Auditadas</th>
+                        <th>Resultado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaAuditorias">
+                    <tr><td colspan="5">Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W');
+
+const $ = id => document.getElementById(id);
+let auditorias = [];
+let proveedoresMap = {};
+
+async function init() {
+    // Traer todas las auditorias finalizadas y sus defectos
+    const { data: auds } = await supabase.from('auditorias')
+        .select('*, auditoria_proveedores(nombre), auditoria_defectos(cantidad)')
+        .eq('estado', 'finalizada')
+        .order('fecha_auditoria', { ascending: false });
+    
+    auditorias = auds || [];
+    
+    // Poblar filtro proveedores
+    auditorias.forEach(a => {
+        if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
+    });
+    
+    let htmlProv = '<option value="ALL">Todos los proveedores</option>';
+    Object.entries(proveedoresMap).forEach(([id, nombre]) => {
+        htmlProv += `<option value="${id}">${nombre}</option>`;
+    });
+    $('filtroProv').innerHTML = htmlProv;
+
+    renderData('ALL');
+}
+
+function renderData(provId) {
+    const list = provId === 'ALL' ? auditorias : auditorias.filter(a => String(a.proveedor_id) === String(provId));
+    
+    let totalLote = 0;
+    let totalAuditado = 0;
+    let totalDefectos = 0;
+    let aprobadas = 0;
+    
+    let htmlTabla = '';
+
+    list.forEach(a => {
+        totalLote += Number(a.cantidad_produccion || 0);
+        totalAuditado += Number(a.cantidad_auditada || 0);
+        const defs = a.auditoria_defectos.reduce((acc, curr) => acc + Number(curr.cantidad), 0);
+        totalDefectos += defs;
+        
+        if(a.resultado === 'aprobado') aprobadas++;
+
+        htmlTabla += `<tr>
+            <td>${a.fecha_auditoria}</td>
+            <td>${a.auditoria_proveedores?.nombre || 'N/A'}</td>
+            <td>${a.referencia || ''} <small style="color:gray">${a.sku ? `(${a.sku})` : ''}</small></td>
+            <td>${a.cantidad_auditada || 0}</td>
+            <td><span class="estado-${a.resultado}">${a.resultado.toUpperCase()}</span></td>
+        </tr>`;
+    });
+
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="5">No hay auditorías registradas para este proveedor.</td></tr>';
+
+    const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
+    const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
+    const calificacion = list.length > 0 ? ((aprobadas / list.length) * 100).toFixed(0) : 0;
+
+    $('panelKpis').innerHTML = `
+        <div class="kpi"><div class="num">${list.length}</div><div class="titulo">Auditorías Realizadas</div></div>
+        <div class="kpi" style="border-top-color: ${calificacion > 80 ? '#197A56' : '#B45309'}">
+            <div class="num">${calificacion}/100</div><div class="titulo">Calificación (Aprobaciones)</div>
+        </div>
+        <div class="kpi"><div class="num">${indiceDefectos}%</div><div class="titulo">Índice de Defectos</div></div>
+        <div class="kpi"><div class="num">${tamanoMuestra}%</div><div class="titulo">Tamaño de Muestra</div></div>
+    `;
+}
+
+$('filtroProv').addEventListener('change', (e) => renderData(e.target.value));
+
+init();
+</script>
+</body>
+</html>

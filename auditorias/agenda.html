@@ -34,8 +34,9 @@
         font-size: 24px; margin: 0; flex: 1; }
     .quien { font-size: 12px; color: var(--humo); text-align: right; line-height: 1.4; }
     .quien b { color: var(--hueso); display: block; font-weight: 500; }
-    .salir { background: none; border: 1px solid var(--linea); color: var(--hueso);
-        border-radius: 4px; padding: 8px 12px; font-family: inherit; font-size: 12px; cursor: pointer; }
+    .btn-nav { background: none; border: 1px solid var(--linea); color: var(--hueso);
+        border-radius: 4px; padding: 8px 12px; font-family: inherit; font-size: 12px; cursor: pointer; text-decoration: none;}
+    .btn-nav:hover { border-color: var(--laton); background: rgba(176,137,69,.2); }
     .salir:hover { border-color: var(--vino); background: rgba(110,31,36,.3); }
 
     .contenido { padding: 18px; max-width: 1400px; margin: 0 auto; }
@@ -66,6 +67,7 @@
     .btn-nueva { background: var(--tinta); color: var(--hueso); border-color: var(--tinta);
         font-weight: 500; padding: 11px 18px; }
     .btn-nueva:hover { background: #241c18; }
+    .btn-reportes { background: var(--laton); color: #1a1512; border-color: var(--laton); font-weight: 600;}
 
     /* ---------- Semana ---------- */
     .grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
@@ -82,7 +84,6 @@
     .cita:hover { transform: translateX(2px); }
     .cita.vencida    { background: #FCF0F0; border-left-color: var(--vino); }
     .cita.en_curso   { background: #FEF6E7; border-left-color: var(--ambar); }
-    .cita.finalizada { background: #EEF7F2; border-left-color: var(--verde); }
     .cita.cancelada  { background: #F3F1EF; border-left-color: #A39C94; opacity: .65; text-decoration: line-through; }
     .cita .hora { font-weight: 600; }
     .cita .prov { font-weight: 500; }
@@ -96,7 +97,7 @@
     .hoja { background: #fff; border-radius: 10px; width: 100%; max-width: 560px;
         max-height: 92vh; overflow: auto; }
     .hoja-cabeza { padding: 16px 20px; border-bottom: 1px solid var(--borde); position: sticky; top: 0;
-        background: #fff; display: flex; justify-content: space-between; align-items: center; }
+        background: #fff; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
     .hoja-cabeza h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500;
         font-size: 22px; margin: 0; }
     .cerrar { background: none; border: none; font-size: 20px; color: #9C958D; cursor: pointer; padding: 4px 8px; }
@@ -108,24 +109,24 @@
         width: 100%; padding: 11px 12px; font-size: 16px; border: 1px solid var(--borde);
         border-radius: 6px; font-family: inherit; color: var(--texto); background: #fff; outline: none;
     }
+    .campo input[type="file"] { padding: 8px; font-size: 13px; }
     .campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--laton); }
     .campo textarea { min-height: 74px; resize: vertical; }
     .pista { font-size: 11px; color: #8A8279; margin-top: 5px; }
     .hoja-pie { padding: 16px 20px; border-top: 1px solid var(--borde); display: flex;
-        gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; background: #fff; }
+        gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; background: #fff; z-index: 10;}
     .btn-guardar { background: var(--laton); color: #1a1512; border: none; border-radius: 6px;
         padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-guardar:disabled { background: #D6CFC6; color: #8A8279; cursor: not-allowed; }
     .mensaje { display: none; margin: 0 20px; padding: 11px 13px; border-radius: 6px; font-size: 13px; }
     .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
     .mensaje.ok    { display: block; background: #EEF7F2; color: #14663F; border: 1px solid #BFE2D0; }
-
     .cargando { padding: 40px; text-align: center; color: #8A8279; }
 
     @media (max-width: 900px) {
         .grilla { grid-template-columns: 1fr; }
         .dia { min-height: auto; }
-        .dia:has(.vacio-dia) { display: none; }      /* en el celular, los días vacíos no ocupan espacio */
+        .dia:has(.vacio-dia) { display: none; }
         .hoja-cuerpo { grid-template-columns: 1fr; }
         .contenido { padding: 14px; }
         .semana .rango { min-width: 130px; font-size: 12px; }
@@ -137,7 +138,8 @@
 <div class="barra">
     <h1>Agenda de auditorías</h1>
     <div class="quien"><b id="miNombre">…</b><span id="miRol"></span></div>
-    <button class="salir" id="btnSalir">Salir</button>
+    <a href="reportes.html" class="btn-nav">Reportes</a>
+    <button class="btn-nav salir" id="btnSalir">Salir</button>
 </div>
 
 <div class="contenido">
@@ -151,13 +153,6 @@
         </div>
         <button class="btn" id="hoy">Hoy</button>
         <select id="filtroAuditora"><option value="">Todas las auditoras</option></select>
-        <select id="filtroEstado">
-            <option value="">Todos los estados</option>
-            <option value="programada">Programadas</option>
-            <option value="en_curso">En curso</option>
-            <option value="finalizada">Finalizadas</option>
-            <option value="cancelada">Canceladas</option>
-        </select>
         <button class="btn btn-nueva" id="btnNueva">+ Programar auditoría</button>
     </div>
 
@@ -189,7 +184,7 @@
                 <input type="text" id="fFactura" placeholder="Opcional"></div>
 
             <div class="campo ancho"><label for="fReferencia">Referencia a auditar</label>
-                <input type="text" id="fReferencia" list="listaReferencias" placeholder="Escribe para buscar: kametu, evenky…" autocomplete="off">
+                <input type="text" id="fReferencia" list="listaReferencias" placeholder="Escribe para buscar..." autocomplete="off">
                 <datalist id="listaReferencias"></datalist>
                 <div class="pista" id="pistaRef">Se toma de la base de producción. Al elegirla se llenan colección, línea y SKU.</div></div>
 
@@ -197,6 +192,11 @@
                 <input type="text" id="fColeccion"></div>
             <div class="campo"><label for="fSublinea">Sublínea</label>
                 <input type="text" id="fSublinea" placeholder="t-shirt, jean, crop top…"></div>
+            
+            <div class="campo"><label for="fSku">SKU</label>
+                <input type="text" id="fSku" placeholder="Código SKU"></div>
+            <div class="campo"><label for="fFotoRef">Fotografía de la prenda</label>
+                <input type="file" id="fFotoRef" accept="image/*"></div>
 
             <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
                 <textarea id="fNota" placeholder="Opcional: qué revisar con especial atención"></textarea></div>
@@ -222,7 +222,7 @@ const supabase = createClient(
 const $ = id => document.getElementById(id);
 const DIAS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const iso = f => f.toLocaleDateString('sv');                       // 2026-09-28
+const iso = f => f.toLocaleDateString('sv');                       
 const hoyISO = iso(new Date());
 
 let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
@@ -251,7 +251,7 @@ $('btnSalir').addEventListener('click', async () => {
 // ---------- Semana ----------
 function inicioSemana(fecha) {
     const f = new Date(fecha);
-    const dia = (f.getDay() + 6) % 7;          // lunes = 0
+    const dia = (f.getDay() + 6) % 7; 
     f.setDate(f.getDate() - dia);
     f.setHours(0, 0, 0, 0);
     return f;
@@ -286,14 +286,8 @@ async function cargarCatalogos() {
         .map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
     $('filtroAuditora').innerHTML = '<option value="">Todas las auditoras</option>' +
         usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
-
-    if (!proveedores.length) {
-        $('mensajeHoja').className = 'mensaje error';
-        $('mensajeHoja').textContent = 'Todavía no hay proveedores cargados. El coordinador debe agregarlos primero.';
-    }
 }
 
-// Referencias reales, tomadas de la tabla de producción
 async function cargarReferencias() {
     const { data } = await supabase.from('produccion')
         .select('descripcion, coleccion, linea, sublinea, sku, proveedor').limit(5000);
@@ -313,31 +307,29 @@ async function cargarAuditorias() {
     const { data, error } = await supabase.from('v_agenda_auditorias')
         .select('*').gte('fecha_programada', desde).lte('fecha_programada', hasta)
         .order('hora_programada');
-    if (error) { $('grilla').innerHTML = `<div class="cargando">No se pudo cargar: ${error.message}</div>`; return; }
+    if (error) { $('grilla').innerHTML = `<div class="cargando">Error: ${error.message}</div>`; return; }
     auditorias = data || [];
     pintar();
 }
 
-function filtradas() {
-    const a = $('filtroAuditora').value, e = $('filtroEstado').value;
-    return auditorias.filter(x => (!a || x.auditora_id === a) && (!e || x.estado === e));
-}
-
 function pintar() {
     pintarRango();
-    const lista = filtradas();
-
-    const cuenta = est => lista.filter(x => x.estado === est).length;
+    const a = $('filtroAuditora').value;
+    const listaTotal = auditorias.filter(x => (!a || x.auditora_id === a));
+    
+    // Contadores superiores incluyen finalizadas
+    const cuenta = est => listaTotal.filter(x => x.estado === est).length;
     $('resumen').innerHTML = `
-        <div class="dato"><div class="n">${cuenta('programada')}</div><div class="t">Programadas esta semana</div></div>
-        <div class="dato vencidas"><div class="n">${lista.filter(x => x.vencida).length}</div><div class="t">Vencidas sin realizar</div></div>
+        <div class="dato"><div class="n">${cuenta('programada')}</div><div class="t">Programadas</div></div>
+        <div class="dato vencidas"><div class="n">${listaTotal.filter(x => x.vencida && x.estado !== 'finalizada').length}</div><div class="t">Vencidas</div></div>
         <div class="dato curso"><div class="n">${cuenta('en_curso')}</div><div class="t">En curso</div></div>
         <div class="dato listas"><div class="n">${cuenta('finalizada')}</div><div class="t">Finalizadas</div></div>`;
 
+    // El calendario OCULTA las finalizadas
     $('grilla').innerHTML = DIAS.map((nombre, i) => {
         const fecha = sumarDias(lunes, i);
         const clave = iso(fecha);
-        const delDia = lista.filter(x => x.fecha_programada === clave);
+        const delDia = listaTotal.filter(x => x.fecha_programada === clave && x.estado !== 'finalizada');
         return `
         <div class="dia ${clave === hoyISO ? 'hoy' : ''}">
             <div class="dia-cabeza"><span>${nombre}</span><b>${fecha.getDate()}</b></div>
@@ -346,7 +338,7 @@ function pintar() {
                     <div class="cita ${c.vencida ? 'vencida' : c.estado}" onclick="abrirCita(${c.id})">
                         <div class="hora">${(c.hora_programada || '').slice(0,5)}</div>
                         <div class="prov">${c.proveedor}</div>
-                        <div class="ref">${c.referencia || 'sin referencia'} · ${c.tipo}</div>
+                        <div class="ref">${c.referencia || 'sin ref.'}</div>
                         <div class="aud">${c.auditora || ''}</div>
                     </div>`).join('')
                 : '<div class="vacio-dia">—</div>'}
@@ -363,7 +355,7 @@ function abrirHoja(cita) {
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
     $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
     $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
-    $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar auditoría' : '▶ Realizar auditoría';
+    $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar' : '▶ Realizar';
 
     if (cita) {
         $('fProveedor').value = cita.proveedor_id || '';
@@ -375,12 +367,14 @@ function abrirHoja(cita) {
         $('fReferencia').value = cita.referencia || '';
         $('fColeccion').value = cita.coleccion || '';
         $('fSublinea').value = cita.sublinea || '';
+        $('fSku').value = cita.sku || '';
         $('fNota').value = cita.nota_programacion || '';
     } else {
         $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
         $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
-        ['fFactura','fReferencia','fColeccion','fSublinea','fNota'].forEach(id => $(id).value = '');
+        ['fFactura','fReferencia','fColeccion','fSublinea','fSku','fNota'].forEach(id => $(id).value = '');
     }
+    $('fFotoRef').value = ''; 
     $('modal').classList.add('abierto');
 }
 
@@ -392,20 +386,20 @@ window.abrirCita = async function(id) {
 const cerrarHoja = () => $('modal').classList.remove('abierto');
 $('btnCerrar').addEventListener('click', cerrarHoja);
 $('btnCerrar2').addEventListener('click', cerrarHoja);
-$('modal').addEventListener('click', e => { if (e.target === $('modal')) cerrarHoja(); });
 $('btnNueva').addEventListener('click', () => abrirHoja(null));
 $('btnEjecutar').addEventListener('click', () => { if (editando) location.href = `auditoria.html?id=${editando.id}`; });
 
-// Al elegir una referencia se completan los demás datos
+// Auto-completar sublinea y SKU
 $('fReferencia').addEventListener('change', () => {
     const buscada = $('fReferencia').value.trim().toUpperCase();
     const r = referencias.find(x => (x.descripcion || '').trim().toUpperCase() === buscada);
     if (!r) return;
     if (r.coleccion) $('fColeccion').value = r.coleccion;
     if (r.sublinea) $('fSublinea').value = r.sublinea;
+    if (r.sku) $('fSku').value = r.sku;
     const prov = proveedores.find(p => p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase());
     if (prov && !$('fProveedor').value) $('fProveedor').value = prov.id;
-    $('pistaRef').textContent = `SKU ${r.sku || '—'} · proveedor en producción: ${r.proveedor || '—'}`;
+    $('pistaRef').textContent = `SKU: ${r.sku || '—'} · Proveedor: ${r.proveedor || '—'}`;
 });
 
 $('btnGuardar').addEventListener('click', async () => {
@@ -422,50 +416,58 @@ $('btnGuardar').addEventListener('click', async () => {
         referencia: $('fReferencia').value.trim().toUpperCase() || null,
         coleccion: $('fColeccion').value.trim().toUpperCase() || null,
         sublinea: $('fSublinea').value.trim().toUpperCase() || null,
+        sku: $('fSku').value.trim().toUpperCase() || null,
         nota_programacion: $('fNota').value.trim() || null,
     };
 
     if (!datos.proveedor_id || !datos.tipo_id || !datos.auditora_id || !datos.fecha_programada || !datos.hora_programada) {
-        msg.className = 'mensaje error';
-        msg.textContent = 'Faltan datos: proveedor, tipo, auditora, fecha y hora son obligatorios.';
-        return;
+        msg.className = 'mensaje error'; msg.textContent = 'Faltan datos obligatorios.'; return;
     }
 
     const btn = $('btnGuardar');
     btn.disabled = true; btn.textContent = 'Guardando…';
 
-    const { error } = editando
-        ? await supabase.from('auditorias').update(datos).eq('id', editando.id)
-        : await supabase.from('auditorias').insert({ ...datos, programada_por: yo.id });
+    // Guardar auditoría
+    let idGuardado = editando ? editando.id : null;
+    if (editando) {
+        const { error } = await supabase.from('auditorias').update(datos).eq('id', editando.id);
+        if (error) { msg.className = 'mensaje error'; msg.textContent = error.message; btn.disabled = false; return; }
+    } else {
+        const { data, error } = await supabase.from('auditorias').insert({ ...datos, programada_por: yo.id }).select().single();
+        if (error) { msg.className = 'mensaje error'; msg.textContent = error.message; btn.disabled = false; return; }
+        idGuardado = data.id;
+    }
+
+    // Subir foto si hay una
+    const archivo = $('fFotoRef').files[0];
+    if (archivo && idGuardado) {
+        btn.textContent = 'Subiendo foto...';
+        const nombreExt = `${idGuardado}/ref_${Date.now()}.jpg`;
+        const { error: errUp } = await supabase.storage.from('auditorias-evidencias').upload(nombreExt, archivo);
+        if (!errUp) {
+            const url = supabase.storage.from('auditorias-evidencias').getPublicUrl(nombreExt).data.publicUrl;
+            await supabase.from('auditoria_evidencias').insert({ auditoria_id: idGuardado, url, nombre: 'Foto Prenda Referencia', observacion: 'Foto subida en programación' });
+        }
+    }
 
     btn.disabled = false; btn.textContent = editando ? 'Guardar cambios' : 'Programar';
-
-    if (error) { msg.className = 'mensaje error'; msg.textContent = 'No se pudo guardar: ' + error.message; return; }
-
     cerrarHoja();
     await cargarAuditorias();
 });
 
 $('btnCancelarCita').addEventListener('click', async () => {
-    if (!editando || !confirm('¿Cancelar esta auditoría programada?')) return;
-    const { error } = await supabase.from('auditorias').update({ estado: 'cancelada' }).eq('id', editando.id);
-    if (error) { $('mensajeHoja').className = 'mensaje error'; $('mensajeHoja').textContent = error.message; return; }
-    cerrarHoja();
-    await cargarAuditorias();
+    if (!editando || !confirm('¿Cancelar esta auditoría?')) return;
+    await supabase.from('auditorias').update({ estado: 'cancelada' }).eq('id', editando.id);
+    cerrarHoja(); await cargarAuditorias();
 });
 
-// ---------- Navegación ----------
-$('antes').addEventListener('click',   () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
+$('antes').addEventListener('click', () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
 $('despues').addEventListener('click', () => { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
-$('hoy').addEventListener('click',     () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });
+$('hoy').addEventListener('click', () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });
 $('filtroAuditora').addEventListener('change', pintar);
-$('filtroEstado').addEventListener('change', pintar);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-
-await cargarCatalogos();
-await cargarAuditorias();
-cargarReferencias();     // en segundo plano: es la consulta más pesada
+await cargarCatalogos(); await cargarAuditorias(); cargarReferencias();
 </script>
 </body>
 </html>
