@@ -3,117 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Auditoría · Monastery</title>
+<title>Ejecución · Auditoría Monastery</title>
 <link rel="icon" type="image/png" href="icono-192.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#15100E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
     :root {
-        --tinta:#15100E; --hueso:#EDE7DD; --vino:#6E1F24; --laton:#B08945;
-        --humo:rgba(237,231,221,.55); --linea:rgba(237,231,221,.14);
-        --papel:#F6F4F1; --texto:#241E1A; --borde:#E2DCD4;
-        --azul:#1E3A8A; --verde:#197A56; --ambar:#B45309;
+        --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
+        --papel: #F4F1EB; --texto: #2A2421; --texto-claro: #736961; --borde: #E6E1D8;
+        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309; --vino: #8C2026;
+        --sombra-card: 0 4px 12px rgba(21,16,14,0.04);
+        --transicion: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body { margin:0; font-family:'Inter','Segoe UI',sans-serif; background:var(--papel); color:var(--texto);
-        padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; font-family: 'Inter', sans-serif; background: var(--papel);
+        color: var(--texto); padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
 
-    .barra { background:var(--tinta); color:var(--hueso); padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
-        position:sticky; top:0; z-index:30; }
-    .barra-fila { display:flex; align-items:center; gap:12px; }
-    .volver { background:none; border:none; color:var(--hueso); font-size:20px; cursor:pointer; padding:4px 8px; }
-    .barra h1 { font-family:'Cormorant Garamond',Georgia,serif; font-weight:300; font-size:21px; margin:0; flex:1; line-height:1.2; }
-    .barra .sub { font-size:12px; color:var(--humo); margin-top:3px; }
+    /* Barra Superior Premium (Glassmorphism) */
+    .barra {
+        background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
+        position: sticky; top: 0; z-index: 30; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .barra-fila { display: flex; align-items: center; gap: 16px; }
+    .volver { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--hueso); font-size: 20px; cursor: pointer; padding: 4px 12px; transition: var(--transicion); }
+    .volver:hover { background: rgba(255,255,255,0.15); }
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 22px; margin: 0; flex: 1; letter-spacing: 0.02em; line-height: 1.2;}
+    .barra .sub { font-size: 12px; color: rgba(253,251,247,0.7); margin-top: 4px; letter-spacing: 0.03em; }
 
-    .pasos { display:flex; gap:6px; margin-top:12px; }
-    .paso-punto { flex:1; height:3px; background:var(--linea); border-radius:2px; }
-    .paso-punto.activo { background:var(--laton); }
-    .paso-punto.hecho { background:rgba(176,137,69,.5); }
+    .pasos { display: flex; gap: 8px; margin-top: 16px; }
+    .paso-punto { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; transition: var(--transicion);}
+    .paso-punto.activo { background: var(--laton); box-shadow: 0 0 8px rgba(176,137,69,0.5); }
+    .paso-punto.hecho { background: rgba(176,137,69,0.4); }
 
-    .contenido { padding:16px; max-width:820px; margin:0 auto; }
-    .tarjeta { background:#fff; border:1px solid var(--borde); border-radius:8px; padding:16px; margin-bottom:14px; }
-    .tarjeta h2 { font-family:'Cormorant Garamond',Georgia,serif; font-weight:500; font-size:20px; margin:0 0 4px; }
-    .tarjeta .ayuda { font-size:12.5px; color:#7A736B; margin-bottom:14px; }
+    .contenido { padding: 24px; max-width: 860px; margin: 0 auto; }
+    .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--sombra-card); }
+    .tarjeta h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 0 0 16px 0; color: var(--tinta); }
+    
+    label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-claro); margin-bottom: 8px; }
+    input, select, textarea {
+        width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    textarea { min-height: 100px; resize: vertical; }
+    .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 
-    label { display:block; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-        color:#6F675F; margin-bottom:6px; }
-    input, select, textarea { width:100%; padding:11px 12px; font-size:16px; border:1px solid var(--borde);
-        border-radius:6px; font-family:inherit; color:var(--texto); background:#fff; outline:none; }
-    input:focus, select:focus, textarea:focus { border-color:var(--laton); }
-    textarea { min-height:90px; resize:vertical; }
-    .fila { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-    .fila-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px; }
+    .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+    .btn:hover { background: #F9F8F6; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+    .btn-oscuro { background: var(--tinta); color: var(--hueso); border-color: var(--tinta); }
+    .btn-oscuro:hover { background: #000; }
+    .btn-laton { background: var(--laton); color: #fff; border-color: var(--laton); box-shadow: 0 4px 12px rgba(176,137,69,0.2);}
+    .btn-laton:hover { background: var(--laton-hover); border-color: var(--laton-hover); }
+    .btn-chico { padding: 8px 12px; font-size: 13px; font-weight: 500;}
 
-    .btn { font-family:inherit; font-size:14px; padding:11px 16px; border-radius:6px; border:1px solid var(--borde);
-        background:#fff; color:var(--texto); cursor:pointer; }
-    .btn:hover { background:var(--papel); }
-    .btn-oscuro { background:var(--tinta); color:var(--hueso); border-color:var(--tinta); }
-    .btn-laton { background:var(--laton); color:#1a1512; border:none; font-weight:600; }
-    .btn-chico { padding:7px 11px; font-size:12.5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; padding: 12px 8px; border-bottom: 1px solid var(--borde); letter-spacing: 0.03em;}
+    td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; }
+    td input { padding: 8px; font-size: 15px; text-align: center; }
+    .tabla-scroll { overflow-x: auto; margin: 0 -8px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .quitar { background: #F9F8F6; border: none; border-radius: 6px; color: var(--texto-claro); font-size: 14px; cursor: pointer; padding: 6px 10px; transition: var(--transicion);}
+    .quitar:hover { background: #FCF0F0; color: var(--vino); }
 
-    table { width:100%; border-collapse:collapse; font-size:13.5px; }
-    th { text-align:left; font-size:11px; font-weight:600; color:#6F675F; text-transform:uppercase;
-        padding:8px 6px; border-bottom:1px solid var(--borde); }
-    td { padding:6px; border-bottom:1px solid #F1EEEA; }
-    td input { padding:8px; font-size:15px; text-align:center; }
-    .tabla-scroll { overflow-x:auto; margin:0 -6px; }
-    .num { text-align:right; font-variant-numeric:tabular-nums; }
-    .quitar { background:none; border:none; color:#B9B2AA; font-size:16px; cursor:pointer; padding:4px 8px; }
-    .quitar:hover { color:var(--vino); }
+    .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+    .cifra { background: #F9F8F6; border-radius: 8px; padding: 16px; text-align: center; border: 1px solid var(--borde);}
+    .cifra .n { font-size: 24px; font-weight: 600; line-height: 1; color: var(--tinta); }
+    .cifra .t { font-size: 11px; color: var(--texto-claro); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
 
-    .cifras { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-top:6px; }
-    .cifra { background:var(--papel); border-radius:6px; padding:11px 12px; }
-    .cifra .n { font-size:20px; font-weight:600; line-height:1; }
-    .cifra .t { font-size:11px; color:#7A736B; margin-top:4px; }
-    .cifra.menor .n { color:var(--ambar); }
-    .cifra.mayor .n { color:#C2410C; }
-    .cifra.critico .n { color:var(--vino); }
-
-    .pastilla { display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; }
-    .pastilla.menor { background:#FEF6E7; color:var(--ambar); }
-    .pastilla.mayor { background:#FDEDE4; color:#C2410C; }
-    .pastilla.critico { background:#FCF0F0; color:var(--vino); }
+    .pastilla { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;}
+    .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
+    .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
+    .pastilla.critico { background: #FCF0F0; color: var(--vino); }
 
     /* Estilos Multi-talla */
-    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 6px; padding: 6px 8px; }
-    .talla-item span { font-size: 11px; font-weight: 600; color: #6F675F; margin-bottom: 4px; }
-    .talla-item input { width: 45px; padding: 6px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 4px; background: #F6F4F1;}
-    .talla-item input:focus { border-color: var(--laton); background: #fff; outline: none; }
+    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; transition: var(--transicion);}
+    .talla-item:focus-within { border-color: var(--laton); box-shadow: 0 2px 8px rgba(176,137,69,0.15); }
+    .talla-item span { font-size: 11px; font-weight: 700; color: var(--texto-claro); margin-bottom: 6px; }
+    .talla-item input { width: 50px; padding: 8px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 6px; background: #F9F8F6;}
+    .talla-item input:focus { border-color: var(--laton); background: #fff; box-shadow: none;}
 
     /* Fotos con observaciones */
-    .fotos { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:12px; }
-    .foto-box { background: var(--papel); border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;}
-    .foto { position:relative; aspect-ratio:3/4; overflow:hidden; background:#000; }
-    .foto img { width:100%; height:100%; object-fit:contain; }
-    .foto button { position:absolute; top:6px; right:6px; background:rgba(21,16,14,.8); color:#fff;
-        border:none; border-radius:50%; width:28px; height:28px; font-size:14px; cursor:pointer; }
-    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); }
-    .foto-obs input { font-size: 12px; padding: 6px 8px; border: none; border-radius: 4px; background: #fff; width: 100%; }
+    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
+    .foto-box { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--sombra-card);}
+    .foto { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #F9F8F6; }
+    .foto img { width: 100%; height: 100%; object-fit: cover; }
+    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 14px; cursor: pointer; transition: var(--transicion);}
+    .foto button:hover { background: var(--vino); }
+    .foto-obs { padding: 10px; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-obs input { font-size: 13px; padding: 8px; border: 1px solid var(--borde); border-radius: 6px; background: #fff; width: 100%; }
     
-    .agregar-foto { aspect-ratio:3/4; border:2px dashed var(--borde); border-radius:8px; background:none;
-        color:#9C958D; font-size:13px; cursor:pointer; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; gap:6px; font-family:inherit; min-height: 160px;}
+    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 14px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-family: inherit; min-height: 180px; transition: var(--transicion);}
+    .agregar-foto:hover { border-color: var(--laton); color: var(--laton); background: #fff;}
+    .agregar-foto span { font-size: 24px; }
 
-    .resultado-botones { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .resultado-botones button { padding:18px; border-radius:8px; border:2px solid var(--borde); background:#fff;
-        font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; }
-    .resultado-botones button.sel-aprobado { border-color:var(--verde); background:#EEF7F2; color:var(--verde); }
-    .resultado-botones button.sel-rechazado { border-color:var(--vino); background:#FCF0F0; color:var(--vino); }
+    .resultado-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
+    .resultado-botones button { padding: 20px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
+    .resultado-botones button:hover { background: #F9F8F6; }
+    .resultado-botones button.sel-aprobado { border-color: var(--verde); background: #EEF7F2; color: var(--verde); box-shadow: 0 4px 12px rgba(25,122,86,0.15);}
+    .resultado-botones button.sel-rechazado { border-color: var(--vino); background: #FCF0F0; color: var(--vino); box-shadow: 0 4px 12px rgba(140,32,38,0.15);}
 
-    .pie-fijo { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid var(--borde);
-        padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:10px;
-        justify-content:space-between; z-index:25; }
-    .pie-fijo .btn, .pie-fijo .btn-laton { flex:1; max-width:220px; }
-    .mensaje { display:none; padding:11px 13px; border-radius:6px; font-size:13px; margin-bottom:12px; }
-    .mensaje.info { display:block; background:#F2F5FC; color:#1E3A8A; border:1px solid #CBD9F5; }
-    .cargando { padding:50px; text-align:center; color:#8A8279; }
-    .oculto { display:none !important; }
+    .pie-fijo { 
+        position: fixed; left: 0; right: 0; bottom: 0; 
+        background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(0,0,0,0.08); padding: 16px 24px calc(16px + env(safe-area-inset-bottom)); 
+        display: flex; gap: 12px; justify-content: space-between; z-index: 25;
+    }
+    .pie-fijo .btn, .pie-fijo .btn-laton { flex: 1; max-width: 240px; padding: 16px; font-size: 16px;}
+    .mensaje { display: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .mensaje.info { display: block; background: #F2F5FC; color: #1E3A8A; border: 1px solid #CBD9F5; }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
+    .oculto { display: none !important; }
 
-    @media (max-width:640px) { .fila, .fila-3 { grid-template-columns:1fr; } .contenido { padding:14px; } }
+    @media (max-width: 640px) { 
+        .fila { grid-template-columns: 1fr; gap: 12px;} 
+        .contenido { padding: 16px; } 
+        .tarjeta { padding: 16px; }
+    }
 </style>
 </head>
 <body>
@@ -121,7 +133,7 @@
 <div class="barra">
     <div class="barra-fila">
         <button class="volver" id="btnVolver">‹</button>
-        <div style="flex:1">
+        <div style="flex: 1">
             <h1 id="titulo">Auditoría</h1>
             <div class="sub" id="subtitulo"></div>
         </div>
@@ -129,7 +141,7 @@
     <div class="pasos" id="pasos"></div>
 </div>
 
-<div class="contenido" id="contenido"><div class="cargando">Cargando…</div></div>
+<div class="contenido" id="contenido"><div class="cargando">Cargando datos de la auditoría…</div></div>
 
 <div class="pie-fijo oculto" id="pieFijo">
     <button class="btn" id="btnAtras">Atrás</button>
@@ -138,25 +150,13 @@
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
-const supabase = createClient(
-    'https://emljzsxypeqecevffmwr.supabase.co',
-    'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W',
-    { auth: { storage: window.localStorage } }
-);
-
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
 const $ = id => document.getElementById(id);
 const BUCKET = 'auditorias-evidencias';
 const SEVERIDADES = [['menor','Menor'], ['mayor','Mayor'], ['critico','Crítico']];
 const idAuditoria = +new URLSearchParams(location.search).get('id');
 
-let yo = null, auditoria = null, catalogo = [];
-let cantidades = [];     
-let defectos = [];       
-let evidencias = [];     
-let tallas = [];         
-let paso = 1;
-
+let yo = null, auditoria = null, catalogo = [], cantidades = [], defectos = [], evidencias = [], tallas = [], paso = 1;
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
 const esc = t => String(t ?? '').replace(/[<>"]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -170,13 +170,12 @@ $('btnVolver').addEventListener('click', () => location.href = 'agenda.html');
 
 async function cargar() {
     if (!idAuditoria) return;
-
     const [{ data: aud }, { data: cat }, { data: cant }, { data: def }, { data: evi }] = await Promise.all([
         supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre)').eq('id', idAuditoria).maybeSingle(),
         supabase.from('auditoria_catalogo_defectos').select('nombre, severidad').eq('activo', true).order('nombre'),
         supabase.from('auditoria_cantidades').select('*').eq('auditoria_id', idAuditoria),
         supabase.from('auditoria_defectos').select('*').eq('auditoria_id', idAuditoria).order('id'),
-        supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id'),
+        supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id')
     ]);
 
     auditoria = aud; catalogo = cat || [];
@@ -186,9 +185,7 @@ async function cargar() {
         const mapa = {};
         cant.forEach(c => { mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} }; mapa[c.color].tallas[c.talla] = num(c.cantidad); });
         cantidades = Object.values(mapa);
-    } else {
-        cantidades = await traerDeProduccion(aud.referencia);
-    }
+    } else { cantidades = await traerDeProduccion(aud.referencia); }
     recalcularTallas();
 
     $('titulo').textContent = auditoria.referencia || 'Auditoría';
@@ -229,11 +226,11 @@ function pintar() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- Paso 1 ---
+// Paso 1
 function pasoLote() {
     $('contenido').innerHTML = `
     <div class="tarjeta">
-        <h2>1 · Datos del lote</h2>
+        <h2>1. Datos del lote</h2>
         <div class="fila">
             <div><label>Referencia</label><input id="eRef" value="${esc(auditoria.referencia || '')}"></div>
             <div><label>SKU</label><input id="eSku" value="${esc(auditoria.sku || '')}"></div>
@@ -250,7 +247,7 @@ function pasoLote() {
                 <thead><tr><th>Color</th>${tallas.map(t => `<th class="num">${t}</th>`).join('')}<th class="num">Total</th><th></th></tr></thead>
                 <tbody>
                 ${cantidades.map((c, i) => `<tr>
-                    <td><input value="${esc(c.color)}" onchange="cambiarColor(${i}, this.value)" style="min-width:110px"></td>
+                    <td><input value="${esc(c.color)}" onchange="cambiarColor(${i}, this.value)" style="min-width:120px"></td>
                     ${tallas.map(t => `<td><input type="number" min="0" style="width:72px" value="${c.tallas[t] ?? ''}" onchange="cambiarCantidad(${i},'${t}',this.value)"></td>`).join('')}
                     <td class="num"><b>${fmt(Object.values(c.tallas).reduce((s,v) => s + num(v), 0))}</b></td>
                     <td><button class="quitar" onclick="quitarColor(${i})">✕</button></td>
@@ -258,39 +255,36 @@ function pasoLote() {
                 </tbody>
             </table>
         </div>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-            <button class="btn btn-chico" onclick="agregarColor()">+ Color</button>
-            <button class="btn btn-chico" onclick="agregarTalla()">+ Talla</button>
+        <div style="display:flex; gap:12px; margin-top:16px;">
+            <button class="btn btn-chico" onclick="agregarColor()">+ Agregar Color</button>
+            <button class="btn btn-chico" onclick="agregarTalla()">+ Agregar Talla</button>
         </div>
     </div>`;
 }
-
 window.cambiarColor = (i, v) => { cantidades[i].color = v.trim().toUpperCase(); };
 window.cambiarCantidad = (i, t, v) => { if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v); pintar(); };
 window.quitarColor = i => { cantidades.splice(i, 1); recalcularTallas(); pintar(); };
 window.agregarColor = () => { cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
 window.agregarTalla = () => { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
 
-// --- Paso 2 ---
+// Paso 2
 function pasoAuditado() {
     const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada);
     $('contenido').innerHTML = `
-    <div class="tarjeta"><h2>2 · Cantidad auditada</h2>
-        <input id="eAuditada" type="number" min="0" value="${auditada || ''}" oninput="calcularPct(${lote})" style="font-size:22px; text-align:center; padding:16px">
+    <div class="tarjeta"><h2>2. Cantidad auditada</h2>
+        <input id="eAuditada" type="number" min="0" value="${auditada || ''}" oninput="calcularPct(${lote})" style="font-size:24px; font-weight:600; text-align:center; padding:20px; color:var(--tinta);">
         <div class="cifras"><div class="cifra"><div class="n" id="pctAuditado">${lote ? (auditada / lote * 100).toFixed(1) : '0'} %</div><div class="t">Del lote (${fmt(lote)})</div></div></div>
-        <div style="display:flex; gap:8px; margin-top:14px;">${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="document.getElementById('eAuditada').value=${Math.round(lote*p/100)};calcularPct(${lote})">${p} %</button>`).join('')}</div>
+        <div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="document.getElementById('eAuditada').value=${Math.round(lote*p/100)};calcularPct(${lote})">${p} %</button>`).join('')}</div>
     </div>`;
 }
 window.calcularPct = l => $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %';
 
-// --- Paso 3 ---
+// Paso 3
 function pasoDefectos() {
-    const cols = colores();
-    const autoColor = cols.length === 1 ? cols[0] : '';
-
+    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : '';
     $('contenido').innerHTML = `
     <div class="tarjeta">
-        <h2>3 · Agregar defectos</h2>
+        <h2>3. Agregar defectos</h2>
         <div class="fila">
             <div><label>Severidad</label><select id="dSeveridad">${SEVERIDADES.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></div>
             <div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">${catalogo.map(c => `<option value="${esc(c.nombre)}">`).join('')}</datalist></div>
@@ -298,68 +292,41 @@ function pasoDefectos() {
         <div class="fila">
             <div><label>Color</label><select id="dColor">${cols.length!==1?'<option value="">Elegir...</option>':''}${cols.map(c => `<option ${c===autoColor?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
         </div>
-        
         <label>Cantidades por talla</label>
         <div class="tallas-inputs">
-            ${tallas.map(t => `
-                <div class="talla-item">
-                    <span>${t}</span>
-                    <input type="number" min="0" class="input-talla-defecto" data-talla="${t}">
-                </div>
-            `).join('')}
+            ${tallas.map(t => `<div class="talla-item"><span>${t}</span><input type="number" min="0" class="input-talla-defecto" data-talla="${t}"></div>`).join('')}
         </div>
-        <button class="btn btn-oscuro" style="width:100%; margin-top:8px;" onclick="agregarDefecto()">+ Agregar Defecto</button>
+        <button class="btn btn-oscuro" style="width:100%; margin-top:12px;" onclick="agregarDefecto()">+ Guardar Defecto</button>
     </div>
-
     <div class="tarjeta">
         <h2>Registrados (${defectos.length})</h2>
         <div class="tabla-scroll"><table>
             <thead><tr><th>Sev.</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>
             <tbody>${defectos.map((d, i) => `<tr>
                 <td><span class="pastilla ${d.severidad}">${d.severidad}</span></td>
-                <td>${esc(d.defecto)}</td><td>${esc(d.color)}</td><td>${esc(d.talla)}</td><td class="num">${fmt(d.cantidad)}</td>
+                <td style="font-weight:500;">${esc(d.defecto)}</td><td>${esc(d.color)}</td><td>${esc(d.talla)}</td><td class="num" style="font-weight:600;">${fmt(d.cantidad)}</td>
                 <td><button class="quitar" onclick="quitarDefecto(${i})">✕</button></td>
             </tr>`).join('')}</tbody>
         </table></div>
     </div>`;
 }
-
 window.agregarDefecto = () => {
-    const defecto = $('dDefecto').value.trim();
-    const color = $('dColor').value;
-    const severidad = $('dSeveridad').value;
-
+    const defecto = $('dDefecto').value.trim(); const color = $('dColor').value; const severidad =$('dSeveridad').value;
     if (!defecto || !color) return alert('Verifica que el defecto y el color estén seleccionados.');
-
-    const inputsTallas = document.querySelectorAll('.input-talla-defecto');
     let agregados = 0;
-
-    inputsTallas.forEach(input => {
+    document.querySelectorAll('.input-talla-defecto').forEach(input => {
         const cantidad = num(input.value);
-        if (cantidad > 0) {
-            defectos.push({ 
-                severidad: severidad, 
-                defecto: defecto.toLowerCase(), 
-                color: color, 
-                talla: input.dataset.talla, 
-                cantidad: cantidad 
-            });
-            agregados++;
-        }
+        if (cantidad > 0) { defectos.push({ severidad, defecto: defecto.toLowerCase(), color, talla: input.dataset.talla, cantidad }); agregados++; }
     });
-
     if (agregados === 0) return alert('Ingresa la cantidad en al menos una de las tallas.');
     pintar();
 };
-
 window.quitarDefecto = i => { defectos.splice(i, 1); pintar(); };
 
-// --- Paso 4 ---
+// Paso 4
 function pasoCierre() {
     $('contenido').innerHTML = `
-    <div class="tarjeta"><h2>Observaciones Generales</h2>
-        <textarea id="eObservaciones">${esc(auditoria.observaciones || '')}</textarea>
-    </div>
+    <div class="tarjeta"><h2>Observaciones Generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">${esc(auditoria.observaciones || '')}</textarea></div>
     <div class="tarjeta">
         <h2>Evidencias (${evidencias.length})</h2>
         <input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">
@@ -369,21 +336,19 @@ function pasoCierre() {
                     <div class="foto"><img src="${e.url}"><button onclick="quitarEvidencia(${i})">✕</button></div>
                     <div class="foto-obs"><input type="text" placeholder="Nota a esta foto..." value="${esc(e.observacion)}" onchange="guardarObsFoto(${i}, this.value)"></div>
                 </div>`).join('')}
-            <button class="agregar-foto" onclick="document.getElementById('archivoFoto').click()"><span>📷</span>Agregar Foto</button>
+            <button class="agregar-foto" onclick="document.getElementById('archivoFoto').click()"><span>📷</span>Tomar / Subir Foto</button>
         </div>
-        <div class="mensaje" id="avisoFoto"></div>
+        <div class="mensaje" id="avisoFoto" style="margin-top:16px;"></div>
     </div>
-    <div class="tarjeta"><h2>Resultado</h2>
+    <div class="tarjeta"><h2>Resultado Final</h2>
         <div class="resultado-botones">
             <button id="btnAprobado" class="${auditoria.resultado === 'aprobado' ? 'sel-aprobado' : ''}" onclick="elegirResultado('aprobado')">Aprobado</button>
             <button id="btnRechazado" class="${auditoria.resultado === 'rechazado' ? 'sel-rechazado' : ''}" onclick="elegirResultado('rechazado')">Rechazado</button>
         </div>
     </div>`;
 }
-
 window.elegirResultado = r => { auditoria.resultado = r; $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : '';$('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : ''; };
 window.guardarObsFoto = (i, val) => { evidencias[i].observacion = val; };
-
 window.subirFotos = async function(e) {
     const archivos = [...e.target.files]; if (!archivos.length) return;
     $('avisoFoto').className = 'mensaje info';
@@ -399,15 +364,12 @@ window.subirFotos = async function(e) {
     }
     $('archivoFoto').value = ''; pintar();
 };
-window.quitarEvidencia = async i => { if(confirm('¿Quitar foto?')) { if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id); evidencias.splice(i, 1); pintar(); } };
+window.quitarEvidencia = async i => { if(confirm('¿Eliminar esta evidencia?')) { if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id); evidencias.splice(i, 1); pintar(); } };
 
-// ---------- Guardado ----------
+// Guardado
 async function guardarPaso() {
     if (paso === 1) {
-        auditoria.referencia = ($('eRef').value || '').toUpperCase();
-        auditoria.sku = ($('eSku').value || '').toUpperCase();
-        auditoria.sublinea = ($('eSublinea').value || '').toUpperCase();
-        auditoria.cantidad_produccion = totalLote();
+        auditoria.referencia = ($('eRef').value || '').toUpperCase(); auditoria.sku = ($('eSku').value \vert{}\vert{} '').toUpperCase(); auditoria.sublinea = ($('eSublinea').value || '').toUpperCase(); auditoria.cantidad_produccion = totalLote();
         await supabase.from('auditorias').update({ referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea, cantidad_produccion: auditoria.cantidad_produccion }).eq('id', idAuditoria);
         await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
         const filas = []; cantidades.forEach(c => Object.entries(c.tallas).forEach(([t, cant]) => { if (num(cant)>0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) }); }));
@@ -419,20 +381,16 @@ async function guardarPaso() {
         if (defectos.length) await supabase.from('auditoria_defectos').insert(defectos.map(d => ({ auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad })));
     }
     if (paso === 4) {
-        auditoria.observaciones = $('eObservaciones').value;
-        await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
-        // Guardar observaciones de cada foto individual
-        await Promise.all(evidencias.map(e => {
-            if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
-        }));
+        auditoria.observaciones = $('eObservaciones').value; await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
+        await Promise.all(evidencias.map(e => { if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id); }));
     }
 }
 
-$('btnAtras').addEventListener('click', async () => { await guardarPaso(); paso--; pintar(); });
-$('btnSiguiente').addEventListener('click', async () => {$('btnSiguiente').disabled = true;
+$('btnAtras').addEventListener('click', async () => { await guardarPaso(); paso--; pintar(); });$('btnSiguiente').addEventListener('click', async () => {
+    $('btnSiguiente').disabled = true; $('btnSiguiente').textContent = 'Guardando...';
     await guardarPaso();
     if (paso === 4) {
-        if (!auditoria.resultado) { $('btnSiguiente').disabled = false; return alert('Elige el resultado.'); }
+        if (!auditoria.resultado) { $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría'; return alert('Elige si el lote fue Aprobado o Rechazado.'); }
         await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
         location.href = 'agenda.html'; return;
     }
