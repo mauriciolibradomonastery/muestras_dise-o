@@ -10,7 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Librerías para Gráficos y Generación de PDF -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
     :root {
         --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
@@ -67,27 +69,37 @@
     /* Modal Detalles Pro */
     .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
     .fondo.abierto { display: flex; opacity: 1;}
-    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 850px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
+    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 880px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
     .fondo.abierto .hoja { transform: translateY(0); }
     .hoja-cabeza { padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;}
     .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta);}
+    
+    .btn-pdf { background: var(--laton); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transicion); display: flex; align-items: center; gap: 8px; }
+    .btn-pdf:hover { background: var(--laton-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(176,137,69,0.25); }
+
     .cerrar { background: #F4F1EB; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; color: var(--texto-claro); cursor: pointer; transition: var(--transicion); display: flex; align-items: center; justify-content: center;}
     .cerrar:hover { background: #E6E1D8; color: var(--vino); }
-    .hoja-cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 24px; background: #FDFBF7;}
+    .hoja-cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 24px; background: #fff;}
     
-    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px;}
-    .detalle-item { background: #fff; padding: 16px; border-radius: 8px; border: 1px solid var(--borde); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
-    .detalle-item b { display: block; font-size: 11px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;}
+    /* Formato PDF e Impresión */
+    .pdf-encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--tinta); padding-bottom: 16px; margin-bottom: 20px; }
+    .pdf-encabezado .marca h3 { font-family: 'Cormorant Garamond', serif; font-size: 28px; margin: 0; font-weight: 600; letter-spacing: 0.05em; color: var(--tinta); }
+    .pdf-encabezado .marca p { margin: 2px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--texto-claro); }
+    .pdf-encabezado img { height: 60px; object-fit: contain; }
+
+    .detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;}
+    .detalle-item { background: #FDFBF7; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--borde);}
+    .detalle-item b { display: block; font-size: 10px; color: var(--texto-claro); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em;}
     
-    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 20px; }
-    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 500; margin: 0 0 16px 0; font-size: 20px; color: var(--tinta);}
+    .seccion-detalle { border-top: 1px solid var(--borde); padding-top: 16px; page-break-inside: avoid; }
+    .seccion-detalle h4 { font-family: 'Cormorant Garamond', serif; font-weight: 600; margin: 0 0 12px 0; font-size: 20px; color: var(--tinta);}
     
-    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-    .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; box-shadow: var(--sombra-card);}
-    .foto-card img { width: 100%; height: 160px; object-fit: cover; display: block;}
-    .foto-card p { margin: 0; padding: 10px; font-size: 12px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA; font-weight: 500;}
+    .foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .foto-card { border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: #fff; page-break-inside: avoid; }
+    .foto-card img { width: 100%; height: 150px; object-fit: cover; display: block;}
+    .foto-card p { margin: 0; padding: 8px; font-size: 11px; color: var(--texto-claro); text-align: center; border-top: 1px solid var(--borde); background: #FAFAFA;}
     
-    .pastilla { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
+    .pastilla { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase;}
     .pastilla.pass { background: #EEF7F2; color: var(--verde); }
     .pastilla.fail { background: #FCF0F0; color: var(--vino); }
     .pastilla.na   { background: #F3F4F6; color: #4B5563; }
@@ -95,7 +107,7 @@
     .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
     .pastilla.critico { background: #FCF0F0; color: var(--vino); }
 
-    .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+    .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
     .tabla-aql-comparativa th { background: #FDFBF7; }
 
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
@@ -161,8 +173,11 @@
 <div class="fondo" id="modalDetalle">
     <div class="hoja">
         <div class="hoja-cabeza">
-            <h2>Detalle Completo de Auditoría</h2>
-            <button class="cerrar" id="btnCerrarDetalle">✕</button>
+            <h2>Detalle de Auditoría Pro</h2>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn-pdf" id="btnDescargarPdf">📄 Descargar PDF</button>
+                <button class="cerrar" id="btnCerrarDetalle">✕</button>
+            </div>
         </div>
         <div class="hoja-cuerpo" id="cuerpoDetalle"></div>
     </div>
@@ -175,6 +190,7 @@ const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_pu
 const $ = id => document.getElementById(id);
 let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasMap = {};
 let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
+let idActual = null, refActual = '';
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -240,7 +256,7 @@ function renderData() {
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para los filtros seleccionados.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -288,6 +304,7 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
 }
 
 window.verDetalle = async function(id) {
+    idActual = id;
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
     
     try {
@@ -302,6 +319,7 @@ window.verDetalle = async function(id) {
 
         const det = resDet.data, defs = resDefs.data || [], evis = resEvis.data || [], med = resMed.data || [], prue = resPrue.data || [];
         const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
+        refActual = det.referencia || 'Monastery';
 
         const auditada = Number(det.cantidad_auditada) || 50;
         const maxMayor = auditada >= 50 ? 3 : 2;
@@ -312,6 +330,14 @@ window.verDetalle = async function(id) {
         const realMenores = defs.filter(d => d.severidad === 'menor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
 
         let html = `
+        <div class="pdf-encabezado">
+            <div class="marca">
+                <h3>MONASTERY</h3>
+                <p>INFORME TÉCNICO DE AUDITORÍA DE CALIDAD</p>
+            </div>
+            <img src="logo.png" alt="Logo Monastery" onerror="this.style.display='none'">
+        </div>
+
         <div class="detalle-grid">
             <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small style="color:var(--texto-claro);">(${det.sku || 'N/A'})</small></div>
             <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
@@ -323,7 +349,7 @@ window.verDetalle = async function(id) {
             <div class="detalle-item"><b>Sugerencia de Sistema AQL</b><span style="font-weight:600; color:var(--tinta);">${det.sugerencia_aql || 'Evaluado por AQL ISO 2859-1'}</span></div>
         </div>`;
 
-        // 1. COMPARATIVA DE LÍMITES AQL VS LO REAL
+        // COMPARATIVA DE LÍMITES AQL VS LO REAL
         html += `<div class="seccion-detalle">
             <h4>Análisis Comparativo AQL (ISO 2859-1)</h4>
             <div class="tabla-aql-comparativa">
@@ -355,7 +381,7 @@ window.verDetalle = async function(id) {
             </div>
         </div>`;
 
-        // 2. TABLA DE CONTROL DE MEDIDAS (POM)
+        // TABLA DE CONTROL DE MEDIDAS (POM)
         html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
         if (med.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>`;
@@ -373,8 +399,8 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
         html += `</div>`;
 
-        // 3. CHECKLIST DE PRUEBAS FÍSICAS
-        html += `<div class="seccion-detalle"><h4>Pruebas Físicas y Inspección de Empaque (${prue.length})</h4>`;
+        // CHECKLIST DE PRUEBAS FÍSICAS
+        html += `<div class="seccion-detalle"><h4>Pruebas Físicas e Inspección de Empaque (${prue.length})</h4>`;
         if (prue.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica / Chequeo</th><th>Resultado</th></tr></thead><tbody>`;
             prue.forEach(p => {
@@ -384,7 +410,7 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
         html += `</div>`;
 
-        // 4. DETALLE DE DEFECTOS ENCONTRADOS
+        // DETALLE DE DEFECTOS ENCONTRADOS
         html += `<div class="seccion-detalle"><h4>Detalle de Defectos Físicos (${defs.length} tipos)</h4>`;
         if (defs.length > 0) {
             html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
@@ -395,13 +421,13 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
         html += `</div>`;
 
-        // 5. OBSERVACIONES Y FOTOGRAFÍAS
+        // OBSERVACIONES Y FOTOGRAFÍAS
         html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:14px; background:#F9F8F6; padding:16px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
         
         html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
         if (evis.length > 0) {
             html += `<div class="foto-grid">`;
-            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
+            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}" crossorigin="anonymous"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
             html += `</div>`;
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se adjuntaron fotografías.</p>`; }
         html += `</div>`;
@@ -411,6 +437,32 @@ window.verDetalle = async function(id) {
         $('cuerpoDetalle').innerHTML = `<div class="cargando" style="color:var(--vino)">Error al cargar detalle: ${err.message}</div>`;
     }
 };
+
+// Generador de PDF ejecutable
+$('btnDescargarPdf').addEventListener('click', () => {
+    const elemento = $('cuerpoDetalle');
+    const btn = $('btnDescargarPdf');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generando PDF...';
+
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Informe_Auditoria_${refActual}_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(elemento).save().then(() => {
+        btn.disabled = false;
+        btn.textContent = '📄 Descargar PDF';
+    }).catch(err => {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = '📄 Descargar PDF';
+        alert('Hubo un inconveniente al generar el PDF. Intenta nuevamente.');
+    });
+});
 
 const cerrarModal = () => $('modalDetalle').classList.remove('abierto');
 $('btnCerrarDetalle').addEventListener('click', cerrarModal);$('modalDetalle').addEventListener('click', e => { if (e.target === $('modalDetalle')) cerrarModal(); });$('filtroProv').addEventListener('change', renderData); $('filtroRef').addEventListener('change', renderData);$('filtroAuditor').addEventListener('change', renderData);
