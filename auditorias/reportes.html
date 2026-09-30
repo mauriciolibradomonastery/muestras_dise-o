@@ -64,10 +64,10 @@
     .estado-aprobado { color: var(--verde); font-weight: 700; background: #EEF7F2; padding: 4px 10px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;}
     .estado-rechazado { color: var(--vino); font-weight: 700; background: #FCF0F0; padding: 4px 10px; border-radius: 6px; font-size: 12px; letter-spacing: 0.02em;}
 
-    /* Modal Detalles */
+    /* Modal Detalles Pro */
     .fondo { display: none; position: fixed; inset: 0; background: rgba(21,16,14,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 60; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.3s; }
     .fondo.abierto { display: flex; opacity: 1;}
-    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 800px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
+    .hoja { background: #fff; border-radius: 16px; width: 100%; max-width: 850px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
     .fondo.abierto .hoja { transform: translateY(0); }
     .hoja-cabeza { padding: 20px 24px; border-bottom: 1px solid var(--borde); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); display: flex; justify-content: space-between; align-items: center; z-index: 10;}
     .hoja-cabeza h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0; color: var(--tinta);}
@@ -91,6 +91,12 @@
     .pastilla.pass { background: #EEF7F2; color: var(--verde); }
     .pastilla.fail { background: #FCF0F0; color: var(--vino); }
     .pastilla.na   { background: #F3F4F6; color: #4B5563; }
+    .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
+    .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
+    .pastilla.critico { background: #FCF0F0; color: var(--vino); }
+
+    .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+    .tabla-aql-comparativa th { background: #FDFBF7; }
 
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
@@ -155,7 +161,7 @@
 <div class="fondo" id="modalDetalle">
     <div class="hoja">
         <div class="hoja-cabeza">
-            <h2>Detalle de Auditoría Pro</h2>
+            <h2>Detalle Completo de Auditoría</h2>
             <button class="cerrar" id="btnCerrarDetalle">✕</button>
         </div>
         <div class="hoja-cuerpo" id="cuerpoDetalle"></div>
@@ -234,7 +240,7 @@ function renderData() {
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para los filtros seleccionados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -297,33 +303,80 @@ window.verDetalle = async function(id) {
         const det = resDet.data, defs = resDefs.data || [], evis = resEvis.data || [], med = resMed.data || [], prue = resPrue.data || [];
         const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
 
-        let html = `
-        ${det.sugerencia_aql ? `<div style="padding:14px; background:#F9F8F6; border:1px solid var(--borde); border-radius:8px; font-size:13px;"><b>🤖 Análisis Automático AQL:</b> ${det.sugerencia_aql}</div>` : ''}
+        const auditada = Number(det.cantidad_auditada) || 50;
+        const maxMayor = auditada >= 50 ? 3 : 2;
+        const maxMenor = auditada >= 50 ? 5 : 3;
 
+        const realCriticos = defs.filter(d => d.severidad === 'critico').reduce((s, d) => s + Number(d.cantidad || 0), 0);
+        const realMayores = defs.filter(d => d.severidad === 'mayor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
+        const realMenores = defs.filter(d => d.severidad === 'menor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
+
+        let html = `
         <div class="detalle-grid">
             <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small style="color:var(--texto-claro);">(${det.sku || 'N/A'})</small></div>
             <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
             <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
-            <div class="detalle-item"><b>Auditora</b>${auditora ? auditora.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>Lote / Muestra AQL</b>${det.cantidad_produccion || 0} unds / ${det.cantidad_auditada || 0} unds</div>
-            <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${(det.resultado || 'N/A').toUpperCase()}</span></div>
+            <div class="detalle-item"><b>Auditora Responsable</b>${auditora ? auditora.nombre : 'N/A'}</div>
+            <div class="detalle-item"><b>Lote / Muestra AQL</b>${det.cantidad_produccion || 0} unds / ${auditada} unds</div>
+            <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
+            <div class="detalle-item"><b>Veredicto Final</b><span class="estado-${det.resultado}">${(det.resultado || 'N/A').toUpperCase()}</span></div>
+            <div class="detalle-item"><b>Sugerencia de Sistema AQL</b><span style="font-weight:600; color:var(--tinta);">${det.sugerencia_aql || 'Evaluado por AQL ISO 2859-1'}</span></div>
         </div>`;
 
-        // Puntos de Medida (POM)
-        html += `<div class="seccion-detalle"><h4>Control de Medidas (POM) (${med.length})</h4>`;
+        // 1. COMPARATIVA DE LÍMITES AQL VS LO REAL
+        html += `<div class="seccion-detalle">
+            <h4>Análisis Comparativo AQL (ISO 2859-1)</h4>
+            <div class="tabla-aql-comparativa">
+                <table>
+                    <thead>
+                        <tr><th>Severidad</th><th class="num">Límite Máximo Permitido</th><th class="num">Encontrado en Muestra</th><th>Estado AQL</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="pastilla critico">Crítico</span></td>
+                            <td class="num">0</td>
+                            <td class="num"><b>${realCriticos}</b></td>
+                            <td><span class="pastilla ${realCriticos === 0 ? 'pass' : 'fail'}">${realCriticos === 0 ? 'PASÓ' : 'EXCEDIDO'}</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="pastilla mayor">Mayor</span></td>
+                            <td class="num">${maxMayor}</td>
+                            <td class="num"><b>${realMayores}</b></td>
+                            <td><span class="pastilla ${realMayores <= maxMayor ? 'pass' : 'fail'}">${realMayores <= maxMayor ? 'PASÓ' : 'EXCEDIDO'}</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="pastilla menor">Menor</span></td>
+                            <td class="num">${maxMenor}</td>
+                            <td class="num"><b>${realMenores}</b></td>
+                            <td><span class="pastilla ${realMenores <= maxMenor ? 'pass' : 'fail'}">${realMenores <= maxMenor ? 'PASÓ' : 'EXCEDIDO'}</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+
+        // 2. TABLA DE CONTROL DE MEDIDAS (POM)
+        html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
         if (med.length > 0) {
-            html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol.</th><th class="num">Real</th><th>Cumple</th></tr></thead><tbody>`;
+            html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>`;
             med.forEach(m => {
-                html += `<tr><td><b>${m.punto_medida}</b></td><td>${m.talla}</td><td class="num">${m.medida_teorica} cm</td><td class="num">±${m.tolerancia}</td><td class="num"><b>${m.medida_real} cm</b></td><td><span class="pastilla ${m.cumple?'pass':'fail'}">${m.cumple?'CUMPLE':'FUERA'}</span></td></tr>`;
+                html += `<tr>
+                    <td><b>${m.punto_medida}</b></td>
+                    <td>${m.talla}</td>
+                    <td class="num">${m.medida_teorica} cm</td>
+                    <td class="num">±${m.tolerancia}</td>
+                    <td class="num"><b>${m.medida_real} cm</b></td>
+                    <td><span class="pastilla ${m.cumple ? 'pass' : 'fail'}">${m.cumple ? 'CUMPLE' : 'FUERA'}</span></td>
+                </tr>`;
             });
             html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas para esta auditoría.</p>`; }
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
         html += `</div>`;
 
-        // Checklist de Pruebas
-        html += `<div class="seccion-detalle"><h4>Pruebas Físicas y Calidad (${prue.length})</h4>`;
+        // 3. CHECKLIST DE PRUEBAS FÍSICAS
+        html += `<div class="seccion-detalle"><h4>Pruebas Físicas y Inspección de Empaque (${prue.length})</h4>`;
         if (prue.length > 0) {
-            html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica</th><th>Resultado</th></tr></thead><tbody>`;
+            html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica / Chequeo</th><th>Resultado</th></tr></thead><tbody>`;
             prue.forEach(p => {
                 html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado.toLowerCase()}">${p.resultado}</span></td></tr>`;
             });
@@ -331,25 +384,26 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
         html += `</div>`;
 
-        // Defectos
-        html += `<div class="seccion-detalle"><h4>Defectos Registrados (${defs.length})</h4>`;
+        // 4. DETALLE DE DEFECTOS ENCONTRADOS
+        html += `<div class="seccion-detalle"><h4>Detalle de Defectos Físicos (${defs.length} tipos)</h4>`;
         if (defs.length > 0) {
             html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
             defs.forEach(d => {
                 html += `<tr><td><span class="pastilla ${d.severidad}">${d.severidad}</span></td><td><b>${d.defecto}</b></td><td>${d.color || '-'} / ${d.talla || '-'}</td><td class="num"><b>${d.cantidad}</b></td></tr>`;
             });
             html += `</tbody></table>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin defectos registrados.</p>`; }
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
         html += `</div>`;
 
-        // Observaciones y Fotos
-        html += `<div class="seccion-detalle"><h4>Observaciones</h4><p style="font-size:14px; background:#F9F8F6; padding:12px; border-radius:8px; border:1px solid var(--borde);">${det.observaciones || 'Sin observaciones.'}</p></div>`;
+        // 5. OBSERVACIONES Y FOTOGRAFÍAS
+        html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:14px; background:#F9F8F6; padding:16px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
+        
         html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
         if (evis.length > 0) {
             html += `<div class="foto-grid">`;
-            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank"><img src="${e.url}"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
+            evis.forEach(e => { html += `<div class="foto-card"><a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}"></a><p>${e.observacion || e.nombre || 'Evidencia'}</p></div>`; });
             html += `</div>`;
-        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">Sin fotografías.</p>`; }
+        } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se adjuntaron fotografías.</p>`; }
         html += `</div>`;
 
         $('cuerpoDetalle').innerHTML = html;
