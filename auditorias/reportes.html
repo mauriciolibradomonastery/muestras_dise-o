@@ -190,7 +190,7 @@ const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_pu
 const $ = id => document.getElementById(id);
 let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasMap = {};
 let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
-let idActual = null, refActual = '';
+let refActual = '';
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -256,7 +256,7 @@ function renderData() {
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para los filtros seleccionados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -304,7 +304,6 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
 }
 
 window.verDetalle = async function(id) {
-    idActual = id;
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
     
     try {
@@ -317,7 +316,11 @@ window.verDetalle = async function(id) {
             supabase.from('auditoria_usuarios').select('id, nombre')
         ]);
 
-        const det = resDet.data, defs = resDefs.data || [], evis = resEvis.data || [], med = resMed.data || [], prue = resPrue.data || [];
+        const det = resDet.data;
+        const defs = resDefs.data || [];
+        const evis = resEvis.data || [];
+        const med = resMed.data || [];
+        const prue = resPrue.data || [];
         const auditora = (resUsuarios.data || []).find(u => u.id === det.auditora_id);
         refActual = det.referencia || 'Monastery';
 
@@ -349,7 +352,7 @@ window.verDetalle = async function(id) {
             <div class="detalle-item"><b>Sugerencia de Sistema AQL</b><span style="font-weight:600; color:var(--tinta);">${det.sugerencia_aql || 'Evaluado por AQL ISO 2859-1'}</span></div>
         </div>`;
 
-        // COMPARATIVA DE LÍMITES AQL VS LO REAL
+        // 1. COMPARATIVA DE LÍMITES AQL VS LO REAL
         html += `<div class="seccion-detalle">
             <h4>Análisis Comparativo AQL (ISO 2859-1)</h4>
             <div class="tabla-aql-comparativa">
@@ -381,7 +384,7 @@ window.verDetalle = async function(id) {
             </div>
         </div>`;
 
-        // TABLA DE CONTROL DE MEDIDAS (POM)
+        // 2. TABLA DE CONTROL DE MEDIDAS (POM)
         html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
         if (med.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>`;
@@ -399,18 +402,18 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
         html += `</div>`;
 
-        // CHECKLIST DE PRUEBAS FÍSICAS
+        // 3. CHECKLIST DE PRUEBAS FÍSICAS
         html += `<div class="seccion-detalle"><h4>Pruebas Físicas e Inspección de Empaque (${prue.length})</h4>`;
         if (prue.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica / Chequeo</th><th>Resultado</th></tr></thead><tbody>`;
             prue.forEach(p => {
-                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado.toLowerCase()}">${p.resultado}</span></td></tr>`;
+                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado ? p.resultado.toLowerCase() : 'na'}">${p.resultado || 'N/A'}</span></td></tr>`;
             });
             html += `</tbody></table>`;
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
         html += `</div>`;
 
-        // DETALLE DE DEFECTOS ENCONTRADOS
+        // 4. DETALLE DE DEFECTOS ENCONTRADOS
         html += `<div class="seccion-detalle"><h4>Detalle de Defectos Físicos (${defs.length} tipos)</h4>`;
         if (defs.length > 0) {
             html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
@@ -421,7 +424,7 @@ window.verDetalle = async function(id) {
         } else { html += `<p style="font-size:13px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
         html += `</div>`;
 
-        // OBSERVACIONES Y FOTOGRAFÍAS
+        // 5. OBSERVACIONES Y FOTOGRAFÍAS
         html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:14px; background:#F9F8F6; padding:16px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
         
         html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${evis.length})</h4>`;
@@ -438,26 +441,38 @@ window.verDetalle = async function(id) {
     }
 };
 
-// Generador de PDF ejecutable
+// Generador de PDF que evita cortes
 $('btnDescargarPdf').addEventListener('click', () => {
-    const elemento = $('cuerpoDetalle');
     const btn = $('btnDescargarPdf');
     btn.disabled = true;
     btn.textContent = '⏳ Generando PDF...';
+
+    // Clonar contenido fuera de pantalla para desplegar todo sin el scroll del modal
+    const clon = $('cuerpoDetalle').cloneNode(true);
+    clon.style.width = '790px';
+    clon.style.padding = '20px';
+    clon.style.background = '#fff';
+    clon.style.position = 'absolute';
+    clon.style.left = '-9999px';
+    clon.style.top = '0px';
+    document.body.appendChild(clon);
 
     const opt = {
         margin:       [10, 10, 10, 10],
         filename:     `Informe_Auditoria_${refActual}_${new Date().toISOString().slice(0,10)}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    html2pdf().set(opt).from(elemento).save().then(() => {
+    html2pdf().set(opt).from(clon).save().then(() => {
+        document.body.removeChild(clon);
         btn.disabled = false;
         btn.textContent = '📄 Descargar PDF';
     }).catch(err => {
         console.error(err);
+        if (document.body.contains(clon)) document.body.removeChild(clon);
         btn.disabled = false;
         btn.textContent = '📄 Descargar PDF';
         alert('Hubo un inconveniente al generar el PDF. Intenta nuevamente.');
