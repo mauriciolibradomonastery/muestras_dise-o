@@ -67,7 +67,6 @@
     .btn-nueva { background: var(--tinta); color: var(--hueso); border-color: var(--tinta);
         font-weight: 500; padding: 11px 18px; }
     .btn-nueva:hover { background: #241c18; }
-    .btn-reportes { background: var(--laton); color: #1a1512; border-color: var(--laton); font-weight: 600;}
 
     /* ---------- Semana ---------- */
     .grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
@@ -196,7 +195,9 @@
             <div class="campo"><label for="fSku">SKU</label>
                 <input type="text" id="fSku" placeholder="Código SKU"></div>
             <div class="campo"><label for="fFotoRef">Fotografía de la prenda</label>
-                <input type="file" id="fFotoRef" accept="image/*"></div>
+                <input type="file" id="fFotoRef" accept="image/*">
+                <div id="previewFoto" style="margin-top: 8px; display: none;"></div>
+            </div>
 
             <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
                 <textarea id="fNota" placeholder="Opcional: qué revisar con especial atención"></textarea></div>
@@ -350,44 +351,52 @@ function pintar() {
 // ---------- Formulario ----------
 function abrirHoja(cita) {
     editando = cita || null;
-    $('mensajeHoja').className = 'mensaje';
-    $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
+    $('mensajeHoja').className = 'mensaje';$('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
     $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
-    $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
-    $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar' : '▶ Realizar';
+    $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';$('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar' : '▶ Realizar';
 
     if (cita) {
         $('fProveedor').value = cita.proveedor_id || '';
-        $('fTipo').value = cita.tipo_id || '';
-        $('fFecha').value = cita.fecha_programada;
-        $('fHora').value = (cita.hora_programada || '08:00').slice(0, 5);
-        $('fAuditora').value = cita.auditora_id || '';
-        $('fFactura').value = cita.numero_factura || '';
-        $('fReferencia').value = cita.referencia || '';
-        $('fColeccion').value = cita.coleccion || '';
-        $('fSublinea').value = cita.sublinea || '';
-        $('fSku').value = cita.sku || '';
-        $('fNota').value = cita.nota_programacion || '';
+        $('fTipo').value = cita.tipo_id \vert{}\vert{} '';$('fFecha').value = cita.fecha_programada;
+        $('fHora').value = (cita.hora_programada \vert{}\vert{} '08:00').slice(0, 5);$('fAuditora').value = cita.auditora_id || '';
+        $('fFactura').value = cita.numero_factura \vert{}\vert{} '';$('fReferencia').value = cita.referencia || '';
+        $('fColeccion').value = cita.coleccion \vert{}\vert{} '';$('fSublinea').value = cita.sublinea || '';
+        $('fSku').value = cita.sku \vert{}\vert{} '';$('fNota').value = cita.nota_programacion || '';
+
+        // Mostrar la miniatura si ya hay foto guardada
+        if (cita.fotoUrl) {
+            $('previewFoto').innerHTML = `<a href="${cita.fotoUrl}" target="_blank"><img src="${cita.fotoUrl}" style="height: 60px; border-radius: 4px; border: 1px solid var(--borde); object-fit: cover;"></a><br><small style="color:#8A8279">Foto actual guardada. Sube otra si deseas reemplazarla.</small>`;
+            $('previewFoto').style.display = 'block';
+        } else {
+            $('previewFoto').style.display = 'none';
+        }
     } else {
         $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
         $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
-        ['fFactura','fReferencia','fColeccion','fSublinea','fSku','fNota'].forEach(id => $(id).value = '');
+        ['fFactura','fReferencia','fColeccion','fSublinea','fSku','fNota'].forEach(id => $(id).value = '');$('previewFoto').style.display = 'none';
     }
-    $('fFotoRef').value = ''; 
-    $('modal').classList.add('abierto');
+    $('fFotoRef').value = '';$('modal').classList.add('abierto');
 }
 
 window.abrirCita = async function(id) {
-    const { data } = await supabase.from('auditorias').select('*').eq('id', id).maybeSingle();
-    if (data) abrirHoja(data);
+    const { data: cita } = await supabase.from('auditorias').select('*').eq('id', id).maybeSingle();
+    if (!cita) return;
+
+    // Buscar si ya tiene foto guardada en evidencias
+    const { data: foto } = await supabase.from('auditoria_evidencias')
+        .select('url')
+        .eq('auditoria_id', id)
+        .eq('nombre', 'Foto Prenda Referencia')
+        .limit(1).maybeSingle();
+    
+    cita.fotoUrl = foto ? foto.url : null;
+    abrirHoja(cita);
 };
 
 const cerrarHoja = () => $('modal').classList.remove('abierto');
-$('btnCerrar').addEventListener('click', cerrarHoja);
-$('btnCerrar2').addEventListener('click', cerrarHoja);
-$('btnNueva').addEventListener('click', () => abrirHoja(null));
-$('btnEjecutar').addEventListener('click', () => { if (editando) location.href = `auditoria.html?id=${editando.id}`; });
+$('btnCerrar').addEventListener('click', cerrarHoja);$('btnCerrar2').addEventListener('click', cerrarHoja);
+$('btnNueva').addEventListener('click', () => abrirHoja(null));$('btnEjecutar').addEventListener('click', () => { if (editando) location.href = `auditoria.html?id=${editando.id}`; });
 
 // Auto-completar sublinea y SKU
 $('fReferencia').addEventListener('change', () => {
@@ -398,7 +407,7 @@ $('fReferencia').addEventListener('change', () => {
     if (r.sublinea) $('fSublinea').value = r.sublinea;
     if (r.sku) $('fSku').value = r.sku;
     const prov = proveedores.find(p => p.nombre.toUpperCase() === (r.proveedor || '').toUpperCase());
-    if (prov && !$('fProveedor').value) $('fProveedor').value = prov.id;
+    if (prov && !$('fProveedor').value)$('fProveedor').value = prov.id;
     $('pistaRef').textContent = `SKU: ${r.sku || '—'} · Proveedor: ${r.proveedor || '—'}`;
 });
 
@@ -461,10 +470,8 @@ $('btnCancelarCita').addEventListener('click', async () => {
     cerrarHoja(); await cargarAuditorias();
 });
 
-$('antes').addEventListener('click', () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
-$('despues').addEventListener('click', () => { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
-$('hoy').addEventListener('click', () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });
-$('filtroAuditora').addEventListener('change', pintar);
+$('antes').addEventListener('click', () => { lunes = sumarDias(lunes, -7); cargarAuditorias(); });$('despues').addEventListener('click', () => { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
+$('hoy').addEventListener('click', () => { lunes = inicioSemana(new Date()); cargarAuditorias(); });$('filtroAuditora').addEventListener('change', pintar);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 await cargarCatalogos(); await cargarAuditorias(); cargarReferencias();
