@@ -72,6 +72,8 @@
     .foto-card { border: 1px solid var(--borde); border-radius: 6px; overflow: hidden; background: #fff; }
     .foto-card img { width: 100%; height: 140px; object-fit: cover; display: block;}
     .foto-card p { margin: 0; padding: 8px; font-size: 12px; color: #6F675F; text-align: center; border-top: 1px solid var(--borde); background: #faf9f8;}
+    
+    .cargando { padding: 40px; text-align: center; color: #8A8279; }
 
     @media (max-width: 768px) {
         .graficos-grid { grid-template-columns: 1fr; }
@@ -157,7 +159,7 @@ let chartRankingInst = null;
 let chartDefectosInst = null;
 
 async function init() {
-    // Traer auditorías finalizadas
+    // Traer auditorías finalizadas (solo con la relación estricta del proveedor y los defectos para los gráficos)
     const { data: auds } = await supabase.from('auditorias')
         .select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)')
         .eq('estado', 'finalizada')
@@ -195,12 +197,14 @@ function renderData(provId) {
         totalAuditado += Number(a.cantidad_auditada || 0);
         
         // Contar defectos para el gráfico de dona
-        a.auditoria_defectos.forEach(d => {
-            const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
-            const cant = Number(d.cantidad) || 0;
-            totalDefectos += cant;
-            defectosCount[defName] = (defectosCount[defName] || 0) + cant;
-        });
+        if (a.auditoria_defectos) {
+            a.auditoria_defectos.forEach(d => {
+                const defName = d.defecto ? d.defecto.toUpperCase() : 'NO ESPECIFICADO';
+                const cant = Number(d.cantidad) || 0;
+                totalDefectos += cant;
+                defectosCount[defName] = (defectosCount[defName] || 0) + cant;
+            });
+        }
         
         if(a.resultado === 'aprobado') aprobadas++;
 
@@ -210,8 +214,8 @@ function renderData(provId) {
             <td>${a.auditoria_proveedores?.nombre || 'N/A'}</td>
             <td>${a.referencia || ''} <small style="color:gray">${a.sku ? `(${a.sku})` : ''}</small></td>
             <td>${a.cantidad_auditada || 0}</td>
-            <td><span class="estado-${a.resultado}">${a.resultado.toUpperCase()}</span></td>
-            <td style="color: var(--laton); text-align:right;">Ver ›</td>
+            <td><span class="estado-${a.resultado}">${a.resultado?.toUpperCase()}</span></td>
+            <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver ›</td>
         </tr>`;
     });
 
@@ -307,71 +311,76 @@ function actualizarGraficos(ranking, topDefectos) {
     }
 }
 
-// Mostrar Detalle Completo
+// Mostrar Detalle Completo de Auditoría (Resiliente a fallos de relaciones foráneas múltiples)
 window.verDetalle = async function(id) {
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Descargando detalles...</div>';
     
-    // Consultar todos los datos relacionados a esta auditoría
-    const { data: det, error } = await supabase.from('auditorias')
-        .select('*, auditoria_proveedores(nombre), auditoria_usuarios(nombre), auditoria_defectos(*), auditoria_evidencias(*)')
-        .eq('id', id).single();
+    try {
+        // Se descargan en hilos paralelos para evitar colapsos de consultas JOIN anidadas en Supabase
+        const [ { data: det, error }, { data: defs }, { data: evis }, { data: usuarios } ] = await Promise.all([
+            supabase.from('auditorias').select('*, auditoria_proveedores(nombre)').eq('id', id).single(),
+            supabase.from('auditoria_defectos').select('*').eq('auditoria_id', id),
+            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', id),
+            supabase.from('auditoria_usuarios').select('id, nombre')
+        ]);
+
+        if (error || !det) throw error;
+
+        // Encontrar el nombre de la auditora basado en el ID
+        const auditora = (usuarios || []).find(u => u.id === det.auditora_id);
+        const nombreAuditora = auditora ? auditora.nombre : 'N/A';
         
-    if (error || !det) {
-        $('cuerpoDetalle').innerHTML = '<div class="cargando" style="color:#8C2026;">No se pudo cargar la información.</div>';
-        return;
+        $('cuerpoDetalle').innerHTML = `
+            <div class="detalle-grid">
+                <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small>(${det.sku || 'N/A'})</small></div>
+                <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores?.nombre || 'N/A'}</div>
+                <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria || 'N/A'}</div>
+                <div class="detalle-item"><b>Auditora</b>${nombreAuditora}</div>
+                <div class="detalle-item"><b>Producción (Lote)</b>${det.cantidad_produccion || 0} unidades</div>
+                <div class="detalle-item"><b>Unidades Auditadas</b>${det.cantidad_auditada || 0} unidades</div>
+                <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${det.resultado?.toUpperCase() || 'N/A'}</span></div>
+                <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
+            </div>
+            
+            <div class="seccion-detalle">
+                <h4>Defectos Registrados (${defs ? defs.length : 0})</h4>
+                ${(defs && defs.length) ? `
+                    <table>
+                        <thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead>
+                        <tbody>
+                            ${defs.map(d => `<tr>
+                                <td><span class="pastilla" style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:11px;">${d.severidad}</span></td>
+                                <td>${d.defecto}</td>
+                                <td>${d.color || '-'} / ${d.talla || '-'}</td>
+                                <td class="num">${d.cantidad}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se registraron defectos en esta auditoría.</p>'}
+            </div>
+
+            <div class="seccion-detalle">
+                <h4>Observaciones Generales</h4>
+                <p style="font-size: 14px; margin: 0; line-height: 1.5;">${det.observaciones ? det.observaciones.replace(/\n/g, '<br>') : '<i style="color:#8A8279">Sin observaciones.</i>'}</p>
+            </div>
+            
+            <div class="seccion-detalle">
+                <h4>Evidencias Fotográficas (${evis ? evis.length : 0})</h4>
+                ${(evis && evis.length) ? `
+                    <div class="foto-grid">
+                        ${evis.map(e => `
+                            <div class="foto-card">
+                                <a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}"></a>
+                                <p>${e.observacion || 'Sin nota adjunta'}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se adjuntaron fotografías.</p>'}
+            </div>
+        `;
+    } catch (err) {
+        $('cuerpoDetalle').innerHTML = `<div class="cargando" style="color:#8C2026;">No se pudo cargar la información.<br><small>${err?.message || ''}</small></div>`;
     }
-
-    const defs = det.auditoria_defectos || [];
-    const evis = det.auditoria_evidencias || [];
-    
-    $('cuerpoDetalle').innerHTML = `
-        <div class="detalle-grid">
-            <div class="detalle-item"><b>Referencia / SKU</b>${det.referencia || 'N/A'} <small>(${det.sku || 'N/A'})</small></div>
-            <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores?.nombre || 'N/A'}</div>
-            <div class="detalle-item"><b>Fecha de Revisión</b>${det.fecha_auditoria}</div>
-            <div class="detalle-item"><b>Auditora</b>${det.auditoria_usuarios?.nombre || 'N/A'}</div>
-            <div class="detalle-item"><b>Producción (Lote)</b>${det.cantidad_produccion || 0} unidades</div>
-            <div class="detalle-item"><b>Unidades Auditadas</b>${det.cantidad_auditada || 0} unidades</div>
-            <div class="detalle-item"><b>Resultado Final</b><span class="estado-${det.resultado}">${det.resultado?.toUpperCase()}</span></div>
-            <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
-        </div>
-        
-        <div class="seccion-detalle">
-            <h4>Defectos Registrados (${defs.length})</h4>
-            ${defs.length ? `
-                <table>
-                    <thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead>
-                    <tbody>
-                        ${defs.map(d => `<tr>
-                            <td><span class="pastilla" style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:11px;">${d.severidad}</span></td>
-                            <td>${d.defecto}</td>
-                            <td>${d.color || '-'} / ${d.talla || '-'}</td>
-                            <td class="num">${d.cantidad}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>
-            ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se registraron defectos en esta auditoría.</p>'}
-        </div>
-
-        <div class="seccion-detalle">
-            <h4>Observaciones Generales</h4>
-            <p style="font-size: 14px; margin: 0; line-height: 1.5;">${det.observaciones ? det.observaciones.replace(/\n/g, '<br>') : '<i style="color:#8A8279">Sin observaciones.</i>'}</p>
-        </div>
-        
-        <div class="seccion-detalle">
-            <h4>Evidencias Fotográficas (${evis.length})</h4>
-            ${evis.length ? `
-                <div class="foto-grid">
-                    ${evis.map(e => `
-                        <div class="foto-card">
-                            <a href="${e.url}" target="_blank" title="Clic para ampliar"><img src="${e.url}"></a>
-                            <p>${e.observacion || 'Sin nota adjunta'}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            ` : '<p style="font-size:13px; color:#8A8279; margin:0;">No se adjuntaron fotografías.</p>'}
-        </div>
-    `;
 };
 
 // Cerrar Modal
