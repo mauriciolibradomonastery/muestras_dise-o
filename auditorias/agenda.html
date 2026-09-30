@@ -97,21 +97,23 @@
     .dia-cabeza b { font-size: 18px; color: var(--tinta); font-weight: 600; }
     .dia-cuerpo { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; background: #fff; }
 
-    /* Tarjetas de Cita */
+    /* Tarjetas de Cita coloreadas según auditora */
     .cita { 
-        border-radius: 8px; padding: 12px; font-size: 13px; cursor: pointer;
-        background: #fff; border: 1px solid var(--borde); border-left: 5px solid var(--color-auditora, var(--azul)); 
-        transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative;
+        border-radius: 10px; padding: 12px; font-size: 13px; cursor: pointer;
+        background: var(--bg-auditora, #F2F5FC); 
+        border: 1px solid var(--border-auditora, rgba(30,58,138,0.2)); 
+        border-left: 6px solid var(--color-auditora, var(--azul)); 
+        transition: var(--transicion); box-shadow: 0 2px 6px rgba(0,0,0,0.03); position: relative;
     }
-    .cita:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); border-color: #D4CDC3; }
-    .cita.vencida    { background: #FFF9F9; }
-    .cita.en_curso   { background: #FFFCF7; }
+    .cita:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
+    .cita.vencida    { background: #FFF4F4; border-color: rgba(140,32,38,0.2); border-left-color: var(--vino) !important; }
+    .cita.en_curso   { background: #FFFDF0; border-color: rgba(180,83,9,0.2); border-left-color: var(--ambar) !important; }
     .cita.cancelada  { border-left-color: #A39C94 !important; background: #F9F8F6; opacity: .6; text-decoration: line-through; }
     
     .cita .hora { font-weight: 700; color: var(--tinta); margin-bottom: 4px; font-size: 12px; }
     .cita .prov { font-weight: 600; color: var(--texto); margin-bottom: 2px; }
     .cita .ref { color: var(--texto-claro); font-size: 11px; text-transform: uppercase; }
-    .cita .aud { color: var(--texto-claro); font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
+    .cita .aud { color: var(--tinta); font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 600; }
     .cita .aud::before { content: '👤'; font-size: 10px; }
     .vacio-dia { color: #C3BCB4; font-size: 12px; padding: 12px; text-align: center; font-style: italic; }
 
@@ -270,13 +272,23 @@ const supabase = createClient(
 const $ = function(id) { return document.getElementById(id); };
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const PALETA_COLORES = ['#1E3A8A', '#B45309', '#197A56', '#6E1F24', '#B08945', '#4C1D95', '#047857', '#C2410C'];
+
+// Paleta de colores distintivos con sus versiones de fondo claro y borde suave
+const PALETA_AUDITORAS = [
+    { solido: '#1E3A8A', bg: '#EFF4FE', border: '#C2D6FF' }, // Azul (Ej. Yudi)
+    { solido: '#197A56', bg: '#EEF7F2', border: '#BFE2D0' }, // Verde
+    { solido: '#B45309', bg: '#FEF8EE', border: '#FCE4C6' }, // Ámbar/Naranja
+    { solido: '#6E1F24', bg: '#FCF0F0', border: '#F2C8C9' }, // Vino/Rojo
+    { solido: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' }, // Púrpura
+    { solido: '#0284C7', bg: '#F0F9FF', border: '#BAE6FD' }, // Celeste
+    { solido: '#D97706', bg: '#FFFBEB', border: '#FDE68A' }, // Dorado
+];
 
 const iso = function(f) { return f.toLocaleDateString('sv'); };                       
 const hoyISO = iso(new Date());
 
 let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
-let coloresAuditoras = {};
+let esquemaAuditoras = {};
 let lunes = inicioSemana(new Date());
 let editando = null;
 
@@ -328,9 +340,9 @@ async function cargarCatalogos() {
     tipos = tip.data || [];
     usuarios = usu.data || [];
 
-    // Mapeo dinámico de colores por auditora
+    // Mapeo dinámico de estilos por auditora
     usuarios.forEach(function(u, idx) {
-        coloresAuditoras[u.id] = PALETA_COLORES[idx % PALETA_COLORES.length];
+        esquemaAuditoras[u.id] = PALETA_AUDITORAS[idx % PALETA_AUDITORAS.length];
     });
 
     $('fProveedor').innerHTML = '<option value="">Elegir…</option>' +
@@ -392,8 +404,8 @@ function pintar() {
             
         if (delDia.length) {
             htmlDia += delDia.map(function(c) {
-                const colorBorde = coloresAuditoras[c.auditora_id] || 'var(--azul)';
-                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" style="--color-auditora: ' + colorBorde + '" onclick="abrirCita(' + c.id + ')">' +
+                const estilo = esquemaAuditoras[c.auditora_id] || PALETA_AUDITORAS[0];
+                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" style="--color-auditora: ' + estilo.solido + '; --bg-auditora: ' + estilo.bg + '; --border-auditora: ' + estilo.border + ';" onclick="abrirCita(' + c.id + ')">' +
                     '<div class="hora">' + (c.hora_programada || '').slice(0,5) + '</div>' +
                     '<div class="prov">' + c.proveedor + '</div>' +
                     '<div class="ref">' + (c.referencia || 'sin ref.') + '</div>' +
