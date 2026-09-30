@@ -206,23 +206,36 @@ async function init() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { location.replace('index.html'); return; }
 
-    const { data: auds, error } = await supabase.from('auditorias')
-        .select('*, auditoria_proveedores(nombre), auditoria_usuarios!auditora_id(nombre), auditoria_defectos(defecto, cantidad)')
-        .eq('estado', 'finalizada')
-        .order('fecha_auditoria', { ascending: false });
+    // Descargar auditorías y usuarios en consultas separadas para evitar el error de llave foránea
+    const [ resAuds, resUsuarios ] = await Promise.all([
+        supabase.from('auditorias')
+            .select('*, auditoria_proveedores(nombre), auditoria_defectos(defecto, cantidad)')
+            .eq('estado', 'finalizada')
+            .order('fecha_auditoria', { ascending: false }),
+        supabase.from('auditoria_usuarios').select('id, nombre')
+    ]);
 
-    if (error) {
-        console.error(error);
-        $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error al cargar: ' + error.message + '</td></tr>';
+    if (resAuds.error) {
+        console.error(resAuds.error);
+        $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error al cargar: ' + resAuds.error.message + '</td></tr>';
         $('panelKpis').innerHTML = '';
         return;
     }
     
-    auditorias = auds;
-    if (!auditorias) { auditorias = []; }
+    // Crear un diccionario rápido de IDs a nombres de usuarios
+    const usuariosNombres = {};
+    if (resUsuarios.data) {
+        resUsuarios.data.forEach(function(u) { usuariosNombres[u.id] = u.nombre; });
+    }
+
+    auditorias = resAuds.data || [];
     
-    // Poblar mapas de filtros
+    // Poblar mapas de filtros y asignar nombres de auditoras manualmente
     auditorias.forEach(function(a) {
+        if (a.auditora_id && usuariosNombres[a.auditora_id]) {
+            a.auditoria_usuarios = { nombre: usuariosNombres[a.auditora_id] };
+        }
+
         if(a.auditoria_proveedores) proveedoresMap[a.proveedor_id] = a.auditoria_proveedores.nombre;
         if(a.auditoria_usuarios) auditorasMap[a.auditora_id] = a.auditoria_usuarios.nombre;
         if(a.referencia) referenciasSet.add(a.referencia);
