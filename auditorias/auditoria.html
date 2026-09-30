@@ -278,7 +278,7 @@ function pasoAuditado() {
     <div class="tarjeta"><h2>2 · Cantidad auditada</h2>
         <input id="eAuditada" type="number" min="0" value="${auditada || ''}" oninput="calcularPct(${lote})" style="font-size:22px; text-align:center; padding:16px">
         <div class="cifras"><div class="cifra"><div class="n" id="pctAuditado">${lote ? (auditada / lote * 100).toFixed(1) : '0'} %</div><div class="t">Del lote (${fmt(lote)})</div></div></div>
-        <div style="display:flex; gap:8px; margin-top:14px;">${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="$('eAuditada').value=${Math.round(lote*p/100)};calcularPct(${lote})">${p} %</button>`).join('')}</div>
+        <div style="display:flex; gap:8px; margin-top:14px;">${[10, 25, 50, 100].map(p => `<button class="btn btn-chico" onclick="document.getElementById('eAuditada').value=${Math.round(lote*p/100)};calcularPct(${lote})">${p} %</button>`).join('')}</div>
     </div>`;
 }
 window.calcularPct = l => $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %';
@@ -369,7 +369,7 @@ function pasoCierre() {
                     <div class="foto"><img src="${e.url}"><button onclick="quitarEvidencia(${i})">✕</button></div>
                     <div class="foto-obs"><input type="text" placeholder="Nota a esta foto..." value="${esc(e.observacion)}" onchange="guardarObsFoto(${i}, this.value)"></div>
                 </div>`).join('')}
-            <button class="agregar-foto" onclick="$('archivoFoto').click()"><span>📷</span>Agregar Foto</button>
+            <button class="agregar-foto" onclick="document.getElementById('archivoFoto').click()"><span>📷</span>Agregar Foto</button>
         </div>
         <div class="mensaje" id="avisoFoto"></div>
     </div>
