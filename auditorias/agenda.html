@@ -25,7 +25,7 @@
         color: var(--texto); padding-bottom: calc(30px + env(safe-area-inset-bottom));
     }
 
-    /* Barra Superior Premium (Glassmorphism) */
+    /* Barra Superior Premium */
     .barra {
         background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
@@ -100,18 +100,18 @@
     /* Tarjetas de Cita */
     .cita { 
         border-radius: 8px; padding: 12px; font-size: 13px; cursor: pointer;
-        background: #fff; border: 1px solid var(--borde); border-left: 4px solid var(--azul); 
+        background: #fff; border: 1px solid var(--borde); border-left: 5px solid var(--color-auditora, var(--azul)); 
         transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative;
     }
     .cita:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); border-color: #D4CDC3; }
-    .cita.vencida    { border-left-color: var(--vino); background: #FFF9F9; }
-    .cita.en_curso   { border-left-color: var(--ambar); background: #FFFCF7; }
-    .cita.cancelada  { border-left-color: #A39C94; background: #F9F8F6; opacity: .6; text-decoration: line-through; }
+    .cita.vencida    { background: #FFF9F9; }
+    .cita.en_curso   { background: #FFFCF7; }
+    .cita.cancelada  { border-left-color: #A39C94 !important; background: #F9F8F6; opacity: .6; text-decoration: line-through; }
     
     .cita .hora { font-weight: 700; color: var(--tinta); margin-bottom: 4px; font-size: 12px; }
     .cita .prov { font-weight: 600; color: var(--texto); margin-bottom: 2px; }
     .cita .ref { color: var(--texto-claro); font-size: 11px; text-transform: uppercase; }
-    .cita .aud { color: var(--texto-claro); font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .cita .aud { color: var(--texto-claro); font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
     .cita .aud::before { content: '👤'; font-size: 10px; }
     .vacio-dia { color: #C3BCB4; font-size: 12px; padding: 12px; text-align: center; font-style: italic; }
 
@@ -123,7 +123,7 @@
     }
     .fondo.abierto { display: flex; opacity: 1; }
     .hoja { 
-        background: #fff; border-radius: 16px; width: 100%; max-width: 600px;
+        background: #fff; border-radius: 16px; width: 100%; max-width: 620px;
         max-height: 90vh; overflow: auto; box-shadow: 0 24px 48px rgba(0,0,0,0.2);
         transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -167,7 +167,7 @@
     @media (max-width: 1024px) {
         .grilla { grid-template-columns: 1fr; }
         .dia { min-height: auto; margin-bottom: 12px; }
-        .dia:has(.vacio-dia) { display: none; } /* Ocultar días vacíos en móvil */
+        .dia:has(.vacio-dia) { display: none; }
         .hoja-cuerpo { grid-template-columns: 1fr; }
         .contenido { padding: 16px; }
         .semana .rango { min-width: 140px; font-size: 13px; }
@@ -234,11 +234,17 @@
             <div class="campo"><label for="fSublinea">Sublínea</label>
                 <input type="text" id="fSublinea" placeholder="t-shirt, jean, crop top…"></div>
             
-            <div class="campo"><label for="fSku">SKU</label>
+            <div class="campo ancho"><label for="fSku">SKU</label>
                 <input type="text" id="fSku" placeholder="Código SKU"></div>
+
             <div class="campo"><label for="fFotoRef">Fotografía de la prenda</label>
                 <input type="file" id="fFotoRef" accept="image/*">
                 <div id="previewFoto" style="margin-top: 10px; display: none;"></div>
+            </div>
+
+            <div class="campo"><label for="fPdfPatronaje">Informe de Patronaje (PDF)</label>
+                <input type="file" id="fPdfPatronaje" accept="application/pdf">
+                <div id="previewPdf" style="margin-top: 10px; display: none;"></div>
             </div>
 
             <div class="campo ancho"><label for="fNota">Nota para la auditora</label>
@@ -264,10 +270,13 @@ const supabase = createClient(
 const $ = function(id) { return document.getElementById(id); };
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const PALETA_COLORES = ['#1E3A8A', '#B45309', '#197A56', '#6E1F24', '#B08945', '#4C1D95', '#047857', '#C2410C'];
+
 const iso = function(f) { return f.toLocaleDateString('sv'); };                       
 const hoyISO = iso(new Date());
 
 let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
+let coloresAuditoras = {};
 let lunes = inicioSemana(new Date());
 let editando = null;
 
@@ -318,6 +327,11 @@ async function cargarCatalogos() {
     proveedores = prov.data || [];
     tipos = tip.data || [];
     usuarios = usu.data || [];
+
+    // Mapeo dinámico de colores por auditora
+    usuarios.forEach(function(u, idx) {
+        coloresAuditoras[u.id] = PALETA_COLORES[idx % PALETA_COLORES.length];
+    });
 
     $('fProveedor').innerHTML = '<option value="">Elegir…</option>' +
         proveedores.map(function(p) { return '<option value="' + p.id + '">' + p.nombre + '</option>'; }).join('');
@@ -378,7 +392,8 @@ function pintar() {
             
         if (delDia.length) {
             htmlDia += delDia.map(function(c) {
-                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" onclick="abrirCita(' + c.id + ')">' +
+                const colorBorde = coloresAuditoras[c.auditora_id] || 'var(--azul)';
+                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" style="--color-auditora: ' + colorBorde + '" onclick="abrirCita(' + c.id + ')">' +
                     '<div class="hora">' + (c.hora_programada || '').slice(0,5) + '</div>' +
                     '<div class="prov">' + c.proveedor + '</div>' +
                     '<div class="ref">' + (c.referencia || 'sin ref.') + '</div>' +
@@ -418,10 +433,17 @@ function abrirHoja(cita) {
         $('fNota').value = cita.nota_programacion || '';
 
         if (cita.fotoUrl) {
-            $('previewFoto').innerHTML = '<a href="' + cita.fotoUrl + '" target="_blank"><img src="' + cita.fotoUrl + '" style="height: 80px; border-radius: 8px; border: 1px solid var(--borde); object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></a><br><small style="color:var(--texto-claro)">Foto guardada. Sube otra para reemplazarla.</small>';
+            $('previewFoto').innerHTML = '<a href="' + cita.fotoUrl + '" target="_blank"><img src="' + cita.fotoUrl + '" style="height: 70px; border-radius: 8px; border: 1px solid var(--borde); object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></a><br><small style="color:var(--texto-claro)">Foto guardada.</small>';
             $('previewFoto').style.display = 'block';
         } else {
             $('previewFoto').style.display = 'none';
+        }
+
+        if (cita.pdfUrl) {
+            $('previewPdf').innerHTML = '<a href="' + cita.pdfUrl + '" target="_blank" style="font-size:13px; font-weight:600; color:var(--azul); text-decoration:underline;">📄 Ver Informe de Patronaje (PDF)</a>';
+            $('previewPdf').style.display = 'block';
+        } else {
+            $('previewPdf').style.display = 'none';
         }
     } else {
         $('fProveedor').value = ''; 
@@ -435,8 +457,10 @@ function abrirHoja(cita) {
         $('fSku').value = '';
         $('fNota').value = '';
         $('previewFoto').style.display = 'none';
+        $('previewPdf').style.display = 'none';
     }
     $('fFotoRef').value = ''; 
+    $('fPdfPatronaje').value = '';
     $('modal').classList.add('abierto');
 }
 
@@ -444,13 +468,15 @@ window.abrirCita = async function(id) {
     const { data: cita } = await supabase.from('auditorias').select('*').eq('id', id).maybeSingle();
     if (!cita) return;
 
-    const { data: foto } = await supabase.from('auditoria_evidencias')
-        .select('url')
-        .eq('auditoria_id', id)
-        .eq('nombre', 'Foto Prenda Referencia')
-        .limit(1).maybeSingle();
+    const { data: evis } = await supabase.from('auditoria_evidencias')
+        .select('url, nombre')
+        .eq('auditoria_id', id);
+    
+    const foto = (evis || []).find(function(e) { return e.nombre === 'Foto Prenda Referencia'; });
+    const pdf = (evis || []).find(function(e) { return e.nombre === 'Informe de Patronaje'; });
     
     cita.fotoUrl = foto ? foto.url : null;
+    cita.pdfUrl = pdf ? pdf.url : null;
     abrirHoja(cita);
 };
 
@@ -507,14 +533,27 @@ $('btnGuardar').addEventListener('click', async () => {
         idGuardado = data.id;
     }
 
-    const archivo = $('fFotoRef').files[0];
-    if (archivo && idGuardado) {
+    // Subir fotografía de referencia si existe
+    const archivoFoto = $('fFotoRef').files[0];
+    if (archivoFoto && idGuardado) {
         btn.textContent = 'Subiendo foto...';
         const nombreExt = idGuardado + '/ref_' + Date.now() + '.jpg';
-        const { error: errUp } = await supabase.storage.from('auditorias-evidencias').upload(nombreExt, archivo);
+        const { error: errUp } = await supabase.storage.from('auditorias-evidencias').upload(nombreExt, archivoFoto);
         if (!errUp) {
             const url = supabase.storage.from('auditorias-evidencias').getPublicUrl(nombreExt).data.publicUrl;
             await supabase.from('auditoria_evidencias').insert({ auditoria_id: idGuardado, url: url, nombre: 'Foto Prenda Referencia', observacion: 'Foto subida en programación' });
+        }
+    }
+
+    // Subir informe PDF de patronaje si existe
+    const archivoPdf = $('fPdfPatronaje').files[0];
+    if (archivoPdf && idGuardado) {
+        btn.textContent = 'Subiendo PDF...';
+        const nombrePdf = idGuardado + '/patronaje_' + Date.now() + '.pdf';
+        const { error: errPdf } = await supabase.storage.from('auditorias-evidencias').upload(nombrePdf, archivoPdf, { contentType: 'application/pdf' });
+        if (!errPdf) {
+            const urlPdf = supabase.storage.from('auditorias-evidencias').getPublicUrl(nombrePdf).data.publicUrl;
+            await supabase.from('auditoria_evidencias').insert({ auditoria_id: idGuardado, url: urlPdf, nombre: 'Informe de Patronaje', observacion: 'Documento PDF de patronaje' });
         }
     }
 
