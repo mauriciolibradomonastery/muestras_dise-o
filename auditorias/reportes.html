@@ -202,10 +202,23 @@ let chartMesesInst = null;
 
 async function init() {
     // Traer auditorías finalizadas con todas las relaciones necesarias
-    const { data: auds } = await supabase.from('auditorias')
-        .select('*, auditoria_proveedores(nombre), auditoria_usuarios(nombre), auditoria_defectos(defecto, cantidad)')
+    // Sin sesión, las políticas RLS devuelven una lista vacía sin error
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { location.replace('index.html'); return; }
+
+    // auditorias tiene DOS relaciones con auditoria_usuarios (auditora_id y programada_por),
+    // así que hay que indicar cuál usar; si no, Supabase responde con error.
+    const { data: auds, error } = await supabase.from('auditorias')
+        .select('*, auditoria_proveedores(nombre), auditoria_usuarios!auditora_id(nombre), auditoria_defectos(defecto, cantidad)')
         .eq('estado', 'finalizada')
         .order('fecha_auditoria', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        $('tablaAuditorias').innerHTML = `<tr><td colspan="7" style="color:#8C2026">Error al cargar: ${error.message}</td></tr>`;
+        $('panelKpis').innerHTML = '';
+        return;
+    }
     
     auditorias = auds || [];
     
