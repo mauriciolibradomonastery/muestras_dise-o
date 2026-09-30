@@ -209,7 +209,6 @@ async function cargar() {
         defectos = (resDef.data || []).map(function(d) { return Object.assign({}, d); });
         evidencias = (resEvi.data || []).map(function(e) { return Object.assign({}, e); });
 
-        // Carga opcional resiliente de medidas y pruebas
         try {
             const resMed = await supabase.from('auditoria_medidas').select('*').eq('auditoria_id', idAuditoria).order('id');
             medidas = (resMed.data || []).map(function(m) { return Object.assign({}, m); });
@@ -389,15 +388,31 @@ function pasoMedidas() {
         '</table></div>' +
     '</div>';
 }
-window.agregarMedida = function() {
+window.agregarMedida = async function() {
     const punto = $('mPunto').value.trim(); const talla = $('mTalla').value;
     const teorica = num($('mTeorica').value); const tol = num($('mTolerancia').value) || 0.5; const real = num($('mReal').value);
     if (!punto || !teorica || !real) return alert('Por favor ingresa punto de medida, medida teórica y medida real.');
     const cumple = Math.abs(real - teorica) <= tol;
     medidas.push({ punto_medida: punto, talla: talla, medida_teorica: teorica, tolerancia: tol, medida_real: real, cumple: cumple });
+    await guardarMedidasBD();
     pintar();
 };
-window.quitarMedida = function(i) { medidas.splice(i, 1); pintar(); };
+window.quitarMedida = async function(i) { 
+    medidas.splice(i, 1); 
+    await guardarMedidasBD();
+    pintar(); 
+};
+
+async function guardarMedidasBD() {
+    try {
+        await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
+        if (medidas.length) {
+            await supabase.from('auditoria_medidas').insert(medidas.map(function(m) {
+                return { auditoria_id: idAuditoria, punto_medida: m.punto_medida, talla: m.talla, medida_teorica: m.medida_teorica, tolerancia: m.tolerancia, medida_real: m.medida_real, cumple: m.cumple };
+            }));
+        }
+    } catch(e){}
+}
 
 // Paso 4
 function pasoDefectosYPruebas() {
@@ -459,7 +474,22 @@ window.agregarDefecto = function() {
     pintar();
 };
 window.quitarDefecto = function(i) { defectos.splice(i, 1); pintar(); };
-window.setPrueba = function(i, res) { pruebas[i].resultado = res; pintar(); };
+window.setPrueba = async function(i, res) { 
+    pruebas[i].resultado = res; 
+    await guardarPruebasBD();
+    pintar(); 
+};
+
+async function guardarPruebasBD() {
+    try {
+        await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
+        if (pruebas.length) {
+            await supabase.from('auditoria_pruebas').insert(pruebas.map(function(p) {
+                return { auditoria_id: idAuditoria, prueba: p.prueba, resultado: p.resultado, observacion: p.observacion };
+            }));
+        }
+    } catch(e){}
+}
 
 // Paso 5
 function pasoCierre() {
@@ -541,76 +571,56 @@ window.quitarEvidencia = async function(i) {
     }
 };
 
-// Guardado
-async function guardarPaso() {
-    if (paso === 1) {
-        auditoria.referencia = ($('eRef').value || '').toUpperCase();
-        auditoria.sku = ($('eSku').value || '').toUpperCase();
-        auditoria.sublinea = ($('eSublinea').value || '').toUpperCase();
-        auditoria.numero_factura = ($('eFactura').value || '').trim();
-        auditoria.cantidad_produccion = totalLote();
-        
-        await supabase.from('auditorias').update({
-            referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
-            numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion
-        }).eq('id', idAuditoria);
-        
-        await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
-        const filas = [];
-        cantidades.forEach(function(c) {
-            Object.entries(c.tallas).forEach(function([t, cant]) {
-                if (num(cant) > 0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) });
-            });
+// Guardado integral de toda la auditoría
+async function guardarTodo() {
+    auditoria.referencia = ($('eRef') ? $('eRef').value : auditoria.referencia || '').toUpperCase();
+    auditoria.sku = ($('eSku') ? $('eSku').value : auditoria.sku || '').toUpperCase();
+    auditoria.sublinea = ($('eSublinea') ? $('eSublinea').value : auditoria.sublinea || '').toUpperCase();
+    auditoria.numero_factura = ($('eFactura') ? $('eFactura').value : auditoria.numero_factura || '').trim();
+    auditoria.cantidad_produccion = totalLote();
+    auditoria.cantidad_auditada = $('eAuditada') ? num($('eAuditada').value) : auditoria.cantidad_auditada;
+    if ($('eObservaciones')) auditoria.observaciones = $('eObservaciones').value;
+
+    // 1. Datos básicos
+    await supabase.from('auditorias').update({
+        referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
+        numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion,
+        cantidad_auditada: auditoria.cantidad_auditada, observaciones: auditoria.observaciones,
+        sugerencia_aql: auditoria.sugerencia_aql
+    }).eq('id', idAuditoria);
+
+    // 2. Cantidades
+    await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
+    const filasCant = [];
+    cantidades.forEach(function(c) {
+        Object.entries(c.tallas).forEach(function([t, cant]) {
+            if (num(cant) > 0) filasCant.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) });
         });
-        if (filas.length) await supabase.from('auditoria_cantidades').insert(filas);
-    }
-    if (paso === 2) {
-        auditoria.cantidad_auditada = num($('eAuditada').value);
-        await supabase.from('auditorias').update({ cantidad_auditada: auditoria.cantidad_auditada }).eq('id', idAuditoria);
-    }
-    if (paso === 3) {
-        try {
-            await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
-            if (medidas.length) {
-                await supabase.from('auditoria_medidas').insert(medidas.map(function(m) {
-                    return { auditoria_id: idAuditoria, punto_medida: m.punto_medida, talla: m.talla, medida_teorica: m.medida_teorica, tolerancia: m.tolerancia, medida_real: m.medida_real, cumple: m.cumple };
-                }));
-            }
-        } catch(e){}
-    }
-    if (paso === 4) {
-        await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
-        if (defectos.length) {
-            await supabase.from('auditoria_defectos').insert(defectos.map(function(d) {
-                return { auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad };
-            }));
-        }
-        try {
-            await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
-            if (pruebas.length) {
-                await supabase.from('auditoria_pruebas').insert(pruebas.map(function(p) {
-                    return { auditoria_id: idAuditoria, prueba: p.prueba, resultado: p.resultado, observacion: p.observacion };
-                }));
-            }
-        } catch(e){}
-    }
-    if (paso === 5) {
-        auditoria.observaciones = $('eObservaciones').value;
-        try {
-            await supabase.from('auditorias').update({ observaciones: auditoria.observaciones, sugerencia_aql: auditoria.sugerencia_aql }).eq('id', idAuditoria);
-        } catch(e) {
-            await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
-        }
-        await Promise.all(evidencias.map(function(e) {
-            if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
+    });
+    if (filasCant.length) await supabase.from('auditoria_cantidades').insert(filasCant);
+
+    // 3. Medidas
+    await guardarMedidasBD();
+
+    // 4. Defectos y Pruebas
+    await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
+    if (defectos.length) {
+        await supabase.from('auditoria_defectos').insert(defectos.map(function(d) {
+            return { auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad };
         }));
     }
+    await guardarPruebasBD();
+
+    // 5. Evidencias
+    await Promise.all(evidencias.map(function(e) {
+        if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
+    }));
 }
 
-$('btnAtras').addEventListener('click', async function() { await guardarPaso(); paso--; pintar(); });
+$('btnAtras').addEventListener('click', async function() { await guardarTodo(); paso--; pintar(); });
 $('btnSiguiente').addEventListener('click', async function() {
     $('btnSiguiente').disabled = true; $('btnSiguiente').textContent = 'Guardando...';
-    await guardarPaso();
+    await guardarTodo();
     if (paso === 5) {
         if (!auditoria.resultado) {
             $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría';
