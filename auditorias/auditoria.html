@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ejecución · Auditoría Monastery</title>
+<title>Ejecución · Auditoría Monastery Pro</title>
 <link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#15100E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +41,7 @@
     .paso-punto.activo { background: var(--laton); box-shadow: 0 0 8px rgba(176,137,69,0.5); }
     .paso-punto.hecho { background: rgba(176,137,69,0.4); }
 
-    .contenido { padding: 24px; max-width: 860px; margin: 0 auto; }
+    .contenido { padding: 24px; max-width: 900px; margin: 0 auto; }
     .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--sombra-card); }
     .tarjeta h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 0 0 16px 0; color: var(--tinta); }
     
@@ -50,7 +51,7 @@
         border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
     }
     input:focus, select:focus, textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
-    textarea { min-height: 100px; resize: vertical; }
+    textarea { min-height: 90px; resize: vertical; }
     .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 
     .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
@@ -64,7 +65,7 @@
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th { text-align: left; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; padding: 12px 8px; border-bottom: 1px solid var(--borde); letter-spacing: 0.03em;}
     td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; }
-    td input { padding: 8px; font-size: 15px; text-align: center; }
+    td input { padding: 8px; font-size: 14px; text-align: center; }
     .tabla-scroll { overflow-x: auto; margin: 0 -8px; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
     .quitar { background: #F9F8F6; border: none; border-radius: 6px; color: var(--texto-claro); font-size: 14px; cursor: pointer; padding: 6px 10px; transition: var(--transicion);}
@@ -79,30 +80,42 @@
     .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
     .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
     .pastilla.critico { background: #FCF0F0; color: var(--vino); }
+    .pastilla.pass { background: #EEF7F2; color: var(--verde); }
+    .pastilla.fail { background: #FCF0F0; color: var(--vino); }
 
+    /* Checklist Selector */
+    .checklist-grid { display: flex; flex-direction: column; gap: 12px; }
+    .checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; gap: 12px; }
+    .checklist-info { flex: 1; }
+    .checklist-nombre { font-size: 14px; font-weight: 600; color: var(--tinta); }
+    .checklist-opciones { display: flex; gap: 6px; }
+    .btn-opt { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--borde); background: #F9F8F6; font-size: 12px; font-weight: 700; cursor: pointer; transition: var(--transicion); }
+    .btn-opt.sel-pass { background: #EEF7F2; color: var(--verde); border-color: var(--verde); }
+    .btn-opt.sel-fail { background: #FCF0F0; color: var(--vino); border-color: var(--vino); }
+    .btn-opt.sel-na   { background: #F3F4F6; color: #4B5563; border-color: #9CA3AF; }
+
+    /* Tallas/Inputs */
     .tallas-inputs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
     .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; transition: var(--transicion);}
-    .talla-item:focus-within { border-color: var(--laton); box-shadow: 0 2px 8px rgba(176,137,69,0.15); }
     .talla-item span { font-size: 11px; font-weight: 700; color: var(--texto-claro); margin-bottom: 6px; }
     .talla-item input { width: 50px; padding: 8px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 6px; background: #F9F8F6;}
-    .talla-item input:focus { border-color: var(--laton); background: #fff; box-shadow: none;}
 
-    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
+    /* Fotos */
+    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
     .foto-box { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--sombra-card);}
     .foto { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #F9F8F6; }
     .foto img { width: 100%; height: 100%; object-fit: cover; }
-    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 14px; cursor: pointer; transition: var(--transicion);}
-    .foto button:hover { background: var(--vino); }
-    .foto-obs { padding: 10px; border-top: 1px solid var(--borde); background: #FAFAFA;}
-    .foto-obs input { font-size: 13px; padding: 8px; border: 1px solid var(--borde); border-radius: 6px; background: #fff; width: 100%; }
-    
-    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 14px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-family: inherit; min-height: 180px; transition: var(--transicion);}
-    .agregar-foto:hover { border-color: var(--laton); color: var(--laton); background: #fff;}
-    .agregar-foto span { font-size: 24px; }
+    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-obs input { font-size: 12px; padding: 6px; }
+    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 160px;}
+
+    .sugerencia-aql-box { padding: 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; border: 1px solid; }
+    .sugerencia-aql-box.aprobado { background: #EEF7F2; color: var(--verde); border-color: #BFE2D0; }
+    .sugerencia-aql-box.rechazado { background: #FCF0F0; color: var(--vino); border-color: #F2C8C9; }
 
     .resultado-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
-    .resultado-botones button { padding: 20px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
-    .resultado-botones button:hover { background: #F9F8F6; }
+    .resultado-botones button { padding: 18px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
     .resultado-botones button.sel-aprobado { border-color: var(--verde); background: #EEF7F2; color: var(--verde); box-shadow: 0 4px 12px rgba(25,122,86,0.15);}
     .resultado-botones button.sel-rechazado { border-color: var(--vino); background: #FCF0F0; color: var(--vino); box-shadow: 0 4px 12px rgba(140,32,38,0.15);}
 
@@ -118,11 +131,7 @@
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
     .oculto { display: none !important; }
 
-    @media (max-width: 640px) { 
-        .fila { grid-template-columns: 1fr; gap: 12px;} 
-        .contenido { padding: 16px; } 
-        .tarjeta { padding: 16px; }
-    }
+    @media (max-width: 640px) { .fila { grid-template-columns: 1fr; gap: 12px;} .contenido { padding: 16px; } .tarjeta { padding: 16px; } }
 </style>
 </head>
 <body>
@@ -131,7 +140,7 @@
     <div class="barra-fila">
         <button class="volver" id="btnVolver">‹</button>
         <div style="flex: 1">
-            <h1 id="titulo">Auditoría</h1>
+            <h1 id="titulo">Auditoría Pro</h1>
             <div class="sub" id="subtitulo"></div>
         </div>
     </div>
@@ -148,56 +157,70 @@
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
-const $ = function(id) { return document.getElementById(id); };
+const $ = id => document.getElementById(id);
 const BUCKET = 'auditorias-evidencias';
 const SEVERIDADES = [['menor','Menor'], ['mayor','Mayor'], ['critico','Crítico']];
+const PRUEBAS_BASE = [
+    'Resistencia de Costuras (Seam Strength)',
+    'Simetría y Calce (Symmetry / Fitting)',
+    'Solidez del Color / Frote (Rubbing Test)',
+    'Tracción de Broches / Botones (Pull Test)',
+    'Tono y Matiz de Color (Color Shade)',
+    'Adherencia de Estampado / Marquilla (Tape Test)',
+    'Prueba de Olor (Smell Test)',
+    'Verificación de Código de Barras / QR',
+    'Estado de Empaque y Silica Gel'
+];
+
 const idAuditoria = +new URLSearchParams(location.search).get('id');
 
-let yo = null, auditoria = null, catalogo = [], cantidades = [], defectos = [], evidencias = [], tallas = [], paso = 1;
-const num = function(v) { const n = Number(v); return isNaN(n) ? 0 : n; };
-const fmt = function(n) { return Math.round(n).toLocaleString('es-CO'); };
-const esc = function(t) { return String(t || '').replace(/[<>"]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); };
+let yo = null, auditoria = null, catalogo = [], cantidades = [], defectos = [], evidencias = [], medidas = [], pruebas = [], tallas = [], paso = 1;
+const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
+const fmt = n => Math.round(n).toLocaleString('es-CO');
+const esc = t => String(t || '').replace(/[<>"]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 const resSession = await supabase.auth.getSession();
 if (!resSession.data || !resSession.data.session) location.replace('index.html');
 const resUser = await supabase.from('auditoria_usuarios').select('id, nombre, rol, activo').eq('id', resSession.data.session.user.id).maybeSingle();
 yo = resUser.data;
 
-$('btnVolver').addEventListener('click', function() { location.href = 'agenda.html'; });
+$('btnVolver').addEventListener('click', () => location.href = 'agenda.html');
 
 async function cargar() {
-    if (!idAuditoria) {
-        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">No se proporcionó un ID de auditoría válido.</div>';
-        return;
-    }
+    if (!idAuditoria) return;
 
     try {
-        const [resAud, resProv, resTip, resCat, resCant, resDef, resEvi] = await Promise.all([
+        const [resAud, resProv, resTip, resCat, resCant, resDef, resEvi, resMed, resPrue] = await Promise.all([
             supabase.from('auditorias').select('*').eq('id', idAuditoria).maybeSingle(),
             supabase.from('auditoria_proveedores').select('id, nombre'),
             supabase.from('auditoria_tipos').select('id, nombre'),
             supabase.from('auditoria_catalogo_defectos').select('nombre, severidad').eq('activo', true).order('nombre'),
             supabase.from('auditoria_cantidades').select('*').eq('auditoria_id', idAuditoria),
             supabase.from('auditoria_defectos').select('*').eq('auditoria_id', idAuditoria).order('id'),
-            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id')
+            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id'),
+            supabase.from('auditoria_medidas').select('*').eq('auditoria_id', idAuditoria).order('id'),
+            supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', idAuditoria).order('id')
         ]);
-
-        if (resAud.error || !resAud.data) {
-            $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">No se encontró la auditoría solicitada.</div>';
-            return;
-        }
 
         auditoria = resAud.data;
         catalogo = resCat.data || [];
-        defectos = (resDef.data || []).map(function(d) { return Object.assign({}, d); });
-        evidencias = (resEvi.data || []).map(function(e) { return Object.assign({}, e); });
+        defectos = (resDef.data || []).map(d => ({ ...d }));
+        evidencias = (resEvi.data || []).map(e => ({ ...e }));
+        medidas = (resMed.data || []).map(m => ({ ...m }));
+        
+        // Cargar o inicializar pruebas físicas
+        const pruebasBD = resPrue.data || [];
+        pruebas = PRUEBAS_BASE.map(pNombre => {
+            const existe = pruebasBD.find(x => x.prueba === pNombre);
+            return existe ? { ...existe } : { prueba: pNombre, resultado: 'PASS', observacion: '' };
+        });
 
-        const prov = (resProv.data || []).find(function(p) { return p.id === auditoria.proveedor_id; });
-        const tipo = (resTip.data || []).find(function(t) { return t.id === auditoria.tipo_id; });
+        const prov = (resProv.data || []).find(p => p.id === auditoria.proveedor_id);
+        const tipo = (resTip.data || []).find(t => t.id === auditoria.tipo_id);
 
         if (resCant.data && resCant.data.length) {
             const mapa = {};
-            resCant.data.forEach(function(c) {
+            resCant.data.forEach(c => {
                 mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} };
                 mapa[c.color].tallas[c.talla] = num(c.cantidad);
             });
@@ -207,7 +230,7 @@ async function cargar() {
         }
         recalcularTallas();
 
-        $('titulo').textContent = auditoria.referencia || 'Auditoría';
+        $('titulo').textContent = auditoria.referencia || 'Auditoría Pro';
         $('subtitulo').textContent = [prov ? prov.nombre : '', tipo ? tipo.nombre : ''].filter(Boolean).join(' · ');
 
         if (auditoria.estado === 'programada') {
@@ -218,7 +241,6 @@ async function cargar() {
         pintar();
     } catch (err) {
         console.error(err);
-        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">Error al cargar la auditoría: ' + (err.message || 'Error desconocido') + '</div>';
     }
 }
 
@@ -226,12 +248,10 @@ async function traerDeProduccion(referencia) {
     if (!referencia) return [];
     const { data } = await supabase.from('produccion').select('color, tallas').ilike('descripcion', referencia.trim());
     const mapa = {};
-    (data || []).forEach(function(r) {
+    (data || []).forEach(r => {
         const color = (r.color || 'sin color').trim();
         mapa[color] = mapa[color] || { color: color, tallas: {} };
-        Object.entries(r.tallas || {}).forEach(function([t, c]) {
-            mapa[color].tallas[t] = (mapa[color].tallas[t] || 0) + num(c);
-        });
+        Object.entries(r.tallas || {}).forEach(([t, c]) => { mapa[color].tallas[t] = (mapa[color].tallas[t] || 0) + num(c); });
     });
     return Object.values(mapa);
 }
@@ -239,170 +259,251 @@ async function traerDeProduccion(referencia) {
 function recalcularTallas() {
     const orden = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44'];
     const usadas = new Set();
-    cantidades.forEach(function(c) { Object.keys(c.tallas).forEach(function(t) { usadas.add(t); }); });
-    tallas = Array.from(usadas).sort(function(a, b) {
+    cantidades.forEach(c => Object.keys(c.tallas).forEach(t => usadas.add(t)));
+    tallas = Array.from(usadas).sort((a, b) => {
         const ia = orden.indexOf(a), ib = orden.indexOf(b);
         return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
     });
 }
 
-const totalLote = function() {
-    return cantidades.reduce(function(s, c) {
-        return s + Object.values(c.tallas).reduce(function(x, v) { return x + num(v); }, 0);
-    }, 0);
-};
-const colores = function() { return cantidades.map(function(c) { return c.color; }); };
+const totalLote = () => cantidades.reduce((s, c) => s + Object.values(c.tallas).reduce((x, v) => x + num(v), 0), 0);
+const colores = () => cantidades.map(c => c.color);
 
 function pintar() {
-    $('pasos').innerHTML = [1,2,3,4].map(function(p) {
-        return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>';
-    }).join('');
-    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
-    $('btnSiguiente').textContent = paso === 4 ? 'Finalizar auditoría' : 'Siguiente';
-    ({ 1: pasoLote, 2: pasoAuditado, 3: pasoDefectos, 4: pasoCierre })[paso]();
+    $('pasos').innerHTML = [1,2,3,4,5].map(p => `<div class="paso-punto ${p === paso ? 'activo' : p < paso ? 'hecho' : ''}"></div>`).join('');
+    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';$('btnSiguiente').textContent = paso === 5 ? 'Finalizar auditoría' : 'Siguiente';
+    ({ 1: pasoLote, 2: pasoMuestraAQL, 3: pasoMedidas, 4: pasoDefectosYPruebas, 5: pasoCierre })[paso]();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Paso 1
+// Paso 1: Datos y Lote
 function pasoLote() {
-    $('contenido').innerHTML = 
-    '<div class="tarjeta">' +
-        '<h2>1. Datos del lote</h2>' +
-        '<div class="fila">' +
-            '<div><label>Referencia</label><input id="eRef" value="' + esc(auditoria.referencia || '') + '"></div>' +
-            '<div><label>SKU</label><input id="eSku" value="' + esc(auditoria.sku || '') + '"></div>' +
-        '</div>' +
-        '<div class="fila">' +
-            '<div><label>Sublínea</label><input id="eSublinea" value="' + esc(auditoria.sublinea || '') + '"></div>' +
-            '<div><label>N° factura</label><input id="eFactura" value="' + esc(auditoria.numero_factura || '') + '"></div>' +
-        '</div>' +
-    '</div>' +
-    '<div class="tarjeta">' +
-        '<h2>Cantidades por color y talla</h2>' +
-        '<div class="tabla-scroll">' +
-            '<table>' +
-                '<thead><tr><th>Color</th>' + tallas.map(function(t) { return '<th class="num">' + t + '</th>'; }).join('') + '<th class="num">Total</th><th></th></tr></thead>' +
-                '<tbody>' +
-                cantidades.map(function(c, i) {
-                    const totalCol = Object.values(c.tallas).reduce(function(s,v) { return s + num(v); }, 0);
-                    return '<tr>' +
-                        '<td><input value="' + esc(c.color) + '" onchange="cambiarColor(' + i + ', this.value)" style="min-width:120px"></td>' +
-                        tallas.map(function(t) {
-                            return '<td><input type="number" min="0" style="width:72px" value="' + (c.tallas[t] !== undefined ? c.tallas[t] : '') + '" onchange="cambiarCantidad(' + i + ',\'' + t + '\',this.value)"></td>';
-                        }).join('') +
-                        '<td class="num"><b>' + fmt(totalCol) + '</b></td>' +
-                        '<td><button class="quitar" onclick="quitarColor(' + i + ')">✕</button></td>' +
-                    '</tr>';
-                }).join('') +
-                '</tbody>' +
-            '</table>' +
-        '</div>' +
-        '<div style="display:flex; gap:12px; margin-top:16px;">' +
-            '<button class="btn btn-chico" onclick="agregarColor()">+ Agregar Color</button>' +
-            '<button class="btn btn-chico" onclick="agregarTalla()">+ Agregar Talla</button>' +
-        '</div>' +
-    '</div>';
+    $('contenido').innerHTML = `
+    <div class="tarjeta">
+        <h2>1. Información del lote</h2>
+        <div class="fila">
+            <div><label>Referencia</label><input id="eRef" value="${esc(auditoria.referencia || '')}"></div>
+            <div><label>SKU</label><input id="eSku" value="${esc(auditoria.sku || '')}"></div>
+        </div>
+        <div class="fila">
+            <div><label>Sublínea</label><input id="eSublinea" value="${esc(auditoria.sublinea || '')}"></div>
+            <div><label>N° factura</label><input id="eFactura" value="${esc(auditoria.numero_factura || '')}"></div>
+        </div>
+    </div>
+    <div class="tarjeta">
+        <h2>Unidades producidas por color y talla</h2>
+        <div class="tabla-scroll">
+            <table>
+                <thead><tr><th>Color</th>${tallas.map(t => `<th class="num">${t}</th>`).join('')}<th class="num">Total</th><th></th></tr></thead>
+                <tbody>
+                ${cantidades.map((c, i) => `<tr>
+                    <td><input value="${esc(c.color)}" onchange="cambiarColor(${i}, this.value)" style="min-width:110px"></td>
+                    ${tallas.map(t => `<td><input type="number" min="0" style="width:65px" value="${c.tallas[t] !== undefined ? c.tallas[t] : ''}" onchange="cambiarCantidad(${i},'${t}',this.value)"></td>`).join('')}
+                    <td class="num"><b>${fmt(Object.values(c.tallas).reduce((s,v) => s + num(v), 0))}</b></td>
+                    <td><button class="quitar" onclick="quitarColor(${i})">✕</button></td>
+                </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:16px;">
+            <button class="btn btn-chico" onclick="agregarColor()">+ Color</button>
+            <button class="btn btn-chico" onclick="agregarTalla()">+ Talla</button>
+        </div>
+    </div>`;
 }
-window.cambiarColor = function(i, v) { cantidades[i].color = v.trim().toUpperCase(); };
-window.cambiarCantidad = function(i, t, v) { if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v); pintar(); };
-window.quitarColor = function(i) { cantidades.splice(i, 1); recalcularTallas(); pintar(); };
-window.agregarColor = function() { cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
-window.agregarTalla = function() { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
+window.cambiarColor = (i, v) => { cantidades[i].color = v.trim().toUpperCase(); };
+window.cambiarCantidad = (i, t, v) => { if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v); pintar(); };
+window.quitarColor = i => { cantidades.splice(i, 1); recalcularTallas(); pintar(); };
+window.agregarColor = () => { cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
+window.agregarTalla = () => { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
 
-// Paso 2
-function pasoAuditado() {
-    const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada);
-    const pct = lote ? (auditada / lote * 100).toFixed(1) : '0';
-    $('contenido').innerHTML = 
-    '<div class="tarjeta"><h2>2. Cantidad auditada</h2>' +
-        '<input id="eAuditada" type="number" min="0" value="' + (auditada || '') + '" oninput="calcularPct(' + lote + ')" style="font-size:24px; font-weight:600; text-align:center; padding:20px; color:var(--tinta);">' +
-        '<div class="cifras"><div class="cifra"><div class="n" id="pctAuditado">' + pct + ' %</div><div class="t">Del lote (' + fmt(lote) + ')</div></div></div>' +
-        '<div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">' +
-            [10, 25, 50, 100].map(function(p) {
-                return '<button class="btn btn-chico" onclick="document.getElementById(\'eAuditada\').value=' + Math.round(lote*p/100) + ';calcularPct(' + lote + ')">' + p + ' %</button>';
-            }).join('') +
-        '</div>' +
-    '</div>';
-}
-window.calcularPct = function(l) { $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %'; };
+// Paso 2: Muestra AQL
+function pasoMuestraAQL() {
+    const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada) || Math.min(lote, 50);
+    // Límites teóricos AQL (ISO 2859-1 Nivel II)
+    const maxMayor = auditada >= 50 ? 3 : 2;
+    const maxMenor = auditada >= 50 ? 5 : 3;
 
-// Paso 3
-function pasoDefectos() {
-    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : '';
-    $('contenido').innerHTML = 
-    '<div class="tarjeta">' +
-        '<h2>3. Agregar defectos</h2>' +
-        '<div class="fila">' +
-            '<div><label>Severidad</label><select id="dSeveridad">' + SEVERIDADES.map(function(s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('') + '</select></div>' +
-            '<div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">' + catalogo.map(function(c) { return '<option value="' + esc(c.nombre) + '">'; }).join('') + '</datalist></div>' +
-        '</div>' +
-        '<div class="fila">' +
-            '<div><label>Color</label><select id="dColor">' + (cols.length!==1?'<option value="">Elegir...</option>':'') + cols.map(function(c) { return '<option ' + (c===autoColor?'selected':'') + '>' + esc(c) + '</option>'; }).join('') + '</select></div>' +
-        '</div>' +
-        '<label>Cantidades por talla</label>' +
-        '<div class="tallas-inputs">' +
-            tallas.map(function(t) { return '<div class="talla-item"><span>' + t + '</span><input type="number" min="0" class="input-talla-defecto" data-talla="' + t + '"></div>'; }).join('') +
-        '</div>' +
-        '<button class="btn btn-oscuro" style="width:100%; margin-top:12px;" onclick="agregarDefecto()">+ Guardar Defecto</button>' +
-    '</div>' +
-    '<div class="tarjeta">' +
-        '<h2>Registrados (' + defectos.length + ')</h2>' +
-        '<div class="tabla-scroll"><table>' +
-            '<thead><tr><th>Sev.</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>' +
-            '<tbody>' + defectos.map(function(d, i) {
-                return '<tr>' +
-                    '<td><span class="pastilla ' + d.severidad + '">' + d.severidad + '</span></td>' +
-                    '<td style="font-weight:500;">' + esc(d.defecto) + '</td><td>' + esc(d.color) + '</td><td>' + esc(d.talla) + '</td><td class="num" style="font-weight:600;">' + fmt(d.cantidad) + '</td>' +
-                    '<td><button class="quitar" onclick="quitarDefecto(' + i + ')">✕</button></td>' +
-                '</tr>';
-            }).join('') + '</tbody>' +
-        '</table></div>' +
-    '</div>';
+    $('contenido').innerHTML = `
+    <div class="tarjeta">
+        <h2>2. Muestra de Inspección AQL (ISO 2859-1)</h2>
+        <label>Unidades a auditar de la muestra</label>
+        <input id="eAuditada" type="number" min="1" value="${auditada}" oninput="calcularPct(${lote})" style="font-size:24px; font-weight:600; text-align:center; padding:16px; color:var(--tinta);">
+        <div class="cifras">
+            <div class="cifra"><div class="n" id="pctAuditado">${lote ? (auditada / lote * 100).toFixed(1) : '0'} %</div><div class="t">Muestra del Lote (${fmt(lote)})</div></div>
+            <div class="cifra"><div class="n">${maxMayor}</div><div class="t">Límite AQL Mayores</div></div>
+            <div class="cifra"><div class="n">${maxMenor}</div><div class="t">Límite AQL Menores</div></div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">
+            ${[10, 20, 50, 80, 125].map(m => `<button class="btn btn-chico" onclick="document.getElementById('eAuditada').value=${m};calcularPct(${lote})">${m} unds</button>`).join('')}
+        </div>
+    </div>`;
 }
-window.agregarDefecto = function() {
-    const defecto = $('dDefecto').value.trim(); const color = $('dColor').value; const severidad = $('dSeveridad').value;
-    if (!defecto || !color) return alert('Verifica que el defecto y el color estén seleccionados.');
-    let agregados = 0;
-    document.querySelectorAll('.input-talla-defecto').forEach(function(input) {
-        const cantidad = num(input.value);
-        if (cantidad > 0) { defectos.push({ severidad: severidad, defecto: defecto.toLowerCase(), color: color, talla: input.dataset.talla, cantidad: cantidad }); agregados++; }
-    });
-    if (agregados === 0) return alert('Ingresa la cantidad en al menos una de las tallas.');
+window.calcularPct = l => { $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %'; };
+
+// Paso 3: Control de Medidas
+function pasoMedidas() {
+    $('contenido').innerHTML = `
+    <div class="tarjeta">
+        <h2>3. Tabla de Medidas Real vs. Patronaje (POM)</h2>
+        <div class="fila">
+            <div><label>Punto de Medida</label><input id="mPunto" placeholder="Ej: Ancho Pecho / Largo Total"></div>
+            <div><label>Talla</label><select id="mTalla">${tallas.map(t => `<option>${t}</option>`).join('')}</select></div>
+        </div>
+        <div class="fila">
+            <div><label>Medida Teórica (cm)</label><input type="number" step="0.1" id="mTeorica" placeholder="Ej: 50.0"></div>
+            <div><label>Tolerancia (+/- cm)</label><input type="number" step="0.1" id="mTolerancia" value="0.5"></div>
+        </div>
+        <div><label>Medida Real Tomada (cm)</label><input type="number" step="0.1" id="mReal" placeholder="Ej: 51.2"></div>
+        <button class="btn btn-oscuro" style="width:100%; margin-top:16px;" onclick="agregarMedida()">+ Registrar Medida</button>
+    </div>
+    <div class="tarjeta">
+        <h2>Medidas Evaluadas (${medidas.length})</h2>
+        <div class="tabla-scroll"><table>
+            <thead><tr><th>Punto</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol.</th><th class="num">Real</th><th>Cumple</th><th></th></tr></thead>
+            <tbody>${medidas.map((m, i) => `<tr>
+                <td style="font-weight:500;">${esc(m.punto_medida)}</td>
+                <td>${esc(m.talla)}</td>
+                <td class="num">${m.medida_teorica} cm</td>
+                <td class="num">±${m.tolerancia}</td>
+                <td class="num" style="font-weight:700;">${m.medida_real} cm</td>
+                <td><span class="pastilla ${m.cumple ? 'pass' : 'fail'}">${m.cumple ? 'CUMPLE' : 'FUERA'}</span></td>
+                <td><button class="quitar" onclick="quitarMedida(${i})">✕</button></td>
+            </tr>`).join('')}</tbody>
+        </table></div>
+    </div>`;
+}
+window.agregarMedida = () => {
+    const punto = $('mPunto').value.trim(); const talla =$('mTalla').value;
+    const teorica = num($('mTeorica').value); const tol = num($('mTolerancia').value) \vert{}\vert{} 0.5; const real = num($('mReal').value);
+    if (!punto || !teorica || !real) return alert('Por favor ingresa punto de medida, medida teórica y medida real.');
+    const cumple = Math.abs(real - teorica) <= tol;
+    medidas.push({ punto_medida: punto, talla, medida_teorica: teorica, tolerancia: tol, medida_real: real, cumple });
     pintar();
 };
-window.quitarDefecto = function(i) { defectos.splice(i, 1); pintar(); };
+window.quitarMedida = i => { medidas.splice(i, 1); pintar(); };
 
-// Paso 4
-function pasoCierre() {
-    $('contenido').innerHTML = 
-    '<div class="tarjeta"><h2>Observaciones Generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">' + esc(auditoria.observaciones || '') + '</textarea></div>' +
-    '<div class="tarjeta">' +
-        '<h2>Evidencias (' + evidencias.length + ')</h2>' +
-        '<input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">' +
-        '<div class="fotos">' +
-            evidencias.map(function(e, i) {
-                return '<div class="foto-box">' +
-                    '<div class="foto"><img src="' + e.url + '"><button onclick="quitarEvidencia(' + i + ')">✕</button></div>' +
-                    '<div class="foto-obs"><input type="text" placeholder="Nota a esta foto..." value="' + esc(e.observacion) + '" onchange="guardarObsFoto(' + i + ', this.value)"></div>' +
-                '</div>';
-            }).join('') +
-            '<button class="agregar-foto" onclick="document.getElementById(\'archivoFoto\').click()"><span>📷</span>Tomar / Subir Foto</button>' +
-        '</div>' +
-        '<div class="mensaje" id="avisoFoto" style="margin-top:16px;"></div>' +
-    '</div>' +
-    '<div class="tarjeta"><h2>Resultado Final</h2>' +
-        '<div class="resultado-botones">' +
-            '<button id="btnAprobado" class="' + (auditoria.resultado === 'aprobado' ? 'sel-aprobado' : '') + '" onclick="elegirResultado(\'aprobado\')">Aprobado</button>' +
-            '<button id="btnRechazado" class="' + (auditoria.resultado === 'rechazado' ? 'sel-rechazado' : '') + '" onclick="elegirResultado(\'rechazado\')">Rechazado</button>' +
-        '</div>' +
-    '</div>';
+// Paso 4: Defectos y Checklist
+function pasoDefectosYPruebas() {
+    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : '';
+    $('contenido').innerHTML = `
+    <div class="tarjeta">
+        <h2>4. Registro de Defectos Físicos</h2>
+        <div class="fila">
+            <div><label>Severidad</label><select id="dSeveridad">${SEVERIDADES.map(s => `<option value="${s[0]}">${s[1]}</option>`).join('')}</select></div>
+            <div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">${catalogo.map(c => `<option value="${esc(c.nombre)}">`).join('')}</datalist></div>
+        </div>
+        <div class="fila">
+            <div><label>Color</label><select id="dColor">${cols.length!==1?'<option value="">Elegir...</option>':''}${cols.map(c => `<option ${c===autoColor?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+        </div>
+        <label>Cantidades por talla</label>
+        <div class="tallas-inputs">
+            ${tallas.map(t => `<div class="talla-item"><span>${t}</span><input type="number" min="0" class="input-talla-defecto" data-talla="${t}"></div>`).join('')}
+        </div>
+        <button class="btn btn-oscuro" style="width:100%; margin-top:12px;" onclick="agregarDefecto()">+ Guardar Defecto</button>
+    </div>
+    
+    <div class="tarjeta">
+        <h2>Defectos Registrados (${defectos.length})</h2>
+        <div class="tabla-scroll"><table>
+            <thead><tr><th>Sev.</th><th>Defecto</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th></th></tr></thead>
+            <tbody>${defectos.map((d, i) => `<tr>
+                <td><span class="pastilla ${d.severidad}">${d.severidad}</span></td>
+                <td style="font-weight:500;">${esc(d.defecto)}</td><td>${esc(d.color)}</td><td>${esc(d.talla)}</td><td class="num" style="font-weight:600;">${fmt(d.cantidad)}</td>
+                <td><button class="quitar" onclick="quitarDefecto(${i})">✕</button></td>
+            </tr>`).join('')}</tbody>
+        </table></div>
+    </div>
+
+    <div class="tarjeta">
+        <h2>Checklist de Pruebas Físicas y Calidad</h2>
+        <div class="checklist-grid">
+            ${pruebas.map((p, i) => `
+                <div class="checklist-item">
+                    <div class="checklist-info"><div class="checklist-nombre">${esc(p.prueba)}</div></div>
+                    <div class="checklist-opciones">
+                        <button class="btn-opt ${p.resultado==='PASS'?'sel-pass':''}" onclick="setPrueba(${i},'PASS')">PASS</button>
+                        <button class="btn-opt ${p.resultado==='FAIL'?'sel-fail':''}" onclick="setPrueba(${i},'FAIL')">FAIL</button>
+                        <button class="btn-opt ${p.resultado==='N/A'?'sel-na':''}" onclick="setPrueba(${i},'N/A')">N/A</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
 }
-window.elegirResultado = function(r) {
-    auditoria.resultado = r;
-    $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : '';
-    $('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : '';
+window.agregarDefecto = () => {
+    const defecto = $('dDefecto').value.trim(); const color = $('dColor').value; const severidad =$('dSeveridad').value;
+    if (!defecto || !color) return alert('Selecciona el defecto y el color.');
+    let agregados = 0;
+    document.querySelectorAll('.input-talla-defecto').forEach(input => {
+        const cantidad = num(input.value);
+        if (cantidad > 0) { defectos.push({ severidad, defecto: defecto.toLowerCase(), color, talla: input.dataset.talla, cantidad }); agregados++; }
+    });
+    if (agregados === 0) return alert('Ingresa cantidad en al menos una talla.');
+    pintar();
 };
-window.guardarObsFoto = function(i, val) { evidencias[i].observacion = val; };
+window.quitarDefecto = i => { defectos.splice(i, 1); pintar(); };
+window.setPrueba = (i, res) => { pruebas[i].resultado = res; pintar(); };
+
+// Paso 5: Cierre, Recomendación AQL y Veredicto
+function pasoCierre() {
+    const auditada = num(auditoria.cantidad_auditada) || 50;
+    const maxMayor = auditada >= 50 ? 3 : 2;
+    const maxMenor = auditada >= 50 ? 5 : 3;
+
+    const tCritico = defectos.filter(d => d.severidad === 'critico').reduce((s,d) => s + num(d.cantidad), 0);
+    const tMayor = defectos.filter(d => d.severidad === 'mayor').reduce((s,d) => s + num(d.cantidad), 0);
+    const tMenor = defectos.filter(d => d.severidad === 'menor').reduce((s,d) => s + num(d.cantidad), 0);
+    const hayPruebaFallida = pruebas.some(p => p.resultado === 'FAIL');
+    const hayMedidaFallida = medidas.some(m => !m.cumple);
+
+    // Motor AQL Sugerencia
+    let sugerencia = 'aprobado';
+    let motivo = 'El lote cumple con las especificaciones AQL y pruebas de calidad.';
+
+    if (tCritico > 0 || tMayor > maxMayor || tMenor > maxMenor || hayPruebaFallida || hayMedidaFallida) {
+        sugerencia = 'rechazado';
+        const motivos = [];
+        if (tCritico > 0) motivos.push(`${tCritico} defecto(s) crítico(s)`);
+        if (tMayor > maxMayor) motivos.push(`Exceso de defectos mayores (${tMayor} encontrados vs. ${maxMayor} máximo)`);
+        if (tMenor > maxMenor) motivos.push(`Exceso de defectos menores (${tMenor} encontrados vs. ${maxMenor} máximo)`);
+        if (hayPruebaFallida) motivos.push('Prueba física fallida');
+        if (hayMedidaFallida) motivos.push('Punto de medida fuera de tolerancia');
+        motivo = 'Sugerencia AQL: ' + motivos.join(' · ');
+    }
+
+    if (!auditoria.resultado) auditoria.resultado = sugerencia;
+    auditoria.sugerencia_aql = motivo;
+
+    $('contenido').innerHTML = `
+    <div class="sugerencia-aql-box ${sugerencia}">
+        <strong>🤖 Dictamen Automático AQL: ${sugerencia.toUpperCase()}</strong>
+        <div style="margin-top:4px; font-size:13px; opacity:0.9;">${motivo}</div>
+    </div>
+
+    <div class="tarjeta"><h2>Observaciones Generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">${esc(auditoria.observaciones || '')}</textarea></div>
+    <div class="tarjeta">
+        <h2>Evidencias Fotográficas (${evidencias.length})</h2>
+        <input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">
+        <div class="fotos">
+            ${evidencias.map((e, i) => `
+                <div class="foto-box">
+                    <div class="foto"><img src="${e.url}"><button onclick="quitarEvidencia(${i})">✕</button></div>
+                    <div class="foto-obs"><input type="text" placeholder="Nota..." value="${esc(e.observacion)}" onchange="guardarObsFoto(${i}, this.value)"></div>
+                </div>`).join('')}
+            <button class="agregar-foto" onclick="document.getElementById('archivoFoto').click()"><span>📷</span>Tomar / Subir Foto</button>
+        </div>
+        <div class="mensaje" id="avisoFoto" style="margin-top:16px;"></div>
+    </div>
+    <div class="tarjeta"><h2>Decisión Final de la Auditora</h2>
+        <div class="resultado-botones">
+            <button id="btnAprobado" class="${auditoria.resultado === 'aprobado' ? 'sel-aprobado' : ''}" onclick="elegirResultado('aprobado')">Aprobado</button>
+            <button id="btnRechazado" class="${auditoria.resultado === 'rechazado' ? 'sel-rechazado' : ''}" onclick="elegirResultado('rechazado')">Rechazado</button>
+        </div>
+    </div>`;
+}
+window.elegirResultado = r => { auditoria.resultado = r; $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : '';$('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : ''; };
+window.guardarObsFoto = (i, val) => { evidencias[i].observacion = val; };
 window.subirFotos = async function(e) {
     const archivos = Array.from(e.target.files); if (!archivos.length) return;
     $('avisoFoto').className = 'mensaje info';
@@ -418,11 +519,10 @@ window.subirFotos = async function(e) {
     }
     $('archivoFoto').value = ''; pintar();
 };
-window.quitarEvidencia = async function(i) {
+window.quitarEvidencia = async i => {
     if(confirm('¿Eliminar esta evidencia?')) {
         if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id);
-        evidencias.splice(i, 1);
-        pintar();
+        evidencias.splice(i, 1); pintar();
     }
 };
 
@@ -436,17 +536,14 @@ async function guardarPaso() {
         auditoria.cantidad_produccion = totalLote();
         
         await supabase.from('auditorias').update({
-            referencia: auditoria.referencia,
-            sku: auditoria.sku,
-            sublinea: auditoria.sublinea,
-            numero_factura: auditoria.numero_factura,
-            cantidad_produccion: auditoria.cantidad_produccion
+            referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
+            numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion
         }).eq('id', idAuditoria);
         
         await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
         const filas = [];
-        cantidades.forEach(function(c) {
-            Object.entries(c.tallas).forEach(function([t, cant]) {
+        cantidades.forEach(c => {
+            Object.entries(c.tallas).forEach(([t, cant]) => {
                 if (num(cant) > 0) filas.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) });
             });
         });
@@ -457,30 +554,45 @@ async function guardarPaso() {
         await supabase.from('auditorias').update({ cantidad_auditada: auditoria.cantidad_auditada }).eq('id', idAuditoria);
     }
     if (paso === 3) {
-        await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
-        if (defectos.length) {
-            await supabase.from('auditoria_defectos').insert(defectos.map(function(d) {
-                return { auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad };
-            }));
+        await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
+        if (medidas.length) {
+            await supabase.from('auditoria_medidas').insert(medidas.map(m => ({
+                auditoria_id: idAuditoria, punto_medida: m.punto_medida, talla: m.talla,
+                medida_teorica: m.medida_teorica, tolerancia: m.tolerancia, medida_real: m.medida_real, cumple: m.cumple
+            })));
         }
     }
     if (paso === 4) {
+        await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
+        if (defectos.length) {
+            await supabase.from('auditoria_defectos').insert(defectos.map(d => ({
+                auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, color: d.color, talla: d.talla, cantidad: d.cantidad
+            })));
+        }
+        await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
+        if (pruebas.length) {
+            await supabase.from('auditoria_pruebas').insert(pruebas.map(p => ({
+                auditoria_id: idAuditoria, prueba: p.prueba, resultado: p.resultado, observacion: p.observacion
+            })));
+        }
+    }
+    if (paso === 5) {
         auditoria.observaciones = $('eObservaciones').value;
-        await supabase.from('auditorias').update({ observaciones: auditoria.observaciones }).eq('id', idAuditoria);
-        await Promise.all(evidencias.map(function(e) {
+        await supabase.from('auditorias').update({
+            observaciones: auditoria.observaciones, sugerencia_aql: auditoria.sugerencia_aql
+        }).eq('id', idAuditoria);
+        await Promise.all(evidencias.map(e => {
             if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
         }));
     }
 }
 
-$('btnAtras').addEventListener('click', async function() { await guardarPaso(); paso--; pintar(); });
-$('btnSiguiente').addEventListener('click', async function() {
+$('btnAtras').addEventListener('click', async () => { await guardarPaso(); paso--; pintar(); });$('btnSiguiente').addEventListener('click', async () => {
     $('btnSiguiente').disabled = true; $('btnSiguiente').textContent = 'Guardando...';
     await guardarPaso();
-    if (paso === 4) {
+    if (paso === 5) {
         if (!auditoria.resultado) {
-            $('btnSiguiente').disabled = false;
-            $('btnSiguiente').textContent = 'Finalizar auditoría';
+            $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría';
             return alert('Elige si el lote fue Aprobado o Rechazado.');
         }
         await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
@@ -490,7 +602,7 @@ $('btnSiguiente').addEventListener('click', async function() {
     paso++; $('btnSiguiente').disabled = false; pintar();
 });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 await cargar();
 </script>
 </body>
