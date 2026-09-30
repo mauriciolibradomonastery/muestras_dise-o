@@ -358,11 +358,11 @@ function abrirHoja(cita) {
 
     if (cita) {
         $('fProveedor').value = cita.proveedor_id || '';
-        $('fTipo').value = cita.tipo_id \vert{}\vert{} '';$('fFecha').value = cita.fecha_programada || '';
-        $('fHora').value = (cita.hora_programada \vert{}\vert{} '08:00').slice(0, 5);$('fAuditora').value = cita.auditora_id || '';
-        $('fFactura').value = cita.numero_factura \vert{}\vert{} '';$('fReferencia').value = cita.referencia || '';
-        $('fColeccion').value = cita.coleccion \vert{}\vert{} '';$('fSublinea').value = cita.sublinea || '';
-        $('fSku').value = cita.sku \vert{}\vert{} '';$('fNota').value = cita.nota_programacion || '';
+        $('fTipo').value = cita.tipo_id || '';$('fFecha').value = cita.fecha_programada;
+        $('fHora').value = (cita.hora_programada || '08:00').slice(0, 5);$('fAuditora').value = cita.auditora_id || '';
+        $('fFactura').value = cita.numero_factura || '';$('fReferencia').value = cita.referencia || '';
+        $('fColeccion').value = cita.coleccion || '';$('fSublinea').value = cita.sublinea || '';
+        $('fSku').value = cita.sku || '';$('fNota').value = cita.nota_programacion || '';
 
         // Mostrar la miniatura si ya hay foto guardada
         if (cita.fotoUrl) {
@@ -372,12 +372,9 @@ function abrirHoja(cita) {
             $('previewFoto').style.display = 'none';
         }
     } else {
-        $('fProveedor').value = '';$('fFecha').value = hoyISO; 
-        $('fHora').value = '08:00';
-        $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0] ? $('fAuditora').options[0].value : '');$('fFactura').value = '';
-        $('fReferencia').value = '';$('fColeccion').value = '';
-        $('fSublinea').value = '';$('fSku').value = '';
-        $('fNota').value = '';$('previewFoto').style.display = 'none';
+        $('fProveedor').value = ''; $('fFecha').value = hoyISO; $('fHora').value = '08:00';
+        $('fAuditora').value = yo.rol === 'auditora' ? yo.id : ($('fAuditora').options[0]?.value || '');
+        ['fFactura','fReferencia','fColeccion','fSublinea','fSku','fNota'].forEach(id => $(id).value = '');$('previewFoto').style.display = 'none';
     }
     $('fFotoRef').value = '';$('modal').classList.add('abierto');
 }
