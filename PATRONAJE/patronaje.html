@@ -112,6 +112,7 @@
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
             <button class="btn" style="background-color: #6b7280; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
+            <button class="btn" style="background-color: #7c3aed; color: white; border: none;" onclick="migrarArchivosAStorage()" title="Mueve fotos y PDFs antiguos (base64) a Supabase Storage">🚚 Migrar archivos</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
@@ -157,6 +158,91 @@
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
+
+        // ================== ARCHIVOS EN SUPABASE STORAGE ==================
+        // Las fotos y PDFs se suben al bucket y en la tabla solo se guarda el enlace.
+        const BUCKET = 'dpto-tecnico';
+
+        function mostrarCarga(msg) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').innerText = msg;
+        }
+        function ocultarCarga() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+        function extensionDe(mime) {
+            const mapa = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf' };
+            return mapa[mime] || (mime.split('/')[1] || 'bin');
+        }
+
+        async function dataUrlABlob(dataUrl) {
+            const res = await fetch(dataUrl);
+            return await res.blob();
+        }
+
+        // Sube un archivo/Blob y devuelve su URL pública
+        async function subirArchivoStorage(blob, carpeta) {
+            const tipo = blob.type || 'application/octet-stream';
+            const nombre = `${carpeta}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extensionDe(tipo)}`;
+            const { error } = await client.storage.from(BUCKET).upload(nombre, blob, { contentType: tipo, upsert: false });
+            if (error) throw error;
+            return client.storage.from(BUCKET).getPublicUrl(nombre).data.publicUrl;
+        }
+
+        // Si el valor es base64 (data:...), lo sube y devuelve la URL; si no, lo deja igual
+        async function asegurarUrl(valor, carpeta) {
+            if (typeof valor === 'string' && valor.startsWith('data:')) {
+                return await subirArchivoStorage(await dataUrlABlob(valor), carpeta);
+            }
+            return valor || '';
+        }
+
+        // Migración única: recorre fila por fila y pasa los base64 antiguos a Storage
+        window.migrarArchivosAStorage = async function() {
+            if (!confirm("Esto moverá las fotos y PDFs guardados dentro de la tabla a Supabase Storage.\n\nPuede tardar varios minutos. No cierres la página mientras termina.\n\n¿Continuar?")) return;
+            try {
+                // 1) Solo los IDs (consulta liviana)
+                mostrarCarga("Buscando registros...");
+                let ids = []; let desde = 0; const paso = 1000;
+                while (true) {
+                    const { data, error } = await client.from('dpto_tecnico').select('id').order('id').range(desde, desde + paso - 1);
+                    if (error) throw error;
+                    ids = ids.concat(data.map(r => r.id));
+                    if (data.length < paso) break;
+                    desde += paso;
+                }
+
+                // 2) Fila por fila
+                let migradas = 0, fallidas = 0;
+                for (let n = 0; n < ids.length; n++) {
+                    mostrarCarga(`Migrando archivos: fila ${n + 1} de ${ids.length} (${migradas} migradas)...`);
+                    try {
+                        const { data: fila, error } = await client.from('dpto_tecnico').select('id, datos').eq('id', ids[n]).single();
+                        if (error) throw error;
+                        const datos = Array.isArray(fila.datos) ? [...fila.datos] : null;
+                        if (!datos) continue;
+                        const fotoEsBase64 = typeof datos[0] === 'string' && datos[0].startsWith('data:');
+                        const pdfEsBase64 = typeof datos[29] === 'string' && datos[29].startsWith('data:');
+                        if (!fotoEsBase64 && !pdfEsBase64) continue;
+
+                        if (fotoEsBase64) datos[0] = await asegurarUrl(datos[0], 'fotos');
+                        if (pdfEsBase64) datos[29] = await asegurarUrl(datos[29], 'pdfs');
+
+                        const { error: errUpd } = await client.from('dpto_tecnico').update({ datos }).eq('id', fila.id);
+                        if (errUpd) throw errUpd;
+                        migradas++;
+                    } catch (errFila) {
+                        console.error('Error migrando fila', ids[n], errFila);
+                        fallidas++;
+                    }
+                }
+                ocultarCarga();
+                alert(`✅ Migración terminada.\n\nFilas migradas: ${migradas}\nFilas con error: ${fallidas}` + (fallidas ? "\n\nPuedes volver a ejecutarla: solo procesa lo que falte." : ""));
+                cargarDatos();
+            } catch (err) {
+                console.error(err); ocultarCarga();
+                alert("Error en la migración: " + (err.message || err));
+            }
+        };
         
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'DISEÑADOR:', 'GÉNERO', 'PROVEEDOR:', 'PAIS', 'COLECCIÓN:', 'PRECINTO',
@@ -256,39 +342,49 @@
             });
         });
 
-        window.cambiarFotoFila = function(input) {
+        window.cambiarFotoFila = async function(input) {
             if(input.files && input.files[0]) {
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    const td = input.closest('td');
+                const file = input.files[0];
+                if(file.size > 10 * 1024 * 1024) { input.value = ''; return alert("La imagen es muy pesada. Intenta con una menor a 10MB."); }
+                const td = input.closest('td');
+                try {
+                    mostrarCarga("Subiendo foto...");
+                    const url = await subirArchivoStorage(file, 'fotos');
                     const img = td.querySelector('.img-foto-prenda');
-                    img.src = e.target.result;
+                    img.src = url;
                     const tr = td.closest('tr');
                     tr._modificado = true;
                     recalcularFila(tr); 
                     marcarCambios();
-                }; reader.readAsDataURL(input.files[0]);
+                } catch (err) {
+                    console.error(err); alert("No se pudo subir la foto: " + (err.message || err));
+                } finally { ocultarCarga(); input.value = ''; }
             }
         };
 
         window.subirPdfFila = function(input) {
             if(input.files && input.files[0]) {
                 const file = input.files[0];
-                if(file.size > 10 * 1024 * 1024) { return alert("El PDF es muy pesado. Intenta subir un archivo menor a 10MB."); }
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    const td = input.closest('td'); const base64 = e.target.result;
-                    td.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                            <a href="${base64}" download="Auditoria.pdf" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
-                            <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
-                            <input type="hidden" value="${base64}" class="pdf-data">
-                        </div>`;
-                    const tr = td.closest('tr');
-                    tr._modificado = true;
-                    recalcularFila(tr);
-                    marcarCambios();
-                }; reader.readAsDataURL(file);
+                if(file.size > 10 * 1024 * 1024) { input.value = ''; return alert("El PDF es muy pesado. Intenta subir un archivo menor a 10MB."); }
+                (async () => {
+                    const td = input.closest('td');
+                    try {
+                        mostrarCarga("Subiendo PDF...");
+                        const url = await subirArchivoStorage(file, 'pdfs');
+                        td.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+                                <a href="${url}" target="_blank" rel="noopener" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                                <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
+                                <input type="hidden" value="${url}" class="pdf-data">
+                            </div>`;
+                        const tr = td.closest('tr');
+                        tr._modificado = true;
+                        recalcularFila(tr);
+                        marcarCambios();
+                    } catch (err) {
+                        console.error(err); alert("No se pudo subir el PDF: " + (err.message || err));
+                    } finally { ocultarCarga(); input.value = ''; }
+                })();
             }
         };
 
@@ -480,24 +576,35 @@
             
             let allData = [];
             let from = 0;
-            // 🔥 TIMEOUT FIX: Bloques pequeños
-            const step = 200; 
-            let fetching = true;
+            // Bloques pequeños mientras existan filas antiguas con base64; tras migrar puedes subirlo a 200
+            const step = 25; 
 
-            while (fetching) {
+            while (true) {
                 document.getElementById('loadingText').innerText = `Descargando registros: ${allData.length}...`;
-                
-                const { data, error } = await client.from('dpto_tecnico')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .range(from, from + step - 1);
-                    
-                if (error) { 
-                    console.error(error); document.getElementById('loadingOverlay').style.display = 'none'; return alert("Hubo un error descargando la información."); 
+                let data = null, error = null;
+
+                // Reintenta hasta 3 veces antes de rendirse
+                for (let intento = 1; intento <= 3; intento++) {
+                    ({ data, error } = await client.from('dpto_tecnico')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .order('id', { ascending: false }) // orden estable: evita filas repetidas o saltadas
+                        .range(from, from + step - 1));
+                    if (!error) break;
+                    console.warn(`Intento ${intento} falló en el bloque ${from}:`, error);
+                    await new Promise(r => setTimeout(r, 1500 * intento));
                 }
-                
-                if (data && data.length > 0) { allData = allData.concat(data); from += step; } else { fetching = false; }
-                if (data.length < step) { fetching = false; }
+
+                if (error) { 
+                    console.error(error); document.getElementById('loadingOverlay').style.display = 'none';
+                    return alert("Hubo un error descargando la información:\n" + (error.message || '') + (error.code ? ` (código ${error.code})` : '') +
+                        "\n\nSi el problema es de tiempo de espera, usa el botón '🚚 Migrar archivos'."); 
+                }
+
+                if (!data || data.length === 0) break;
+                allData = allData.concat(data);
+                if (data.length < step) break;
+                from += step;
             }
 
             const tbody = document.getElementById('tableBody'); tbody.innerHTML = ''; 
@@ -610,9 +717,9 @@
                 } 
                 else if (colName === 'PDF AUDITORÍA') {
                     td.contentEditable = "false"; td.style.textAlign = "center";
-                    if(valorStr && valorStr.startsWith('data:application/pdf')) {
+                    if(valorStr && (valorStr.startsWith('data:application/pdf') || valorStr.startsWith('http'))) {
                         td.innerHTML = `<div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                            <a href="${valorStr}" download="Auditoria.pdf" class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <a href="${valorStr}" ${valorStr.startsWith('http') ? 'target="_blank" rel="noopener"' : 'download="Auditoria.pdf"'} class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
                             <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
                             <input type="hidden" value="${valorStr}" class="pdf-data">
                         </div>`;
@@ -1005,11 +1112,12 @@
             let registrosInsert = [];
             const hoy = new Date(); const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
 
-            window.prendasAImportar.forEach(prenda => {
+            for (const prenda of window.prendasAImportar) {
                 const precintoReal = prenda.precinto || prenda.id;
                 let datosNuevos = new Array(30).fill(''); 
                 
-                datosNuevos[0] = prenda.fotoUrl || ''; 
+                try { datosNuevos[0] = await asegurarUrl(prenda.fotoUrl || '', 'fotos'); }
+                catch (err) { console.error('No se pudo subir la foto de', precintoReal, err); datosNuevos[0] = ''; }
                 datosNuevos[1] = fechaIngreso; 
                 datosNuevos[2] = prenda.registradoPor || prenda.disenador || ''; 
                 datosNuevos[3] = prenda.genero || ''; 
@@ -1025,7 +1133,7 @@
                 datosNuevos[13] = prenda.linea || '';
                 
                 registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
-            });
+            }
 
             const { data: insertedData, error } = await client.from('dpto_tecnico').insert(registrosInsert).select();
             
