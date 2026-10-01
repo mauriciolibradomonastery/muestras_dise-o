@@ -577,7 +577,7 @@
             let allData = [];
             let from = 0;
             // Bloques pequeños mientras existan filas antiguas con base64; tras migrar puedes subirlo a 200
-            const step = 25; 
+            const step = 200; 
 
             while (true) {
                 document.getElementById('loadingText').innerText = `Descargando registros: ${allData.length}...`;
