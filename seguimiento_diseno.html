@@ -49,22 +49,6 @@
         .user-avatar:hover::after { content: attr(title); position: absolute; bottom: -30px; background: #1f2937; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100; }
         .users-label { font-size: 12px; color: #6b7280; font-weight: 600; margin-right: 15px; display: none; }
 
-        .notif-wrapper { position: relative; display: flex; align-items: center; }
-        .notif-btn { background: #ffffff; border: 1px solid #d1d5db; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; padding: 0; }
-        .notif-btn:hover { background: #f3f4f6; }
-        .notif-badge { position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .notif-panel { display: none; position: absolute; top: 50px; right: 0; width: 320px; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; z-index: 9999; flex-direction: column; overflow: hidden; }
-        .notif-header { background: #f9fafb; padding: 12px 15px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-        .notif-close { cursor: pointer; color: #9ca3af; font-size: 16px; }
-        .notif-close:hover { color: #ef4444; }
-        .notif-body { max-height: 280px; overflow-y: auto; padding: 10px; background: #f9fafb; }
-        .notif-item { background: white; border-left: 4px solid #3b82f6; padding: 10px; margin-bottom: 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size: 12px; }
-        .notif-item.read { border-left-color: #d1d5db; opacity: 0.7; }
-        .notif-meta { display: flex; justify-content: space-between; color: #6b7280; font-size: 10px; margin-bottom: 4px; }
-        .notif-footer { padding: 12px; background: white; border-top: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
-        .notif-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; }
-        .notif-send-btn { background: #10b981; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .notif-send-btn:hover { background: #059669; }
 
         .segmentador { display: flex; gap: 8px; margin-left: 20px; border-left: 2px solid #d1d5db; padding-left: 20px; }
         .seg-btn { background: rgba(255, 255, 255, 0.5); border: 1px solid #d1d5db; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #4b5563; cursor: pointer; transition: all 0.2s; }
@@ -209,27 +193,6 @@
             <span id="usersLabel" class="users-label">En línea:</span>
             <div id="activeUsersContainer" class="active-users-container"></div>
             
-            <div class="notif-wrapper">
-                <button class="notif-btn" onclick="toggleNotifPanel()">
-                    🔔<span id="notifBadge" class="notif-badge" style="display:none;">0</span>
-                </button>
-                
-                <div id="notifPanel" class="notif-panel">
-                    <div class="notif-header">
-                        <span>📋 Tareas y Mensajes</span>
-                        <span class="notif-close" onclick="toggleNotifPanel()">✖</span>
-                    </div>
-                    <div id="notifBody" class="notif-body">
-                        <div style="text-align: center; color: #9ca3af; padding: 20px;">Bandeja limpia ✨</div>
-                    </div>
-                    <div class="notif-footer">
-                        <input type="text" id="notifDestinatario" class="notif-input" placeholder="¿Para quién? (Ej: Mauricio o 'Todos')">
-                        <input type="text" id="notifMensaje" class="notif-input" placeholder="Escribe la tarea a realizar...">
-                        <button class="notif-send-btn" onclick="enviarNotificacion()">Enviar Tarea</button>
-                    </div>
-                </div>
-            </div>
-
             <a href="menu.html" class="btn-back">⬅ Volver al Menú Principal</a>
         </div>
     </div>
@@ -689,71 +652,7 @@
             label.style.display = count > 0 ? 'block' : 'none';
         }
 
-        window.toggleNotifPanel = function() {
-            const panel = document.getElementById('notifPanel');
-            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
-        };
-
-        async function cargarNotificaciones() {
-            const { data, error } = await supabase
-                .from('wips_notificaciones')
-                .select('*')
-                .or(`destinatario.ilike.%${miNombre}%,destinatario.ilike.todos`)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            if (error) return;
-
-            const body = document.getElementById('notifBody');
-            const badge = document.getElementById('notifBadge');
-            
-            body.innerHTML = '';
-            let unreadCount = 0;
-
-            if (data.length === 0) {
-                body.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Bandeja limpia ✨</div>';
-            } else {
-                data.forEach(n => {
-                    if(!n.leido) unreadCount++;
-                    const item = document.createElement('div');
-                    item.className = `notif-item ${n.leido ? 'read' : ''}`;
-                    const fechaObj = new Date(n.created_at);
-                    const fechaFix = `${fechaObj.getDate()}/${fechaObj.getMonth()+1} ${fechaObj.getHours()}:${String(fechaObj.getMinutes()).padStart(2, '0')}`;
-
-                    item.innerHTML = `
-                        <div class="notif-meta">
-                            <span>De: <b>${n.remitente}</b></span>
-                            <span>${fechaFix}</span>
-                        </div>
-                        <div style="margin-bottom: 5px;">${n.mensaje}</div>
-                        ${!n.leido ? `<button onclick="marcarNotificacionLeida(${n.id})" style="background:none; border:none; color:#3b82f6; font-size:10px; cursor:pointer; padding:0; text-decoration:underline;">Marcar como leída</button>` : ''}
-                    `;
-                    body.appendChild(item);
-                });
-            }
-
-            if(unreadCount > 0) { badge.textContent = unreadCount; badge.style.display = 'flex'; } 
-            else { badge.style.display = 'none'; }
-        }
-
-        window.enviarNotificacion = async function() {
-            const dest = document.getElementById('notifDestinatario').value.trim();
-            const msj = document.getElementById('notifMensaje').value.trim();
-            if(!dest || !msj) { alert("Escribe el destinatario y el mensaje"); return; }
-            const btn = document.querySelector('.notif-send-btn');
-            btn.textContent = "⏳";
-            const { error } = await supabase.from('wips_notificaciones').insert([{ remitente: miNombre, destinatario: dest, mensaje: msj }]);
-            if(error) { alert("Error al enviar"); } else { document.getElementById('notifMensaje').value = ''; cargarNotificaciones(); }
-            btn.textContent = "Enviar Tarea";
-        };
-
-        window.marcarNotificacionLeida = async function(id) {
-            await supabase.from('wips_notificaciones').update({ leido: true }).eq('id', id);
-            cargarNotificaciones();
-        };
-
-        setInterval(cargarNotificaciones, 15000);
-        setTimeout(cargarNotificaciones, 1000); 
+        // Notificaciones ("Tareas y Mensajes") eliminadas: consultaban Supabase cada 15 segundos.
 
         function initResizer(th, colIndex) {
             const resizer = document.createElement('div');
