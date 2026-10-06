@@ -128,6 +128,27 @@
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
     .oculto { display: none !important; }
 
+    /* Tabla militar AQL integrada */
+    .tabla-aql { border-collapse: collapse; width: 100%; min-width: 520px; }
+    .tabla-aql th, .tabla-aql td { text-align: center; border: 1px solid var(--borde); padding: 8px 6px; font-size: 13px; }
+    .tabla-aql th { background: #F9F8F6; color: var(--texto); font-size: 11px; }
+    .tabla-aql .col-sel { background: #FBF3E4; }
+    .tabla-aql th.col-sel { background: var(--laton); color: #fff; }
+    .tabla-aql tr.fila-sel td { background: #F7EEDD; font-weight: 600; }
+    .tabla-aql td.celda-sel { background: var(--tinta) !important; color: var(--hueso); font-weight: 700; }
+    .tabla-aql .flecha { color: var(--texto-claro); font-size: 16px; }
+    .tabla-aql .sev-critico { background: #FCF0F0; color: var(--vino); }
+    .tabla-aql .sev-mayor { background: #FDEDE4; color: #C2410C; }
+    .tabla-aql .sev-menor { background: #FEF6E7; color: var(--ambar); }
+    .calc-aql td:first-child { text-align: left; }
+    .calc-aql .obs { font-size: 12px; color: var(--texto-claro); text-align: left; }
+    details.ref-aql { border: 1px solid var(--borde); border-radius: 10px; margin-top: 12px; background: #fff; }
+    details.ref-aql summary { cursor: pointer; padding: 14px 16px; font-weight: 600; font-size: 14px; color: var(--tinta); list-style: none; }
+    details.ref-aql summary::before { content: '▸ '; color: var(--laton); }
+    details.ref-aql[open] summary::before { content: '▾ '; }
+    details.ref-aql .cuerpo { padding: 0 16px 16px; }
+    .leyenda-aql { font-size: 12px; color: var(--texto-claro); margin-top: 10px; line-height: 1.6; }
+
     @media (max-width: 640px) { .fila { grid-template-columns: 1fr; gap: 12px;} .contenido { padding: 16px; } .tarjeta { padding: 16px; } }
 </style>
 </head>
@@ -280,6 +301,53 @@ function recalcularTallas() {
 const totalLote = function() { return cantidades.reduce(function(s, c) { return s + Object.values(c.tallas).reduce(function(x, v) { return x + num(v); }, 0); }, 0); };
 const colores = function() { return cantidades.map(function(c) { return c.color; }); };
 
+// ================= TABLA MILITAR AQL (MIL-STD-105E / ISO 2859-1) =================
+// Criterios: Crítico AQL 0 · Mayor AQL 2.5 · Menor AQL 4.0 · Inspección normal, muestreo simple
+const AQL_NIVELES = ['S-1','S-2','S-3','S-4','I','II','III'];
+const AQL_NIVEL_DEFECTO = 'II';
+// Tabla 1: [lote desde, letras para S-1,S-2,S-3,S-4,I,II,III]
+const AQL_TABLA1 = [
+    [2,'AAAAAAB'], [9,'AAAAABC'], [16,'AABBBCD'], [26,'ABBCCDE'], [51,'BBCCCEF'],
+    [91,'BBCDDFG'], [151,'BCDEEGH'], [281,'BCDEFHJ'], [501,'CCEFGJK'], [1201,'CDEGHKL'],
+    [3201,'CDFGJLM'], [10001,'CDFHKMN'], [35001,'DEGJLNP'], [150001,'DEGJMPQ'], [500001,'DEHKNQR']
+];
+// Tabla 2-A: letra código → tamaño de muestra
+const AQL_LETRAS = 'ABCDEFGHJKLMNPQR';
+const AQL_MUESTRAS = [2,3,5,8,13,20,32,50,80,125,200,315,500,800,1250,2000];
+// Columnas de la Tabla 2-A tal cual la norma: [Ac, Re] o flecha 'D' (↓ usar plan de abajo) / 'U' (↑ usar plan de arriba)
+const AQL_COL_2_5 = ['D','D',[0,1],'U','D',[1,2],[2,3],[3,4],[5,6],[7,8],[10,11],[14,15],[21,22],'U','U','U'];
+const AQL_COL_4_0 = ['D',[0,1],'U','D',[1,2],[2,3],[3,4],[5,6],[7,8],[10,11],[14,15],[21,22],'U','U','U','U'];
+
+function aqlResolver(columna, i) {
+    let j = i;
+    while (!Array.isArray(columna[j])) j += columna[j] === 'D' ? 1 : -1;
+    return { letra: AQL_LETRAS[j], n: AQL_MUESTRAS[j], ac: columna[j][0], re: columna[j][1] };
+}
+
+function planAQL(lote, nivel) {
+    lote = num(lote);
+    if (lote < 2) return null;
+    const col = Math.max(0, AQL_NIVELES.indexOf(nivel || AQL_NIVEL_DEFECTO));
+    let fila = AQL_TABLA1[0];
+    AQL_TABLA1.forEach(function(f) { if (lote >= f[0]) fila = f; });
+    const letra = fila[1][col];
+    const i = AQL_LETRAS.indexOf(letra);
+    const critico = { letra: letra, n: AQL_MUESTRAS[i], ac: 0, re: 1 };   // AQL 0 = tolerancia cero
+    const mayor = aqlResolver(AQL_COL_2_5, i);
+    const menor = aqlResolver(AQL_COL_4_0, i);
+    const requerida = Math.max(critico.n, mayor.n, menor.n);
+    return {
+        nivel: AQL_NIVELES[col], letra: letra,
+        critico: critico, mayor: mayor, menor: menor,
+        muestra: Math.min(requerida, lote),
+        cienPorCiento: requerida >= lote
+    };
+}
+
+const claveNivel = 'aqlNivel_' + idAuditoria;
+let nivelInspeccion = AQL_NIVEL_DEFECTO;
+try { nivelInspeccion = localStorage.getItem(claveNivel) || AQL_NIVEL_DEFECTO; } catch (e) {}
+
 function pintar() {
     $('pasos').innerHTML = [1,2,3,4,5].map(function(p) { return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>'; }).join('');
     $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
@@ -332,27 +400,157 @@ window.agregarColor = function() { cantidades.push({ color: 'NUEVO', tallas: {} 
 window.agregarTalla = function() { const t = prompt('Talla:'); if (t) { tallas.push(t.toUpperCase()); pintar(); } };
 
 // Paso 2
-function pasoMuestraAQL() {
-    const lote = totalLote(); const auditada = num(auditoria.cantidad_auditada) || Math.min(lote, 50);
-    const maxMayor = auditada >= 50 ? 3 : 2;
-    const maxMenor = auditada >= 50 ? 5 : 3;
+function rangoTabla1(i) {
+    const desde = AQL_TABLA1[i][0];
+    return i < AQL_TABLA1.length - 1 ? fmt(desde) + ' a ' + fmt(AQL_TABLA1[i + 1][0] - 1) : fmt(desde) + ' y más';
+}
+function indiceTabla1(lote) {
+    let idx = 0;
+    AQL_TABLA1.forEach(function(f, i) { if (lote >= f[0]) idx = i; });
+    return idx;
+}
+function obsPlan(plan, p) {
+    const notas = [];
+    if (p.letra !== plan.letra) notas.push('Flecha de la tabla: usa letra ' + p.letra + ' (' + fmt(p.n) + ' unds)');
+    if (plan.cienPorCiento) notas.push('Muestra ≥ lote: inspeccionar 100%');
+    return notas.join(' · ');
+}
+function filaCalc(nombre, clase, aql, plan, p) {
+    return '<tr>' +
+        '<td class="sev-' + clase + '" style="font-weight:700;">' + nombre + '</td>' +
+        '<td class="sev-' + clase + '">' + aql + '</td>' +
+        '<td>' + fmt(Math.min(p.n, plan.lote)) + '</td>' +
+        '<td style="font-weight:700; color:var(--verde);">' + p.ac + '</td>' +
+        '<td style="font-weight:700; color:var(--vino);">' + p.re + '</td>' +
+        '<td class="obs">' + obsPlan(plan, p) + '</td>' +
+    '</tr>';
+}
 
-    $('contenido').innerHTML = 
+function htmlTabla1(plan, lote) {
+    const filaSel = indiceTabla1(lote);
+    const colSel = AQL_NIVELES.indexOf(plan.nivel);
+    const sub = ['S-1','S-2','S-3','S-4','I · Bajo','II · General','III · Estricto'];
+    return '<div class="tabla-scroll"><table class="tabla-aql">' +
+        '<thead>' +
+            '<tr><th rowspan="2">Tamaño del lote</th><th colspan="4">Niveles especiales</th><th colspan="3">Niveles generales</th></tr>' +
+            '<tr>' + sub.map(function(t, j) { return '<th class="' + (j === colSel ? 'col-sel' : '') + '">' + t + '</th>'; }).join('') + '</tr>' +
+        '</thead><tbody>' +
+        AQL_TABLA1.map(function(f, i) {
+            return '<tr class="' + (i === filaSel ? 'fila-sel' : '') + '"><td>' + rangoTabla1(i) + '</td>' +
+                f[1].split('').map(function(L, j) {
+                    const cls = (i === filaSel && j === colSel) ? 'celda-sel' : (j === colSel ? 'col-sel' : '');
+                    return '<td class="' + cls + '">' + L + '</td>';
+                }).join('') + '</tr>';
+        }).join('') +
+        '</tbody></table></div>' +
+        '<div class="leyenda-aql">Lote de <b>' + fmt(lote) + '</b> unidades con nivel <b>' + plan.nivel + '</b> → letra código <b>' + plan.letra + '</b>.</div>';
+}
+
+function htmlTabla2A(plan) {
+    const iSel = AQL_LETRAS.indexOf(plan.letra);
+    const celda = function(col, i, sevPlan) {
+        const v = col[i];
+        const sel = AQL_LETRAS[i] === sevPlan.letra && i !== -1 ? ' celda-sel' : '';
+        if (Array.isArray(v)) return '<td class="' + sel + '">' + v[0] + '</td><td class="' + sel + '">' + v[1] + '</td>';
+        return '<td colspan="2" class="flecha' + sel + '">' + (v === 'D' ? '↓' : '↑') + '</td>';
+    };
+    return '<div class="tabla-scroll"><table class="tabla-aql">' +
+        '<thead>' +
+            '<tr><th rowspan="2">Letra código</th><th rowspan="2">Tamaño de muestra</th>' +
+                '<th colspan="2" class="sev-critico">Crítico · AQL 0</th>' +
+                '<th colspan="2" class="sev-mayor">Mayor · AQL 2.5</th>' +
+                '<th colspan="2" class="sev-menor">Menor · AQL 4.0</th></tr>' +
+            '<tr><th>Ac</th><th>Re</th><th>Ac</th><th>Re</th><th>Ac</th><th>Re</th></tr>' +
+        '</thead><tbody>' +
+        AQL_LETRAS.split('').map(function(L, i) {
+            const selCrit = i === iSel ? ' celda-sel' : '';
+            return '<tr class="' + (i === iSel ? 'fila-sel' : '') + '">' +
+                '<td style="font-weight:700;">' + L + '</td><td>' + fmt(AQL_MUESTRAS[i]) + '</td>' +
+                '<td class="' + selCrit + '">0</td><td class="' + selCrit + '">1</td>' +
+                celda(AQL_COL_2_5, i, plan.mayor) +
+                celda(AQL_COL_4_0, i, plan.menor) +
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>' +
+        '<div class="leyenda-aql">↓ usar el primer plan debajo de la flecha · ↑ usar el primer plan arriba de la flecha. ' +
+        'Las celdas oscuras son el plan que se aplica a esta auditoría. Ac = se acepta con esa cantidad o menos · Re = se rechaza desde esa cantidad.</div>';
+}
+
+function pasoMuestraAQL() {
+    const lote = totalLote();
+    const plan = planAQL(lote, nivelInspeccion);
+    const auditada = num(auditoria.cantidad_auditada) || (plan ? plan.muestra : Math.min(lote, 50));
+
+    if (!plan) {
+        $('contenido').innerHTML =
+        '<div class="tarjeta">' +
+            '<h2>2. Calculadora de muestreo AQL</h2>' +
+            '<div class="sugerencia-aql-box rechazado">Primero registra las unidades producidas en el paso 1 (mínimo 2 unidades) para calcular la muestra con la tabla militar.</div>' +
+            '<label>Unidades a auditar de la muestra</label>' +
+            '<input id="eAuditada" type="number" min="1" value="' + auditada + '">' +
+        '</div>';
+        return;
+    }
+    plan.lote = lote;
+
+    $('contenido').innerHTML =
     '<div class="tarjeta">' +
-        '<h2>2. Muestra de Inspección AQL (ISO 2859-1)</h2>' +
-        '<label>Unidades a auditar de la muestra</label>' +
-        '<input id="eAuditada" type="number" min="1" value="' + auditada + '" oninput="calcularPct(' + lote + ')" style="font-size:24px; font-weight:600; text-align:center; padding:16px; color:var(--tinta);">' +
+        '<h2>2. Calculadora de muestreo AQL · Tabla militar</h2>' +
+        '<div class="fila">' +
+            '<div><label>Tamaño del lote (unidades)</label><input value="' + fmt(lote) + '" disabled style="background:#F9F8F6; font-weight:700; font-size:18px; text-align:center;"></div>' +
+            '<div><label>Nivel de inspección</label><select id="eNivel" onchange="cambiarNivel(this.value)" style="font-weight:600;">' +
+                AQL_NIVELES.map(function(n) {
+                    const etiqueta = n === 'I' ? 'I · Bajo' : n === 'II' ? 'II · General (recomendado)' : n === 'III' ? 'III · Estricto' : n + ' · Especial';
+                    return '<option value="' + n + '"' + (n === plan.nivel ? ' selected' : '') + '>' + etiqueta + '</option>';
+                }).join('') +
+            '</select></div>' +
+        '</div>' +
         '<div class="cifras">' +
-            '<div class="cifra"><div class="n" id="pctAuditado">' + (lote ? (auditada / lote * 100).toFixed(1) : '0') + ' %</div><div class="t">Muestra del Lote (' + fmt(lote) + ')</div></div>' +
-            '<div class="cifra"><div class="n">' + maxMayor + '</div><div class="t">Límite AQL Mayores</div></div>' +
-            '<div class="cifra"><div class="n">' + maxMenor + '</div><div class="t">Límite AQL Menores</div></div>' +
+            '<div class="cifra"><div class="n">' + plan.nivel + '</div><div class="t">Nivel de inspección</div></div>' +
+            '<div class="cifra"><div class="n">' + plan.letra + '</div><div class="t">Letra código</div></div>' +
+            '<div class="cifra" style="background:var(--tinta); border-color:var(--tinta);"><div class="n" style="color:var(--hueso);">' + fmt(plan.muestra) + '</div><div class="t" style="color:rgba(253,251,247,0.75);">Tamaño sugerido a auditar</div></div>' +
+            '<div class="cifra"><div class="n">' + (plan.muestra / lote * 100).toFixed(1) + ' %</div><div class="t">Del lote total</div></div>' +
         '</div>' +
-        '<div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">' +
-            [10, 20, 50, 80, 125].map(function(m) { return '<button class="btn btn-chico" onclick="document.getElementById(\'eAuditada\').value=' + m + ';calcularPct(' + lote + ')">' + m + ' unds</button>'; }).join('') +
+        (plan.cienPorCiento ? '<div class="mensaje info" style="margin-top:16px;">La muestra de la tabla iguala o supera el lote: se deben inspeccionar las ' + fmt(lote) + ' unidades (100%).</div>' : '') +
+        '<div class="tabla-scroll" style="margin-top:20px;"><table class="tabla-aql calc-aql">' +
+            '<thead><tr><th style="text-align:left;">Tipo de defecto</th><th>AQL</th><th>Tamaño de muestra</th><th>Acepta con (Ac)</th><th>Rechaza con (Re)</th><th style="text-align:left;">Observación</th></tr></thead>' +
+            '<tbody>' +
+                filaCalc('Crítico', 'critico', '0', plan, plan.critico) +
+                filaCalc('Mayor', 'mayor', '2.5', plan, plan.mayor) +
+                filaCalc('Menor', 'menor', '4.0', plan, plan.menor) +
+            '</tbody>' +
+        '</table></div>' +
+        '<div class="leyenda-aql">Ejemplo con este lote: en la muestra de ' + fmt(plan.muestra) + ' unidades, el lote se aprueba con ' + plan.mayor.ac + ' defectos mayores o menos y se rechaza con ' + plan.mayor.re + ' o más. Un solo defecto crítico rechaza el lote.</div>' +
+    '</div>' +
+
+    '<div class="tarjeta">' +
+        '<h2>Unidades auditadas</h2>' +
+        '<input id="eAuditada" type="number" min="1" value="' + auditada + '" oninput="calcularPct(' + lote + ',' + plan.muestra + ')" style="font-size:24px; font-weight:600; text-align:center; padding:16px; color:var(--tinta);">' +
+        '<div style="text-align:center; font-size:13px; color:var(--texto-claro); margin-top:8px;"><span id="pctAuditado">' + (auditada / lote * 100).toFixed(1) + ' %</span> del lote</div>' +
+        '<div class="mensaje info" id="avisoMuestra" style="margin-top:12px;' + (auditada < plan.muestra ? '' : 'display:none;') + '">La cantidad auditada es menor al tamaño sugerido por la tabla militar (' + fmt(plan.muestra) + ' unds).</div>' +
+        '<div style="display:flex; justify-content:center; margin-top:16px;">' +
+            '<button class="btn btn-chico" onclick="document.getElementById(\'eAuditada\').value=' + plan.muestra + ';calcularPct(' + lote + ',' + plan.muestra + ')">Usar tamaño sugerido (' + fmt(plan.muestra) + ' unds)</button>' +
         '</div>' +
+    '</div>' +
+
+    '<div class="tarjeta">' +
+        '<h2>Tabla militar de referencia (MIL-STD-105E / ISO 2859-1)</h2>' +
+        '<details class="ref-aql" open><summary>Tabla 1 · Letra código de tamaño de muestra</summary><div class="cuerpo">' + htmlTabla1(plan, lote) + '</div></details>' +
+        '<details class="ref-aql" open><summary>Tabla 2-A · Planes de muestreo simple, inspección normal</summary><div class="cuerpo">' + htmlTabla2A(plan) + '</div></details>' +
     '</div>';
 }
-window.calcularPct = function(l) { $('pctAuditado').textContent = (l ? num($('eAuditada').value) / l * 100 : 0).toFixed(1) + ' %'; };
+window.calcularPct = function(l, requerida) {
+    const v = num($('eAuditada').value);
+    $('pctAuditado').textContent = (l ? v / l * 100 : 0).toFixed(1) + ' %';
+    if ($('avisoMuestra')) $('avisoMuestra').style.display = v < requerida ? '' : 'none';
+};
+window.cambiarNivel = function(n) {
+    nivelInspeccion = n;
+    try { localStorage.setItem(claveNivel, n); } catch (e) {}
+    const plan = planAQL(totalLote(), n);
+    if (plan) auditoria.cantidad_auditada = plan.muestra;
+    pintar();
+};
 
 // Paso 3
 function pasoMedidas() {
@@ -493,38 +691,69 @@ async function guardarPruebasBD() {
 
 // Paso 5
 function pasoCierre() {
-    const auditada = num(auditoria.cantidad_auditada) || 50;
-    const maxMayor = auditada >= 50 ? 3 : 2;
-    const maxMenor = auditada >= 50 ? 5 : 3;
+    const lote = totalLote();
+    const plan = planAQL(lote, nivelInspeccion);
+    const auditada = num(auditoria.cantidad_auditada);
 
-    const tCritico = defectos.filter(function(d) { return d.severidad === 'critico'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
-    const tMayor = defectos.filter(function(d) { return d.severidad === 'mayor'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
-    const tMenor = defectos.filter(function(d) { return d.severidad === 'menor'; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0);
+    const suma = function(sev) { return defectos.filter(function(d) { return d.severidad === sev; }).reduce(function(s,d) { return s + num(d.cantidad); }, 0); };
+    const tCritico = suma('critico'), tMayor = suma('mayor'), tMenor = suma('menor');
     const hayPruebaFallida = pruebas.some(function(p) { return p.resultado === 'FAIL'; });
     const hayMedidaFallida = medidas.some(function(m) { return !m.cumple; });
 
-    let sugerencia = 'aprobado';
-    let motivo = 'El lote cumple con las especificaciones AQL y pruebas de calidad.';
+    // Críticos: AQL 0, siempre Re = 1
+    const reCritico = 1;
+    const reMayor = plan ? plan.mayor.re : null;
+    const reMenor = plan ? plan.menor.re : null;
 
-    if (tCritico > 0 || tMayor > maxMayor || tMenor > maxMenor || hayPruebaFallida || hayMedidaFallida) {
-        sugerencia = 'rechazado';
-        const motivos = [];
-        if (tCritico > 0) motivos.push(tCritico + ' defecto(s) crítico(s)');
-        if (tMayor > maxMayor) motivos.push('Exceso de defectos mayores (' + tMayor + ' encontrados vs. ' + maxMayor + ' máximo)');
-        if (tMenor > maxMenor) motivos.push('Exceso de defectos menores (' + tMenor + ' encontrados vs. ' + maxMenor + ' máximo)');
-        if (hayPruebaFallida) motivos.push('Prueba física fallida');
-        if (hayMedidaFallida) motivos.push('Punto de medida fuera de tolerancia');
-        motivo = 'Sugerencia AQL: ' + motivos.join(' · ');
+    const motivos = [];
+    if (tCritico >= reCritico) motivos.push(tCritico + ' defecto(s) crítico(s) — AQL 0, tolerancia cero');
+    if (plan && tMayor >= reMayor) motivos.push('Defectos mayores: ' + tMayor + ' encontrados (rechaza con ' + reMayor + ', AQL 2.5)');
+    if (plan && tMenor >= reMenor) motivos.push('Defectos menores: ' + tMenor + ' encontrados (rechaza con ' + reMenor + ', AQL 4.0)');
+    if (hayPruebaFallida) motivos.push('Prueba física fallida');
+    if (hayMedidaFallida) motivos.push('Punto de medida fuera de tolerancia');
+
+    const sugerencia = motivos.length ? 'rechazado' : 'aprobado';
+    let motivo = sugerencia === 'rechazado'
+        ? 'Sugerencia AQL: ' + motivos.join(' · ')
+        : 'El lote cumple con las especificaciones AQL y pruebas de calidad.';
+
+    if (plan) {
+        motivo += ' [Nivel ' + plan.nivel + ' · Letra ' + plan.letra + ' · Muestra ' + plan.muestra +
+            ' · Mayor Ac ' + plan.mayor.ac + '/Re ' + plan.mayor.re + ' · Menor Ac ' + plan.menor.ac + '/Re ' + plan.menor.re + ']';
+        if (auditada && auditada < plan.muestra) motivo += ' ⚠ Se auditaron ' + auditada + ' de ' + plan.muestra + ' unidades requeridas.';
+    } else {
+        motivo += ' ⚠ Sin tamaño de lote registrado: no se aplicó la tabla AQL para mayores y menores.';
     }
 
     if (!auditoria.resultado) auditoria.resultado = sugerencia;
     auditoria.sugerencia_aql = motivo;
+
+    const filaRes = function(nombre, clase, encontrados, ac, re) {
+        const ok = re === null ? true : encontrados < re;
+        return '<tr><td><span class="pastilla ' + clase + '">' + nombre + '</span></td>' +
+            '<td class="num" style="font-weight:700;">' + fmt(encontrados) + '</td>' +
+            '<td class="num">' + (ac === null ? '—' : ac) + '</td>' +
+            '<td class="num">' + (re === null ? '—' : re) + '</td>' +
+            '<td><span class="pastilla ' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'CUMPLE' : 'RECHAZA') + '</span></td></tr>';
+    };
+    const tablaResumen =
+    '<div class="tarjeta"><h2>Resumen AQL' + (plan ? ' · Nivel ' + plan.nivel + ' · Letra ' + plan.letra + ' · Muestra ' + fmt(plan.muestra) : '') + '</h2>' +
+        '<div class="tabla-scroll"><table>' +
+            '<thead><tr><th>Defecto</th><th class="num">Encontrados</th><th class="num">Ac</th><th class="num">Re</th><th>Estado</th></tr></thead>' +
+            '<tbody>' +
+                filaRes('Crítico', 'critico', tCritico, 0, reCritico) +
+                filaRes('Mayor', 'mayor', tMayor, plan ? plan.mayor.ac : null, reMayor) +
+                filaRes('Menor', 'menor', tMenor, plan ? plan.menor.ac : null, reMenor) +
+            '</tbody>' +
+        '</table></div>' +
+    '</div>';
 
     $('contenido').innerHTML = 
     '<div class="sugerencia-aql-box ' + sugerencia + '">' +
         '<strong>🤖 Dictamen Automático AQL: ' + sugerencia.toUpperCase() + '</strong>' +
         '<div style="margin-top:4px; font-size:13px; opacity:0.9;">' + motivo + '</div>' +
     '</div>' +
+    tablaResumen +
     '<div class="tarjeta"><h2>Observaciones Generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">' + esc(auditoria.observaciones || '') + '</textarea></div>' +
     '<div class="tarjeta">' +
         '<h2>Evidencias Fotográficas (' + evidencias.length + ')</h2>' +
