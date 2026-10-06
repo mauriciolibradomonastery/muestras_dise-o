@@ -111,6 +111,27 @@
     .tabla-aql-comparativa { background: #fff; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; margin-bottom: 12px; page-break-inside: avoid !important; break-inside: avoid !important; }
     tr { page-break-inside: avoid !important; break-inside: avoid !important; }
 
+    /* Informe dinámico por motivo de defecto */
+    .ayuda-grafico { font-size: 12px; color: var(--texto-claro); margin: -12px 0 12px 0; width: 100%; }
+    .informe-defecto { display: none; border-top: 4px solid var(--vino); scroll-margin-top: calc(90px + env(safe-area-inset-top)); }
+    .informe-cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .informe-cabeza h2 { margin: 0 !important; }
+    .informe-cabeza .etiqueta { font-size: 11px; font-weight: 700; color: var(--texto-claro); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+    .informe-acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .informe-acciones select { width: auto; min-width: 220px; }
+    .btn-quitar { background: #F4F1EB; border: 1px solid var(--borde); color: var(--texto); padding: 11px 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transicion); }
+    .btn-quitar:hover { background: #FCF0F0; color: var(--vino); border-color: #F2C8C9; }
+    .mini-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .mini-kpi { background: #FDFBF7; border: 1px solid var(--borde); border-radius: 10px; padding: 14px 16px; }
+    .mini-kpi .n { font-size: 24px; font-weight: 600; color: var(--tinta); }
+    .mini-kpi .t { font-size: 11px; color: var(--texto-claro); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-top: 4px; }
+    .informe-sub { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 19px; margin: 8px 0 10px; color: var(--tinta); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .informe-sub small { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: var(--texto-claro); }
+    .barra-prop { height: 6px; background: #F4F1EB; border-radius: 3px; overflow: hidden; min-width: 80px; margin-top: 6px; }
+    .barra-prop span { display: block; height: 100%; background: var(--vino); border-radius: 3px; }
+    tr.fila-ref-sel td { background: #FCF0F0; }
+    .chip-filtro { display: inline-flex; align-items: center; gap: 6px; background: #FCF0F0; color: var(--vino); border-radius: 999px; padding: 4px 10px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
     @media (max-width: 768px) {
@@ -147,9 +168,12 @@
         </div>
         <div class="grafico-caja">
             <h3>Top 5 Motivos de Defecto</h3>
+            <div class="ayuda-grafico">Haz clic en un motivo para ver las referencias afectadas.</div>
             <div class="canvas-container"><canvas id="chartDefectos"></canvas></div>
         </div>
     </div>
+
+    <div class="seccion informe-defecto" id="informeDefecto"></div>
 
     <div class="grafico-caja" style="margin-bottom: 24px;">
         <h3>Evolución Mensual (Aprobadas vs Rechazadas)</h3>
@@ -192,13 +216,17 @@ const $ = id => document.getElementById(id);
 let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasMap = {};
 let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
 let refActual = '';
+let defectoSel = null, refSelInforme = null, listaActual = [], refsInforme = [];
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN = n => Math.round(Number(n) || 0).toLocaleString('es-CO');
+const nombreDefecto = d => d.defecto ? d.defecto.toUpperCase().trim() : 'NO ESPECIFICADO';
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { location.replace('index.html'); return; }
 
     const [ resAuds, resUsuarios ] = await Promise.all([
-        supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre), auditoria_defectos(defecto, cantidad)').eq('estado', 'finalizada').order('fecha_auditoria', { ascending: false }),
+        supabase.from('auditorias').select('*, auditoria_proveedores(nombre), auditoria_tipos(nombre), auditoria_defectos(defecto, cantidad, severidad, color, talla)').eq('estado', 'finalizada').order('fecha_auditoria', { ascending: false }),
         supabase.from('auditoria_usuarios').select('id, nombre')
     ]);
 
@@ -277,7 +305,9 @@ function renderData() {
     });
     const ranking = Object.entries(provScores).map(([nombre, datos]) => ({ nombre, score: Math.round((datos.aprobadas / datos.total) * 100) })).sort((a, b) => b.score - a.score);
 
+    listaActual = list;
     actualizarGraficos(ranking, topDefectos, mesesCount);
+    renderInformeDefecto();
 }
 
 function actualizarGraficos(ranking, topDefectos, mesesCount) {
@@ -293,8 +323,30 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
     chartDefectosInst = new Chart($('chartDefectos').getContext('2d'), {
         type: 'doughnut',
         data: topDefectos.length === 0 ? { labels: ['Sin defectos'], datasets: [{ data: [1], backgroundColor: ['#E6E1D8'] }] } : { labels: topDefectos.map(d => d[0]), datasets: [{ data: topDefectos.map(d => d[1]), backgroundColor: ['#8C2026', '#B45309', '#B08945', '#1E3A8A', '#197A56'], borderWidth: 2, borderColor: '#fff' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12, weight: 500 } } } } }
+        options: {
+            responsive: true, maintainAspectRatio: false, layout: { padding: 14 },
+            onClick: (evt, els, chart) => {
+                if (!els.length || topDefectos.length === 0) return;
+                seleccionarDefecto(chart.data.labels[els[0].index]);
+            },
+            onHover: (evt, els) => { evt.native.target.style.cursor = (els.length && topDefectos.length) ? 'pointer' : 'default'; },
+            plugins: { legend: {
+                position: 'right',
+                labels: { boxWidth: 12, font: { size: 12, weight: 500 } },
+                onClick: (e, item, legend) => { if (topDefectos.length) seleccionarDefecto(legend.chart.data.labels[item.index]); },
+                onHover: e => { e.native.target.style.cursor = 'pointer'; },
+                onLeave: e => { e.native.target.style.cursor = 'default'; }
+            } }
+        }
     });
+    // Resaltar el motivo seleccionado
+    if (defectoSel && topDefectos.length) {
+        const ds = chartDefectosInst.data.datasets[0];
+        const base = ['#8C2026', '#B45309', '#B08945', '#1E3A8A', '#197A56'];
+        ds.backgroundColor = topDefectos.map((d, i) => d[0] === defectoSel ? base[i] : base[i] + '40');
+        ds.offset = topDefectos.map(d => d[0] === defectoSel ? 16 : 0);
+        chartDefectosInst.update('none');
+    }
 
     const mesesLabels = Object.keys(mesesCount).sort();
     chartMesesInst = new Chart($('chartMeses').getContext('2d'), {
@@ -302,6 +354,124 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
         data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(m => mesesCount[m].aprobadas), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(m => mesesCount[m].rechazadas), backgroundColor: '#8C2026', borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
+}
+
+// ================= INFORME DINÁMICO POR MOTIVO DE DEFECTO =================
+function seleccionarDefecto(nombre) {
+    defectoSel = defectoSel === nombre ? null : nombre;
+    refSelInforme = null;
+    renderData();
+    if (defectoSel) $('informeDefecto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.quitarFiltroDefecto = () => { defectoSel = null; refSelInforme = null; renderData(); };
+window.cambiarDefectoInforme = v => { defectoSel = v || null; refSelInforme = null; renderData(); };
+window.filtrarRefInforme = i => {
+    const ref = refsInforme[i] ? refsInforme[i].ref : null;
+    refSelInforme = refSelInforme === ref ? null : ref;
+    renderInformeDefecto();
+};
+
+function renderInformeDefecto() {
+    const cont = $('informeDefecto');
+    if (!defectoSel) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+    cont.style.display = 'block';
+
+    // Todos los motivos disponibles con los filtros actuales (para el selector)
+    const totalesMotivo = {};
+    let totalTodosDefectos = 0;
+    listaActual.forEach(a => (a.auditoria_defectos || []).forEach(d => {
+        const n = nombreDefecto(d), c = Number(d.cantidad) || 0;
+        totalesMotivo[n] = (totalesMotivo[n] || 0) + c; totalTodosDefectos += c;
+    }));
+    const motivos = Object.entries(totalesMotivo).sort((a, b) => b[1] - a[1]);
+
+    // Registros del motivo seleccionado
+    const regs = [];
+    listaActual.forEach(a => (a.auditoria_defectos || []).forEach(d => {
+        if (nombreDefecto(d) === defectoSel) regs.push({ a, d, cant: Number(d.cantidad) || 0 });
+    }));
+
+    const selector = `<select onchange="cambiarDefectoInforme(this.value)">` +
+        (totalesMotivo[defectoSel] === undefined ? `<option value="${esc(defectoSel)}" selected>${esc(defectoSel)}</option>` : '') +
+        motivos.map(([n, c]) => `<option value="${esc(n)}"${n === defectoSel ? ' selected' : ''}>${esc(n)} (${fmtN(c)})</option>`).join('') +
+        `</select>`;
+    const cabeza = `<div class="informe-cabeza">
+        <div><div class="etiqueta">Informe por motivo de defecto</div><h2>${esc(defectoSel)}</h2></div>
+        <div class="informe-acciones">${selector}<button class="btn-quitar" onclick="quitarFiltroDefecto()">✕ Quitar filtro</button></div>
+    </div>`;
+
+    if (!regs.length) {
+        cont.innerHTML = cabeza + `<p style="color:var(--texto-claro); font-size:14px;">No hay registros de este defecto con los filtros actuales de proveedor, referencia o auditora.</p>`;
+        return;
+    }
+
+    const totalUnd = regs.reduce((s, r) => s + r.cant, 0);
+    const audsIds = new Set(regs.map(r => r.a.id));
+    const provs = new Set(regs.map(r => r.a.auditoria_proveedores ? r.a.auditoria_proveedores.nombre : 'N/A'));
+    const pctTotal = totalTodosDefectos ? (totalUnd / totalTodosDefectos * 100).toFixed(1) : '0';
+
+    // Agrupar por referencia
+    const porRef = {};
+    regs.forEach(({ a, d, cant }) => {
+        const key = a.referencia || 'SIN REFERENCIA';
+        const r = porRef[key] = porRef[key] || { ref: key, skus: new Set(), provs: new Set(), auds: new Set(), und: 0, colores: {}, tallas: {}, ultima: '' };
+        if (a.sku) r.skus.add(a.sku);
+        r.provs.add(a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A');
+        r.auds.add(a.id);
+        r.und += cant;
+        if (d.color) r.colores[d.color] = (r.colores[d.color] || 0) + cant;
+        if (d.talla) r.tallas[d.talla] = (r.tallas[d.talla] || 0) + cant;
+        if ((a.fecha_auditoria || '') > r.ultima) r.ultima = a.fecha_auditoria || '';
+    });
+    refsInforme = Object.values(porRef).sort((x, y) => y.und - x.und);
+    const maxRef = refsInforme[0].und || 1;
+    const resumenMapa = m => Object.entries(m).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${esc(k)} (${fmtN(v)})`).join(', ') || '—';
+
+    const kpis = `<div class="mini-kpis">
+        <div class="mini-kpi"><div class="n">${fmtN(totalUnd)}</div><div class="t">Defectos encontrados</div></div>
+        <div class="mini-kpi"><div class="n">${refsInforme.length}</div><div class="t">Referencias afectadas</div></div>
+        <div class="mini-kpi"><div class="n">${audsIds.size}</div><div class="t">Auditorías con el defecto</div></div>
+        <div class="mini-kpi"><div class="n">${provs.size}</div><div class="t">Proveedores</div></div>
+        <div class="mini-kpi"><div class="n">${pctTotal}%</div><div class="t">Del total de defectos</div></div>
+    </div>`;
+
+    const tablaRefs = `<div class="informe-sub">Referencias afectadas <small>Haz clic en una referencia para ver solo su detalle</small></div>
+    <div style="overflow-x:auto; margin-bottom:24px;"><table>
+        <thead><tr><th>Referencia (SKU)</th><th>Proveedor</th><th class="num">Auditorías</th><th class="num">Defectos</th><th>Colores</th><th>Tallas</th><th>Última auditoría</th></tr></thead>
+        <tbody>${refsInforme.map((r, i) => `<tr class="fila-clic ${r.ref === refSelInforme ? 'fila-ref-sel' : ''}" onclick="filtrarRefInforme(${i})">
+            <td><strong style="color:var(--tinta); font-weight:600;">${esc(r.ref)}</strong>${r.skus.size ? ` <small style="color:#A39C94">(${[...r.skus].map(esc).join(', ')})</small>` : ''}</td>
+            <td>${[...r.provs].map(esc).join(', ')}</td>
+            <td class="num">${r.auds.size}</td>
+            <td class="num"><b>${fmtN(r.und)}</b><div class="barra-prop"><span style="width:${(r.und / maxRef * 100).toFixed(0)}%"></span></div></td>
+            <td style="font-size:12px;">${resumenMapa(r.colores)}</td>
+            <td style="font-size:12px;">${resumenMapa(r.tallas)}</td>
+            <td>${esc(r.ultima || '—')}</td>
+        </tr>`).join('')}</tbody>
+    </table></div>`;
+
+    const detalle = regs
+        .filter(r => !refSelInforme || (r.a.referencia || 'SIN REFERENCIA') === refSelInforme)
+        .sort((x, y) => (y.a.fecha_auditoria || '').localeCompare(x.a.fecha_auditoria || '') || y.cant - x.cant);
+    const tablaDetalle = `<div class="informe-sub">Detalle por auditoría
+        ${refSelInforme ? `<button class="chip-filtro" onclick="filtrarRefInforme(${refsInforme.findIndex(r => r.ref === refSelInforme)})">${esc(refSelInforme)} ✕</button>` : '<small>Haz clic en una fila para abrir el informe completo de la auditoría</small>'}
+    </div>
+    <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Severidad</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th>Resultado</th><th></th></tr></thead>
+        <tbody>${detalle.map(({ a, d, cant }) => `<tr class="fila-clic" onclick="verDetalle(${Number(a.id)})">
+            <td>${esc(a.fecha_auditoria || '—')}</td>
+            <td>${esc(a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A')}</td>
+            <td>${esc(a.referencia || '')}${a.sku ? ` <small style="color:#A39C94">(${esc(a.sku)})</small>` : ''}</td>
+            <td>${esc(a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A')}</td>
+            <td>${d.severidad ? `<span class="pastilla ${esc(d.severidad)}">${esc(d.severidad)}</span>` : '—'}</td>
+            <td>${esc(d.color || '—')}</td>
+            <td>${esc(d.talla || '—')}</td>
+            <td class="num"><b>${fmtN(cant)}</b></td>
+            <td><span class="estado-${esc((a.resultado || '').toLowerCase())}">${esc((a.resultado || 'N/A').toUpperCase())}</span></td>
+            <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver ›</td>
+        </tr>`).join('')}</tbody>
+    </table></div>`;
+
+    cont.innerHTML = cabeza + kpis + tablaRefs + tablaDetalle;
 }
 
 window.verDetalle = async function(id) {
@@ -376,7 +546,7 @@ window.verDetalle = async function(id) {
             <div class="detalle-item"><b>Colección / Sublínea</b>${det.coleccion || 'N/A'} / ${det.sublinea || 'N/A'}</div>
             
             <div class="detalle-item"><b>Proveedor</b>${det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A'}</div>
-            <div class="detalle-item"><b>N° Factura</b>${det.numero_factura || 'N/A'}</div>
+            <div class="detalle-item"><b>N° de Orden de Compra</b>${det.numero_factura || 'N/A'}</div>
             <div class="detalle-item"><b>Tipo de Auditoría</b>${det.auditoria_tipos ? det.auditoria_tipos.nombre : 'Inicial'}</div>
 
             <div class="detalle-item"><b>Fecha de Programación</b>${det.fecha_programada || 'N/A'} (${det.hora_programada ? det.hora_programada.slice(0,5) : ''})</div>
