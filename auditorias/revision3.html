@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Revisión 3%</title>
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#15100E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
+        --papel: #F4F1EB; --texto: #2A2421; --texto-claro: #736961; --borde: #E6E1D8;
+        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309; --vino: #8C2026;
+        --sombra-card: 0 4px 12px rgba(21,16,14,0.04);
+        --transicion: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; font-family: 'Inter', sans-serif; background: var(--papel);
+        color: var(--texto); padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+
+    .barra {
+        background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
+        position: sticky; top: 0; z-index: 30; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .barra-fila { display: flex; align-items: center; gap: 16px; }
+    .volver { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--hueso); font-size: 20px; cursor: pointer; padding: 4px 12px; transition: var(--transicion); }
+    .volver:hover { background: rgba(255,255,255,0.15); }
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 22px; margin: 0; flex: 1; letter-spacing: 0.02em; line-height: 1.2;}
+    .barra .sub { font-size: 12px; color: rgba(253,251,247,0.7); margin-top: 4px; letter-spacing: 0.03em; }
+
+    .pasos { display: flex; gap: 8px; margin-top: 16px; }
+    .paso-punto { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; transition: var(--transicion);}
+    .paso-punto.activo { background: var(--laton); box-shadow: 0 0 8px rgba(176,137,69,0.5); }
+    .paso-punto.hecho { background: rgba(176,137,69,0.4); }
+
+    .contenido { padding: 24px; max-width: 900px; margin: 0 auto; }
+    .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--sombra-card); }
+    .tarjeta h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 0 0 16px 0; color: var(--tinta); }
+    
+    label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-claro); margin-bottom: 8px; }
+    input, select, textarea {
+        width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    textarea { min-height: 90px; resize: vertical; }
+    .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+    .btn:hover { background: #F9F8F6; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+    .btn-oscuro { background: var(--tinta); color: var(--hueso); border-color: var(--tinta); }
+    .btn-oscuro:hover { background: #000; }
+    .btn-laton { background: var(--laton); color: #fff; border-color: var(--laton); box-shadow: 0 4px 12px rgba(176,137,69,0.2);}
+    .btn-laton:hover { background: var(--laton-hover); border-color: var(--laton-hover); }
+    .btn-chico { padding: 8px 12px; font-size: 13px; font-weight: 500;}
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; padding: 12px 8px; border-bottom: 1px solid var(--borde); letter-spacing: 0.03em;}
+    td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; }
+    td input { padding: 8px; font-size: 14px; text-align: center; }
+    .tabla-scroll { overflow-x: auto; margin: 0 -8px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .quitar { background: #F9F8F6; border: none; border-radius: 6px; color: var(--texto-claro); font-size: 14px; cursor: pointer; padding: 6px 10px; transition: var(--transicion);}
+    .quitar:hover { background: #FCF0F0; color: var(--vino); }
+
+    .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+    .cifra { background: #F9F8F6; border-radius: 8px; padding: 16px; text-align: center; border: 1px solid var(--borde);}
+    .cifra .n { font-size: 24px; font-weight: 600; line-height: 1; color: var(--tinta); }
+    .cifra .t { font-size: 11px; color: var(--texto-claro); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
+
+    .pastilla { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;}
+    .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
+    .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
+    .pastilla.critico { background: #FCF0F0; color: var(--vino); }
+    .pastilla.pass { background: #EEF7F2; color: var(--verde); }
+    .pastilla.fail { background: #FCF0F0; color: var(--vino); }
+
+    .checklist-grid { display: flex; flex-direction: column; gap: 12px; }
+    .checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; gap: 12px; }
+    .checklist-info { flex: 1; }
+    .checklist-nombre { font-size: 14px; font-weight: 600; color: var(--tinta); }
+    .checklist-opciones { display: flex; gap: 6px; }
+    .btn-opt { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--borde); background: #F9F8F6; font-size: 12px; font-weight: 700; cursor: pointer; transition: var(--transicion); }
+    .btn-opt.sel-pass { background: #EEF7F2; color: var(--verde); border-color: var(--verde); }
+    .btn-opt.sel-fail { background: #FCF0F0; color: var(--vino); border-color: var(--vino); }
+    .btn-opt.sel-na   { background: #F3F4F6; color: #4B5563; border-color: #9CA3AF; }
+
+    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; transition: var(--transicion);}
+    .talla-item span { font-size: 11px; font-weight: 700; color: var(--texto-claro); margin-bottom: 6px; }
+    .talla-item input { width: 50px; padding: 8px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 6px; background: #F9F8F6;}
+
+    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
+    .foto-box { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--sombra-card);}
+    .foto { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #F9F8F6; }
+    .foto img { width: 100%; height: 100%; object-fit: cover; }
+    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-obs input { font-size: 12px; padding: 6px; }
+    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 160px;}
+
+    .sugerencia-aql-box { padding: 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; border: 1px solid; }
+    .sugerencia-aql-box.aprobado { background: #EEF7F2; color: var(--verde); border-color: #BFE2D0; }
+    .sugerencia-aql-box.rechazado { background: #FCF0F0; color: var(--vino); border-color: #F2C8C9; }
+
+    .resultado-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
+    .resultado-botones button { padding: 18px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
+    .resultado-botones button.sel-aprobado { border-color: var(--verde); background: #EEF7F2; color: var(--verde); box-shadow: 0 4px 12px rgba(25,122,86,0.15);}
+    .resultado-botones button.sel-rechazado { border-color: var(--vino); background: #FCF0F0; color: var(--vino); box-shadow: 0 4px 12px rgba(140,32,38,0.15);}
+
+    .pie-fijo { 
+        position: fixed; left: 0; right: 0; bottom: 0; 
+        background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(0,0,0,0.08); padding: 16px 24px calc(16px + env(safe-area-inset-bottom)); 
+        display: flex; gap: 12px; justify-content: space-between; z-index: 25;
+    }
+    .pie-fijo .btn, .pie-fijo .btn-laton { flex: 1; max-width: 240px; padding: 16px; font-size: 16px;}
+    .mensaje { display: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .mensaje.info { display: block; background: #F2F5FC; color: #1E3A8A; border: 1px solid #CBD9F5; }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
+    .oculto { display: none !important; }
+
+    /* Tabla militar AQL integrada */
+    .tabla-aql { border-collapse: collapse; width: 100%; min-width: 520px; }
+    .tabla-aql th, .tabla-aql td { text-align: center; border: 1px solid var(--borde); padding: 8px 6px; font-size: 13px; }
+    .tabla-aql th { background: #F9F8F6; color: var(--texto); font-size: 11px; }
+    .tabla-aql .col-sel { background: #FBF3E4; }
+    .tabla-aql th.col-sel { background: var(--laton); color: #fff; }
+    .tabla-aql tr.fila-sel td { background: #F7EEDD; font-weight: 600; }
+    .tabla-aql td.celda-sel { background: var(--tinta) !important; color: var(--hueso); font-weight: 700; }
+    .tabla-aql .flecha { color: var(--texto-claro); font-size: 16px; }
+    .tabla-aql .sev-critico { background: #FCF0F0; color: var(--vino); }
+    .tabla-aql .sev-mayor { background: #FDEDE4; color: #C2410C; }
+    .tabla-aql .sev-menor { background: #FEF6E7; color: var(--ambar); }
+    .calc-aql td:first-child { text-align: left; }
+    .calc-aql .obs { font-size: 12px; color: var(--texto-claro); text-align: left; }
+    details.ref-aql { border: 1px solid var(--borde); border-radius: 10px; margin-top: 12px; background: #fff; }
+    details.ref-aql summary { cursor: pointer; padding: 14px 16px; font-weight: 600; font-size: 14px; color: var(--tinta); list-style: none; }
+    details.ref-aql summary::before { content: '▸ '; color: var(--laton); }
+    details.ref-aql[open] summary::before { content: '▾ '; }
+    details.ref-aql .cuerpo { padding: 0 16px 16px; }
+    .leyenda-aql { font-size: 12px; color: var(--texto-claro); margin-top: 10px; line-height: 1.6; }
+
+
+    /* ===== Revisión 3% ===== */
+    .tabla-medir { width: 100%; border-collapse: collapse; }
+    .tabla-medir th, .tabla-medir td { padding: 8px 6px; border-bottom: 1px solid var(--borde); text-align: left; font-size: 13px; }
+    .tabla-medir input { padding: 10px; text-align: center; min-width: 70px; }
+    .tabla-medir td.punto { font-weight: 600; color: var(--tinta); white-space: nowrap; }
+    .estado-medida { display: inline-block; min-width: 92px; text-align: center; }
+    .celda-medida b { font-size: 14px; }
+    .celda-medida small { display: block; color: var(--texto-claro); font-size: 11px; }
+    .celda-medida.mal b { color: var(--vino); }
+    .celda-medida.bien b { color: var(--verde); }
+    .tabla-procesos { width: 100%; border-collapse: collapse; }
+    .tabla-procesos th { text-align: center; }
+    .tabla-procesos th:first-child, .tabla-procesos td:first-child { text-align: left; }
+    .tabla-procesos td { padding: 12px 8px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+    .tabla-procesos td.opcion { text-align: center; width: 120px; }
+    .marca { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--borde); background: #fff; cursor: pointer; font-size: 18px; font-weight: 700; color: transparent; transition: var(--transicion); font-family: inherit; }
+    .marca.si.activa { background: var(--verde); border-color: var(--verde); color: #fff; }
+    .marca.no.activa { background: var(--vino); border-color: var(--vino); color: #fff; }
+    .marca:hover { border-color: var(--laton); }
+    .proceso-nombre { font-weight: 600; color: var(--tinta); font-size: 14px; }
+    .afectadas { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--vino); font-weight: 600; }
+    .afectadas input { width: 90px; padding: 8px; text-align: center; }
+    .total-hallazgos { background: var(--tinta); color: var(--hueso); border-radius: 14px; padding: 24px; text-align: center; margin-bottom: 20px; }
+    .total-hallazgos .n { font-size: 48px; font-weight: 700; line-height: 1; }
+    .total-hallazgos .t { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.8; margin-top: 8px; }
+    .pendiente { font-size: 11px; color: var(--ambar); font-weight: 600; display: block; margin-top: 4px; }
+
+    @media (max-width: 640px) { .fila { grid-template-columns: 1fr; gap: 12px;} .contenido { padding: 16px; } .tarjeta { padding: 16px; } }
+</style>
+</head>
+<body>
+
+<div class="barra">
+    <div class="barra-fila">
+        <button class="volver" id="btnVolver">‹</button>
+        <div style="flex: 1">
+            <h1 id="titulo">Revisión 3%</h1>
+            <div class="sub" id="subtitulo"></div>
+        </div>
+    </div>
+    <div class="pasos" id="pasos"></div>
+</div>
+
+<div class="contenido" id="contenido"><div class="cargando">Cargando datos de la revisión…</div></div>
+
+<div class="pie-fijo oculto" id="pieFijo">
+    <button class="btn" id="btnAtras">Atrás</button>
+    <button class="btn-laton btn" id="btnSiguiente">Siguiente</button>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
+const $ = function(id) { return document.getElementById(id); };
+const BUCKET = 'auditorias-evidencias';
+const PORCENTAJE = 0.03;
+const PUNTOS = ['Largo Total', 'Ancho de Pecho', 'Escote de Cuello'];
+const PROCESOS = ['Estampado', 'Bordado', 'Aplique', 'Lavandería', 'Confección'];
+const PREFIJO_PROCESO = 'Proceso externo: ';
+const TOTAL_PASOS = 3;
+
+const idAuditoria = +new URLSearchParams(location.search).get('id');
+
+let auditoria = null, cantidades = [], tallas = [], evidencias = [], prendas = [], procesos = [], paso = 1;
+const num = function(v) { const n = Number(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };
+const fmt = function(n) { return Math.round(n).toLocaleString('es-CO'); };
+const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
+const esRevision3 = function(nombre) {
+    const n = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return n.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(n);
+};
+
+const resSession = await supabase.auth.getSession();
+if (!resSession.data || !resSession.data.session) location.replace('index.html');
+$('btnVolver').addEventListener('click', function() { location.href = 'agenda.html'; });
+
+// ================= CARGA =================
+async function cargar() {
+    if (!idAuditoria) {
+        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">No se encontró el ID de la revisión. Redirigiendo...</div>';
+        setTimeout(function() { location.href = 'agenda.html'; }, 2000);
+        return;
+    }
+    try {
+        const r = await Promise.all([
+            supabase.from('auditorias').select('*').eq('id', idAuditoria).maybeSingle(),
+            supabase.from('auditoria_proveedores').select('id, nombre'),
+            supabase.from('auditoria_tipos').select('id, nombre'),
+            supabase.from('auditoria_cantidades').select('*').eq('auditoria_id', idAuditoria),
+            supabase.from('auditoria_evidencias').select('*').eq('auditoria_id', idAuditoria).order('id'),
+            supabase.from('auditoria_medidas').select('*').eq('auditoria_id', idAuditoria).order('id'),
+            supabase.from('auditoria_pruebas').select('*').eq('auditoria_id', idAuditoria).order('id')
+        ]);
+        const resAud = r[0], resProv = r[1], resTip = r[2], resCant = r[3], resEvi = r[4], resMed = r[5], resPrue = r[6];
+
+        if (resAud.error || !resAud.data) {
+            $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">Error al cargar la revisión solicitada.</div>';
+            return;
+        }
+        auditoria = resAud.data;
+        const prov = (resProv.data || []).find(function(p) { return p.id === auditoria.proveedor_id; });
+        const tipo = (resTip.data || []).find(function(t) { return t.id === auditoria.tipo_id; });
+
+        // Si no es una revisión 3%, se abre la auditoría normal
+        if (tipo && !esRevision3(tipo.nombre)) { location.replace('auditoria.html?id=' + idAuditoria); return; }
+
+        evidencias = (resEvi.data || []).map(function(e) { return Object.assign({}, e); });
+        prendas = medidasAPrendas(resMed.data || []);
+        const pruebasBD = resPrue.data || [];
+        procesos = PROCESOS.map(function(nombre) {
+            const p = pruebasBD.find(function(x) { return x.prueba === PREFIJO_PROCESO + nombre; });
+            const m = p && /(\d+)/.exec(p.observacion || '');
+            return { nombre: nombre, resultado: p ? p.resultado : null, unidades: m ? num(m[1]) : 0 };
+        });
+
+        if (resCant.data && resCant.data.length) {
+            const mapa = {};
+            resCant.data.forEach(function(c) {
+                mapa[c.color] = mapa[c.color] || { color: c.color, tallas: {} };
+                mapa[c.color].tallas[c.talla] = num(c.cantidad);
+            });
+            cantidades = Object.values(mapa);
+        } else {
+            cantidades = await traerDeProduccion(auditoria.referencia);
+        }
+        recalcularTallas();
+
+        $('titulo').textContent = (auditoria.referencia || 'Revisión') + ' · Revisión 3%';
+        $('subtitulo').textContent = [prov ? prov.nombre : '', tipo ? tipo.nombre : ''].filter(Boolean).join(' · ');
+
+        if (auditoria.estado === 'programada') {
+            await supabase.from('auditorias').update({ estado: 'en_curso', fecha_auditoria: new Date().toLocaleDateString('sv') }).eq('id', idAuditoria);
+            auditoria.estado = 'en_curso';
+        }
+        $('pieFijo').classList.remove('oculto');
+        pintar();
+    } catch (err) {
+        console.error(err);
+        $('contenido').innerHTML = '<div class="cargando" style="color:var(--vino)">Error general: ' + esc(err.message || 'Error de conexión') + '</div>';
+    }
+}
+
+async function traerDeProduccion(referencia) {
+    if (!referencia) return [];
+    const { data } = await supabase.from('produccion').select('color, tallas').ilike('descripcion', referencia.trim());
+    const mapa = {};
+    (data || []).forEach(function(r) {
+        const color = (r.color || 'sin color').trim();
+        mapa[color] = mapa[color] || { color: color, tallas: {} };
+        Object.entries(r.tallas || {}).forEach(function(e) { mapa[color].tallas[e[0]] = (mapa[color].tallas[e[0]] || 0) + num(e[1]); });
+    });
+    return Object.values(mapa);
+}
+
+function recalcularTallas() {
+    const orden = ['XS','S','M','L','XL','XXL','XXXL','U','2','4','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44'];
+    const usadas = new Set();
+    cantidades.forEach(function(c) { Object.keys(c.tallas).forEach(function(t) { usadas.add(t); }); });
+    tallas = Array.from(usadas).sort(function(a, b) {
+        const ia = orden.indexOf(a), ib = orden.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+}
+
+const colores = function() { return cantidades.map(function(c) { return c.color; }); };
+const totalLote = function() { return cantidades.reduce(function(s, c) { return s + Object.values(c.tallas).reduce(function(a, b) { return a + num(b); }, 0); }, 0); };
+const muestra3 = function() { const t = totalLote(); return t ? Math.min(t, Math.ceil(t * PORCENTAJE)) : 0; };
+
+// Las medidas se guardan en auditoria_medidas como "Largo Total · Prenda 3"
+function medidasAPrendas(filas) {
+    const mapa = {};
+    filas.forEach(function(f) {
+        const m = /^(.*) · Prenda (\d+)$/.exec(f.punto_medida || '');
+        const n = m ? +m[2] : 0, punto = m ? m[1] : f.punto_medida;
+        const color = (/\[(.*)\]$/.exec(f.observacion || '') || [])[1] || '';
+        mapa[n] = mapa[n] || { n: n, talla: f.talla, color: color, medidas: {} };
+        mapa[n].medidas[punto] = { teorica: num(f.medida_teorica), tolerancia: num(f.tolerancia), real: num(f.medida_real), cumple: !!f.cumple };
+    });
+    return Object.values(mapa).sort(function(a, b) { return a.n - b.n; });
+}
+const prendaCumple = function(p) { return Object.values(p.medidas).every(function(m) { return m.cumple; }); };
+
+// ================= NAVEGACIÓN =================
+function pintar() {
+    $('pasos').innerHTML = [1,2,3].map(function(p) { return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>'; }).join('');
+    $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
+    $('btnSiguiente').textContent = paso === TOTAL_PASOS ? 'Finalizar revisión' : 'Siguiente';
+    ({ 1: pasoLote, 2: pasoValidaciones, 3: pasoResultado })[paso]();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ================= PASO 1: INFORMACIÓN DEL LOTE + MUESTRA 3% =================
+function pasoLote() {
+    const total = totalLote(), m3 = muestra3();
+    const revisadas = num(auditoria.cantidad_auditada) || m3;
+    $('contenido').innerHTML =
+    '<div class="tarjeta">' +
+        '<h2>1. Información del lote</h2>' +
+        '<div class="fila">' +
+            '<div><label>Referencia</label><input id="eRef" value="' + esc(auditoria.referencia || '') + '"></div>' +
+            '<div><label>SKU</label><input id="eSku" value="' + esc(auditoria.sku || '') + '"></div>' +
+        '</div>' +
+        '<div class="fila">' +
+            '<div><label>Sublínea</label><input id="eSublinea" value="' + esc(auditoria.sublinea || '') + '"></div>' +
+            '<div><label>N° de orden de compra</label><input id="eFactura" autocomplete="off" placeholder="Escribe el N° de orden de compra" value="' + esc(auditoria.numero_factura || '') + '"></div>' +
+        '</div>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Unidades producidas por color y talla</h2>' +
+        '<div class="tabla-scroll"><table>' +
+            '<thead><tr><th>Color</th>' + tallas.map(function(t) { return '<th class="num">' + esc(t) + '</th>'; }).join('') + '<th class="num">Total</th><th></th></tr></thead>' +
+            '<tbody>' + cantidades.map(function(c, i) {
+                return '<tr>' +
+                    '<td><input value="' + esc(c.color) + '" onchange="cambiarColor(' + i + ', this.value)" style="min-width:110px"></td>' +
+                    tallas.map(function(t) { return '<td><input type="number" min="0" style="width:65px" value="' + (c.tallas[t] !== undefined ? c.tallas[t] : '') + '" onchange="cambiarCantidad(' + i + ',\'' + esc(t) + '\',this.value)"></td>'; }).join('') +
+                    '<td class="num"><b>' + fmt(Object.values(c.tallas).reduce(function(s, v) { return s + num(v); }, 0)) + '</b></td>' +
+                    '<td><button class="quitar" onclick="quitarColor(' + i + ')">✕</button></td>' +
+                '</tr>';
+            }).join('') + '</tbody>' +
+        '</table></div>' +
+        '<div style="display:flex; gap:12px; margin-top:16px;">' +
+            '<button class="btn btn-chico" onclick="agregarColor()">+ Color</button>' +
+            '<button class="btn btn-chico" onclick="agregarTalla()">+ Talla</button>' +
+        '</div>' +
+    '</div>' +
+    '<div class="tarjeta">' +
+        '<h2>Tamaño a revisar (3% de la producción)</h2>' +
+        '<div class="cifras">' +
+            '<div class="cifra"><div class="n">' + fmt(total) + '</div><div class="t">Producción total</div></div>' +
+            '<div class="cifra" style="background:var(--tinta); border-color:var(--tinta);"><div class="n" style="color:var(--hueso);">' + fmt(m3) + '</div><div class="t" style="color:rgba(253,251,247,0.75);">Unidades a revisar (3%)</div></div>' +
+        '</div>' +
+        '<label style="margin-top:20px;">Unidades revisadas</label>' +
+        '<input id="eRevisadas" type="number" min="1" value="' + revisadas + '" oninput="avisoRevisadas(' + m3 + ')" style="font-size:22px; font-weight:600; text-align:center; color:var(--tinta);">' +
+        '<div class="mensaje info" id="avisoMuestra" style="margin-top:12px;' + (revisadas < m3 ? '' : 'display:none;') + '">Se están revisando menos unidades del 3% sugerido (' + fmt(m3) + ' unds).</div>' +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:10px;">El 3% se redondea hacia arriba: ' + fmt(total) + ' × 3% = ' + (total * PORCENTAJE).toFixed(2).replace('.', ',') + ' → ' + fmt(m3) + ' unidades.</div>' +
+    '</div>';
+}
+window.avisoRevisadas = function(m3) { $('avisoMuestra').style.display = num($('eRevisadas').value) < m3 ? '' : 'none'; };
+window.cambiarColor = function(i, v) { cantidades[i].color = v.trim().toUpperCase(); };
+window.cambiarCantidad = function(i, t, v) {
+    leerPaso1();
+    if (v === '') delete cantidades[i].tallas[t]; else cantidades[i].tallas[t] = num(v);
+    auditoria.cantidad_auditada = 0; // se recalcula el 3%
+    pintar();
+};
+window.quitarColor = function(i) { leerPaso1(); cantidades.splice(i, 1); recalcularTallas(); auditoria.cantidad_auditada = 0; pintar(); };
+window.agregarColor = function() { leerPaso1(); cantidades.push({ color: 'NUEVO', tallas: {} }); pintar(); };
+window.agregarTalla = function() { const t = prompt('Talla:'); if (t) { leerPaso1(); tallas.push(t.trim().toUpperCase()); pintar(); } };
+function leerPaso1() {
+    if ($('eRef')) auditoria.referencia = $('eRef').value.toUpperCase();
+    if ($('eSku')) auditoria.sku = $('eSku').value.toUpperCase();
+    if ($('eSublinea')) auditoria.sublinea = $('eSublinea').value.toUpperCase();
+    if ($('eFactura')) auditoria.numero_factura = $('eFactura').value.trim();
+    if ($('eRevisadas')) auditoria.cantidad_auditada = num($('eRevisadas').value);
+}
+
+// ================= PASO 2: MEDIDAS + PROCESOS EXTERNOS =================
+function ultimaReferencia(talla) {
+    for (let i = prendas.length - 1; i >= 0; i--) if (prendas[i].talla === talla) return prendas[i].medidas;
+    return null;
+}
+function filaMedir(punto, idx, ref) {
+    const r = ref && ref[punto];
+    return '<tr>' +
+        '<td class="punto">' + (idx + 1) + '. ' + punto + '</td>' +
+        '<td><input type="number" step="0.1" id="teo' + idx + '" placeholder="Ej: 50.0" value="' + (r ? r.teorica : '') + '" oninput="evaluarFila(' + idx + ')"></td>' +
+        '<td><input type="number" step="0.1" id="tol' + idx + '" value="' + (r ? r.tolerancia : '0.5') + '" oninput="evaluarFila(' + idx + ')"></td>' +
+        '<td><input type="number" step="0.1" id="real' + idx + '" placeholder="Ej: 51.2" oninput="evaluarFila(' + idx + ')"></td>' +
+        '<td><span class="pastilla estado-medida" id="est' + idx + '" style="background:#F4F1EB; color:var(--texto-claro);">—</span></td>' +
+    '</tr>';
+}
+function celdaMedida(m) {
+    if (!m) return '<td style="color:var(--texto-claro);">—</td>';
+    return '<td class="celda-medida ' + (m.cumple ? 'bien' : 'mal') + '"><b>' + m.real + ' cm</b><small>' + m.teorica + ' ±' + m.tolerancia + ' · ' + (m.cumple ? 'Cumple' : 'No cumple') + '</small></td>';
+}
+
+function pasoValidaciones() {
+    const cols = colores();
+    const tallaSel = window.__tallaSel && tallas.indexOf(window.__tallaSel) >= 0 ? window.__tallaSel : (tallas[0] || '');
+    const colorSel = window.__colorSel && cols.indexOf(window.__colorSel) >= 0 ? window.__colorSel : (cols.length === 1 ? cols[0] : '');
+    const ref = ultimaReferencia(tallaSel);
+    const siguiente = prendas.reduce(function(mx, p) { return Math.max(mx, p.n); }, 0) + 1;
+    const fallidas = prendas.filter(function(p) { return !prendaCumple(p); }).length;
+
+    $('contenido').innerHTML =
+    '<div class="tarjeta">' +
+        '<h2>2. Chequeo de medidas (Real vs. Patronaje)</h2>' +
+        '<div class="fila">' +
+            '<div><label>Color</label><select id="mColor" onchange="window.__colorSel=this.value">' + (cols.length !== 1 ? '<option value="">Elegir...</option>' : '') + cols.map(function(c) { return '<option' + (c === colorSel ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></div>' +
+            '<div><label>Talla</label><select id="mTalla" onchange="cambiarTallaMedida(this.value)">' + tallas.map(function(t) { return '<option' + (t === tallaSel ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
+        '</div>' +
+        '<div class="tabla-scroll"><table class="tabla-medir">' +
+            '<thead><tr><th>Punto de medida</th><th>Teórico (cm)</th><th>Tolerancia (+/-)</th><th>Medida real (cm)</th><th>Cumple / No cumple</th></tr></thead>' +
+            '<tbody>' + PUNTOS.map(function(p, i) { return filaMedir(p, i, ref); }).join('') + '</tbody>' +
+        '</table></div>' +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:10px;">El teórico y la tolerancia se conservan para la siguiente prenda de la misma talla. Solo cambia la medida real.</div>' +
+        '<button class="btn btn-oscuro" style="width:100%; margin-top:16px;" onclick="registrarPrenda()">+ Registrar prenda N° ' + siguiente + '</button>' +
+    '</div>' +
+
+    '<div class="tarjeta">' +
+        '<h2>Prendas medidas (' + prendas.length + ')' + (fallidas ? ' · <span style="color:var(--vino)">' + fallidas + ' no cumplen</span>' : '') + '</h2>' +
+        (prendas.length ? '<div class="tabla-scroll"><table>' +
+            '<thead><tr><th>Prenda</th><th>Color</th><th>Talla</th>' + PUNTOS.map(function(p) { return '<th>' + p + '</th>'; }).join('') + '<th>Resultado</th><th></th></tr></thead>' +
+            '<tbody>' + prendas.map(function(p, i) {
+                const ok = prendaCumple(p);
+                return '<tr><td style="font-weight:600;">N° ' + p.n + '</td><td>' + esc(p.color || '—') + '</td><td>' + esc(p.talla) + '</td>' +
+                    PUNTOS.map(function(pt) { return celdaMedida(p.medidas[pt]); }).join('') +
+                    '<td><span class="pastilla ' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'CUMPLE' : 'NO CUMPLE') + '</span></td>' +
+                    '<td><button class="quitar" onclick="quitarPrenda(' + i + ')">✕</button></td></tr>';
+            }).join('') + '</tbody></table></div>'
+        : '<p style="color:var(--texto-claro); font-size:14px; margin:0;">Aún no hay prendas medidas.</p>') +
+    '</div>' +
+
+    '<div class="tarjeta" id="cardProcesos">' + htmlProcesos() + '</div>';
+    PUNTOS.forEach(function(p, i) { evaluarFila(i); });
+}
+function htmlProcesos() {
+    return '' +
+        '<h2>Checklist de procesos externos</h2>' +
+        '<div class="tabla-scroll"><table class="tabla-procesos">' +
+            '<thead><tr><th>Procesos externos</th><th>Cumple</th><th>No cumple</th></tr></thead>' +
+            '<tbody>' + procesos.map(function(p, i) {
+                return '<tr>' +
+                    '<td><div class="proceso-nombre">' + p.nombre + '</div>' +
+                        (p.resultado === 'FAIL' ? '<div class="afectadas">Unidades afectadas: <input type="number" min="0" value="' + (p.unidades || '') + '" placeholder="0" onchange="unidadesProceso(' + i + ', this.value)"></div>' : '') +
+                        (!p.resultado ? '<span class="pendiente">Pendiente por seleccionar</span>' : '') +
+                    '</td>' +
+                    '<td class="opcion"><button class="marca si' + (p.resultado === 'PASS' ? ' activa' : '') + '" onclick="setProceso(' + i + ',\'PASS\')" aria-label="Cumple">✓</button></td>' +
+                    '<td class="opcion"><button class="marca no' + (p.resultado === 'FAIL' ? ' activa' : '') + '" onclick="setProceso(' + i + ',\'FAIL\')" aria-label="No cumple">✕</button></td>' +
+                '</tr>';
+            }).join('') + '</tbody>' +
+        '</table></div>' +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:10px;">Si un proceso no cumple, escribe cuántas unidades de la muestra tienen ese problema.</div>';
+}
+window.cambiarTallaMedida = function(t) { window.__tallaSel = t; window.__colorSel = $('mColor').value; pasoValidaciones(); };
+window.evaluarFila = function(i) {
+    const teo = $('teo' + i).value, tol = $('tol' + i).value, real = $('real' + i).value, el = $('est' + i);
+    if (teo === '' || real === '') { el.textContent = '—'; el.className = 'pastilla estado-medida'; el.style.cssText = 'background:#F4F1EB; color:var(--texto-claro);'; return; }
+    const ok = Math.abs(num(real) - num(teo)) <= num(tol) + 1e-9;
+    el.style.cssText = ''; el.className = 'pastilla estado-medida ' + (ok ? 'pass' : 'fail');
+    el.textContent = ok ? 'CUMPLE' : 'NO CUMPLE';
+};
+window.registrarPrenda = async function() {
+    const color = $('mColor').value, talla = $('mTalla').value;
+    if (!color) return alert('Selecciona el color de la prenda.');
+    const medidasPrenda = {};
+    for (let i = 0; i < PUNTOS.length; i++) {
+        const teo = $('teo' + i).value, tol = $('tol' + i).value, real = $('real' + i).value;
+        if (real === '') continue;
+        if (teo === '') return alert('Falta la medida teórica de ' + PUNTOS[i] + '.');
+        const t = num(teo), tl = num(tol), r = num(real);
+        medidasPrenda[PUNTOS[i]] = { teorica: t, tolerancia: tl, real: r, cumple: Math.abs(r - t) <= tl + 1e-9 };
+    }
+    if (!Object.keys(medidasPrenda).length) return alert('Escribe al menos una medida real.');
+    const n = prendas.reduce(function(mx, p) { return Math.max(mx, p.n); }, 0) + 1;
+    prendas.push({ n: n, color: color, talla: talla, medidas: medidasPrenda });
+    window.__tallaSel = talla; window.__colorSel = color;
+    await guardarMedidasBD();
+    pasoValidaciones();
+};
+window.quitarPrenda = async function(i) {
+    if (!confirm('¿Eliminar la prenda N° ' + prendas[i].n + '?')) return;
+    prendas.splice(i, 1);
+    await guardarMedidasBD();
+    pasoValidaciones();
+};
+window.setProceso = async function(i, res) {
+    procesos[i].resultado = res;
+    if (res === 'PASS') procesos[i].unidades = 0;
+    $('cardProcesos').innerHTML = htmlProcesos();
+    await guardarProcesosBD();
+};
+window.unidadesProceso = async function(i, v) { procesos[i].unidades = Math.max(0, Math.round(num(v))); await guardarProcesosBD(); };
+
+async function guardarMedidasBD() {
+    try {
+        await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
+        const filas = [];
+        prendas.forEach(function(p) {
+            PUNTOS.forEach(function(pt) {
+                const m = p.medidas[pt]; if (!m) return;
+                filas.push({ auditoria_id: idAuditoria, punto_medida: pt + ' · Prenda ' + p.n, talla: p.talla, medida_teorica: m.teorica, tolerancia: m.tolerancia, medida_real: m.real, cumple: m.cumple });
+            });
+        });
+        if (filas.length) {
+            // El color se guarda en "observacion" si la columna existe; si no, se guarda sin color
+            const conColor = filas.map(function(f) {
+                const p = prendas.find(function(x) { return f.punto_medida.endsWith(' · Prenda ' + x.n); });
+                return Object.assign({}, f, { observacion: '[' + (p ? p.color : '') + ']' });
+            });
+            const res = await supabase.from('auditoria_medidas').insert(conColor);
+            if (res.error) await supabase.from('auditoria_medidas').insert(filas);
+        }
+    } catch (e) { console.error(e); }
+}
+async function guardarProcesosBD() {
+    try {
+        const nombres = PROCESOS.map(function(p) { return PREFIJO_PROCESO + p; });
+        await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria).in('prueba', nombres);
+        const filas = procesos.filter(function(p) { return p.resultado; }).map(function(p) {
+            return { auditoria_id: idAuditoria, prueba: PREFIJO_PROCESO + p.nombre, resultado: p.resultado, observacion: p.resultado === 'FAIL' ? 'Unidades afectadas: ' + (p.unidades || 0) : '' };
+        });
+        if (filas.length) await supabase.from('auditoria_pruebas').insert(filas);
+    } catch (e) { console.error(e); }
+}
+
+// ================= PASO 3: RESULTADO =================
+function calcularHallazgos() {
+    const prendasMal = prendas.filter(function(p) { return !prendaCumple(p); });
+    const porProceso = procesos.filter(function(p) { return p.resultado === 'FAIL'; });
+    const total = prendasMal.length + porProceso.reduce(function(s, p) { return s + num(p.unidades); }, 0);
+    return { prendasMal: prendasMal, porProceso: porProceso, total: total };
+}
+
+function pasoResultado() {
+    const h = calcularHallazgos();
+    const revisadas = num(auditoria.cantidad_auditada) || muestra3();
+    const pct = revisadas ? (h.total / revisadas * 100) : 0;
+    const pendientes = procesos.filter(function(p) { return !p.resultado; }).map(function(p) { return p.nombre; });
+
+    const filas = [['Medidas fuera de tolerancia', h.prendasMal.length, prendas.length ? prendas.length + (prendas.length === 1 ? ' prenda medida' : ' prendas medidas') : 'Sin prendas medidas']]
+        .concat(procesos.map(function(p) {
+            return [p.nombre, p.resultado === 'FAIL' ? num(p.unidades) : 0, p.resultado === 'FAIL' ? 'No cumple' : p.resultado === 'PASS' ? 'Cumple' : 'Sin seleccionar'];
+        }));
+
+    $('contenido').innerHTML =
+    '<div class="tarjeta">' +
+        '<h2>3. Resultado de la revisión</h2>' +
+        '<div class="total-hallazgos"><div class="n">' + fmt(h.total) + '</div><div class="t">Unidades encontradas con hallazgos de calidad</div></div>' +
+        '<div class="cifras">' +
+            '<div class="cifra"><div class="n">' + fmt(totalLote()) + '</div><div class="t">Producción total</div></div>' +
+            '<div class="cifra"><div class="n">' + fmt(revisadas) + '</div><div class="t">Unidades revisadas (3%)</div></div>' +
+            '<div class="cifra"><div class="n">' + pct.toFixed(1) + ' %</div><div class="t">De la muestra con hallazgos</div></div>' +
+        '</div>' +
+        '<div class="tabla-scroll" style="margin-top:20px;"><table>' +
+            '<thead><tr><th>Validación</th><th>Estado</th><th class="num">Unidades</th></tr></thead>' +
+            '<tbody>' + filas.map(function(f) {
+                const mal = f[1] > 0 || f[2] === 'No cumple';
+                const pend = f[2] === 'Sin seleccionar';
+                return '<tr><td style="font-weight:500;">' + f[0] + '</td><td>' +
+                    (pend ? '<span class="pendiente" style="margin:0">Sin seleccionar</span>' : '<span class="pastilla ' + (mal ? 'fail' : 'pass') + '">' + (f[0] === 'Medidas fuera de tolerancia' ? (mal ? 'NO CUMPLE' : 'CUMPLE') : f[2].toUpperCase()) + '</span>') +
+                    (f[0] === 'Medidas fuera de tolerancia' ? ' <small style="color:var(--texto-claro)">' + f[2] + '</small>' : '') +
+                    '</td><td class="num" style="font-weight:700;">' + fmt(f[1]) + '</td></tr>';
+            }).join('') +
+            '<tr><td style="font-weight:700;">Total</td><td></td><td class="num" style="font-weight:700; font-size:16px;">' + fmt(h.total) + '</td></tr>' +
+            '</tbody></table></div>' +
+        (pendientes.length ? '<div class="mensaje info" style="margin-top:14px;">Faltan procesos por marcar en el paso 2: ' + pendientes.join(', ') + '.</div>' : '') +
+    '</div>' +
+    '<div class="tarjeta"><h2>Observaciones generales</h2><textarea id="eObservaciones" placeholder="Escribe aquí las conclusiones...">' + esc(auditoria.observaciones || '') + '</textarea></div>' +
+    '<div class="tarjeta">' +
+        '<h2>Evidencias fotográficas (' + evidencias.length + ')</h2>' +
+        '<input type="file" id="archivoFoto" accept="image/*" capture="environment" multiple class="oculto" onchange="subirFotos(event)">' +
+        '<div class="fotos">' +
+            evidencias.map(function(e, i) {
+                return '<div class="foto-box">' +
+                    '<div class="foto"><img src="' + esc(e.url) + '"><button onclick="quitarEvidencia(' + i + ')">✕</button></div>' +
+                    '<div class="foto-obs"><input type="text" placeholder="Nota..." value="' + esc(e.observacion) + '" onchange="guardarObsFoto(' + i + ', this.value)"></div>' +
+                '</div>';
+            }).join('') +
+            '<button class="agregar-foto" onclick="document.getElementById(\'archivoFoto\').click()"><span>📷</span>Tomar / Subir Foto</button>' +
+        '</div>' +
+        '<div class="mensaje" id="avisoFoto" style="margin-top:16px;"></div>' +
+    '</div>' +
+    '<div class="tarjeta"><h2>Decisión de la auditora</h2>' +
+        '<div class="resultado-botones">' +
+            '<button id="btnAprobado" class="' + (auditoria.resultado === 'aprobado' ? 'sel-aprobado' : '') + '" onclick="elegirResultado(\'aprobado\')">Aprobado</button>' +
+            '<button id="btnRechazado" class="' + (auditoria.resultado === 'rechazado' ? 'sel-rechazado' : '') + '" onclick="elegirResultado(\'rechazado\')">Rechazado</button>' +
+        '</div>' +
+    '</div>';
+}
+window.elegirResultado = function(r) { auditoria.resultado = r; $('btnAprobado').className = r === 'aprobado' ? 'sel-aprobado' : ''; $('btnRechazado').className = r === 'rechazado' ? 'sel-rechazado' : ''; };
+window.guardarObsFoto = function(i, val) { evidencias[i].observacion = val; };
+window.subirFotos = async function(e) {
+    const archivos = Array.from(e.target.files); if (!archivos.length) return;
+    if ($('eObservaciones')) auditoria.observaciones = $('eObservaciones').value;
+    $('avisoFoto').className = 'mensaje info';
+    for (let i = 0; i < archivos.length; i++) {
+        $('avisoFoto').textContent = 'Subiendo ' + (i + 1) + ' de ' + archivos.length + '…';
+        const nombre = idAuditoria + '/' + Date.now() + '_' + i + '.jpg';
+        const { error } = await supabase.storage.from(BUCKET).upload(nombre, archivos[i]);
+        if (!error) {
+            const url = supabase.storage.from(BUCKET).getPublicUrl(nombre).data.publicUrl;
+            const { data } = await supabase.from('auditoria_evidencias').insert({ auditoria_id: idAuditoria, url: url, nombre: archivos[i].name, observacion: '' }).select().single();
+            evidencias.push(data || { url: url, observacion: '' });
+        }
+    }
+    $('archivoFoto').value = ''; pintar();
+};
+window.quitarEvidencia = async function(i) {
+    if (confirm('¿Eliminar esta evidencia?')) {
+        if ($('eObservaciones')) auditoria.observaciones = $('eObservaciones').value;
+        if (evidencias[i].id) await supabase.from('auditoria_evidencias').delete().eq('id', evidencias[i].id);
+        evidencias.splice(i, 1); pintar();
+    }
+};
+
+// ================= GUARDADO =================
+// Los hallazgos también se guardan como defectos para que aparezcan en Reportes
+function defectosGenerados() {
+    const filas = [], cols = colores();
+    const colorGeneral = cols.length === 1 ? cols[0] : 'VARIOS';
+    const grupo = {};
+    calcularHallazgos().prendasMal.forEach(function(p) {
+        const k = (p.color || colorGeneral) + '|' + p.talla;
+        grupo[k] = (grupo[k] || 0) + 1;
+    });
+    Object.entries(grupo).forEach(function(e) {
+        const ct = e[0].split('|');
+        filas.push({ auditoria_id: idAuditoria, severidad: 'mayor', defecto: 'medidas fuera de tolerancia', color: ct[0], talla: ct[1], cantidad: e[1] });
+    });
+    procesos.forEach(function(p) {
+        if (p.resultado === 'FAIL' && num(p.unidades) > 0)
+            filas.push({ auditoria_id: idAuditoria, severidad: 'mayor', defecto: 'proceso externo - ' + p.nombre.toLowerCase(), color: colorGeneral, talla: 'VARIAS', cantidad: num(p.unidades) });
+    });
+    return filas;
+}
+
+async function guardarTodo() {
+    leerPaso1();
+    if ($('eObservaciones')) auditoria.observaciones = $('eObservaciones').value;
+    auditoria.cantidad_produccion = totalLote();
+    if (!num(auditoria.cantidad_auditada)) auditoria.cantidad_auditada = muestra3();
+    const h = calcularHallazgos();
+    auditoria.sugerencia_aql = 'Revisión 3%: ' + fmt(auditoria.cantidad_auditada) + ' de ' + fmt(auditoria.cantidad_produccion) +
+        ' unidades revisadas · ' + fmt(h.total) + ' unidades con hallazgos (' + h.prendasMal.length + ' por medidas' +
+        h.porProceso.map(function(p) { return ', ' + num(p.unidades) + ' por ' + p.nombre.toLowerCase(); }).join('') + ')';
+
+    await supabase.from('auditorias').update({
+        referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
+        numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion,
+        cantidad_auditada: auditoria.cantidad_auditada, observaciones: auditoria.observaciones,
+        sugerencia_aql: auditoria.sugerencia_aql
+    }).eq('id', idAuditoria);
+
+    await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
+    const filasCant = [];
+    cantidades.forEach(function(c) {
+        Object.entries(c.tallas).forEach(function(e) {
+            if (num(e[1]) > 0) filasCant.push({ auditoria_id: idAuditoria, color: c.color, talla: e[0], cantidad: num(e[1]) });
+        });
+    });
+    if (filasCant.length) await supabase.from('auditoria_cantidades').insert(filasCant);
+
+    await guardarMedidasBD();
+    await guardarProcesosBD();
+
+    await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
+    const defs = defectosGenerados();
+    if (defs.length) await supabase.from('auditoria_defectos').insert(defs);
+
+    await Promise.all(evidencias.map(function(e) {
+        if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
+    }));
+}
+
+$('btnAtras').addEventListener('click', async function() { await guardarTodo(); paso--; pintar(); });
+$('btnSiguiente').addEventListener('click', async function() {
+    const btn = $('btnSiguiente');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    await guardarTodo();
+    if (paso === TOTAL_PASOS) {
+        const pendientes = procesos.filter(function(p) { return !p.resultado; });
+        if (pendientes.length) {
+            btn.disabled = false; btn.textContent = 'Finalizar revisión';
+            return alert('Marca Cumple o No cumple en todos los procesos externos (paso 2). Faltan: ' + pendientes.map(function(p) { return p.nombre; }).join(', ') + '.');
+        }
+        if (!auditoria.resultado) {
+            btn.disabled = false; btn.textContent = 'Finalizar revisión';
+            return alert('Elige si la revisión fue Aprobada o Rechazada.');
+        }
+        await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
+        location.href = 'agenda.html';
+        return;
+    }
+    paso++; btn.disabled = false; pintar();
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function() {});
+await cargar();
+</script>
+</body>
+</html>

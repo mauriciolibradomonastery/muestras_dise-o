@@ -248,6 +248,9 @@ async function cargar() {
 
         const prov = (resProv.data || []).find(function(p) { return p.id === auditoria.proveedor_id; });
         const tipo = (resTip.data || []).find(function(t) { return t.id === auditoria.tipo_id; });
+        // Las revisiones 3% tienen su propia página
+        const nombreTipo = String(tipo ? tipo.nombre : '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (nombreTipo.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(nombreTipo)) { location.replace('revision3.html?id=' + idAuditoria); return; }
 
         if (resCant.data && resCant.data.length) {
             const mapa = {};

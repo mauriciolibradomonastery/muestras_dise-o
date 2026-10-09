@@ -495,7 +495,15 @@ window.abrirCita = async function(id) {
 const cerrarHoja = function() { $('modal').classList.remove('abierto'); };
 $('btnCerrar').addEventListener('click', cerrarHoja);
 $('btnNueva').addEventListener('click', function() { abrirHoja(null); });
-$('btnEjecutar').addEventListener('click', function() { if (editando) location.href = 'auditoria.html?id=' + editando.id; });
+function esRevision3(nombre) {
+    const n = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return n.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(n);
+}
+$('btnEjecutar').addEventListener('click', function() {
+    if (!editando) return;
+    const tipo = tipos.find(function(t) { return t.id === editando.tipo_id; });
+    location.href = (tipo && esRevision3(tipo.nombre) ? 'revision3.html' : 'auditoria.html') + '?id=' + editando.id;
+});
 
 // Auto-completar
 $('fReferencia').addEventListener('change', function() {
