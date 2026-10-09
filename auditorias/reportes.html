@@ -149,6 +149,22 @@
     .total-rev3 .n { font-size: 34px; font-weight: 700; line-height: 1; }
     .total-rev3 .t { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-top: 6px; }
 
+    /* Formato de informe tipo inspección (Resumen + Resultado de defectos) */
+    .titulo-informe { font-family: 'Inter', sans-serif !important; font-size: 14px !important; font-weight: 700 !important; letter-spacing: 0.02em; text-transform: uppercase; border-bottom: 2px solid var(--tinta); padding-bottom: 6px; margin-bottom: 12px !important; }
+    .tabla-informe { width: 100%; border-collapse: collapse; font-size: 12px; color: var(--tinta); }
+    .tabla-informe th, .tabla-informe td { border: 1px solid #CFCAC2; padding: 7px 10px; vertical-align: middle; }
+    .tabla-informe thead th { background: #F2F2F2; font-weight: 700; text-align: center; color: var(--tinta); font-size: 12px; text-transform: none; letter-spacing: 0; }
+    .tabla-informe td.centro { text-align: center; }
+    .tabla-informe td.letra { width: 26px; text-align: center; color: var(--texto-claro); }
+    .tabla-informe td.criterio { font-weight: 700; }
+    .tabla-informe .pie td { background: #F2F2F2; }
+    .tabla-informe .pie td.etiqueta { text-align: right; font-weight: 700; }
+    .tabla-informe .ref small { display: block; color: var(--texto-claro); }
+    .tabla-informe .det-defecto { display: block; font-size: 10px; color: var(--texto-claro); margin-top: 2px; }
+    .res-cumple { color: #2E9B3E; font-weight: 700; }
+    .res-nocumple { color: var(--vino); font-weight: 700; }
+    .res-pendiente { color: #E0A21B; font-weight: 700; }
+
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
     @media (max-width: 768px) {
@@ -422,6 +438,127 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
         data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(m => mesesCount[m].aprobadas), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(m => mesesCount[m].rechazadas), backgroundColor: '#8C2026', borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
+}
+
+// ================= TABLA MILITAR AQL (MIL-STD-105E / ISO 2859-1) · Crítico 0 · Mayor 2.5 · Menor 4.0 =================
+const AQL_NIVELES = ['S-1','S-2','S-3','S-4','I','II','III'];
+const AQL_TABLA1 = [[2,'AAAAAAB'],[9,'AAAAABC'],[16,'AABBBCD'],[26,'ABBCCDE'],[51,'BBCCCEF'],[91,'BBCDDFG'],[151,'BCDEEGH'],[281,'BCDEFHJ'],[501,'CCEFGJK'],[1201,'CDEGHKL'],[3201,'CDFGJLM'],[10001,'CDFHKMN'],[35001,'DEGJLNP'],[150001,'DEGJMPQ'],[500001,'DEHKNQR']];
+const AQL_LETRAS = 'ABCDEFGHJKLMNPQR';
+const AQL_MUESTRAS = [2,3,5,8,13,20,32,50,80,125,200,315,500,800,1250,2000];
+const AQL_COL_2_5 = ['D','D',[0,1],'U','D',[1,2],[2,3],[3,4],[5,6],[7,8],[10,11],[14,15],[21,22],'U','U','U'];
+const AQL_COL_4_0 = ['D',[0,1],'U','D',[1,2],[2,3],[3,4],[5,6],[7,8],[10,11],[14,15],[21,22],'U','U','U','U'];
+function aqlResolver(col, i) { let j = i; while (!Array.isArray(col[j])) j += col[j] === 'D' ? 1 : -1; return { letra: AQL_LETRAS[j], n: AQL_MUESTRAS[j], ac: col[j][0], re: col[j][1] }; }
+function planAQL(lote, nivel) {
+    lote = Number(lote) || 0; if (lote < 2) return null;
+    const c = Math.max(0, AQL_NIVELES.indexOf(nivel || 'II'));
+    let fila = AQL_TABLA1[0]; AQL_TABLA1.forEach(f => { if (lote >= f[0]) fila = f; });
+    const letra = fila[1][c], i = AQL_LETRAS.indexOf(letra);
+    const critico = { letra, n: AQL_MUESTRAS[i], ac: 0, re: 1 }, mayor = aqlResolver(AQL_COL_2_5, i), menor = aqlResolver(AQL_COL_4_0, i);
+    return { nivel: AQL_NIVELES[c], letra, critico, mayor, menor, muestra: Math.min(Math.max(critico.n, mayor.n, menor.n), lote) };
+}
+const nivelDeAuditoria = det => { const m = /Nivel (S-[1-4]|III|II|I)\b/.exec(det.sugerencia_aql || ''); return m ? m[1] : 'II'; };
+const RES = { cumple: '<span class="res-cumple">CUMPLE</span>', nocumple: '<span class="res-nocumple">NO CUMPLE</span>', pendiente: '<span class="res-pendiente">PENDIENTE</span>' };
+
+// Tabla "Resultado de defectos" (formato de inspección)
+function htmlResultadoDefectos(det, defs, plan) {
+    const lote = Number(det.cantidad_produccion) || 0;
+    const grupos = {};
+    defs.forEach(d => {
+        const sev = ['critico', 'mayor', 'menor'].includes(d.severidad) ? d.severidad : 'menor';
+        const nombre = String(d.defecto || 'No especificado').trim();
+        const k = sev + '|' + nombre.toLowerCase();
+        grupos[k] = grupos[k] || { nombre, sev, cant: 0, detalle: {} };
+        grupos[k].cant += Number(d.cantidad) || 0;
+        const ct = [d.color, d.talla].filter(Boolean).join(' / ');
+        if (ct) grupos[k].detalle[ct] = (grupos[k].detalle[ct] || 0) + (Number(d.cantidad) || 0);
+    });
+    const orden = { critico: 0, mayor: 1, menor: 2 };
+    const filas = Object.values(grupos).sort((a, b) => orden[a.sev] - orden[b.sev] || b.cant - a.cant);
+    const total = sev => filas.filter(f => f.sev === sev).reduce((s, f) => s + f.cant, 0);
+    const enc = { critico: total('critico'), mayor: total('mayor'), menor: total('menor') };
+    const p = plan ? { critico: plan.critico, mayor: plan.mayor, menor: plan.menor } : null;
+    const muestra = sev => p ? fmtN(Math.min(p[sev].n, lote)) : fmtN(det.cantidad_auditada);
+    const maximo = sev => p ? p[sev].ac : (sev === 'critico' ? 0 : '—');
+    const resultado = sev => {
+        if (sev === 'critico') return enc.critico === 0 ? RES.cumple : RES.nocumple;
+        if (!p) return RES.pendiente;
+        return enc[sev] <= p[sev].ac ? RES.cumple : RES.nocumple;
+    };
+    const ref = `<span class="ref">${esc(det.sku || '—')}<small>${esc(det.referencia || '')}</small></span>`;
+    const sevs = ['critico', 'mayor', 'menor'];
+
+    let html = `<table class="tabla-informe">
+        <thead>
+            <tr><th rowspan="2" style="width:44px">#</th><th rowspan="2" style="width:22%">Referencia del producto</th><th rowspan="2">Descripción del defecto</th><th colspan="3">Clasificación del defecto</th></tr>
+            <tr><th style="width:11%">Crítico<br>0</th><th style="width:11%">Mayor<br>2.5</th><th style="width:11%">Menor<br>4</th></tr>
+        </thead><tbody>`;
+    if (filas.length) {
+        filas.forEach((f, i) => {
+            const det2 = Object.entries(f.detalle).map(([k, v]) => `${esc(k)} (${fmtN(v)})`).join(' · ');
+            html += `<tr><td class="centro">B${i + 1}</td><td>${ref}</td>
+                <td>${esc(f.nombre.charAt(0).toUpperCase() + f.nombre.slice(1))}${det2 ? `<span class="det-defecto">${det2}</span>` : ''}</td>
+                ${sevs.map(sv => `<td class="centro">${f.sev === sv ? fmtN(f.cant) : ''}</td>`).join('')}</tr>`;
+        });
+    } else {
+        html += `<tr><td colspan="6" class="centro" style="color:var(--texto-claro); padding:14px;">No se encontraron defectos en la muestra inspeccionada.</td></tr>`;
+    }
+    html += `<tr class="pie"><td colspan="3" class="etiqueta">Tamaño de muestra</td>${sevs.map(sv => `<td class="centro">${muestra(sv)}</td>`).join('')}</tr>
+        <tr class="pie"><td colspan="3" class="etiqueta">Máximo permitido</td>${sevs.map(sv => `<td class="centro">${maximo(sv)}</td>`).join('')}</tr>
+        <tr class="pie"><td colspan="3" class="etiqueta">Número de defectos encontrados</td>${sevs.map(sv => `<td class="centro"${sv === 'critico' ? ' style="font-weight:700"' : ''}>${fmtN(enc[sv])}</td>`).join('')}</tr>
+        <tr class="pie"><td colspan="3" class="etiqueta">Resultado de mano de obra</td>${sevs.map(sv => `<td class="centro">${resultado(sv)}</td>`).join('')}</tr>
+    </tbody></table>`;
+    const pasa = enc.critico === 0 && (!p || (enc.mayor <= p.mayor.ac && enc.menor <= p.menor.ac));
+    return { html, pasa: p ? pasa : null, enc };
+}
+
+// Tabla "Resumen de inspección"
+function htmlResumenInspeccion(det, plan, rDef, med, prue, evis) {
+    const auditada = Number(det.cantidad_auditada) || 0;
+    const fila = (letra, criterio, res, obs) => `<tr><td class="letra">${letra}</td><td class="criterio">${criterio}</td><td>${res}</td><td>${obs || ''}</td></tr>`;
+
+    // A. Cantidad
+    let aRes = RES.pendiente, aObs = 'Sin tamaño de lote registrado';
+    if (plan) {
+        aRes = auditada >= plan.muestra ? RES.cumple : RES.nocumple;
+        aObs = `Lote ${fmtN(det.cantidad_produccion)} unds · Nivel ${plan.nivel}, letra ${plan.letra} · Muestra ${fmtN(auditada)} de ${fmtN(plan.muestra)} requeridas`;
+    }
+    // B. Mano de obra
+    const bRes = rDef.pasa === null ? RES.pendiente : rDef.pasa ? RES.cumple : RES.nocumple;
+    const bObs = `Crítico ${rDef.enc.critico} · Mayor ${rDef.enc.mayor} · Menor ${rDef.enc.menor}`;
+    // C. Especificaciones del producto (medidas)
+    const fuera = med.filter(m => !m.cumple);
+    const cRes = !med.length ? RES.pendiente : fuera.length ? RES.nocumple : RES.cumple;
+    const cObs = !med.length ? 'Sin medidas registradas' : fuera.length
+        ? `${fuera.length} de ${med.length} medidas fuera de tolerancia: ` + fuera.slice(0, 4).map(m => `${esc(m.punto_medida)} talla ${esc(m.talla)}`).join(', ') + (fuera.length > 4 ? '…' : '')
+        : `${med.length} medidas dentro de tolerancia`;
+    // D. Empaque / E. Pruebas en sitio
+    const esEmpaque = p => /empaque|silica|c[oó]digo de barras|qr|etiqueta|marquilla de empaque/i.test(p.prueba || '');
+    const evaluar = lista => {
+        const evaluadas = lista.filter(p => p.resultado === 'PASS' || p.resultado === 'FAIL');
+        const fallas = lista.filter(p => p.resultado === 'FAIL');
+        if (!evaluadas.length) return [RES.pendiente, lista.length ? 'Pruebas marcadas como N/A' : 'Sin pruebas registradas'];
+        if (fallas.length) return [RES.nocumple, 'No cumple: ' + fallas.map(p => esc(p.prueba)).join(', ')];
+        return [RES.cumple, `${evaluadas.length} prueba(s) cumplen`];
+    };
+    const [dRes, dObs] = evaluar(prue.filter(esEmpaque));
+    const [eRes, eObs] = evaluar(prue.filter(p => !esEmpaque(p)));
+    // F. Otra información
+    const fotos = evis.filter(e => !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(e.nombre)).length;
+    const fObs = [det.observaciones ? 'Ver observaciones finales' : '', fotos ? `${fotos} evidencia(s) fotográfica(s)` : ''].filter(Boolean).join(' · ');
+    // Resultado general = veredicto de la auditora
+    const general = det.resultado === 'aprobado' ? '<span class="res-cumple">APROBADO</span>' : det.resultado === 'rechazado' ? '<span class="res-nocumple">RECHAZADO</span>' : RES.pendiente;
+
+    return `<table class="tabla-informe">
+        <thead><tr><th colspan="2" style="width:42%">Criterios</th><th style="width:18%">Resultado</th><th>Observaciones</th></tr></thead>
+        <tbody>
+            ${fila('A', 'Cantidad', aRes, aObs)}
+            ${fila('B', 'Mano de obra', bRes, bObs)}
+            ${fila('C', 'Especificaciones del producto', cRes, cObs)}
+            ${fila('D', 'Empaque', dRes, dObs)}
+            ${fila('E', 'Pruebas en sitio', eRes, eObs)}
+            ${fila('F', 'Otra información', RES.cumple, fObs)}
+            <tr class="pie"><td colspan="2" class="etiqueta">Resultado general</td><td>${general}</td><td></td></tr>
+        </tbody></table>`;
 }
 
 // ================= REVISIONES 3% (VISTA INDEPENDIENTE) =================
@@ -758,8 +895,6 @@ window.verDetalle = async function(id) {
         const totalLote = Number(det.cantidad_produccion) || 0;
         const pctMuestra = totalLote > 0 ? ((auditada / totalLote) * 100).toFixed(1) : '0';
 
-        const maxMayor = auditada >= 50 ? 3 : 2;
-        const maxMenor = auditada >= 50 ? 5 : 3;
 
         const realCriticos = defs.filter(d => d.severidad === 'critico').reduce((s, d) => s + Number(d.cantidad || 0), 0);
         const realMayores = defs.filter(d => d.severidad === 'mayor').reduce((s, d) => s + Number(d.cantidad || 0), 0);
@@ -825,6 +960,11 @@ window.verDetalle = async function(id) {
             ${det.sugerencia_aql ? `<div class="detalle-item ancho"><b>Análisis Automático AQL</b>${det.sugerencia_aql}</div>` : ''}
         </div>`;
 
+        // RESUMEN DE INSPECCIÓN (formato inspección)
+        const planDet = planAQL(totalLote, nivelDeAuditoria(det));
+        const resDefectos = htmlResultadoDefectos(det, defs, planDet);
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Resumen de inspección</h4>${htmlResumenInspeccion(det, planDet, resDefectos, med, prue, evis)}</div>`;
+
         // ADJUNTOS ESPECIALES (PDF Y FOTO DE REFERENCIA)
         if (fotoPrenda || pdfPatronaje) {
             html += `<div class="seccion-detalle">
@@ -851,37 +991,9 @@ window.verDetalle = async function(id) {
         }
         html += `</div>`;
 
-        // 2. COMPARATIVA DE LÍMITES AQL VS LO REAL
-        html += `<div class="seccion-detalle">
-            <h4>Análisis Comparativo AQL (ISO 2859-1)</h4>
-            <div class="tabla-aql-comparativa">
-                <table>
-                    <thead>
-                        <tr><th>Severidad</th><th class="num">Límite Máximo Permitido</th><th class="num">Encontrado en Muestra</th><th>Estado AQL</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="pastilla critico">Crítico</span></td>
-                            <td class="num">0</td>
-                            <td class="num"><b>${realCriticos}</b></td>
-                            <td><span class="pastilla ${realCriticos === 0 ? 'pass' : 'fail'}">${realCriticos === 0 ? 'PASÓ' : 'EXCEDIDO'}</span></td>
-                        </tr>
-                        <tr>
-                            <td><span class="pastilla mayor">Mayor</span></td>
-                            <td class="num">${maxMayor}</td>
-                            <td class="num"><b>${realMayores}</b></td>
-                            <td><span class="pastilla ${realMayores <= maxMayor ? 'pass' : 'fail'}">${realMayores <= maxMayor ? 'PASÓ' : 'EXCEDIDO'}</span></td>
-                        </tr>
-                        <tr>
-                            <td><span class="pastilla menor">Menor</span></td>
-                            <td class="num">${maxMenor}</td>
-                            <td class="num"><b>${realMenores}</b></td>
-                            <td><span class="pastilla ${realMenores <= maxMenor ? 'pass' : 'fail'}">${realMenores <= maxMenor ? 'PASÓ' : 'EXCEDIDO'}</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>`;
+        // 2. RESULTADO DE DEFECTOS (formato inspección · tabla militar AQL)
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Resultado de defectos</h4>${resDefectos.html}` +
+            (planDet ? `<p style="font-size:10px; color:var(--texto-claro); margin:6px 0 0;">Tabla militar MIL-STD-105E / ISO 2859-1 · Nivel ${planDet.nivel} · Letra código ${planDet.letra} · Inspección normal, muestreo simple.</p>` : '') + `</div>`;
 
         // 3. TABLA DE CONTROL DE MEDIDAS (POM)
         html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
@@ -906,21 +1018,10 @@ window.verDetalle = async function(id) {
         if (prue.length > 0) {
             html += `<table style="margin-bottom:12px;"><thead><tr><th>Prueba Técnica / Chequeo</th><th>Resultado</th></tr></thead><tbody>`;
             prue.forEach(p => {
-                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado ? p.resultado.toLowerCase() : 'na'}">${p.resultado || 'N/A'}</span></td></tr>`;
+                html += `<tr><td>${p.prueba}</td><td><span class="pastilla ${p.resultado ? p.resultado.toLowerCase() : 'na'}">${p.resultado === 'PASS' ? 'CUMPLE' : p.resultado === 'FAIL' ? 'NO CUMPLE' : 'N/A'}</span></td></tr>`;
             });
             html += `</tbody></table>`;
         } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
-        html += `</div>`;
-
-        // 5. DETALLE DE DEFECTOS ENCONTRADOS
-        html += `<div class="seccion-detalle"><h4>Detalle de Defectos Físicos (${defs.length} tipos)</h4>`;
-        if (defs.length > 0) {
-            html += `<table><thead><tr><th>Severidad</th><th>Defecto</th><th>Color / Talla</th><th class="num">Cant.</th></tr></thead><tbody>`;
-            defs.forEach(d => {
-                html += `<tr><td><span class="pastilla ${d.severidad}">${d.severidad}</span></td><td><b>${d.defecto}</b></td><td>${d.color || '-'} / ${d.talla || '-'}</td><td class="num"><b>${d.cantidad}</b></td></tr>`;
-            });
-            html += `</tbody></table>`;
-        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se encontraron defectos físicos en las prendas.</p>`; }
         html += `</div>`;
 
         // 6. OBSERVACIONES Y FOTOGRAFÍAS
