@@ -132,6 +132,23 @@
     tr.fila-ref-sel td { background: #FCF0F0; }
     .chip-filtro { display: inline-flex; align-items: center; gap: 6px; background: #FCF0F0; color: var(--vino); border-radius: 999px; padding: 4px 10px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
 
+    /* Pestañas Auditorías / Revisiones 3% */
+    .pestanas { display: flex; gap: 8px; margin-bottom: 20px; background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 6px; box-shadow: var(--sombra-card); }
+    .pestana { flex: 1; border: none; background: transparent; padding: 14px 16px; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--texto-claro); cursor: pointer; transition: var(--transicion); }
+    .pestana:hover { color: var(--tinta); background: #F9F8F6; }
+    .pestana.activa { background: var(--tinta); color: #fff; }
+    .pestana .cuenta { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,0.06); font-size: 12px; }
+    .pestana.activa .cuenta { background: rgba(255,255,255,0.18); }
+    .marca-ok { color: var(--verde); font-weight: 700; font-size: 16px; }
+    .marca-no { color: var(--vino); font-weight: 700; font-size: 16px; }
+    .med-celda b { display: block; font-size: 12px; }
+    .med-celda small { font-size: 10px; color: var(--texto-claro); }
+    .med-celda.mal b { color: var(--vino); }
+    .med-celda.bien b { color: var(--verde); }
+    .total-rev3 { background: var(--tinta); color: #fff; border-radius: 10px; padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+    .total-rev3 .n { font-size: 34px; font-weight: 700; line-height: 1; }
+    .total-rev3 .t { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-top: 6px; }
+
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
     @media (max-width: 768px) {
@@ -157,6 +174,12 @@
         </div>
     </div>
 
+    <div class="pestanas">
+        <button class="pestana activa" id="tabAud" onclick="cambiarVista('aud')">Auditorías <span class="cuenta" id="cuentaAud">0</span></button>
+        <button class="pestana" id="tabRev3" onclick="cambiarVista('rev3')">Revisiones 3% <span class="cuenta" id="cuentaRev3">0</span></button>
+    </div>
+
+    <div id="vistaAud">
     <div class="kpis" id="panelKpis">
         <div class="kpi"><div class="num">...</div><div class="titulo">Cargando datos</div></div>
     </div>
@@ -193,12 +216,36 @@
             </table>
         </div>
     </div>
+    </div>
+
+    <div id="vistaRev3" style="display:none;">
+        <div class="kpis" id="panelKpisRev3"></div>
+        <div class="graficos-grid">
+            <div class="grafico-caja">
+                <h3>Unidades con hallazgos por validación</h3>
+                <div class="canvas-container"><canvas id="chartRev3"></canvas></div>
+            </div>
+            <div class="grafico-caja">
+                <h3>Resultado por proveedor (Revisiones 3%)</h3>
+                <div class="canvas-container"><canvas id="chartRev3Prov"></canvas></div>
+            </div>
+        </div>
+        <div class="seccion">
+            <h2>Historial de Revisiones 3%</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>N° Orden de Compra</th><th>Auditora</th><th class="num">Producción</th><th class="num">Revisadas (3%)</th><th class="num">Con hallazgos</th><th>Resultado</th><th></th></tr></thead>
+                    <tbody id="tablaRev3"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="fondo" id="modalDetalle">
     <div class="hoja">
         <div class="hoja-cabeza">
-            <h2>Detalle de Auditoría Pro</h2>
+            <h2 id="tituloModal">Detalle de Auditoría Pro</h2>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <button class="btn-pdf" id="btnDescargarPdf">📄 Descargar PDF</button>
                 <button class="cerrar" id="btnCerrarDetalle">✕</button>
@@ -217,6 +264,22 @@ let auditorias = [], proveedoresMap = {}, referenciasSet = new Set(), auditorasM
 let chartRankingInst = null, chartDefectosInst = null, chartMesesInst = null;
 let refActual = '';
 let defectoSel = null, refSelInforme = null, listaActual = [], refsInforme = [];
+let vista = 'aud', chartRev3Inst = null, chartRev3ProvInst = null, nombreArchivoPdf = 'Informe';
+const PUNTOS_REV3 = ['Largo Total', 'Ancho de Pecho', 'Escote de Cuello'];
+const PROCESOS_REV3 = ['Estampado', 'Bordado', 'Aplique', 'Lavandería', 'Confección'];
+const esRevision3Nombre = nombre => {
+    const n = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return n.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(n);
+};
+const esRev3 = a => esRevision3Nombre(a.auditoria_tipos ? a.auditoria_tipos.nombre : '');
+window.cambiarVista = v => {
+    vista = v;
+    $('vistaAud').style.display = v === 'aud' ? '' : 'none';
+    $('vistaRev3').style.display = v === 'rev3' ? '' : 'none';
+    $('tabAud').classList.toggle('activa', v === 'aud');
+    $('tabRev3').classList.toggle('activa', v === 'rev3');
+    renderData();
+};
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => Math.round(Number(n) || 0).toLocaleString('es-CO');
 const nombreDefecto = d => d.defecto ? d.defecto.toUpperCase().trim() : 'NO ESPECIFICADO';
@@ -252,9 +315,14 @@ async function init() {
 
 function renderData() {
     const valProv = $('filtroProv').value, valRef = $('filtroRef').value, valAud =$('filtroAuditor').value;
-    const list = auditorias.filter(a => {
+    const filtradas = auditorias.filter(a => {
         return (valProv === 'ALL' || String(a.proveedor_id) === String(valProv)) && (valRef === 'ALL' || a.referencia === valRef) && (valAud === 'ALL' || String(a.auditora_id) === String(valAud));
     });
+    const list = filtradas.filter(a => !esRev3(a));          // Auditorías normales
+    const listRev3 = filtradas.filter(a => esRev3(a));       // Revisiones 3% (informe independiente)
+    $('cuentaAud').textContent = list.length;
+    $('cuentaRev3').textContent = listRev3.length;
+    if (vista === 'rev3') { renderRev3(listRev3); return; }
     
     let totalLote = 0, totalAuditado = 0, totalDefectos = 0, aprobadas = 0, htmlTabla = '';
     const defectosCount = {}, mesesCount = {};
@@ -354,6 +422,192 @@ function actualizarGraficos(ranking, topDefectos, mesesCount) {
         data: { labels: mesesLabels, datasets: [{ label: 'Aprobadas', data: mesesLabels.map(m => mesesCount[m].aprobadas), backgroundColor: '#197A56', borderRadius: 4 }, { label: 'Rechazadas', data: mesesLabels.map(m => mesesCount[m].rechazadas), backgroundColor: '#8C2026', borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
+}
+
+// ================= REVISIONES 3% (VISTA INDEPENDIENTE) =================
+function hallazgosDe(a) {
+    const r = { total: 0, medidas: 0, procesos: {} };
+    (a.auditoria_defectos || []).forEach(d => {
+        const c = Number(d.cantidad) || 0, n = String(d.defecto || '').toLowerCase();
+        r.total += c;
+        if (n.indexOf('medida') >= 0) r.medidas += c;
+        else {
+            const p = PROCESOS_REV3.find(x => n.indexOf(x.toLowerCase()) >= 0) || 'Otros';
+            r.procesos[p] = (r.procesos[p] || 0) + c;
+        }
+    });
+    return r;
+}
+
+function renderRev3(list) {
+    let produccion = 0, revisadas = 0, hallazgos = 0, aprobadas = 0;
+    const porValidacion = { 'Medidas': 0 }; PROCESOS_REV3.forEach(p => porValidacion[p] = 0);
+    const porProv = {};
+    const filas = list.map(a => {
+        const h = hallazgosDe(a);
+        produccion += Number(a.cantidad_produccion) || 0; revisadas += Number(a.cantidad_auditada) || 0; hallazgos += h.total;
+        if (a.resultado === 'aprobado') aprobadas++;
+        porValidacion['Medidas'] += h.medidas;
+        Object.entries(h.procesos).forEach(([k, v]) => porValidacion[k] = (porValidacion[k] || 0) + v);
+        const prov = a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A';
+        porProv[prov] = porProv[prov] || { aprobadas: 0, rechazadas: 0 };
+        if (a.resultado === 'aprobado') porProv[prov].aprobadas++; else porProv[prov].rechazadas++;
+        return `<tr class="fila-clic" onclick="verDetalle(${Number(a.id)})">
+            <td><strong style="color:var(--tinta); font-weight:500;">${esc(a.fecha_auditoria || '—')}</strong></td>
+            <td>${esc(prov)}</td>
+            <td>${esc(a.referencia || '')}${a.sku ? ` <small style="color:#A39C94">(${esc(a.sku)})</small>` : ''}</td>
+            <td>${esc(a.numero_factura || '—')}</td>
+            <td>${esc(a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A')}</td>
+            <td class="num">${fmtN(a.cantidad_produccion)}</td>
+            <td class="num">${fmtN(a.cantidad_auditada)}</td>
+            <td class="num"><b style="color:${h.total ? 'var(--vino)' : 'var(--verde)'}">${fmtN(h.total)}</b></td>
+            <td><span class="estado-${esc((a.resultado || '').toLowerCase())}">${esc((a.resultado || 'N/A').toUpperCase())}</span></td>
+            <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver informe ›</td>
+        </tr>`;
+    });
+    $('tablaRev3').innerHTML = filas.join('') || '<tr><td colspan="10">No hay revisiones 3% finalizadas para los filtros seleccionados.</td></tr>';
+
+    const calif = list.length ? Math.round(aprobadas / list.length * 100) : 0;
+    const pctH = revisadas ? (hallazgos / revisadas * 100).toFixed(2) : '0.00';
+    $('panelKpisRev3').innerHTML = `<div class="kpi"><div class="num">${list.length}</div><div class="titulo">Revisiones 3% realizadas</div></div>
+        <div class="kpi" style="border-top-color: ${calif >= 80 ? '#197A56' : '#B45309'}"><div class="num">${calif}/100</div><div class="titulo">Calificación (Aprob.)</div></div>
+        <div class="kpi"><div class="num">${fmtN(revisadas)}</div><div class="titulo">Unidades revisadas de ${fmtN(produccion)}</div></div>
+        <div class="kpi" style="border-top-color: var(--vino)"><div class="num">${fmtN(hallazgos)} <small style="font-size:16px; color:var(--texto-claro)">(${pctH}%)</small></div><div class="titulo">Unidades con hallazgos</div></div>`;
+
+    if (chartRev3Inst) chartRev3Inst.destroy();
+    const etiquetas = Object.keys(porValidacion);
+    chartRev3Inst = new Chart($('chartRev3'), {
+        type: 'bar',
+        data: { labels: etiquetas, datasets: [{ data: etiquetas.map(k => porValidacion[k]), backgroundColor: etiquetas.map(k => porValidacion[k] ? '#8C2026' : '#E6E0D6'), borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+    if (chartRev3ProvInst) chartRev3ProvInst.destroy();
+    const provs = Object.keys(porProv);
+    chartRev3ProvInst = new Chart($('chartRev3Prov'), {
+        type: 'bar',
+        data: { labels: provs, datasets: [
+            { label: 'Aprobadas', data: provs.map(p => porProv[p].aprobadas), backgroundColor: '#197A56', borderRadius: 6 },
+            { label: 'Rechazadas', data: provs.map(p => porProv[p].rechazadas), backgroundColor: '#8C2026', borderRadius: 6 }
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } } }
+    });
+}
+
+// Informe técnico independiente para la revisión 3%
+function htmlRevision3(det, ctx) {
+    const { defs, evis, med, prue, mapaLote, tallasLista, auditora, programo } = ctx;
+    const totalLote = Number(det.cantidad_produccion) || 0;
+    const revisadas = Number(det.cantidad_auditada) || 0;
+    const sugerida = totalLote ? Math.min(totalLote, Math.ceil(totalLote * 0.03)) : 0;
+
+    // Prendas medidas ("Largo Total · Prenda 3")
+    const prendas = {};
+    med.forEach(m => {
+        const r = /^(.*) · Prenda (\d+)$/.exec(m.punto_medida || '');
+        const n = r ? +r[2] : 0, punto = r ? r[1] : m.punto_medida;
+        const color = (/\[(.*)\]$/.exec(m.observacion || '') || [])[1] || '';
+        prendas[n] = prendas[n] || { n, talla: m.talla, color, medidas: {} };
+        prendas[n].medidas[punto] = m;
+    });
+    const listaPrendas = Object.values(prendas).sort((a, b) => a.n - b.n);
+    const prendaOk = p => Object.values(p.medidas).every(m => m.cumple);
+    const prendasMal = listaPrendas.filter(p => !prendaOk(p)).length;
+
+    // Procesos externos
+    const procesos = PROCESOS_REV3.map(nombre => {
+        const p = prue.find(x => x.prueba === 'Proceso externo: ' + nombre);
+        const u = p && /(\d+)/.exec(p.observacion || '');
+        return { nombre, resultado: p ? p.resultado : null, unidades: u ? Number(u[1]) : 0 };
+    });
+    const totalHallazgos = defs.reduce((s, d) => s + (Number(d.cantidad) || 0), 0);
+    const pctH = revisadas ? (totalHallazgos / revisadas * 100).toFixed(1) : '0';
+
+    let html = `
+    <div class="pdf-encabezado">
+        <div class="marca">
+            <h3>MONASTERY</h3>
+            <p>INFORME DE REVISIÓN 3% · MEDIDAS Y PROCESOS EXTERNOS</p>
+        </div>
+        <img src="logo.png" alt="Logo Monastery" onerror="this.style.display='none'">
+    </div>
+
+    <div class="detalle-grid">
+        <div class="detalle-item"><b>Referencia</b>${esc(det.referencia || 'N/A')}</div>
+        <div class="detalle-item"><b>SKU</b>${esc(det.sku || 'N/A')}</div>
+        <div class="detalle-item"><b>Colección / Sublínea</b>${esc(det.coleccion || 'N/A')} / ${esc(det.sublinea || 'N/A')}</div>
+        <div class="detalle-item"><b>Proveedor</b>${esc(det.auditoria_proveedores ? det.auditoria_proveedores.nombre : 'N/A')}</div>
+        <div class="detalle-item"><b>N° de Orden de Compra</b>${esc(det.numero_factura || 'N/A')}</div>
+        <div class="detalle-item"><b>Tipo</b>Revisión 3%</div>
+        <div class="detalle-item"><b>Fecha de Programación</b>${esc(det.fecha_programada || 'N/A')} ${det.hora_programada ? '(' + esc(det.hora_programada.slice(0, 5)) + ')' : ''}</div>
+        <div class="detalle-item"><b>Fecha de Ejecución</b>${esc(det.fecha_auditoria || 'N/A')}</div>
+        <div class="detalle-item"><b>Auditora Responsable</b>${esc(auditora ? auditora.nombre : 'N/A')}</div>
+        <div class="detalle-item"><b>Programada Por</b>${esc(programo ? programo.nombre : 'Coordinación')}</div>
+        <div class="detalle-item"><b>Producción / Revisadas</b>${fmtN(totalLote)} unds / ${fmtN(revisadas)} unds (3% = ${fmtN(sugerida)})</div>
+        <div class="detalle-item"><b>Veredicto Final</b><span class="estado-${esc(det.resultado || '')}">${esc((det.resultado || 'N/A').toUpperCase())}</span></div>
+        ${det.nota_programacion ? `<div class="detalle-item ancho"><b>Nota de Coordinación</b>${esc(det.nota_programacion)}</div>` : ''}
+    </div>`;
+
+    // Resumen de hallazgos
+    html += `<div class="seccion-detalle">
+        <h4>Resumen de la Revisión</h4>
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:14px; align-items:stretch;">
+            <div class="total-rev3"><div class="n">${fmtN(totalHallazgos)}</div><div class="t">Unidades con hallazgos</div><div class="t" style="margin-top:8px;">${pctH}% de ${fmtN(revisadas)} revisadas</div></div>
+            <div class="tabla-aql-comparativa"><table>
+                <thead><tr><th>Validación</th><th>Estado</th><th class="num">Unidades</th></tr></thead>
+                <tbody>
+                    <tr><td><b>Medidas fuera de tolerancia</b></td><td><span class="pastilla ${prendasMal ? 'fail' : 'pass'}">${prendasMal ? 'NO CUMPLE' : 'CUMPLE'}</span> <small style="color:var(--texto-claro)">${listaPrendas.length} prendas medidas</small></td><td class="num"><b>${prendasMal}</b></td></tr>
+                    ${procesos.map(p => `<tr><td>${p.nombre}</td><td>${p.resultado ? `<span class="pastilla ${p.resultado === 'FAIL' ? 'fail' : 'pass'}">${p.resultado === 'FAIL' ? 'NO CUMPLE' : 'CUMPLE'}</span>` : '—'}</td><td class="num"><b>${p.resultado === 'FAIL' ? p.unidades : 0}</b></td></tr>`).join('')}
+                </tbody>
+            </table></div>
+        </div>
+    </div>`;
+
+    // Desglose por color y talla
+    html += `<div class="seccion-detalle"><h4>Unidades Producidas por Color y Talla (Total: ${fmtN(totalLote)} unds)</h4>`;
+    if (Object.keys(mapaLote).length) {
+        html += `<div class="tabla-aql-comparativa"><table><thead><tr><th>Color</th>${tallasLista.map(t => `<th class="num">${esc(t)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>`;
+        Object.entries(mapaLote).forEach(([col, tOb]) => {
+            const sub = Object.values(tOb).reduce((s, v) => s + v, 0);
+            html += `<tr><td><b>${esc(col)}</b></td>${tallasLista.map(t => `<td class="num">${tOb[t] !== undefined ? tOb[t] : 0}</td>`).join('')}<td class="num"><b>${sub}</b></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+    } else html += `<p style="font-size:12px; color:var(--texto-claro);">Sin cantidades registradas.</p>`;
+    html += `</div>`;
+
+    // Chequeo de medidas por prenda
+    html += `<div class="seccion-detalle"><h4>Chequeo de Medidas Real vs. Patronaje (${listaPrendas.length} prendas)</h4>`;
+    if (listaPrendas.length) {
+        html += `<table><thead><tr><th>Prenda</th><th>Color</th><th>Talla</th>${PUNTOS_REV3.map(p => `<th>${p}</th>`).join('')}<th>Resultado</th></tr></thead><tbody>`;
+        listaPrendas.forEach(p => {
+            html += `<tr><td><b>N° ${p.n}</b></td><td>${esc(p.color || '—')}</td><td>${esc(p.talla)}</td>` +
+                PUNTOS_REV3.map(pt => {
+                    const m = p.medidas[pt];
+                    return m ? `<td class="med-celda ${m.cumple ? 'bien' : 'mal'}"><b>${m.medida_real} cm</b><small>${m.medida_teorica} ±${m.tolerancia}</small></td>` : '<td>—</td>';
+                }).join('') +
+                `<td><span class="pastilla ${prendaOk(p) ? 'pass' : 'fail'}">${prendaOk(p) ? 'CUMPLE' : 'NO CUMPLE'}</span></td></tr>`;
+        });
+        html += `</tbody></table>`;
+    } else html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron medidas.</p>`;
+    html += `</div>`;
+
+    // Checklist de procesos externos
+    html += `<div class="seccion-detalle"><h4>Checklist de Procesos Externos</h4>
+        <table><thead><tr><th>Procesos externos</th><th style="text-align:center">Cumple</th><th style="text-align:center">No cumple</th><th class="num">Unidades afectadas</th></tr></thead><tbody>
+        ${procesos.map(p => `<tr><td><b>${p.nombre}</b></td>
+            <td style="text-align:center">${p.resultado === 'PASS' ? '<span class="marca-ok">✓</span>' : ''}</td>
+            <td style="text-align:center">${p.resultado === 'FAIL' ? '<span class="marca-no">✕</span>' : ''}</td>
+            <td class="num">${p.resultado === 'FAIL' ? `<b>${p.unidades}</b>` : '—'}</td></tr>`).join('')}
+        </tbody></table></div>`;
+
+    // Observaciones y evidencias
+    html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:13px; background:#F9F8F6; padding:14px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${esc(det.observaciones || 'Sin observaciones registradas.')}</p></div>`;
+    const fotos = evis.filter(e => !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(e.nombre));
+    html += `<div class="seccion-detalle"><h4>Evidencias Fotográficas (${fotos.length})</h4>`;
+    if (fotos.length) {
+        html += `<div class="foto-grid">` + fotos.map(e => `<div class="foto-card"><a href="${esc(e.url)}" target="_blank" title="Clic para ampliar"><img src="${esc(e.url)}" crossorigin="anonymous"></a><p>${esc(e.observacion || e.nombre || 'Evidencia')}</p></div>`).join('') + `</div>`;
+    } else html += `<p style="font-size:12px; color:var(--texto-claro);">No se adjuntaron fotografías de evidencia.</p>`;
+    html += `</div>`;
+    return html;
 }
 
 // ================= INFORME DINÁMICO POR MOTIVO DE DEFECTO =================
@@ -528,6 +782,16 @@ window.verDetalle = async function(id) {
         });
 
         // Buscar evidencias especiales
+        // Revisión 3%: informe independiente
+        if (det.auditoria_tipos && esRevision3Nombre(det.auditoria_tipos.nombre)) {
+            $('tituloModal').textContent = 'Informe de Revisión 3%';
+            nombreArchivoPdf = 'Informe_Revision3_' + (det.referencia || 'Monastery');
+            $('cuerpoDetalle').innerHTML = htmlRevision3(det, { defs, evis, med, prue, mapaLote, tallasLista, auditora, programo });
+            return;
+        }
+        $('tituloModal').textContent = 'Detalle de Auditoría Pro';
+        nombreArchivoPdf = 'Informe_Auditoria_' + refActual;
+
         const fotoPrenda = evis.find(e => e.nombre === 'Foto Prenda Referencia');
         const pdfPatronaje = evis.find(e => e.nombre === 'Informe de Patronaje');
 
@@ -695,7 +959,7 @@ $('btnDescargarPdf').addEventListener('click', async () => {
 
     const opt = {
         margin:       [10, 10, 10, 10],
-        filename:     `Informe_Auditoria_${refActual}_${new Date().toISOString().slice(0,10)}.pdf`,
+        filename:     `${nombreArchivoPdf}_${new Date().toISOString().slice(0,10)}.pdf`.replace(/[\\/:*?"<>|]/g, '-'),
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, allowTaint: true, scrollX: 0, scrollY: 0 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
