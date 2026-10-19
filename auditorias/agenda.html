@@ -240,6 +240,8 @@
     .pend .etq { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 4px; background: #FCF0F0; color: var(--vino); margin-top: 8px; }
     .btn-reaud { width: 100%; background: var(--vino); color: #fff; border: none; border-radius: 8px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-reaud:hover { filter: brightness(1.1); }
+    .btn-cerrar-def { width: 100%; margin-top: 8px; background: #fff; color: var(--texto-claro); border: 1px solid var(--borde); border-radius: 8px; padding: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-cerrar-def:hover { color: var(--tinta); background: #F9F8F6; }
 
     /* Panel de una línea de proceso */
     .sub-lista { display: flex; flex-direction: column; gap: 8px; }
@@ -387,6 +389,27 @@
         <div class="hoja-pie">
             <button class="btn" id="btnCerrarReaud2">Cancelar</button>
             <button class="btn-guardar" id="btnGuardarReaud" style="background:var(--vino);">Programar re-auditoría</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cerrar sin re-auditoría -->
+<div class="fondo" id="modalCierre">
+    <div class="hoja" style="max-width:520px;">
+        <div class="hoja-cabeza">
+            <h2>Cerrar sin re-auditoría</h2>
+            <button class="cerrar" id="btnCerrarCierre">✕</button>
+        </div>
+        <div class="mensaje" id="mensajeCierre"></div>
+        <div style="padding: 24px; background:#FDFBF7;">
+            <div id="infoCierre" style="font-size:14px; margin-bottom:14px;"></div>
+            <div class="campo"><label for="motivoCierre">Motivo del cierre</label>
+                <textarea id="motivoCierre" placeholder="Ej: El proveedor no pudo reorganizar las prendas. Lote devuelto."></textarea>
+                <div class="pista">La auditoría no se borra: sigue en reportes como rechazada y cuenta en la calificación del proveedor.</div></div>
+        </div>
+        <div class="hoja-pie">
+            <button class="btn" id="btnCerrarCierre2">Volver</button>
+            <button class="btn-guardar" id="btnGuardarCierre">Cerrar definitivamente</button>
         </div>
     </div>
 </div>
@@ -612,13 +635,13 @@ async function cargarPendientes() {
         const ids = [tf, tr].filter(Boolean).map(function(t) { return t.id; });
         if (!ids.length) { $('bloqueReaud').style.display = 'none'; return; }
         const [rech, reauds] = await Promise.all([
-            supabase.from('auditorias').select('id, tipo_id, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, fecha_auditoria, fecha_programada, sugerencia_aql')
+            supabase.from('auditorias').select('id, tipo_id, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, fecha_auditoria, fecha_programada, sugerencia_aql, cierre_definitivo')
                 .in('tipo_id', ids).eq('estado', 'finalizada').eq('resultado', 'rechazado').order('fecha_auditoria'),
             tr ? supabase.from('auditorias').select('linea_id').eq('tipo_id', tr.id).neq('estado', 'cancelada').not('linea_id', 'is', null) : Promise.resolve({ data: [] })
         ]);
         if (rech.error) throw rech.error;
         const yaTienen = new Set((reauds.data || []).map(function(r) { return r.linea_id; }));
-        pendientes = (rech.data || []).filter(function(a) { return !yaTienen.has(a.id); });
+        pendientes = (rech.data || []).filter(function(a) { return !yaTienen.has(a.id) && !a.cierre_definitivo; });
         pintarPendientes();
     } catch (e) {
         console.error(e);
@@ -640,6 +663,7 @@ function pintarPendientes() {
             '<div class="etq">' + esc(t ? t.nombre : 'Final') + ' rechazada · ' + fechaCorta(p.fecha_auditoria || p.fecha_programada) + '</div>' +
             (motivo ? '<div class="motivo">' + esc(motivo.length > 160 ? motivo.slice(0, 160) + '…' : motivo) + '</div>' : '<div style="height:12px"></div>') +
             '<button class="btn-reaud" onclick="abrirReaud(' + p.id + ')">Programar re-auditoría</button>' +
+            '<button class="btn-cerrar-def" onclick="abrirCierre(' + p.id + ')">Cerrar sin re-auditoría</button>' +
         '</div>';
     }).join('');
 }
@@ -659,6 +683,35 @@ window.abrirReaud = function(id) {
         '</div></div>';
     $('modalReaud').classList.add('abierto');
 };
+// ---------- Cerrar definitivamente sin re-auditoría ----------
+let cierreAbierto = null;
+window.abrirCierre = function(id) {
+    cierreAbierto = pendientes.find(function(p) { return p.id === id; });
+    if (!cierreAbierto) return;
+    const p = cierreAbierto, prov = proveedores.find(function(x) { return x.id === p.proveedor_id; });
+    $('mensajeCierre').className = 'mensaje';
+    $('infoCierre').innerHTML = '<b>' + esc(p.referencia || '') + '</b> · ' + esc(prov ? prov.nombre : '') + (p.numero_factura ? ' · OC ' + esc(p.numero_factura) : '') +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:4px;">Rechazada el ' + fechaCorta(p.fecha_auditoria || p.fecha_programada) + '. Saldrá del panel "Pendientes de re-auditoría".</div>';
+    $('motivoCierre').value = '';
+    $('modalCierre').classList.add('abierto');
+};
+const cerrarModalCierre = function() { $('modalCierre').classList.remove('abierto'); };
+$('btnCerrarCierre').addEventListener('click', cerrarModalCierre);
+$('btnCerrarCierre2').addEventListener('click', cerrarModalCierre);
+$('btnGuardarCierre').addEventListener('click', async function() {
+    const p = cierreAbierto, msg = $('mensajeCierre');
+    const motivo = $('motivoCierre').value.trim();
+    if (!motivo) { msg.className = 'mensaje error'; msg.textContent = 'Escribe el motivo del cierre.'; return; }
+    if (!confirm('¿Estás segura de cerrar definitivamente ' + (p.referencia || 'esta auditoría') + ' sin re-auditoría?\n\nSeguirá en reportes como RECHAZADA.')) return;
+    const btn = $('btnGuardarCierre'); btn.disabled = true; btn.textContent = 'Cerrando…';
+    const { error } = await supabase.from('auditorias').update({ cierre_definitivo: true, motivo_cierre: motivo, fecha_cierre: hoyISO }).eq('id', p.id);
+    btn.disabled = false; btn.textContent = 'Cerrar definitivamente';
+    if (error) { msg.className = 'mensaje error'; msg.textContent = 'No se pudo cerrar: ' + error.message; return; }
+    cerrarModalCierre();
+    pendientes = pendientes.filter(function(x) { return x.id !== p.id; });
+    pintarPendientes();
+});
+
 const cerrarReaud = function() { $('modalReaud').classList.remove('abierto'); };
 $('btnCerrarReaud').addEventListener('click', cerrarReaud);
 $('btnCerrarReaud2').addEventListener('click', cerrarReaud);
