@@ -210,6 +210,13 @@
     .lineas { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
     .linea { background: #fff; border: 1px solid var(--borde); border-left: 6px solid #7C3AED; border-radius: 12px; padding: 16px; cursor: pointer; box-shadow: var(--sombra-card); transition: var(--transicion); }
     .linea:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
+    .linea.lista-final { border-left-color: var(--verde); background: #FBFEFC; }
+    .caja-final { margin-top: 14px; padding: 16px; border-radius: 12px; background: #EEF7F2; border: 1px solid #BFE2D0; }
+    .caja-final h3 { margin: 0 0 6px; font-size: 15px; color: var(--verde); }
+    .caja-final p { margin: 0 0 12px; font-size: 12px; color: var(--texto-claro); }
+    .caja-final .rejilla { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .btn-final { background: var(--verde); color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 14px; }
+    .btn-final:hover { filter: brightness(0.95); }
     .linea .l-ref { font-weight: 700; color: var(--tinta); font-size: 15px; }
     .linea .l-sub { font-size: 12px; color: var(--texto-claro); margin-top: 2px; }
     .pasos-linea { display: flex; gap: 4px; margin: 14px 0 10px; }
@@ -241,7 +248,7 @@
     .btn-eliminar:hover { background: #FCF0F0; }
 
     @media (max-width: 1024px) {
-        .caja-siguiente .rejilla { grid-template-columns: 1fr; }
+        .caja-siguiente .rejilla, .caja-final .rejilla { grid-template-columns: 1fr; }
         .grilla-mes { gap: 3px; }
         .mes-dia { min-height: 56px; padding: 4px; cursor: pointer; }
         .mini-cita, .mas-citas { display: none; }
@@ -283,7 +290,7 @@
 
     <div class="bloque-proceso">
         <h2>Auditorías en proceso</h2>
-        <p class="ayuda">Cada tarjeta es una referencia en su línea de procesos: corte → estampado → bordado → lavandería → sublimado → confección. Haz clic para ver su avance y programar el siguiente subproceso.</p>
+        <p class="ayuda">Cada tarjeta es una referencia en su línea de procesos: corte → estampado → bordado → lavandería → sublimado → confección. Haz clic para ver su avance y programar el siguiente subproceso. La tarjeta sale de esta lista cuando se programa su auditoría final.</p>
         <div class="lineas" id="lineas"><div class="vacio-lineas">Cargando…</div></div>
     </div>
 </div>
@@ -421,6 +428,7 @@ const ordenSub = function(clave) { return SUBPROCESOS.findIndex(function(x) { re
 const normal = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
 const esProceso = function(nombre) { return normal(nombre).indexOf('proceso') === 0; };
 const tipoProceso = function() { return tipos.find(function(t) { return esProceso(t.nombre); }); };
+const tipoFinal = function() { return tipos.find(function(t) { return normal(t.nombre).indexOf('final') === 0; }); };
 const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
 const fechaCorta = function(f) { if (!f) return ''; const d = new Date(f + 'T00:00:00'); return d.getDate() + ' ' + MESES[d.getMonth()].slice(0, 3); };
 
@@ -620,6 +628,13 @@ async function cargarLineas() {
     const { data, error } = await supabase.from('auditorias')
         .select('id, linea_id, subproceso, estado, resultado, fecha_programada, hora_programada, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, tipo_id, programada_por')
         .eq('tipo_id', tp.id).neq('estado', 'cancelada').order('id');
+    // Líneas que ya tienen su auditoría final programada (esas salen de la lista)
+    const tf = tipoFinal();
+    const conFinal = new Set();
+    if (tf) {
+        const { data: finales } = await supabase.from('auditorias').select('linea_id').eq('tipo_id', tf.id).neq('estado', 'cancelada').not('linea_id', 'is', null);
+        (finales || []).forEach(function(f) { conFinal.add(f.linea_id); });
+    }
     if (error) { $('lineas').innerHTML = '<div class="vacio-lineas">Error: ' + esc(error.message) + '</div>'; return; }
     const grupos = {};
     (data || []).forEach(function(r) {
@@ -630,7 +645,9 @@ async function cargarLineas() {
     });
     lineasProceso = Object.keys(grupos).map(function(k) {
         const filas = grupos[k].sort(function(a, b) { return ordenSub(a.subproceso) - ordenSub(b.subproceso); });
-        return armarLinea(+k, filas);
+        const l = armarLinea(+k, filas);
+        l.tieneFinal = conFinal.has(l.id);
+        return l;
     });
     pintarLineas();
   } catch (e) {
@@ -655,19 +672,21 @@ function armarLinea(id, filas) {
 function pintarLineas() {
     const a = $('filtroAuditora').value;
     const visibles = lineasProceso.filter(function(l) {
-        return !l.completa && (!a || l.filas.some(function(f) { return f.auditora_id === a; }));
+        return !l.tieneFinal && (!a || l.filas.some(function(f) { return f.auditora_id === a; }));
     });
     if (!visibles.length) { $('lineas').innerHTML = '<div class="vacio-lineas">No hay auditorías de proceso abiertas.</div>'; return; }
     $('lineas').innerHTML = visibles.map(function(l) {
         const prov = proveedores.find(function(p) { return p.id === l.base.proveedor_id; });
         let estadoTxt;
-        if (l.ultima.estado === 'hecho') {
+        if (l.completa) {
+            estadoTxt = 'Proceso completo · <b style="color:var(--verde)">listo para auditoría final</b>';
+        } else if (l.ultima.estado === 'hecho') {
             const sig = SUBPROCESOS[l.maxOrden + 1];
             estadoTxt = 'Siguiente: <b>' + sig.nombre + '</b> · sin programar';
         } else {
             estadoTxt = '<b>' + l.ultima.sub.nombre + '</b> · ' + (l.ultima.estado === 'en_curso' ? 'en curso' : 'programado para el ' + fechaCorta(l.ultima.fila.fecha_programada));
         }
-        return '<div class="linea" onclick="abrirLinea(' + l.id + ')">' +
+        return '<div class="linea' + (l.completa ? ' lista-final' : '') + '" onclick="abrirLinea(' + l.id + ')">' +
             '<div class="l-ref">' + esc(l.base.referencia || 'Sin referencia') + (l.base.sku ? ' <small style="font-weight:500; color:var(--texto-claro)">(' + esc(l.base.sku) + ')</small>' : '') + '</div>' +
             '<div class="l-sub">' + esc(prov ? prov.nombre : '') + (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + '</div>' +
             '<div class="pasos-linea">' + l.estados.map(function(e) { return '<div class="pl ' + e.estado + '" title="' + e.sub.nombre + '">' + ({ corte: 'Corte', estampado: 'Estamp.', bordado: 'Bordado', lavanderia: 'Lavand.', sublimado: 'Sublim.', confeccion: 'Confec.' })[e.sub.clave] + '</div>'; }).join('') + '</div>' +
@@ -713,7 +732,18 @@ function pintarPanelLinea() {
             '<div class="campo"><label>Hora</label><input type="time" id="sigHora" value="08:00"></div>' +
         '</div><button class="btn-guardar" style="width:100%; margin-top:14px;" onclick="programarSiguiente()">Programar</button></div>';
     } else if (l.ultima && l.ultima.estado !== 'hecho') {
-        html += '<div class="pista" style="margin-top:14px; font-size:12px;">Cuando se termine <b>' + l.ultima.sub.nombre + '</b> podrás programar el siguiente subproceso desde aquí.</div>';
+        html += '<div class="pista" style="margin-top:14px; font-size:12px;">Cuando se termine <b>' + l.ultima.sub.nombre + '</b> podrás programar el siguiente subproceso o pasar a la auditoría final desde aquí.</div>';
+    }
+    // Pasar a auditoría final (cuando el último subproceso hecho ya terminó)
+    if (l.ultima && l.ultima.estado === 'hecho') {
+        const auditorasF = usuarios.filter(function(u) { return u.rol === 'auditora'; });
+        html += '<div class="caja-final"><h3>' + (l.completa ? 'Proceso completo: programar auditoría final' : '¿Ya no faltan procesos? Pasar a auditoría final') + '</h3>' +
+            '<p>' + (l.completa ? 'Todos los subprocesos terminaron.' : 'Los subprocesos que no se hicieron quedarán como "No aplica".') + ' La línea saldrá de "Auditorías en proceso" y la auditoría final aparecerá en el calendario.</p>' +
+            '<div class="rejilla">' +
+                '<div class="campo"><label>Auditora</label><select id="finAud">' + (auditorasF.length ? auditorasF : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === l.ultima.fila.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
+                '<div class="campo"><label>Fecha</label><input type="date" id="finFecha" value="' + hoyISO + '"></div>' +
+                '<div class="campo"><label>Hora</label><input type="time" id="finHora" value="08:00"></div>' +
+            '</div><button class="btn-final" onclick="programarFinal()">Programar auditoría final</button></div>';
     }
     $('cuerpoLinea').innerHTML = html;
 }
@@ -729,6 +759,32 @@ window.programarSiguiente = async function() {
     if (!datos.fecha_programada || !datos.hora_programada) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = 'Elige fecha y hora.'; return; }
     const { error } = await supabase.from('auditorias').insert(datos);
     if (error) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = error.message; return; }
+    $('modalLinea').classList.remove('abierto');
+    await cargarAuditorias();
+};
+window.programarFinal = async function() {
+    const l = lineaAbierta, b = l.base, tf = tipoFinal();
+    const msg = $('mensajeLinea');
+    if (!tf) { msg.className = 'mensaje error'; msg.textContent = 'No existe el tipo "final" en la base de datos.'; return; }
+    if (!$('finFecha').value || !$('finHora').value) { msg.className = 'mensaje error'; msg.textContent = 'Elige fecha y hora para la auditoría final.'; return; }
+    if (!confirm('¿Programar la auditoría final de ' + (b.referencia || 'esta referencia') + ' para el ' + fechaCorta($('finFecha').value) + '?\n\nLa línea saldrá de "Auditorías en proceso".')) return;
+    const datos = {
+        proveedor_id: b.proveedor_id, tipo_id: tf.id, auditora_id: $('finAud').value,
+        fecha_programada: $('finFecha').value, hora_programada: $('finHora').value,
+        numero_factura: b.numero_factura, referencia: b.referencia, coleccion: b.coleccion, sublinea: b.sublinea, sku: b.sku,
+        linea_id: l.id, programada_por: yo.id,
+        nota_programacion: 'Viene de la línea de proceso (' + l.estados.filter(function(e) { return e.estado === 'hecho'; }).map(function(e) { return e.sub.nombre.toLowerCase(); }).join(', ') + ').'
+    };
+    const { data: nueva, error } = await supabase.from('auditorias').insert(datos).select().single();
+    if (error) { msg.className = 'mensaje error'; msg.textContent = error.message; return; }
+    // Copiar la foto de la prenda y el PDF de patronaje a la final
+    try {
+        const { data: refs } = await supabase.from('auditoria_evidencias').select('url, nombre, observacion')
+            .in('auditoria_id', l.filas.map(function(f) { return f.id; })).in('nombre', ['Foto Prenda Referencia', 'Informe de Patronaje']);
+        const unicos = {}; (refs || []).forEach(function(r) { unicos[r.nombre] = r; });
+        const copias = Object.values(unicos).map(function(r) { return { auditoria_id: nueva.id, url: r.url, nombre: r.nombre, observacion: r.observacion || '' }; });
+        if (copias.length) await supabase.from('auditoria_evidencias').insert(copias);
+    } catch (e) { console.warn(e); }
     $('modalLinea').classList.remove('abierto');
     await cargarAuditorias();
 };
