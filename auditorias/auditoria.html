@@ -251,6 +251,19 @@ async function cargar() {
         // Las revisiones 3% tienen su propia página
         const nombreTipo = String(tipo ? tipo.nombre : '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (nombreTipo.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(nombreTipo)) { location.replace('revision3.html?id=' + idAuditoria); return; }
+        // Las auditorías de proceso tienen su propia página
+        if (nombreTipo.indexOf('proceso') === 0) { location.replace('proceso.html?id=' + idAuditoria); return; }
+        auditoria._tipo = nombreTipo;
+        auditoria._esReaud = /re-?auditor/.test(nombreTipo);
+        // Re-auditoría: traer la auditoría rechazada de la que viene
+        if (auditoria._esReaud && auditoria.linea_id) {
+            const { data: origen } = await supabase.from('auditorias').select('id, fecha_auditoria, fecha_programada, resultado, sugerencia_aql, tipo_id').eq('id', auditoria.linea_id).maybeSingle();
+            if (origen) {
+                const tOrigen = (resTip.data || []).find(function(t) { return t.id === origen.tipo_id; });
+                origen._tipo = tOrigen ? tOrigen.nombre : 'auditoría';
+                auditoria._origen = origen;
+            }
+        }
 
         if (resCant.data && resCant.data.length) {
             const mapa = {};
@@ -361,7 +374,12 @@ function pintar() {
 
 // Paso 1
 function pasoLote() {
-    $('contenido').innerHTML = 
+    const o = auditoria._origen;
+    const avisoReaud = o ? '<div class="sugerencia-aql-box rechazado" style="margin-bottom:20px;">' +
+        '<strong>🔁 Re-auditoría</strong>' +
+        '<div style="margin-top:4px; font-size:13px;">Viene de la ' + esc(o._tipo) + ' del ' + esc(o.fecha_auditoria || o.fecha_programada || '') + ', que quedó <b>RECHAZADA</b>.' +
+        (o.sugerencia_aql ? '<br>Motivo: ' + esc(String(o.sugerencia_aql).replace(/\s*\[.*\]\s*$/, '').replace(/^Sugerencia AQL:\s*/i, '')) : '') + '</div></div>' : '';
+    $('contenido').innerHTML = avisoReaud +
     '<div class="tarjeta">' +
         '<h2>1. Información del lote</h2>' +
         '<div class="fila">' +
@@ -850,6 +868,13 @@ $('btnSiguiente').addEventListener('click', async function() {
         if (!auditoria.resultado) {
             $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría';
             return alert('Elige si el lote fue Aprobado o Rechazado.');
+        }
+        const esFinalOReaud = auditoria._esReaud || String(auditoria._tipo || '').indexOf('final') === 0;
+        if (esFinalOReaud) {
+            const texto = auditoria.resultado === 'aprobado'
+                ? '¿Finalizar como APROBADA?\n\nLa referencia ' + (auditoria.referencia || '') + ' quedará cerrada y aparecerá en reportes.'
+                : '¿Finalizar como RECHAZADA?\n\nAparecerá en reportes como rechazada y quedará abierta para la re-auditoría.\nPodrás programarla desde la agenda, en "Pendientes de re-auditoría".';
+            if (!confirm(texto)) { $('btnSiguiente').disabled = false; $('btnSiguiente').textContent = 'Finalizar auditoría'; return; }
         }
         await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
         location.href = 'agenda.html';

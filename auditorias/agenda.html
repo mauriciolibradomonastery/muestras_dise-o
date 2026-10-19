@@ -229,6 +229,18 @@
     .linea .l-estado b { color: var(--tinta); }
     .vacio-lineas { background: #fff; border: 1px dashed var(--borde); border-radius: 12px; padding: 24px; text-align: center; color: var(--texto-claro); font-size: 14px; }
 
+    /* Pendientes de re-auditoría */
+    .bloque-reaud { margin-top: 32px; }
+    .bloque-reaud h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0 0 6px; color: var(--tinta); }
+    .bloque-reaud .ayuda { font-size: 13px; color: var(--texto-claro); margin: 0 0 16px; }
+    .pend { background: #fff; border: 1px solid var(--borde); border-left: 6px solid var(--vino); border-radius: 12px; padding: 16px; box-shadow: var(--sombra-card); }
+    .pend .l-ref { font-weight: 700; color: var(--tinta); font-size: 15px; }
+    .pend .l-sub { font-size: 12px; color: var(--texto-claro); margin-top: 2px; }
+    .pend .motivo { font-size: 12px; color: var(--vino); background: #FCF0F0; border-radius: 8px; padding: 8px 10px; margin: 12px 0; line-height: 1.4; }
+    .pend .etq { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 4px; background: #FCF0F0; color: var(--vino); margin-top: 8px; }
+    .btn-reaud { width: 100%; background: var(--vino); color: #fff; border: none; border-radius: 8px; padding: 11px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-reaud:hover { filter: brightness(1.1); }
+
     /* Panel de una línea de proceso */
     .sub-lista { display: flex; flex-direction: column; gap: 8px; }
     .sub-fila { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
@@ -287,6 +299,12 @@
     </div>
 
     <div class="grilla" id="grilla"><div class="cargando">Cargando la agenda…</div></div>
+
+    <div class="bloque-reaud" id="bloqueReaud" style="display:none;">
+        <h2>Pendientes de re-auditoría</h2>
+        <p class="ayuda">Auditorías finales (o re-auditorías) que quedaron rechazadas. Siguen abiertas hasta que una re-auditoría salga aprobada.</p>
+        <div class="lineas" id="pendientes"></div>
+    </div>
 
     <div class="bloque-proceso">
         <h2>Auditorías en proceso</h2>
@@ -353,6 +371,22 @@
             <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56; box-shadow: 0 4px 12px rgba(25,122,86,0.2);">▶ Realizar auditoría</button>
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Programar re-auditoría -->
+<div class="fondo" id="modalReaud">
+    <div class="hoja">
+        <div class="hoja-cabeza">
+            <h2>Programar re-auditoría</h2>
+            <button class="cerrar" id="btnCerrarReaud">✕</button>
+        </div>
+        <div class="mensaje" id="mensajeReaud"></div>
+        <div style="padding: 24px; background:#FDFBF7;" id="cuerpoReaud"></div>
+        <div class="hoja-pie">
+            <button class="btn" id="btnCerrarReaud2">Cancelar</button>
+            <button class="btn-guardar" id="btnGuardarReaud" style="background:var(--vino);">Programar re-auditoría</button>
         </div>
     </div>
 </div>
@@ -429,6 +463,7 @@ const normal = function(t) { return String(t || '').toLowerCase().normalize('NFD
 const esProceso = function(nombre) { return normal(nombre).indexOf('proceso') === 0; };
 const tipoProceso = function() { return tipos.find(function(t) { return esProceso(t.nombre); }); };
 const tipoFinal = function() { return tipos.find(function(t) { return normal(t.nombre).indexOf('final') === 0; }); };
+const tipoReaud = function() { return tipos.find(function(t) { return /re-?auditor/.test(normal(t.nombre)); }); };
 const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
 const fechaCorta = function(f) { if (!f) return ''; const d = new Date(f + 'T00:00:00'); return d.getDate() + ' ' + MESES[d.getMonth()].slice(0, 3); };
 
@@ -566,7 +601,93 @@ async function cargarAuditorias() {
     }
     pintar();
     cargarLineas();
+    cargarPendientes();
 }
+
+// ---------- Pendientes de re-auditoría ----------
+let pendientes = [], pendienteAbierta = null;
+async function cargarPendientes() {
+    try {
+        const tf = tipoFinal(), tr = tipoReaud();
+        const ids = [tf, tr].filter(Boolean).map(function(t) { return t.id; });
+        if (!ids.length) { $('bloqueReaud').style.display = 'none'; return; }
+        const [rech, reauds] = await Promise.all([
+            supabase.from('auditorias').select('id, tipo_id, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, fecha_auditoria, fecha_programada, sugerencia_aql')
+                .in('tipo_id', ids).eq('estado', 'finalizada').eq('resultado', 'rechazado').order('fecha_auditoria'),
+            tr ? supabase.from('auditorias').select('linea_id').eq('tipo_id', tr.id).neq('estado', 'cancelada').not('linea_id', 'is', null) : Promise.resolve({ data: [] })
+        ]);
+        if (rech.error) throw rech.error;
+        const yaTienen = new Set((reauds.data || []).map(function(r) { return r.linea_id; }));
+        pendientes = (rech.data || []).filter(function(a) { return !yaTienen.has(a.id); });
+        pintarPendientes();
+    } catch (e) {
+        console.error(e);
+        $('bloqueReaud').style.display = '';
+        $('pendientes').innerHTML = '<div class="vacio-lineas" style="color:var(--vino)">No se pudieron cargar las pendientes de re-auditoría: ' + esc(e.message || e) + '</div>';
+    }
+}
+function pintarPendientes() {
+    const a = $('filtroAuditora').value;
+    const visibles = pendientes.filter(function(p) { return !a || p.auditora_id === a; });
+    $('bloqueReaud').style.display = visibles.length ? '' : 'none';
+    $('pendientes').innerHTML = visibles.map(function(p) {
+        const prov = proveedores.find(function(x) { return x.id === p.proveedor_id; });
+        const t = tipos.find(function(x) { return x.id === p.tipo_id; });
+        const motivo = String(p.sugerencia_aql || '').replace(/\s*\[.*\]\s*$/, '').replace(/^Sugerencia AQL:\s*/i, 'Motivo: ');
+        return '<div class="pend">' +
+            '<div class="l-ref">' + esc(p.referencia || 'Sin referencia') + (p.sku ? ' <small style="font-weight:500; color:var(--texto-claro)">(' + esc(p.sku) + ')</small>' : '') + '</div>' +
+            '<div class="l-sub">' + esc(prov ? prov.nombre : '') + (p.numero_factura ? ' · OC ' + esc(p.numero_factura) : '') + '</div>' +
+            '<div class="etq">' + esc(t ? t.nombre : 'Final') + ' rechazada · ' + fechaCorta(p.fecha_auditoria || p.fecha_programada) + '</div>' +
+            (motivo ? '<div class="motivo">' + esc(motivo.length > 160 ? motivo.slice(0, 160) + '…' : motivo) + '</div>' : '<div style="height:12px"></div>') +
+            '<button class="btn-reaud" onclick="abrirReaud(' + p.id + ')">Programar re-auditoría</button>' +
+        '</div>';
+    }).join('');
+}
+window.abrirReaud = function(id) {
+    pendienteAbierta = pendientes.find(function(p) { return p.id === id; });
+    if (!pendienteAbierta) return;
+    const p = pendienteAbierta;
+    const auditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
+    $('mensajeReaud').className = 'mensaje';
+    $('cuerpoReaud').innerHTML =
+        '<div style="font-size:14px; margin-bottom:16px;"><b>' + esc(p.referencia || '') + '</b> · ' + esc((proveedores.find(function(x) { return x.id === p.proveedor_id; }) || {}).nombre || '') + (p.numero_factura ? ' · OC ' + esc(p.numero_factura) : '') +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:4px;">Se copian los datos de la referencia, las unidades por color y talla, la foto de la prenda y el PDF de patronaje.</div></div>' +
+        '<div class="caja-siguiente" style="background:#FCF0F0; border-color:#F2C8C9; margin:0;"><div class="rejilla">' +
+            '<div class="campo"><label>Auditora</label><select id="reAud">' + (auditoras.length ? auditoras : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === p.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
+            '<div class="campo"><label>Fecha</label><input type="date" id="reFecha" value="' + hoyISO + '"></div>' +
+            '<div class="campo"><label>Hora</label><input type="time" id="reHora" value="08:00"></div>' +
+        '</div></div>';
+    $('modalReaud').classList.add('abierto');
+};
+const cerrarReaud = function() { $('modalReaud').classList.remove('abierto'); };
+$('btnCerrarReaud').addEventListener('click', cerrarReaud);
+$('btnCerrarReaud2').addEventListener('click', cerrarReaud);
+$('btnGuardarReaud').addEventListener('click', async function() {
+    const p = pendienteAbierta, tr = tipoReaud(), msg = $('mensajeReaud');
+    if (!tr) { msg.className = 'mensaje error'; msg.textContent = 'No existe el tipo "re-auditoría" en la base de datos.'; return; }
+    if (!$('reFecha').value || !$('reHora').value) { msg.className = 'mensaje error'; msg.textContent = 'Elige fecha y hora.'; return; }
+    const btn = $('btnGuardarReaud'); btn.disabled = true; btn.textContent = 'Programando…';
+    try {
+        const { data: nueva, error } = await supabase.from('auditorias').insert({
+            proveedor_id: p.proveedor_id, tipo_id: tr.id, auditora_id: $('reAud').value,
+            fecha_programada: $('reFecha').value, hora_programada: $('reHora').value,
+            numero_factura: p.numero_factura, referencia: p.referencia, coleccion: p.coleccion, sublinea: p.sublinea, sku: p.sku,
+            linea_id: p.id, programada_por: yo.id,
+            nota_programacion: 'Re-auditoría de la auditoría rechazada del ' + (p.fecha_auditoria || p.fecha_programada || '') + '.'
+        }).select().single();
+        if (error) throw error;
+        // Copiar unidades por color y talla, y los archivos de referencia
+        const [cants, refs] = await Promise.all([
+            supabase.from('auditoria_cantidades').select('color, talla, cantidad').eq('auditoria_id', p.id),
+            supabase.from('auditoria_evidencias').select('url, nombre, observacion').eq('auditoria_id', p.id).in('nombre', ['Foto Prenda Referencia', 'Informe de Patronaje'])
+        ]);
+        if (cants.data && cants.data.length) await supabase.from('auditoria_cantidades').insert(cants.data.map(function(c) { return { auditoria_id: nueva.id, color: c.color, talla: c.talla, cantidad: c.cantidad }; }));
+        if (refs.data && refs.data.length) await supabase.from('auditoria_evidencias').insert(refs.data.map(function(r) { return { auditoria_id: nueva.id, url: r.url, nombre: r.nombre, observacion: r.observacion || '' }; }));
+        cerrarReaud();
+        await cargarAuditorias();
+    } catch (e) { msg.className = 'mensaje error'; msg.textContent = e.message || String(e); }
+    btn.disabled = false; btn.textContent = 'Programar re-auditoría';
+});
 
 // ---------- Atrasadas: días anteriores a hoy sin terminar ----------
 async function cargarAtrasadas() {
@@ -1076,7 +1197,7 @@ function cambiarVista(v) {
 $('vSemana').addEventListener('click', function() { lunes = vista === 'mes' ? inicioSemana(mesRef.getMonth() === new Date().getMonth() && mesRef.getFullYear() === new Date().getFullYear() ? new Date() : mesRef) : lunes; cambiarVista('semana'); });
 $('vMes').addEventListener('click', function() { mesRef = new Date(lunes.getFullYear(), sumarDias(lunes, 3).getMonth(), 1); if (sumarDias(lunes, 3).getFullYear() !== lunes.getFullYear()) mesRef = new Date(sumarDias(lunes, 3).getFullYear(), sumarDias(lunes, 3).getMonth(), 1); cambiarVista('mes'); });
 window.irASemana = function(clave) { lunes = inicioSemana(new Date(clave + 'T00:00:00')); cambiarVista('semana'); };
-$('filtroAuditora').addEventListener('change', function() { pintar(); pintarLineas(); });
+$('filtroAuditora').addEventListener('change', function() { pintar(); pintarLineas(); pintarPendientes(); });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 await cargarCatalogos(); await cargarAuditorias(); cargarReferencias();
