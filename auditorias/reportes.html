@@ -224,10 +224,10 @@
         <div style="overflow-x: auto;">
             <table>
                 <thead>
-                    <tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Auditadas</th><th>Resultado</th><th></th></tr>
+                    <tr><th>Fecha</th><th>Tipo</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Auditadas</th><th>Resultado</th><th></th></tr>
                 </thead>
                 <tbody id="tablaAuditorias">
-                    <tr><td colspan="7">Cargando datos...</td></tr>
+                    <tr><td colspan="8">Cargando datos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -288,6 +288,11 @@ const esRevision3Nombre = nombre => {
     return n.indexOf('3%') >= 0 || /revision\s*(del\s*)?3/.test(n);
 };
 const esRev3 = a => esRevision3Nombre(a.auditoria_tipos ? a.auditoria_tipos.nombre : '');
+const nombreTipoNorm = a => String(a.auditoria_tipos ? a.auditoria_tipos.nombre : '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const esReaud = a => /re-?auditor/.test(nombreTipoNorm(a));
+const esFinal = a => nombreTipoNorm(a).indexOf('final') === 0;
+// En reportes solo entran: finales, re-auditorías (pestaña Auditorías) y revisiones 3% (su pestaña)
+const entraEnReportes = a => esFinal(a) || esReaud(a) || esRev3(a);
 window.cambiarVista = v => {
     vista = v;
     $('vistaAud').style.display = v === 'aud' ? '' : 'none';
@@ -309,11 +314,11 @@ async function init() {
         supabase.from('auditoria_usuarios').select('id, nombre')
     ]);
 
-    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="7" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
+    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="8" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
     
     const usuariosNombres = {};
     if (resUsuarios.data) resUsuarios.data.forEach(u => usuariosNombres[u.id] = u.nombre);
-    auditorias = resAuds.data || [];
+    auditorias = (resAuds.data || []).filter(entraEnReportes);
     
     auditorias.forEach(a => {
         if (a.auditora_id && usuariosNombres[a.auditora_id]) a.auditoria_usuarios = { nombre: usuariosNombres[a.auditora_id] };
@@ -334,7 +339,7 @@ function renderData() {
     const filtradas = auditorias.filter(a => {
         return (valProv === 'ALL' || String(a.proveedor_id) === String(valProv)) && (valRef === 'ALL' || a.referencia === valRef) && (valAud === 'ALL' || String(a.auditora_id) === String(valAud));
     });
-    const list = filtradas.filter(a => !esRev3(a));          // Auditorías normales
+    const list = filtradas.filter(a => esFinal(a) || esReaud(a));   // Solo finales y re-auditorías
     const listRev3 = filtradas.filter(a => esRev3(a));       // Revisiones 3% (informe independiente)
     $('cuentaAud').textContent = list.length;
     $('cuentaRev3').textContent = listRev3.length;
@@ -360,6 +365,7 @@ function renderData() {
         const skuHtml = a.sku ? ` <small style="color:#A39C94">(${a.sku})</small>` : '';
         htmlTabla += `<tr class="fila-clic" onclick="verDetalle(${a.id})">
             <td><strong style="color:var(--tinta); font-weight:500;">${a.fecha_auditoria || '—'}</strong></td>
+            <td><span class="pastilla" style="background:${esReaud(a) ? '#FCF0F0' : '#EFF4FE'}; color:${esReaud(a) ? 'var(--vino)' : 'var(--azul)'}; text-transform:none;">${esReaud(a) ? 'Re-auditoría' : 'Final'}</span></td>
             <td>${a.auditoria_proveedores ? a.auditoria_proveedores.nombre : 'N/A'}</td>
             <td>${a.referencia || ''}${skuHtml}</td>
             <td>${a.auditoria_usuarios ? a.auditoria_usuarios.nombre : 'N/A'}</td>
@@ -369,7 +375,7 @@ function renderData() {
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="7">No hay resultados para los filtros seleccionados.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="8">No hay resultados para los filtros seleccionados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
