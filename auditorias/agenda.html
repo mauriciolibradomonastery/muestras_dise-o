@@ -306,7 +306,6 @@
         </div>
         <div class="hoja-pie">
             <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56; box-shadow: 0 4px 12px rgba(25,122,86,0.2);">▶ Realizar auditoría</button>
-            <button class="btn btn-eliminar" id="btnEliminarCita" style="display:none; margin-right:auto;">🗑 Eliminar</button>
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
         </div>
@@ -673,8 +672,7 @@ function abrirHoja(cita) {
     $('mensajeHoja').className = 'mensaje';
     $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
-    $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
-    $('btnEliminarCita').style.display = cita ? '' : 'none';
+    $('btnCancelarCita').style.display = cita ? '' : 'none';
     $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
     $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar auditoría' : '▶ Iniciar auditoría';
 
@@ -846,20 +844,14 @@ $('btnGuardar').addEventListener('click', async () => {
 });
 
 $('btnCancelarCita').addEventListener('click', async () => {
-    if (!editando || !confirm('¿Cancelar esta auditoría de forma permanente?')) return;
-    await supabase.from('auditorias').update({ estado: 'cancelada' }).eq('id', editando.id);
-    cerrarHoja(); await cargarAuditorias();
-});
-
-$('btnEliminarCita').addEventListener('click', async () => {
     if (!editando) return;
     const tipo = tipos.find(function(t) { return t.id === editando.tipo_id; });
     const que = (editando.referencia || 'sin referencia') + (tipo ? ' (' + tipo.nombre + (editando.subproceso ? ' · ' + nombreSub(editando.subproceso) : '') + ')' : '');
-    if (!confirm('¿Estás segura de eliminar esta auditoría?\n\n' + que + '\n\nSe borrará con todos sus datos y fotos. Esta acción no se puede deshacer.')) return;
-    const btn = $('btnEliminarCita'); btn.disabled = true; btn.textContent = 'Eliminando…';
+    if (!confirm('¿Estás segura de cancelar esta auditoría?\n\n' + que + '\n\nSe eliminará por completo con todos sus datos y fotos. Esta acción no se puede deshacer.')) return;
+    const btn = $('btnCancelarCita'); btn.disabled = true; btn.textContent = 'Eliminando…';
     try { await eliminarAuditoria(editando.id); cerrarHoja(); await cargarAuditorias(); }
     catch (e) { $('mensajeHoja').className = 'mensaje error'; $('mensajeHoja').textContent = e.message; }
-    btn.disabled = false; btn.textContent = '🗑 Eliminar';
+    btn.disabled = false; btn.textContent = 'Cancelar auditoría';
 });
 
 $('antes').addEventListener('click', function() { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
