@@ -166,7 +166,49 @@
     .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-size: 16px; font-weight: 500; }
 
+    /* Etiqueta de tipo en las tarjetas del calendario */
+    .cita .tipo-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(21,16,14,0.07); color: var(--tinta); margin-bottom: 6px; }
+    .cita .tipo-tag.proceso { background: #EDE7F6; color: #5B21B6; }
+
+    /* Auditorías en proceso */
+    .bloque-proceso { margin-top: 32px; }
+    .bloque-proceso h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0 0 6px; color: var(--tinta); }
+    .bloque-proceso .ayuda { font-size: 13px; color: var(--texto-claro); margin: 0 0 16px; }
+    .lineas { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .linea { background: #fff; border: 1px solid var(--borde); border-left: 6px solid #7C3AED; border-radius: 12px; padding: 16px; cursor: pointer; box-shadow: var(--sombra-card); transition: var(--transicion); }
+    .linea:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
+    .linea .l-ref { font-weight: 700; color: var(--tinta); font-size: 15px; }
+    .linea .l-sub { font-size: 12px; color: var(--texto-claro); margin-top: 2px; }
+    .pasos-linea { display: flex; gap: 4px; margin: 14px 0 10px; }
+    .pasos-linea .pl { flex: 1; text-align: center; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; padding: 6px 2px; border-radius: 6px; background: #F4F1EB; color: #A39C94; line-height: 1.3; }
+    .pl.hecho { background: #EEF7F2; color: var(--verde); }
+    .pl.programado { background: #EFF4FE; color: var(--azul); }
+    .pl.en_curso { background: #FEF8EE; color: var(--ambar); }
+    .pl.omitido { background: #F9F8F6; color: #C3BCB4; text-decoration: line-through; }
+    .linea .l-estado { font-size: 13px; color: var(--texto); }
+    .linea .l-estado b { color: var(--tinta); }
+    .vacio-lineas { background: #fff; border: 1px dashed var(--borde); border-radius: 12px; padding: 24px; text-align: center; color: var(--texto-claro); font-size: 14px; }
+
+    /* Panel de una línea de proceso */
+    .sub-lista { display: flex; flex-direction: column; gap: 8px; }
+    .sub-fila { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
+    .sub-fila .num { width: 26px; height: 26px; border-radius: 50%; background: #F4F1EB; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--texto-claro); flex-shrink: 0; }
+    .sub-fila.hecho .num { background: var(--verde); color: #fff; }
+    .sub-fila.programado .num { background: var(--azul); color: #fff; }
+    .sub-fila.en_curso .num { background: var(--ambar); color: #fff; }
+    .sub-fila .nombre { font-weight: 600; color: var(--tinta); flex: 1; }
+    .sub-fila .nombre small { display: block; font-weight: 500; color: var(--texto-claro); font-size: 12px; margin-top: 2px; }
+    .sub-fila.omitido { opacity: .55; }
+    .btn-mini { padding: 8px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid var(--borde); background: #fff; cursor: pointer; font-family: inherit; color: var(--tinta); }
+    .btn-mini:hover { background: #F9F8F6; }
+    .caja-siguiente { margin-top: 18px; padding: 16px; border-radius: 12px; background: #F5F3FF; border: 1px solid #DDD6FE; }
+    .caja-siguiente h3 { margin: 0 0 12px; font-size: 15px; color: #5B21B6; }
+    .caja-siguiente .rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn-eliminar { background: #fff; color: var(--vino); border: 1px solid #E8C4C6; }
+    .btn-eliminar:hover { background: #FCF0F0; }
+
     @media (max-width: 1024px) {
+        .caja-siguiente .rejilla { grid-template-columns: 1fr; }
         .grilla { grid-template-columns: 1fr; }
         .dia { min-height: auto; margin-bottom: 12px; }
         .dia:has(.vacio-dia) { display: none; }
@@ -200,6 +242,12 @@
     </div>
 
     <div class="grilla" id="grilla"><div class="cargando">Cargando la agenda…</div></div>
+
+    <div class="bloque-proceso">
+        <h2>Auditorías en proceso</h2>
+        <p class="ayuda">Cada tarjeta es una referencia en su línea de procesos: corte → estampado → bordado → lavandería → sublimado → confección. Haz clic para ver su avance y programar el siguiente subproceso.</p>
+        <div class="lineas" id="lineas"><div class="vacio-lineas">Cargando…</div></div>
+    </div>
 </div>
 
 <!-- Formulario de programación -->
@@ -215,6 +263,10 @@
                 <select id="fProveedor"></select></div>
             <div class="campo"><label for="fTipo">Tipo de auditoría</label>
                 <select id="fTipo"></select></div>
+
+            <div class="campo ancho" id="campoSubproceso" style="display:none;"><label for="fSubproceso">Subproceso</label>
+                <select id="fSubproceso"></select>
+                <div class="pista" id="pistaSubproceso">Orden de la línea: corte → estampado → bordado → lavandería → sublimado → confección. Si la referencia no lleva los primeros, elige desde dónde empieza.</div></div>
 
             <div class="campo"><label for="fFecha">Fecha</label>
                 <input type="date" id="fFecha"></div>
@@ -254,8 +306,25 @@
         </div>
         <div class="hoja-pie">
             <button class="btn" id="btnEjecutar" style="display:none; background:#197A56; color:#fff; border-color:#197A56; box-shadow: 0 4px 12px rgba(25,122,86,0.2);">▶ Realizar auditoría</button>
+            <button class="btn btn-eliminar" id="btnEliminarCita" style="display:none; margin-right:auto;">🗑 Eliminar</button>
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Panel de una línea de proceso -->
+<div class="fondo" id="modalLinea">
+    <div class="hoja">
+        <div class="hoja-cabeza">
+            <h2 id="tituloLinea">Línea de proceso</h2>
+            <button class="cerrar" id="btnCerrarLinea">✕</button>
+        </div>
+        <div class="mensaje" id="mensajeLinea"></div>
+        <div style="padding: 24px; background:#FDFBF7;" id="cuerpoLinea"></div>
+        <div class="hoja-pie">
+            <button class="btn btn-eliminar" id="btnEliminarLinea" style="margin-right:auto;">🗑 Eliminar línea completa</button>
+            <button class="btn" id="btnCerrarLinea2">Cerrar</button>
         </div>
     </div>
 </div>
@@ -288,6 +357,37 @@ const iso = function(f) { return f.toLocaleDateString('sv'); };
 const hoyISO = iso(new Date());
 
 let yo = null, auditorias = [], proveedores = [], tipos = [], usuarios = [], referencias = [];
+let lineasProceso = [], lineaAbierta = null;
+
+// ---------- Línea de procesos (orden fijo) ----------
+const SUBPROCESOS = [
+    { clave: 'corte', nombre: 'Corte' },
+    { clave: 'estampado', nombre: 'Estampado' },
+    { clave: 'bordado', nombre: 'Bordado' },
+    { clave: 'lavanderia', nombre: 'Lavandería' },
+    { clave: 'sublimado', nombre: 'Sublimado' },
+    { clave: 'confeccion', nombre: 'Confección' }
+];
+const nombreSub = function(clave) { const s = SUBPROCESOS.find(function(x) { return x.clave === clave; }); return s ? s.nombre : (clave || ''); };
+const ordenSub = function(clave) { return SUBPROCESOS.findIndex(function(x) { return x.clave === clave; }); };
+const normal = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+const esProceso = function(nombre) { return normal(nombre).indexOf('proceso') === 0; };
+const tipoProceso = function() { return tipos.find(function(t) { return esProceso(t.nombre); }); };
+const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
+const fechaCorta = function(f) { if (!f) return ''; const d = new Date(f + 'T00:00:00'); return d.getDate() + ' ' + MESES[d.getMonth()].slice(0, 3); };
+
+// ---------- Eliminar una auditoría con todo lo suyo ----------
+async function eliminarAuditoria(id) {
+    const tablas = ['auditoria_cantidades', 'auditoria_defectos', 'auditoria_medidas', 'auditoria_pruebas', 'auditoria_evidencias'];
+    await Promise.all(tablas.map(function(t) { return supabase.from(t).delete().eq('auditoria_id', id); }));
+    try {
+        const { data: archivos } = await supabase.storage.from('auditorias-evidencias').list(String(id));
+        if (archivos && archivos.length) await supabase.storage.from('auditorias-evidencias').remove(archivos.map(function(a) { return id + '/' + a.name; }));
+    } catch (e) { console.warn(e); }
+    const { data, error } = await supabase.from('auditorias').delete().eq('id', id).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('La base de datos no permitió eliminarla. Revisa que el paso 1 (permiso para eliminar) se haya ejecutado.');
+}
 let esquemaAuditoras = {};
 let lunes = inicioSemana(new Date());
 let editando = null;
@@ -337,7 +437,10 @@ async function cargarCatalogos() {
         supabase.from('auditoria_usuarios').select('id, nombre, rol').eq('activo', true).order('nombre'),
     ]);
     proveedores = prov.data || [];
-    tipos = tip.data || [];
+    tipos = (tip.data || []).slice().sort(function(a, b) {
+        const peso = function(n) { n = normal(n); return n.indexOf('proceso') === 0 ? 0 : n.indexOf('final') === 0 ? 1 : /re-?auditor/.test(n) ? 2 : n.indexOf('3') >= 0 ? 3 : 4; };
+        return peso(a.nombre) - peso(b.nombre) || a.nombre.localeCompare(b.nombre);
+    });
     usuarios = usu.data || [];
 
     // Mapeo dinámico de estilos por auditora
@@ -347,7 +450,8 @@ async function cargarCatalogos() {
 
     $('fProveedor').innerHTML = '<option value="">Elegir…</option>' +
         proveedores.map(function(p) { return '<option value="' + p.id + '">' + p.nombre + '</option>'; }).join('');
-    $('fTipo').innerHTML = tipos.map(function(t) { return '<option value="' + t.id + '">' + t.nombre + '</option>'; }).join('');
+    $('fTipo').innerHTML = tipos.map(function(t) { return '<option value="' + t.id + '">' + esc(t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1)) + '</option>'; }).join('');
+    $('fSubproceso').innerHTML = SUBPROCESOS.map(function(s) { return '<option value="' + s.clave + '">' + s.nombre + '</option>'; }).join('');
 
     const soloAuditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
     $('fAuditora').innerHTML = (soloAuditoras.length ? soloAuditoras : usuarios)
@@ -377,8 +481,144 @@ async function cargarAuditorias() {
         .order('hora_programada');
     if (error) { $('grilla').innerHTML = '<div class="cargando">Error: ' + error.message + '</div>'; return; }
     auditorias = data || [];
+    // Campos nuevos (tipo, subproceso, línea) que la vista no trae
+    if (auditorias.length) {
+        const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso, linea_id').in('id', auditorias.map(function(x) { return x.id; }));
+        (extra || []).forEach(function(e) {
+            const c = auditorias.find(function(x) { return x.id === e.id; });
+            if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; c.linea_id = e.linea_id; }
+        });
+    }
     pintar();
+    cargarLineas();
 }
+
+// ---------- Auditorías en proceso (agrupadas por línea) ----------
+async function cargarLineas() {
+    const tp = tipoProceso();
+    if (!tp) { $('lineas').innerHTML = '<div class="vacio-lineas">No existe el tipo "proceso" en la base de datos.</div>'; return; }
+    const { data, error } = await supabase.from('auditorias')
+        .select('id, linea_id, subproceso, estado, resultado, fecha_programada, hora_programada, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, tipo_id, programada_por')
+        .eq('tipo_id', tp.id).neq('estado', 'cancelada').order('id');
+    if (error) { $('lineas').innerHTML = '<div class="vacio-lineas">Error: ' + esc(error.message) + '</div>'; return; }
+    const grupos = {};
+    (data || []).forEach(function(r) {
+        const k = r.linea_id || r.id;
+        (grupos[k] = grupos[k] || []).push(r);
+    });
+    lineasProceso = Object.keys(grupos).map(function(k) {
+        const filas = grupos[k].sort(function(a, b) { return ordenSub(a.subproceso) - ordenSub(b.subproceso); });
+        return armarLinea(+k, filas);
+    });
+    pintarLineas();
+}
+
+function armarLinea(id, filas) {
+    const base = filas[0];
+    const maxOrden = filas.reduce(function(m, f) { return Math.max(m, ordenSub(f.subproceso)); }, -1);
+    const estados = SUBPROCESOS.map(function(s, i) {
+        const fila = filas.find(function(f) { return f.subproceso === s.clave; });
+        if (fila) return { sub: s, fila: fila, estado: fila.estado === 'finalizada' ? 'hecho' : fila.estado === 'en_curso' ? 'en_curso' : 'programado' };
+        return { sub: s, fila: null, estado: i < maxOrden ? 'omitido' : 'pendiente' };
+    });
+    const ultima = estados[maxOrden];
+    const completa = maxOrden === SUBPROCESOS.length - 1 && ultima && ultima.estado === 'hecho';
+    return { id: id, base: base, filas: filas, estados: estados, maxOrden: maxOrden, ultima: ultima, completa: completa };
+}
+
+function pintarLineas() {
+    const a = $('filtroAuditora').value;
+    const visibles = lineasProceso.filter(function(l) {
+        return !l.completa && (!a || l.filas.some(function(f) { return f.auditora_id === a; }));
+    });
+    if (!visibles.length) { $('lineas').innerHTML = '<div class="vacio-lineas">No hay auditorías de proceso abiertas.</div>'; return; }
+    $('lineas').innerHTML = visibles.map(function(l) {
+        const prov = proveedores.find(function(p) { return p.id === l.base.proveedor_id; });
+        let estadoTxt;
+        if (l.ultima.estado === 'hecho') {
+            const sig = SUBPROCESOS[l.maxOrden + 1];
+            estadoTxt = 'Siguiente: <b>' + sig.nombre + '</b> · sin programar';
+        } else {
+            estadoTxt = '<b>' + l.ultima.sub.nombre + '</b> · ' + (l.ultima.estado === 'en_curso' ? 'en curso' : 'programado para el ' + fechaCorta(l.ultima.fila.fecha_programada));
+        }
+        return '<div class="linea" onclick="abrirLinea(' + l.id + ')">' +
+            '<div class="l-ref">' + esc(l.base.referencia || 'Sin referencia') + (l.base.sku ? ' <small style="font-weight:500; color:var(--texto-claro)">(' + esc(l.base.sku) + ')</small>' : '') + '</div>' +
+            '<div class="l-sub">' + esc(prov ? prov.nombre : '') + (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + '</div>' +
+            '<div class="pasos-linea">' + l.estados.map(function(e) { return '<div class="pl ' + e.estado + '" title="' + e.sub.nombre + '">' + ({ corte: 'Corte', estampado: 'Estamp.', bordado: 'Bordado', lavanderia: 'Lavand.', sublimado: 'Sublim.', confeccion: 'Confec.' })[e.sub.clave] + '</div>'; }).join('') + '</div>' +
+            '<div class="l-estado">' + estadoTxt + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+// ---------- Panel de una línea ----------
+window.abrirLinea = function(id) {
+    lineaAbierta = lineasProceso.find(function(l) { return l.id === id; });
+    if (!lineaAbierta) return;
+    pintarPanelLinea();
+    $('modalLinea').classList.add('abierto');
+};
+function pintarPanelLinea() {
+    const l = lineaAbierta;
+    const prov = proveedores.find(function(p) { return p.id === l.base.proveedor_id; });
+    $('mensajeLinea').className = 'mensaje';
+    $('tituloLinea').textContent = (l.base.referencia || 'Línea de proceso');
+    const auditoraNombre = function(id) { const u = usuarios.find(function(x) { return x.id === id; }); return u ? u.nombre : ''; };
+    const etiqueta = { hecho: '✓ Realizado', programado: 'Programado', en_curso: 'En curso', omitido: 'No aplica', pendiente: 'Pendiente' };
+
+    let html = '<div style="font-size:13px; color:var(--texto-claro); margin-bottom:16px;">' + esc(prov ? prov.nombre : '') +
+        (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + (l.base.sku ? ' · SKU ' + esc(l.base.sku) : '') + '</div>';
+    html += '<div class="sub-lista">' + l.estados.map(function(e, i) {
+        let detalle = etiqueta[e.estado];
+        if (e.fila && e.estado !== 'hecho') detalle += ' · ' + fechaCorta(e.fila.fecha_programada) + ' ' + (e.fila.hora_programada || '').slice(0, 5);
+        if (e.fila) detalle += ' · ' + esc(auditoraNombre(e.fila.auditora_id));
+        const accion = e.fila ? '<button class="btn-mini" onclick="irSubproceso(' + e.fila.id + ')">' + (e.estado === 'hecho' ? 'Ver / editar' : e.estado === 'en_curso' ? 'Continuar' : 'Iniciar') + '</button>' : '';
+        return '<div class="sub-fila ' + e.estado + '"><div class="num">' + (i + 1) + '</div><div class="nombre">' + e.sub.nombre + '<small>' + detalle + '</small></div>' + accion + '</div>';
+    }).join('') + '</div>';
+
+    // Programar el siguiente subproceso (solo cuando el último ya terminó)
+    if (l.ultima && l.ultima.estado === 'hecho' && l.maxOrden < SUBPROCESOS.length - 1) {
+        const opciones = SUBPROCESOS.slice(l.maxOrden + 1);
+        const auditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
+        html += '<div class="caja-siguiente"><h3>Programar el siguiente subproceso</h3><div class="rejilla">' +
+            '<div class="campo"><label>Subproceso</label><select id="sigSub">' + opciones.map(function(s) { return '<option value="' + s.clave + '">' + s.nombre + '</option>'; }).join('') + '</select>' +
+                '<div class="pista">Si eliges uno más adelante, los anteriores quedan como "No aplica".</div></div>' +
+            '<div class="campo"><label>Auditora</label><select id="sigAud">' + (auditoras.length ? auditoras : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === l.ultima.fila.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
+            '<div class="campo"><label>Fecha</label><input type="date" id="sigFecha" value="' + hoyISO + '"></div>' +
+            '<div class="campo"><label>Hora</label><input type="time" id="sigHora" value="08:00"></div>' +
+        '</div><button class="btn-guardar" style="width:100%; margin-top:14px;" onclick="programarSiguiente()">Programar</button></div>';
+    } else if (l.ultima && l.ultima.estado !== 'hecho') {
+        html += '<div class="pista" style="margin-top:14px; font-size:12px;">Cuando se termine <b>' + l.ultima.sub.nombre + '</b> podrás programar el siguiente subproceso desde aquí.</div>';
+    }
+    $('cuerpoLinea').innerHTML = html;
+}
+window.irSubproceso = function(id) { location.href = 'proceso.html?id=' + id; };
+window.programarSiguiente = async function() {
+    const l = lineaAbierta, b = l.base;
+    const datos = {
+        proveedor_id: b.proveedor_id, tipo_id: b.tipo_id, auditora_id: $('sigAud').value,
+        fecha_programada: $('sigFecha').value, hora_programada: $('sigHora').value,
+        numero_factura: b.numero_factura, referencia: b.referencia, coleccion: b.coleccion, sublinea: b.sublinea, sku: b.sku,
+        subproceso: $('sigSub').value, linea_id: l.id, programada_por: yo.id
+    };
+    if (!datos.fecha_programada || !datos.hora_programada) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = 'Elige fecha y hora.'; return; }
+    const { error } = await supabase.from('auditorias').insert(datos);
+    if (error) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = error.message; return; }
+    $('modalLinea').classList.remove('abierto');
+    await cargarAuditorias();
+};
+const cerrarLinea = function() { $('modalLinea').classList.remove('abierto'); };
+$('btnCerrarLinea').addEventListener('click', cerrarLinea);
+$('btnCerrarLinea2').addEventListener('click', cerrarLinea);
+$('btnEliminarLinea').addEventListener('click', async function() {
+    const l = lineaAbierta; if (!l) return;
+    if (!confirm('¿Estás segura de eliminar TODA la línea de proceso de ' + (l.base.referencia || 'esta referencia') + '?\n\nSe borrarán ' + l.filas.length + ' auditoría(s) de subproceso con sus checklists y fotos.\nEsta acción no se puede deshacer.')) return;
+    const btn = $('btnEliminarLinea'); btn.disabled = true; btn.textContent = 'Eliminando…';
+    try {
+        for (const f of l.filas) await eliminarAuditoria(f.id);
+        cerrarLinea(); await cargarAuditorias();
+    } catch (e) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = e.message; }
+    btn.disabled = false; btn.textContent = '🗑 Eliminar línea completa';
+});
 
 function pintar() {
     pintarRango();
@@ -406,6 +646,12 @@ function pintar() {
             htmlDia += delDia.map(function(c) {
                 const estilo = esquemaAuditoras[c.auditora_id] || PALETA_AUDITORAS[0];
                 return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" style="--color-auditora: ' + estilo.solido + '; --bg-auditora: ' + estilo.bg + '; --border-auditora: ' + estilo.border + ';" onclick="abrirCita(' + c.id + ')">' +
+                    (function() {
+                        const t = tipos.find(function(x) { return x.id === c.tipo_id; });
+                        if (!t) return '';
+                        const proc = esProceso(t.nombre);
+                        return '<div class="tipo-tag' + (proc ? ' proceso' : '') + '">' + esc(proc && c.subproceso ? 'Proceso · ' + nombreSub(c.subproceso) : t.nombre) + '</div>';
+                    })() +
                     '<div class="hora">' + (c.hora_programada || '').slice(0,5) + '</div>' +
                     '<div class="prov">' + c.proveedor + '</div>' +
                     '<div class="ref">' + (c.referencia || 'sin ref.') + '</div>' +
@@ -428,6 +674,7 @@ function abrirHoja(cita) {
     $('tituloHoja').textContent = cita ? 'Auditoría programada' : 'Programar auditoría';
     $('btnGuardar').textContent = cita ? 'Guardar cambios' : 'Programar';
     $('btnCancelarCita').style.display = cita && cita.estado === 'programada' ? '' : 'none';
+    $('btnEliminarCita').style.display = cita ? '' : 'none';
     $('btnEjecutar').style.display = cita && ['programada', 'en_curso'].includes(cita.estado) ? '' : 'none';
     $('btnEjecutar').textContent = cita && cita.estado === 'en_curso' ? '▶ Continuar auditoría' : '▶ Iniciar auditoría';
 
@@ -473,6 +720,10 @@ function abrirHoja(cita) {
     }
     $('fFotoRef').value = ''; 
     $('fPdfPatronaje').value = '';
+    $('fSubproceso').value = (cita && cita.subproceso) || 'corte';
+    // Un subproceso ya creado no cambia de lugar en la línea
+    $('fSubproceso').disabled = !!(cita && cita.subproceso);
+    actualizarCampoSubproceso();
     $('modal').classList.add('abierto');
 }
 
@@ -492,6 +743,11 @@ window.abrirCita = async function(id) {
     abrirHoja(cita);
 };
 
+function actualizarCampoSubproceso() {
+    const t = tipos.find(function(x) { return String(x.id) === String($('fTipo').value); });
+    $('campoSubproceso').style.display = t && esProceso(t.nombre) ? '' : 'none';
+}
+$('fTipo').addEventListener('change', actualizarCampoSubproceso);
 const cerrarHoja = function() { $('modal').classList.remove('abierto'); };
 $('btnCerrar').addEventListener('click', cerrarHoja);
 $('btnNueva').addEventListener('click', function() { abrirHoja(null); });
@@ -502,7 +758,8 @@ function esRevision3(nombre) {
 $('btnEjecutar').addEventListener('click', function() {
     if (!editando) return;
     const tipo = tipos.find(function(t) { return t.id === editando.tipo_id; });
-    location.href = (tipo && esRevision3(tipo.nombre) ? 'revision3.html' : 'auditoria.html') + '?id=' + editando.id;
+    const pagina = tipo && esRevision3(tipo.nombre) ? 'revision3.html' : tipo && esProceso(tipo.nombre) ? 'proceso.html' : 'auditoria.html';
+    location.href = pagina + '?id=' + editando.id;
 });
 
 // Auto-completar
@@ -535,6 +792,10 @@ $('btnGuardar').addEventListener('click', async () => {
         sku: $('fSku').value.trim().toUpperCase() || null,
         nota_programacion: $('fNota').value.trim() || null,
     };
+    const tipoSel = tipos.find(function(x) { return x.id === datos.tipo_id; });
+    const esProc = tipoSel && esProceso(tipoSel.nombre);
+    if (esProc) datos.subproceso = $('fSubproceso').value;
+    else datos.subproceso = null;
 
     if (!datos.proveedor_id || !datos.tipo_id || !datos.auditora_id || !datos.fecha_programada || !datos.hora_programada) {
         msg.className = 'mensaje error'; msg.textContent = 'Faltan datos obligatorios.'; return;
@@ -551,6 +812,8 @@ $('btnGuardar').addEventListener('click', async () => {
         const { data, error } = await supabase.from('auditorias').insert({ ...datos, programada_por: yo.id }).select().single();
         if (error) { msg.className = 'mensaje error'; msg.textContent = error.message; btn.disabled = false; return; }
         idGuardado = data.id;
+        // Una auditoría de proceso nueva inicia su propia línea
+        if (esProc) await supabase.from('auditorias').update({ linea_id: idGuardado }).eq('id', idGuardado);
     }
 
     // Subir fotografía de referencia si existe
@@ -588,10 +851,21 @@ $('btnCancelarCita').addEventListener('click', async () => {
     cerrarHoja(); await cargarAuditorias();
 });
 
+$('btnEliminarCita').addEventListener('click', async () => {
+    if (!editando) return;
+    const tipo = tipos.find(function(t) { return t.id === editando.tipo_id; });
+    const que = (editando.referencia || 'sin referencia') + (tipo ? ' (' + tipo.nombre + (editando.subproceso ? ' · ' + nombreSub(editando.subproceso) : '') + ')' : '');
+    if (!confirm('¿Estás segura de eliminar esta auditoría?\n\n' + que + '\n\nSe borrará con todos sus datos y fotos. Esta acción no se puede deshacer.')) return;
+    const btn = $('btnEliminarCita'); btn.disabled = true; btn.textContent = 'Eliminando…';
+    try { await eliminarAuditoria(editando.id); cerrarHoja(); await cargarAuditorias(); }
+    catch (e) { $('mensajeHoja').className = 'mensaje error'; $('mensajeHoja').textContent = e.message; }
+    btn.disabled = false; btn.textContent = '🗑 Eliminar';
+});
+
 $('antes').addEventListener('click', function() { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
 $('despues').addEventListener('click', function() { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
 $('hoy').addEventListener('click', function() { lunes = inicioSemana(new Date()); cargarAuditorias(); });
-$('filtroAuditora').addEventListener('change', pintar);
+$('filtroAuditora').addEventListener('change', function() { pintar(); pintarLineas(); });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 await cargarCatalogos(); await cargarAuditorias(); cargarReferencias();
