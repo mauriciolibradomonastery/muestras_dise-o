@@ -165,6 +165,41 @@
     .res-nocumple { color: var(--vino); font-weight: 700; }
     .res-pendiente { color: #E0A21B; font-weight: 700; }
 
+    /* Historial de la referencia y procesos previos */
+    .hilo { display: flex; flex-direction: column; gap: 0; }
+    .hilo-paso { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; margin-bottom: 6px; font-size: 12px; background: #fff; }
+    .hilo-paso.actual { border-color: var(--tinta); box-shadow: 0 0 0 1px var(--tinta); }
+    .hilo-paso .h-fecha { min-width: 74px; font-weight: 700; color: var(--tinta); }
+    .hilo-paso .h-info { flex: 1; color: var(--texto); line-height: 1.4; }
+    .hilo-paso .h-info small { color: var(--texto-claro); }
+    .bloque-sub { border: 1px solid var(--borde); border-radius: 10px; padding: 12px; margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid; }
+    .bloque-sub .cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .bloque-sub .cab b { font-size: 13px; color: var(--tinta); }
+    .bloque-sub .cab small { font-size: 11px; color: var(--texto-claro); }
+    .bloque-sub .obs-sub { font-size: 12px; background: #F9F8F6; border-radius: 6px; padding: 8px 10px; margin-top: 8px; color: var(--tinta); }
+    .adj-sub { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .adj-sub img { width: 90px; height: 110px; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde); }
+    .adj-sub a.doc { font-size: 11px; padding: 6px 10px; border: 1px solid var(--borde); border-radius: 6px; text-decoration: none; color: var(--tinta); }
+
+    /* Botón eliminar en historiales */
+    .btn-borrar { background: #fff; border: 1px solid #E8C4C6; color: var(--vino); border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; font-family: inherit; transition: var(--transicion); }
+    .btn-borrar:hover { background: var(--vino); color: #fff; border-color: var(--vino); }
+    .btn-borrar:disabled { opacity: .5; cursor: wait; }
+
+    /* Historial de la referencia y procesos previos (informe) */
+    .hilo { display: flex; flex-direction: column; gap: 8px; }
+    .hilo-paso { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; font-size: 12px; background: #fff; }
+    .hilo-paso.actual { border-color: var(--tinta); box-shadow: 0 0 0 1px var(--tinta); }
+    .hilo-paso .hp-fecha { min-width: 78px; font-weight: 700; color: var(--tinta); }
+    .hilo-paso .hp-info { flex: 1; color: var(--texto); line-height: 1.45; }
+    .bloque-sub { border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid; }
+    .bloque-sub .bs-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .bloque-sub .bs-cab b { font-size: 14px; color: var(--tinta); }
+    .bloque-sub .bs-cab span { font-size: 11px; color: var(--texto-claro); }
+    .adj-proceso { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .adj-proceso img { width: 90px; height: 110px; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde); }
+    .adj-proceso a.doc { font-size: 11px; padding: 6px 10px; border: 1px solid var(--borde); border-radius: 6px; text-decoration: none; color: var(--tinta); }
+
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500; font-size: 16px;}
 
     @media (max-width: 768px) {
@@ -224,10 +259,10 @@
         <div style="overflow-x: auto;">
             <table>
                 <thead>
-                    <tr><th>Fecha</th><th>Tipo</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Auditadas</th><th>Resultado</th><th></th></tr>
+                    <tr><th>Fecha</th><th>Tipo</th><th>Proveedor</th><th>Referencia (SKU)</th><th>Auditora</th><th>Auditadas</th><th>Resultado</th><th></th><th></th></tr>
                 </thead>
                 <tbody id="tablaAuditorias">
-                    <tr><td colspan="8">Cargando datos...</td></tr>
+                    <tr><td colspan="9">Cargando datos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -250,7 +285,7 @@
             <h2>Historial de Revisiones 3%</h2>
             <div style="overflow-x: auto;">
                 <table>
-                    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>N° Orden de Compra</th><th>Auditora</th><th class="num">Producción</th><th class="num">Revisadas (3%)</th><th class="num">Con hallazgos</th><th>Resultado</th><th></th></tr></thead>
+                    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Referencia (SKU)</th><th>N° Orden de Compra</th><th>Auditora</th><th class="num">Producción</th><th class="num">Revisadas (3%)</th><th class="num">Con hallazgos</th><th>Resultado</th><th></th><th></th></tr></thead>
                     <tbody id="tablaRev3"></tbody>
                 </table>
             </div>
@@ -314,7 +349,7 @@ async function init() {
         supabase.from('auditoria_usuarios').select('id, nombre')
     ]);
 
-    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="8" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
+    if (resAuds.error) { $('tablaAuditorias').innerHTML = '<tr><td colspan="9" style="color:#8C2026">Error: ' + resAuds.error.message + '</td></tr>'; return; }
     
     const usuariosNombres = {};
     if (resUsuarios.data) resUsuarios.data.forEach(u => usuariosNombres[u.id] = u.nombre);
@@ -372,10 +407,11 @@ function renderData() {
             <td>${a.cantidad_auditada || 0}</td>
             <td><span class="estado-${a.resultado ? a.resultado.toLowerCase() : ''}">${a.resultado ? a.resultado.toUpperCase() : 'N/A'}</span></td>
             <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver Pro ›</td>
+            <td style="text-align:right;"><button class="btn-borrar" title="Eliminar esta auditoría" onclick="event.stopPropagation(); borrarDelHistorial(${Number(a.id)}, this)">🗑</button></td>
         </tr>`;
     });
 
-    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="8">No hay resultados para los filtros seleccionados.</td></tr>';
+    $('tablaAuditorias').innerHTML = htmlTabla || '<tr><td colspan="9">No hay resultados para los filtros seleccionados.</td></tr>';
 
     const indiceDefectos = totalAuditado > 0 ? ((totalDefectos / totalAuditado) * 100).toFixed(2) : 0;
     const tamanoMuestra = totalLote > 0 ? ((totalAuditado / totalLote) * 100).toFixed(2) : 0;
@@ -567,6 +603,113 @@ function htmlResumenInspeccion(det, plan, rDef, med, prue, evis) {
         </tbody></table>`;
 }
 
+// ================= ELIMINAR UNA AUDITORÍA DEL HISTORIAL (individual) =================
+window.borrarDelHistorial = async function(id, btn) {
+    const a = auditorias.find(x => x.id === id);
+    if (!a) return;
+    const tipoBase = a.auditoria_tipos ? a.auditoria_tipos.nombre : 'auditoría';
+    const tipo = /auditor|revisi/i.test(tipoBase) ? tipoBase : 'auditoría ' + tipoBase;
+    const prov = a.auditoria_proveedores ? a.auditoria_proveedores.nombre : '';
+    const texto = '¿Estás segura de eliminar esta ' + tipo + '?\n\n' +
+        (a.referencia || 'Sin referencia') + (prov ? ' · ' + prov : '') + ' · ' + (a.fecha_auditoria || '') + ' · ' + String(a.resultado || '').toUpperCase() + '\n\n' +
+        'Se borrará con sus defectos, medidas, pruebas y fotos, y dejará de contar en los indicadores y en la calificación del proveedor.\nEsta acción no se puede deshacer.';
+    if (!confirm(texto)) return;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+        const tablas = ['auditoria_cantidades', 'auditoria_defectos', 'auditoria_medidas', 'auditoria_pruebas', 'auditoria_evidencias'];
+        await Promise.all(tablas.map(t => supabase.from(t).delete().eq('auditoria_id', id)));
+        try {
+            const { data: archivos } = await supabase.storage.from('auditorias-evidencias').list(String(id));
+            if (archivos && archivos.length) await supabase.storage.from('auditorias-evidencias').remove(archivos.map(f => id + '/' + f.name));
+        } catch (e) { console.warn(e); }
+        const { data, error } = await supabase.from('auditorias').delete().eq('id', id).select('id');
+        if (error) throw error;
+        if (!data || !data.length) throw new Error('La base de datos no permitió eliminarla.');
+        auditorias = auditorias.filter(x => x.id !== id);
+        renderData();
+    } catch (e) {
+        alert('No se pudo eliminar: ' + (e.message || e));
+        btn.disabled = false; btn.textContent = '🗑';
+    }
+};
+
+// ================= HISTORIAL DE LA REFERENCIA Y PROCESOS PREVIOS (informe) =================
+const SUBPROCESOS_R = ['corte', 'estampado', 'bordado', 'lavanderia', 'sublimado', 'confeccion'];
+const NOMBRE_SUB_R = { corte: 'Corte', estampado: 'Estampado', bordado: 'Bordado', lavanderia: 'Lavandería', sublimado: 'Sublimado', confeccion: 'Confección' };
+async function htmlHistorialYProceso(det, usuarios) {
+    const { data: tiposTodos } = await supabase.from('auditoria_tipos').select('id, nombre');
+    const tipoDe = id => { const t = (tiposTodos || []).find(x => x.id === id); return t ? t.nombre : ''; };
+    const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const esProc = id => norm(tipoDe(id)).indexOf('proceso') === 0;
+    const nombreUsuario = id => { const u = usuarios.find(x => x.id === id); return u ? u.nombre : ''; };
+    const campos = 'id, tipo_id, linea_id, fecha_auditoria, fecha_programada, resultado, sugerencia_aql, auditora_id, estado';
+
+    // Hacia atrás: auditorías de las que viene (y la línea de proceso)
+    const previas = []; let lineaProceso = null; let actual = det;
+    for (let i = 0; i < 10 && actual.linea_id; i++) {
+        const { data: prev } = await supabase.from('auditorias').select(campos).eq('id', actual.linea_id).maybeSingle();
+        if (!prev) break;
+        if (esProc(prev.tipo_id)) { lineaProceso = prev.linea_id || prev.id; break; }
+        previas.unshift(prev); actual = prev;
+    }
+    // Hacia adelante: re-auditorías que vinieron después
+    const posteriores = []; let ultimo = det;
+    for (let i = 0; i < 10; i++) {
+        const { data: sig } = await supabase.from('auditorias').select(campos).eq('linea_id', ultimo.id).neq('estado', 'cancelada').order('id');
+        const r = (sig || []).find(x => !esProc(x.tipo_id));
+        if (!r) break;
+        posteriores.push(r); ultimo = r;
+    }
+
+    let html = '';
+    const hilo = previas.concat([Object.assign({}, det, { _actual: true })]).concat(posteriores);
+    if (hilo.length > 1) {
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Historial de la referencia</h4><div class="hilo">` +
+            hilo.map(h => {
+                const res = h.estado === 'finalizada' ? (h.resultado === 'aprobado' ? '<span class="res-cumple">APROBADA</span>' : h.resultado === 'rechazado' ? '<span class="res-nocumple">RECHAZADA</span>' : '') : '<span class="res-pendiente">' + (h.estado === 'en_curso' ? 'EN CURSO' : 'PROGRAMADA') + '</span>';
+                const motivo = h.resultado === 'rechazado' && h.sugerencia_aql ? '<br><span style="color:var(--texto-claro)">' + esc(String(h.sugerencia_aql).replace(/\s*\[.*\]\s*$/, '').replace(/^Sugerencia AQL:\s*/i, 'Motivo: ')) + '</span>' : '';
+                const tipoTxt = (h.auditoria_tipos ? h.auditoria_tipos.nombre : tipoDe(h.tipo_id));
+                return `<div class="hilo-paso${h._actual ? ' actual' : ''}"><div class="hp-fecha">${esc(h.fecha_auditoria || h.fecha_programada || '—')}</div>
+                    <div class="hp-info"><b>${esc(tipoTxt.charAt(0).toUpperCase() + tipoTxt.slice(1))}</b> · ${res} · ${esc(nombreUsuario(h.auditora_id))}${h._actual ? ' · <i>este informe</i>' : ''}${motivo}</div></div>`;
+            }).join('') + `</div></div>`;
+    }
+
+    // Auditorías de proceso previas
+    if (lineaProceso) {
+        const { data: subs } = await supabase.from('auditorias').select('id, subproceso, fecha_auditoria, fecha_programada, auditora_id, estado, resultado, observaciones, tipo_id')
+            .or('linea_id.eq.' + lineaProceso + ',id.eq.' + lineaProceso).neq('estado', 'cancelada');
+        const lista = (subs || []).filter(x => esProc(x.tipo_id)).sort((a, b) => SUBPROCESOS_R.indexOf(a.subproceso || 'corte') - SUBPROCESOS_R.indexOf(b.subproceso || 'corte'));
+        if (lista.length) {
+            const ids = lista.map(x => x.id);
+            const [pr, ev] = await Promise.all([
+                supabase.from('auditoria_pruebas').select('auditoria_id, prueba, resultado, observacion').in('auditoria_id', ids).order('id'),
+                supabase.from('auditoria_evidencias').select('auditoria_id, url, nombre').in('auditoria_id', ids)
+            ]);
+            const marca = (r, v) => r === v ? (v === 'PASS' ? '<span class="res-cumple">✓</span>' : v === 'FAIL' ? '<span class="res-nocumple">✕</span>' : '<b>N/A</b>') : '';
+            html += `<div class="seccion-detalle"><h4 class="titulo-informe">Auditorías de proceso previas</h4>` + lista.map(sp => {
+                const items = (pr.data || []).filter(x => x.auditoria_id === sp.id);
+                const adj = (ev.data || []).filter(x => x.auditoria_id === sp.id && !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(x.nombre));
+                const estado = sp.estado !== 'finalizada' ? '<span class="res-pendiente">' + (sp.estado === 'en_curso' ? 'EN CURSO' : 'PROGRAMADO') + '</span>'
+                    : sp.resultado === 'rechazado' ? '<span class="res-nocumple">NO CUMPLE</span>' : sp.resultado === 'aprobado' ? '<span class="res-cumple">CUMPLE</span>' : '<span class="res-cumple">REALIZADO</span>';
+                let b = `<div class="bloque-sub"><div class="bs-cab"><b>${NOMBRE_SUB_R[sp.subproceso || 'corte'] || esc(sp.subproceso)}</b>
+                    <span>${esc(sp.fecha_auditoria || sp.fecha_programada || '')} · ${esc(nombreUsuario(sp.auditora_id))} · ${estado}</span></div>`;
+                if (items.length) {
+                    b += `<table class="tabla-informe"><thead><tr><th style="text-align:left">Descripción</th><th style="width:70px">Cumple</th><th style="width:80px">No cumple</th><th style="width:50px">N/A</th><th>Observaciones</th></tr></thead><tbody>` +
+                        items.map(it => `<tr><td>${esc(it.prueba)}</td><td class="centro">${marca(it.resultado, 'PASS')}</td><td class="centro">${marca(it.resultado, 'FAIL')}</td><td class="centro">${marca(it.resultado, 'N/A')}</td><td>${esc(it.observacion || '')}</td></tr>`).join('') +
+                        `</tbody></table>`;
+                }
+                if (sp.observaciones) b += `<p style="font-size:12px; margin:8px 0 0; color:var(--tinta);"><b>Observaciones:</b> ${esc(sp.observaciones)}</p>`;
+                if (adj.length) b += `<div class="adj-proceso">` + adj.map(x => /\.(jpe?g|png|gif|webp|heic)$/i.test(x.url) || /\.(jpe?g|png|gif|webp|heic)$/i.test(x.nombre || '')
+                    ? `<a href="${esc(x.url)}" target="_blank"><img src="${esc(x.url)}" crossorigin="anonymous"></a>`
+                    : `<a class="doc" href="${esc(x.url)}" target="_blank">📄 ${esc(x.nombre || 'Documento')}</a>`).join('') + `</div>`;
+                if (!items.length && !sp.observaciones && !adj.length) b += `<p style="font-size:12px; color:var(--texto-claro); margin:0;">Sin datos registrados.</p>`;
+                return b + `</div>`;
+            }).join('') + `</div>`;
+        }
+    }
+    return html;
+}
+
 // ================= REVISIONES 3% (VISTA INDEPENDIENTE) =================
 function hallazgosDe(a) {
     const r = { total: 0, medidas: 0, procesos: {} };
@@ -606,9 +749,10 @@ function renderRev3(list) {
             <td class="num"><b style="color:${h.total ? 'var(--vino)' : 'var(--verde)'}">${fmtN(h.total)}</b></td>
             <td><span class="estado-${esc((a.resultado || '').toLowerCase())}">${esc((a.resultado || 'N/A').toUpperCase())}</span></td>
             <td style="color: var(--laton); text-align:right; font-weight: 600;">Ver informe ›</td>
+            <td style="text-align:right;"><button class="btn-borrar" title="Eliminar esta revisión" onclick="event.stopPropagation(); borrarDelHistorial(${Number(a.id)}, this)">🗑</button></td>
         </tr>`;
     });
-    $('tablaRev3').innerHTML = filas.join('') || '<tr><td colspan="10">No hay revisiones 3% finalizadas para los filtros seleccionados.</td></tr>';
+    $('tablaRev3').innerHTML = filas.join('') || '<tr><td colspan="11">No hay revisiones 3% finalizadas para los filtros seleccionados.</td></tr>';
 
     const calif = list.length ? Math.round(aprobadas / list.length * 100) : 0;
     const pctH = revisadas ? (hallazgos / revisadas * 100).toFixed(2) : '0.00';
@@ -871,6 +1015,104 @@ function renderInformeDefecto() {
     cont.innerHTML = cabeza + kpis + tablaRefs + tablaDetalle;
 }
 
+// ================= HISTORIAL DE LA REFERENCIA Y PROCESOS PREVIOS =================
+const SUBS_ORDEN = ['corte', 'estampado', 'bordado', 'lavanderia', 'sublimado', 'confeccion'];
+const SUBS_NOMBRE = { corte: 'Corte', estampado: 'Estampado', bordado: 'Bordado', lavanderia: 'Lavandería', sublimado: 'Sublimado', confeccion: 'Confección' };
+const normalT = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+const fechaTxt = f => { if (!f) return '—'; const d = new Date(f + 'T00:00:00'); return d.getDate() + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()] + ' ' + d.getFullYear(); };
+const resTxt = r => r === 'aprobado' ? '<span class="res-cumple">APROBADA</span>' : r === 'rechazado' ? '<span class="res-nocumple">RECHAZADA</span>' : '<span class="res-pendiente">SIN RESULTADO</span>';
+const motivoLimpio = t => String(t || '').replace(/\s*\[.*\]\s*$/, '').replace(/^Sugerencia AQL:\s*/i, '');
+
+async function htmlHistorialYProcesos(det, usuarios) {
+    const { data: tiposBD } = await supabase.from('auditoria_tipos').select('id, nombre');
+    const nombreTipo = id => { const t = (tiposBD || []).find(x => x.id === id); return t ? t.nombre : ''; };
+    const esProc = id => normalT(nombreTipo(id)).indexOf('proceso') === 0;
+    const auditora = id => { const u = usuarios.find(x => x.id === id); return u ? u.nombre : ''; };
+    const campos = 'id, tipo_id, linea_id, fecha_auditoria, fecha_programada, resultado, sugerencia_aql, auditora_id, estado';
+
+    // Hacia atrás: auditorías anteriores (final rechazada, re-auditorías) hasta llegar al proceso
+    const anteriores = []; let lineaProceso = null; let actual = det;
+    for (let i = 0; i < 10 && actual.linea_id; i++) {
+        const { data: prev } = await supabase.from('auditorias').select(campos).eq('id', actual.linea_id).maybeSingle();
+        if (!prev) break;
+        if (esProc(prev.tipo_id)) { lineaProceso = prev.linea_id || prev.id; break; }
+        anteriores.unshift(prev); actual = prev;
+    }
+    // Hacia adelante: re-auditorías posteriores
+    const posteriores = []; let ultimo = det;
+    for (let i = 0; i < 10; i++) {
+        const { data: sig } = await supabase.from('auditorias').select(campos).eq('linea_id', ultimo.id).neq('estado', 'cancelada').order('id').limit(1);
+        const s = (sig || []).find(x => !esProc(x.tipo_id));
+        if (!s) break;
+        posteriores.push(s); ultimo = s;
+    }
+
+    let html = '';
+    const hilo = anteriores.concat([det], posteriores);
+    if (hilo.length > 1) {
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Historial de la referencia</h4><div class="hilo">` +
+            hilo.map(a => {
+                const esEste = a.id === det.id;
+                const motivo = a.resultado === 'rechazado' ? motivoLimpio(a.sugerencia_aql) : '';
+                return `<div class="hilo-paso${esEste ? ' actual' : ''}">
+                    <div class="h-fecha">${fechaTxt(a.fecha_auditoria || a.fecha_programada)}</div>
+                    <div class="h-info"><b>${esc(nombreTipo(a.tipo_id).charAt(0).toUpperCase() + nombreTipo(a.tipo_id).slice(1))}</b> · ${a.estado === 'finalizada' ? resTxt(a.resultado) : '<span class="res-pendiente">' + (a.estado === 'en_curso' ? 'EN CURSO' : 'PROGRAMADA') + '</span>'}
+                        ${esEste ? ' <small>(este informe)</small>' : ''} · <small>${esc(auditora(a.auditora_id))}</small>
+                        ${motivo ? `<br><small>Motivo: ${esc(motivo)}</small>` : ''}</div>
+                </div>`;
+            }).join('') + `</div></div>`;
+    }
+
+    // Auditorías de proceso previas
+    if (!lineaProceso) {
+        // Por si la primera de la cadena tiene la línea de proceso
+        const primera = hilo[0];
+        if (primera && primera.linea_id) {
+            const { data: p0 } = await supabase.from('auditorias').select(campos).eq('id', primera.linea_id).maybeSingle();
+            if (p0 && esProc(p0.tipo_id)) lineaProceso = p0.linea_id || p0.id;
+        }
+    }
+    if (lineaProceso) {
+        const { data: subs } = await supabase.from('auditorias').select('id, tipo_id, subproceso, estado, resultado, observaciones, fecha_auditoria, fecha_programada, auditora_id')
+            .or('linea_id.eq.' + lineaProceso + ',id.eq.' + lineaProceso).neq('estado', 'cancelada');
+        const filas = (subs || []).filter(x => esProc(x.tipo_id))
+            .map(x => Object.assign(x, { subproceso: SUBS_ORDEN.includes(x.subproceso) ? x.subproceso : 'corte' }))
+            .sort((a, b) => SUBS_ORDEN.indexOf(a.subproceso) - SUBS_ORDEN.indexOf(b.subproceso));
+        if (filas.length) {
+            const ids = filas.map(x => x.id);
+            const [pr, ev] = await Promise.all([
+                supabase.from('auditoria_pruebas').select('*').in('auditoria_id', ids).order('id'),
+                supabase.from('auditoria_evidencias').select('*').in('auditoria_id', ids).order('id')
+            ]);
+            const pruebasDe = id => (pr.data || []).filter(x => x.auditoria_id === id);
+            const adjDe = id => (ev.data || []).filter(x => x.auditoria_id === id && !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(x.nombre));
+            const marca = (v, r) => v === r ? (r === 'PASS' ? '<span class="res-cumple">✓</span>' : r === 'FAIL' ? '<span class="res-nocumple">✕</span>' : '<b>N/A</b>') : '';
+            html += `<div class="seccion-detalle"><h4 class="titulo-informe">Auditorías de proceso previas</h4>` +
+                filas.map(f => {
+                    const items = pruebasDe(f.id), adj = adjDe(f.id);
+                    const estado = f.estado !== 'finalizada' ? '<span class="res-pendiente">' + (f.estado === 'en_curso' ? 'EN CURSO' : 'PROGRAMADO') + '</span>'
+                        : f.subproceso === 'confeccion' ? '<span class="res-cumple">REALIZADO</span>'
+                        : f.resultado === 'rechazado' ? '<span class="res-nocumple">NO CUMPLE</span>' : '<span class="res-cumple">CUMPLE</span>';
+                    let b = `<div class="bloque-sub"><div class="cab"><b>${SUBS_NOMBRE[f.subproceso]}</b><span>${estado} <small>· ${fechaTxt(f.fecha_auditoria || f.fecha_programada)} · ${esc(auditora(f.auditora_id))}</small></span></div>`;
+                    if (items.length) {
+                        b += `<table class="tabla-informe"><thead><tr><th style="text-align:left">Descripción</th><th style="width:70px">Cumple</th><th style="width:80px">No cumple</th><th style="width:50px">N/A</th><th>Observaciones</th></tr></thead><tbody>` +
+                            items.map(it => `<tr><td>${esc(it.prueba)}</td><td class="centro">${marca(it.resultado, 'PASS')}</td><td class="centro">${marca(it.resultado, 'FAIL')}</td><td class="centro">${marca(it.resultado, 'N/A')}</td><td>${esc(it.observacion || '')}</td></tr>`).join('') +
+                            `</tbody></table>`;
+                    }
+                    if (f.observaciones) b += `<div class="obs-sub"><b>Observaciones:</b> ${esc(f.observaciones)}</div>`;
+                    if (adj.length) {
+                        b += `<div class="adj-sub">` + adj.map(a => /\.(jpe?g|png|gif|webp|heic)(\?|$)/i.test(a.url) || /\.(jpe?g|png|gif|webp|heic)$/i.test(a.nombre || '')
+                            ? `<a href="${esc(a.url)}" target="_blank"><img src="${esc(a.url)}" crossorigin="anonymous"></a>`
+                            : `<a class="doc" href="${esc(a.url)}" target="_blank">📄 ${esc(a.nombre || 'Documento')}</a>`).join('') + `</div>`;
+                    }
+                    if (!items.length && !f.observaciones && !adj.length) b += `<div style="font-size:12px; color:var(--texto-claro)">Sin datos registrados.</div>`;
+                    return b + `</div>`;
+                }).join('') + `</div>`;
+        }
+    }
+    return html;
+}
+
 window.verDetalle = async function(id) {
     $('modalDetalle').classList.add('abierto');$('cuerpoDetalle').innerHTML = '<div class="cargando">Cargando reporte técnico de auditoría…</div>';
     
@@ -940,7 +1182,7 @@ window.verDetalle = async function(id) {
         <div class="pdf-encabezado">
             <div class="marca">
                 <h3>MONASTERY</h3>
-                <p>INFORME TÉCNICO DE AUDITORÍA DE CALIDAD · AUDITORÍA ${det.auditoria_tipos ? det.auditoria_tipos.nombre.toUpperCase() : 'DE PRENDA'}</p>
+                <p>INFORME TÉCNICO DE AUDITORÍA DE CALIDAD · ${det.auditoria_tipos ? (/auditor/i.test(det.auditoria_tipos.nombre) ? '' : 'AUDITORÍA ') + det.auditoria_tipos.nombre.toUpperCase() : 'AUDITORÍA DE PRENDA'}</p>
             </div>
             <img src="logo.png" alt="Logo Monastery" onerror="this.style.display='none'">
         </div>
@@ -1029,6 +1271,12 @@ window.verDetalle = async function(id) {
             html += `</tbody></table>`;
         } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron pruebas físicas.</p>`; }
         html += `</div>`;
+
+        // HISTORIAL DE LA REFERENCIA + AUDITORÍAS DE PROCESO PREVIAS
+        try { html += await htmlHistorialYProcesos(det, usuarios); } catch (e) { console.warn('Historial:', e); }
+
+        // HISTORIAL DE LA REFERENCIA Y AUDITORÍAS DE PROCESO PREVIAS
+        try { html += await htmlHistorialYProceso(det, usuarios); } catch (e) { console.warn('Historial no disponible', e); }
 
         // 6. OBSERVACIONES Y FOTOGRAFÍAS
         html += `<div class="seccion-detalle"><h4>Observaciones Finales</h4><p style="font-size:13px; background:#F9F8F6; padding:14px; border-radius:8px; border:1px solid var(--borde); line-height:1.5; color:var(--tinta);">${det.observaciones || 'Sin observaciones registradas.'}</p></div>`;
