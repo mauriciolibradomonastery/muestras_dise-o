@@ -166,6 +166,39 @@
     .mensaje.error { display: block; background: #FCF0F0; color: #8C2026; border: 1px solid #E8C4C6; }
     .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-size: 16px; font-weight: 500; }
 
+    /* Selector Semana / Mes */
+    .vistas { display: flex; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 4px; box-shadow: var(--sombra-card); }
+    .vistas button { border: none; background: transparent; padding: 9px 16px; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--texto-claro); cursor: pointer; }
+    .vistas button.activa { background: var(--tinta); color: #fff; }
+    .dato.vencidas { cursor: pointer; }
+    .dato.vencidas .t small { display: block; font-size: 10px; font-weight: 500; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+
+    /* Vista de mes */
+    .grilla-mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .mes-cab { text-align: center; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; letter-spacing: .05em; padding: 6px 0; }
+    .mes-dia { background: #fff; border: 1px solid var(--borde); border-radius: 10px; min-height: 120px; padding: 6px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+    .mes-dia.fuera { background: #F9F8F6; opacity: .55; }
+    .mes-dia.hoy { border-color: var(--laton); box-shadow: 0 0 0 1px var(--laton); }
+    .mes-num { font-size: 13px; font-weight: 700; color: var(--tinta); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .mes-num:hover { color: var(--laton); }
+    .mes-num .conteo { display: none; background: var(--tinta); color: #fff; border-radius: 999px; font-size: 10px; padding: 1px 6px; }
+    .mini-cita { font-size: 11px; line-height: 1.25; padding: 4px 6px; border-radius: 5px; cursor: pointer; background: var(--bg-auditora, #F2F5FC); border-left: 3px solid var(--color-auditora, var(--azul)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--tinta); }
+    .mini-cita:hover { filter: brightness(0.96); }
+    .mini-cita.vencida { background: #FFF4F4; border-left-color: var(--vino); }
+    .mini-cita.en_curso { background: #FFFDF0; border-left-color: var(--ambar); }
+    .mini-cita b { font-weight: 700; }
+    .mini-cita .mt { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: var(--texto-claro); font-weight: 700; }
+    .mas-citas { font-size: 11px; font-weight: 600; color: var(--laton); cursor: pointer; padding: 2px 4px; }
+
+    /* Lista de atrasadas */
+    .fila-atrasada { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--borde); border-left: 5px solid var(--vino); border-radius: 10px; background: #fff; cursor: pointer; margin-bottom: 8px; }
+    .fila-atrasada:hover { background: #FFF8F8; }
+    .fila-atrasada .fa-fecha { min-width: 70px; text-align: center; }
+    .fila-atrasada .fa-fecha b { display: block; font-size: 16px; color: var(--tinta); }
+    .fila-atrasada .fa-fecha small { font-size: 11px; color: var(--vino); font-weight: 600; }
+    .fila-atrasada .fa-info { flex: 1; font-size: 13px; }
+    .fila-atrasada .fa-info b { color: var(--tinta); }
+
     /* Etiqueta de tipo en las tarjetas del calendario */
     .cita .tipo-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(21,16,14,0.07); color: var(--tinta); margin-bottom: 6px; }
     .cita .tipo-tag.proceso { background: #EDE7F6; color: #5B21B6; }
@@ -209,6 +242,10 @@
 
     @media (max-width: 1024px) {
         .caja-siguiente .rejilla { grid-template-columns: 1fr; }
+        .grilla-mes { gap: 3px; }
+        .mes-dia { min-height: 56px; padding: 4px; cursor: pointer; }
+        .mini-cita, .mas-citas { display: none; }
+        .mes-num .conteo { display: inline-block; }
         .grilla { grid-template-columns: 1fr; }
         .dia { min-height: auto; margin-bottom: 12px; }
         .dia:has(.vacio-dia) { display: none; }
@@ -236,6 +273,7 @@
             <span class="rango" id="rango"></span>
             <button id="despues" aria-label="Semana siguiente">›</button>
         </div>
+        <div class="vistas"><button id="vSemana" class="activa">Semana</button><button id="vMes">Mes</button></div>
         <button class="btn" id="hoy">Hoy</button>
         <select id="filtroAuditora"><option value="">Todas las auditoras</option></select>
         <button class="btn btn-nueva" id="btnNueva">+ Programar auditoría</button>
@@ -309,6 +347,17 @@
             <button class="btn" id="btnCancelarCita" style="display:none; color:#8C2026; border-color:#E8C4C6;">Cancelar auditoría</button>
             <button class="btn-guardar" id="btnGuardar">Programar</button>
         </div>
+    </div>
+</div>
+
+<!-- Auditorías atrasadas -->
+<div class="fondo" id="modalAtrasadas">
+    <div class="hoja">
+        <div class="hoja-cabeza">
+            <h2>Auditorías atrasadas</h2>
+            <button class="cerrar" id="btnCerrarAtrasadas">✕</button>
+        </div>
+        <div style="padding: 20px 24px; background:#FDFBF7;" id="cuerpoAtrasadas"></div>
     </div>
 </div>
 
@@ -389,6 +438,9 @@ async function eliminarAuditoria(id) {
 }
 let esquemaAuditoras = {};
 let lunes = inicioSemana(new Date());
+let vista = 'semana';
+let mesRef = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let atrasadas = [];
 let editando = null;
 
 // ---------- Sesión ----------
@@ -420,7 +472,21 @@ function inicioSemana(fecha) {
 }
 const sumarDias = function(f, n) { const x = new Date(f); x.setDate(x.getDate() + n); return x; };
 
+function rangoVisible() {
+    if (vista === 'mes') {
+        const ini = inicioSemana(mesRef);
+        const ultimo = new Date(mesRef.getFullYear(), mesRef.getMonth() + 1, 0);
+        const fin = sumarDias(inicioSemana(ultimo), 6);
+        return { desde: ini, hasta: fin };
+    }
+    return { desde: lunes, hasta: sumarDias(lunes, 6) };
+}
 function pintarRango() {
+    if (vista === 'mes') {
+        const n = MESES[mesRef.getMonth()];
+        $('rango').textContent = n.charAt(0).toUpperCase() + n.slice(1) + ' ' + mesRef.getFullYear();
+        return;
+    }
     const fin = sumarDias(lunes, 6);
     const mismoMes = lunes.getMonth() === fin.getMonth();
     $('rango').textContent = mismoMes
@@ -474,7 +540,9 @@ async function cargarReferencias() {
 
 // ---------- Auditorías ----------
 async function cargarAuditorias() {
-    const desde = iso(lunes), hasta = iso(sumarDias(lunes, 6));
+    const r = rangoVisible();
+    const desde = iso(r.desde), hasta = iso(r.hasta);
+    cargarAtrasadas();
     const { data, error } = await supabase.from('v_agenda_auditorias')
         .select('*').gte('fecha_programada', desde).lte('fecha_programada', hasta)
         .order('hora_programada');
@@ -492,8 +560,61 @@ async function cargarAuditorias() {
     cargarLineas();
 }
 
+// ---------- Atrasadas: días anteriores a hoy sin terminar ----------
+async function cargarAtrasadas() {
+    try {
+        const { data, error } = await supabase.from('v_agenda_auditorias').select('*')
+            .lt('fecha_programada', hoyISO).in('estado', ['programada', 'en_curso']).order('fecha_programada');
+        if (error) throw error;
+        atrasadas = data || [];
+        if (atrasadas.length) {
+            const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso').in('id', atrasadas.map(function(x) { return x.id; }));
+            (extra || []).forEach(function(e) { const c = atrasadas.find(function(x) { return x.id === e.id; }); if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; } });
+        }
+    } catch (e) { console.error(e); atrasadas = []; }
+    pintarResumen();
+}
+function atrasadasVisibles() {
+    const a = $('filtroAuditora').value;
+    return atrasadas.filter(function(x) { return !a || x.auditora_id === a; });
+}
+function etiquetaTipo(c) {
+    const t = tipos.find(function(x) { return x.id === c.tipo_id; });
+    if (!t) return '';
+    return esProceso(t.nombre) ? 'Proceso · ' + nombreSub(c.subproceso || 'corte') : t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1);
+}
+function abrirAtrasadas() {
+    const lista = atrasadasVisibles();
+    const hoy = new Date(hoyISO + 'T00:00:00');
+    $('cuerpoAtrasadas').innerHTML = lista.length ? lista.map(function(c) {
+        const dias = Math.round((hoy - new Date(c.fecha_programada + 'T00:00:00')) / 86400000);
+        return '<div class="fila-atrasada" onclick="abrirDesdeAtrasadas(' + c.id + ')">' +
+            '<div class="fa-fecha"><b>' + fechaCorta(c.fecha_programada) + '</b><small>hace ' + dias + (dias === 1 ? ' día' : ' días') + '</small></div>' +
+            '<div class="fa-info"><b>' + esc(c.referencia || 'sin ref.') + '</b> · ' + esc(c.proveedor || '') + '<br>' +
+                '<span style="color:var(--texto-claro)">' + esc(etiquetaTipo(c)) + ' · ' + esc(c.auditora || '') + ' · ' + (c.estado === 'en_curso' ? 'En curso' : 'Sin iniciar') + '</span></div>' +
+        '</div>';
+    }).join('') : '<p style="color:var(--texto-claro); text-align:center;">No hay auditorías atrasadas. 🎉</p>';
+    $('modalAtrasadas').classList.add('abierto');
+}
+window.abrirDesdeAtrasadas = function(id) { $('modalAtrasadas').classList.remove('abierto'); abrirCita(id); };
+$('btnCerrarAtrasadas').addEventListener('click', function() { $('modalAtrasadas').classList.remove('abierto'); });
+
+function pintarResumen() {
+    const a = $('filtroAuditora').value;
+    const listaTotal = auditorias.filter(function(x) { return (!a || x.auditora_id === a); });
+    const cuenta = function(est) { return listaTotal.filter(function(x) { return x.estado === est; }).length; };
+    const periodo = vista === 'mes' ? 'este mes' : 'esta semana';
+    $('resumen').innerHTML =
+        '<div class="dato"><div class="n">' + cuenta('programada') + '</div><div class="t">Programadas<small style="display:block; font-size:10px; font-weight:500; text-transform:none; letter-spacing:0; margin-top:2px;">' + periodo + '</small></div></div>' +
+        '<div class="dato vencidas" id="datoAtrasadas" title="Ver la lista"><div class="n">' + atrasadasVisibles().length + '</div><div class="t">Atrasadas<small>de días anteriores a hoy · ver lista ›</small></div></div>' +
+        '<div class="dato curso"><div class="n">' + cuenta('en_curso') + '</div><div class="t">En curso</div></div>' +
+        '<div class="dato listas"><div class="n">' + cuenta('finalizada') + '</div><div class="t">Finalizadas</div></div>';
+    $('datoAtrasadas').addEventListener('click', abrirAtrasadas);
+}
+
 // ---------- Auditorías en proceso (agrupadas por línea) ----------
 async function cargarLineas() {
+  try {
     const tp = tipoProceso();
     if (!tp) { $('lineas').innerHTML = '<div class="vacio-lineas">No existe el tipo "proceso" en la base de datos.</div>'; return; }
     const { data, error } = await supabase.from('auditorias')
@@ -502,6 +623,8 @@ async function cargarLineas() {
     if (error) { $('lineas').innerHTML = '<div class="vacio-lineas">Error: ' + esc(error.message) + '</div>'; return; }
     const grupos = {};
     (data || []).forEach(function(r) {
+        // Auditorías de proceso antiguas sin subproceso se toman como Corte
+        if (ordenSub(r.subproceso) < 0) r.subproceso = 'corte';
         const k = r.linea_id || r.id;
         (grupos[k] = grupos[k] || []).push(r);
     });
@@ -510,6 +633,10 @@ async function cargarLineas() {
         return armarLinea(+k, filas);
     });
     pintarLineas();
+  } catch (e) {
+    console.error(e);
+    $('lineas').innerHTML = '<div class="vacio-lineas" style="color:var(--vino)">No se pudieron cargar las auditorías en proceso: ' + esc(e.message || e) + '</div>';
+  }
 }
 
 function armarLinea(id, filas) {
@@ -621,16 +748,34 @@ $('btnEliminarLinea').addEventListener('click', async function() {
 
 function pintar() {
     pintarRango();
+    pintarResumen();
     const a = $('filtroAuditora').value;
     const listaTotal = auditorias.filter(function(x) { return (!a || x.auditora_id === a); });
-    
-    const cuenta = function(est) { return listaTotal.filter(function(x) { return x.estado === est; }).length; };
-    
-    $('resumen').innerHTML = 
-        '<div class="dato"><div class="n">' + cuenta('programada') + '</div><div class="t">Programadas</div></div>' +
-        '<div class="dato vencidas"><div class="n">' + listaTotal.filter(function(x) { return x.vencida && x.estado !== 'finalizada'; }).length + '</div><div class="t">Vencidas</div></div>' +
-        '<div class="dato curso"><div class="n">' + cuenta('en_curso') + '</div><div class="t">En curso</div></div>' +
-        '<div class="dato listas"><div class="n">' + cuenta('finalizada') + '</div><div class="t">Finalizadas</div></div>';
+    const estaVencida = function(c) { return c.estado !== 'finalizada' && (c.vencida || c.fecha_programada < hoyISO); };
+    const estiloDe = function(c) { const e = esquemaAuditoras[c.auditora_id] || PALETA_AUDITORAS[0]; return '--color-auditora: ' + e.solido + '; --bg-auditora: ' + e.bg + '; --border-auditora: ' + e.border + ';'; };
+
+    if (vista === 'mes') {
+        const r = rangoVisible();
+        const totalDias = Math.round((r.hasta - r.desde) / 86400000) + 1;
+        let html = DIAS.map(function(d) { return '<div class="mes-cab">' + d.slice(0, 3) + '</div>'; }).join('');
+        for (let i = 0; i < totalDias; i++) {
+            const fecha = sumarDias(r.desde, i), clave = iso(fecha);
+            const delDia = listaTotal.filter(function(x) { return x.fecha_programada === clave && x.estado !== 'finalizada'; });
+            const fuera = fecha.getMonth() !== mesRef.getMonth();
+            html += '<div class="mes-dia' + (fuera ? ' fuera' : '') + (clave === hoyISO ? ' hoy' : '') + '" onclick="if (window.innerWidth <= 1024) irASemana(\'' + clave + '\')">' +
+                '<div class="mes-num" onclick="event.stopPropagation(); irASemana(\'' + clave + '\')" title="Ver esta semana">' + fecha.getDate() + (delDia.length ? '<span class="conteo">' + delDia.length + '</span>' : '') + '</div>' +
+                delDia.slice(0, 4).map(function(c) {
+                    return '<div class="mini-cita ' + (estaVencida(c) ? 'vencida' : c.estado) + '" style="' + estiloDe(c) + '" onclick="event.stopPropagation(); abrirCita(' + c.id + ')" title="' + esc((c.referencia || '') + ' · ' + (c.proveedor || '') + ' · ' + (c.auditora || '')) + '">' +
+                        '<span class="mt">' + esc(etiquetaTipo(c)) + '</span><b>' + (c.hora_programada || '').slice(0, 5) + '</b> ' + esc(c.referencia || 'sin ref.') + '</div>';
+                }).join('') +
+                (delDia.length > 4 ? '<div class="mas-citas" onclick="event.stopPropagation(); irASemana(\'' + clave + '\')">+' + (delDia.length - 4) + ' más</div>' : '') +
+            '</div>';
+        }
+        $('grilla').className = 'grilla-mes';
+        $('grilla').innerHTML = html;
+        return;
+    }
+    $('grilla').className = 'grilla';
 
     $('grilla').innerHTML = DIAS.map(function(nombre, i) {
         const fecha = sumarDias(lunes, i);
@@ -644,12 +789,12 @@ function pintar() {
         if (delDia.length) {
             htmlDia += delDia.map(function(c) {
                 const estilo = esquemaAuditoras[c.auditora_id] || PALETA_AUDITORAS[0];
-                return '<div class="cita ' + (c.vencida ? 'vencida' : c.estado) + '" style="--color-auditora: ' + estilo.solido + '; --bg-auditora: ' + estilo.bg + '; --border-auditora: ' + estilo.border + ';" onclick="abrirCita(' + c.id + ')">' +
+                return '<div class="cita ' + (estaVencida(c) ? 'vencida' : c.estado) + '" style="--color-auditora: ' + estilo.solido + '; --bg-auditora: ' + estilo.bg + '; --border-auditora: ' + estilo.border + ';" onclick="abrirCita(' + c.id + ')">' +
                     (function() {
                         const t = tipos.find(function(x) { return x.id === c.tipo_id; });
                         if (!t) return '';
                         const proc = esProceso(t.nombre);
-                        return '<div class="tipo-tag' + (proc ? ' proceso' : '') + '">' + esc(proc && c.subproceso ? 'Proceso · ' + nombreSub(c.subproceso) : t.nombre) + '</div>';
+                        return '<div class="tipo-tag' + (proc ? ' proceso' : '') + '">' + esc(etiquetaTipo(c)) + '</div>';
                     })() +
                     '<div class="hora">' + (c.hora_programada || '').slice(0,5) + '</div>' +
                     '<div class="prov">' + c.proveedor + '</div>' +
@@ -854,9 +999,27 @@ $('btnCancelarCita').addEventListener('click', async () => {
     btn.disabled = false; btn.textContent = 'Cancelar auditoría';
 });
 
-$('antes').addEventListener('click', function() { lunes = sumarDias(lunes, -7); cargarAuditorias(); });
-$('despues').addEventListener('click', function() { lunes = sumarDias(lunes, 7);  cargarAuditorias(); });
-$('hoy').addEventListener('click', function() { lunes = inicioSemana(new Date()); cargarAuditorias(); });
+$('antes').addEventListener('click', function() {
+    if (vista === 'mes') mesRef = new Date(mesRef.getFullYear(), mesRef.getMonth() - 1, 1); else lunes = sumarDias(lunes, -7);
+    cargarAuditorias();
+});
+$('despues').addEventListener('click', function() {
+    if (vista === 'mes') mesRef = new Date(mesRef.getFullYear(), mesRef.getMonth() + 1, 1); else lunes = sumarDias(lunes, 7);
+    cargarAuditorias();
+});
+$('hoy').addEventListener('click', function() {
+    lunes = inicioSemana(new Date()); mesRef = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    cargarAuditorias();
+});
+function cambiarVista(v) {
+    vista = v;
+    $('vSemana').classList.toggle('activa', v === 'semana');
+    $('vMes').classList.toggle('activa', v === 'mes');
+    cargarAuditorias();
+}
+$('vSemana').addEventListener('click', function() { lunes = vista === 'mes' ? inicioSemana(mesRef.getMonth() === new Date().getMonth() && mesRef.getFullYear() === new Date().getFullYear() ? new Date() : mesRef) : lunes; cambiarVista('semana'); });
+$('vMes').addEventListener('click', function() { mesRef = new Date(lunes.getFullYear(), sumarDias(lunes, 3).getMonth(), 1); if (sumarDias(lunes, 3).getFullYear() !== lunes.getFullYear()) mesRef = new Date(sumarDias(lunes, 3).getFullYear(), sumarDias(lunes, 3).getMonth(), 1); cambiarVista('mes'); });
+window.irASemana = function(clave) { lunes = inicioSemana(new Date(clave + 'T00:00:00')); cambiarVista('semana'); };
 $('filtroAuditora').addEventListener('change', function() { pintar(); pintarLineas(); });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
