@@ -96,6 +96,10 @@
 
         .btn-bulk-cancel { background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5; }
         .btn-bulk-delete { background-color: #fff1f2; color: #b91c1c; border: 1px solid #fda4af; }
+        .btn-bulk-proto { background-color: #f5f3ff; color: #6d28d9; border: 1px solid #c4b5fd; }
+        .btn-bulk-proto:hover { background-color: #ede9fe; }
+        .btn-bulk-retornar { background-color: #ecfdf5; color: #047857; border: 1px solid #6ee7b7; }
+        .btn-bulk-retornar:hover { background-color: #d1fae5; }
 
         .buscador { padding: 9px 16px; border: 1px solid #d1d5db; border-radius: 8px; width: 320px; font-size: 13px; background: #ffffff; outline: none; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); }
         
@@ -229,6 +233,8 @@
     <div class="tabs-container">
         <button id="tabActivas" class="tab-btn activa" onclick="cambiarVista('activas')">📂 Muestras Activas</button>
         <button id="tabCanceladas" class="tab-btn" onclick="cambiarVista('canceladas')">🚫 Muestras Canceladas</button>
+        <button id="tabProtos" class="tab-btn" onclick="cambiarVista('protos')">🧪 Protos y sin colección</button>
+        <button id="tabDesarrollos" class="tab-btn" onclick="cambiarVista('desarrollos')">🛠️ Desarrollos</button>
     </div>
 
     <div class="header-actions">
@@ -245,7 +251,9 @@
 
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 10px; border-left: 2px solid #d1d5db; padding-left: 10px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
-                <button class="btn-bulk-cancel" onclick="cancelarSeleccionadas()">🚫 Cancelar Masivo</button>
+                <button id="btnBulkProto" class="btn-bulk-proto" onclick="enviarSeleccionadasAProtos()">🧪 Enviar a Protos</button>
+                <button id="btnBulkRetornar" class="btn-bulk-retornar" onclick="retornarSeleccionadasAActivas()" style="display: none;">↩️ Retornar a Activas</button>
+                <button id="btnBulkCancelar" class="btn-bulk-cancel" onclick="cancelarSeleccionadas()">🚫 Cancelar Masivo</button>
                 <button class="btn-bulk-delete" onclick="eliminarSeleccionadas()">🗑️ Eliminar Masivo</button>
             </div>
         </div>
@@ -301,6 +309,16 @@
 
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
+        const ESTADO_PROTO = 'PROTO / SIN COLECCIÓN';   // valor que se guarda en la columna ESTADO
+        const ESTADO_DESARROLLO = 'DESARROLLO';          // filas creadas en la pestaña Desarrollos
+        // Devuelve a qué pestaña pertenece una fila según su ESTADO
+        function vistaDeEstado(estado) {
+            const e = (estado || '').trim().toUpperCase();
+            if (e === 'CANCELADO') return 'canceladas';
+            if (e === ESTADO_PROTO) return 'protos';
+            if (e === ESTADO_DESARROLLO) return 'desarrollos';
+            return 'activas';
+        }
         window.categoriaActiva = 'todas'; 
         window.hayCambiosSinGuardar = false;
 
@@ -1028,11 +1046,11 @@
                 tr.appendChild(td); indexGlobal++;
             });
 
-            const estadoActual = (datos[43] || '').trim().toUpperCase(); const esCancelado = estadoActual === 'CANCELADO';
+            const estadoActual = (datos[43] || '').trim().toUpperCase(); const esCancelado = estadoActual === 'CANCELADO'; const esDesarrollo = estadoActual === ESTADO_DESARROLLO;
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `
                 <button class="btn-insert" onclick="insertarFilaAbajo(this)" title="Insertar fila abajo">➕</button>
-                <button class="btn-cancelar-fila ${esCancelado ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'CANCELADO')" title="Cancelar Muestra">🚫</button>
+                <button class="btn-cancelar-fila ${(esCancelado || esDesarrollo) ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'CANCELADO')" title="Cancelar Muestra">🚫</button>
                 <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
                 <button class="btn-delete" onclick="eliminarFila(this)" title="Eliminar Permanente">🗑️</button>
             `;
@@ -1052,7 +1070,7 @@
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
                 const textos = fila._textos; if (!textos || textos.length < 64) return;
-                const estado = (textos[44] || '').toUpperCase(); if (estado === 'CANCELADO') return; 
+                const estado = (textos[44] || '').toUpperCase(); if (estado === 'CANCELADO' || estado === ESTADO_PROTO || estado === ESTADO_DESARROLLO) return; 
 
                 let coincideCategoria = true;
                 const genero = (textos[7] || '').toUpperCase();
@@ -1114,7 +1132,16 @@
             window.vistaActual = vista;
             document.getElementById('tabActivas').classList.toggle('activa', vista === 'activas');
             document.getElementById('tabCanceladas').classList.toggle('activa', vista === 'canceladas');
-            document.getElementById('btnAgregarFila').style.display = vista === 'activas' ? 'inline-flex' : 'none';
+            document.getElementById('tabProtos').classList.toggle('activa', vista === 'protos');
+            document.getElementById('tabDesarrollos').classList.toggle('activa', vista === 'desarrollos');
+            // Se pueden crear filas en Activas y en Desarrollos
+            document.getElementById('btnAgregarFila').style.display = (vista === 'activas' || vista === 'desarrollos') ? 'inline-flex' : 'none';
+            // En Desarrollos no hay cancelación masiva (solo eliminar)
+            document.getElementById('btnBulkCancelar').style.display = vista === 'desarrollos' ? 'none' : 'inline-flex';
+            // Botones masivos según la pestaña
+            document.getElementById('btnBulkProto').style.display = vista === 'activas' ? 'inline-flex' : 'none';
+            document.getElementById('btnBulkRetornar').style.display = vista === 'protos' ? 'inline-flex' : 'none';
+            const selAll = document.getElementById('selectAll'); if (selAll) selAll.checked = false;
             window.filtrarTablaCompleta();
         };
 
@@ -1166,7 +1193,7 @@
             });
 
             const cat = window.categoriaActiva;
-            const verActivas = window.vistaActual === 'activas';
+            const vistaActual = window.vistaActual;
             let visibles = 0;
 
             for (let i = 0; i < filas.length; i++) {
@@ -1174,8 +1201,7 @@
                 const textos = fila._textos || window.cachearFila(fila);
                 let mostrar = true;
 
-                const esCancelado = (textos[indiceEstado] || '').toUpperCase() === 'CANCELADO';
-                if (verActivas === esCancelado) mostrar = false;
+                if (vistaDeEstado(textos[indiceEstado]) !== vistaActual) mostrar = false;
 
                 if (mostrar && cat !== 'todas' && fila.dataset.id) {
                     const genero = (textos[7] || '').toUpperCase();
@@ -1213,7 +1239,7 @@
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
             if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
-            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td'); celdas[44].innerText = nuevoEstado;
+            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td'); celdas[44].innerText = nuevoEstado; window.cachearFila(tr);
             const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
             if (nuevoEstado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); } 
             else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
@@ -1246,6 +1272,7 @@
                     promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb) );
                     tr._hashGuardado = JSON.stringify(datosFila);
                 }
+                window.cachearFila(tr);
             }
             if (promesasUpdate.length > 0) {
                 const resultados = await Promise.all(promesasUpdate);
@@ -1255,10 +1282,51 @@
             window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
         };
 
+        // Cambia el ESTADO de todas las filas seleccionadas y visibles, y lo guarda en Supabase
+        async function moverSeleccionadas(nuevoEstado, pregunta) {
+            const filas = [];
+            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+                const tr = cb.closest('tr'); if (tr.style.display !== 'none') filas.push(tr);
+            });
+            if (filas.length === 0) return;
+            if (!confirm(pregunta.replace('{n}', filas.length))) return;
+
+            const promesas = [];
+            for (const tr of filas) {
+                const celdas = tr.querySelectorAll('td');
+                celdas[44].innerText = nuevoEstado;
+                const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
+                if (btnCancelar) btnCancelar.classList.remove('hidden');
+                if (btnReactivar) btnReactivar.classList.add('hidden');
+
+                if (tr.dataset.id) {
+                    const datosFila = window.extraerDatosFila(tr);
+                    promesas.push(supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id));
+                    tr._hashGuardado = JSON.stringify(datosFila);
+                }
+                tr.querySelector('.row-checkbox').checked = false;
+                window.cachearFila(tr);
+            }
+            if (promesas.length > 0) {
+                const resultados = await Promise.all(promesas);
+                for (const res of resultados) { if (res.error) { alert("Error: " + res.error.message); return; } }
+            }
+            document.getElementById('selectAll').checked = false;
+            window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
+        }
+
+        window.enviarSeleccionadasAProtos = function() {
+            return moverSeleccionadas(ESTADO_PROTO, '¿Enviar {n} muestras a "Protos y sin colección"?');
+        };
+
+        window.retornarSeleccionadasAActivas = function() {
+            return moverSeleccionadas('EN PROCESO', '¿Retornar {n} muestras a "Muestras Activas"?');
+        };
+
         window.eliminarSeleccionadas = async function() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             let idsToDelete = []; let rowsToRemove = [];
-            checkboxes.forEach(cb => { const tr = closest('tr'); if(tr.style.display !== 'none') { if(tr.dataset.id) idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
+            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none') { if(tr.dataset.id) idsToDelete.push(tr.dataset.id); rowsToRemove.push(tr); } });
 
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás COMPLETAMENTE SEGURO de eliminar definitivamente ${rowsToRemove.length} muestras?`)) return;
@@ -1276,6 +1344,7 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
+            if (window.vistaActual === 'desarrollos') { datosInic[43] = ESTADO_DESARROLLO; }
             const newTr = crearFilaHTML(null, datosInic);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             document.getElementById('tableBody').appendChild(newTr);
@@ -1289,6 +1358,7 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
+            if (window.vistaActual === 'desarrollos') { datosInic[43] = ESTADO_DESARROLLO; }
             const newTr = crearFilaHTML(null, datosInic);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', newTr);
@@ -1442,6 +1512,7 @@
                     const registrosParaSupabase = filasCSV.map(fila => {
                         let datosLimpios = fila.map(celda => String(celda).trim());
                         while(datosLimpios.length < 64) datosLimpios.push(""); 
+                        if (window.vistaActual === 'desarrollos' && !datosLimpios[43]) datosLimpios[43] = ESTADO_DESARROLLO;
                         return { datos: datosLimpios.slice(0, 64) };
                     }).filter(r => r.datos.join("").trim() !== ""); 
 
