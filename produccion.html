@@ -203,6 +203,7 @@
         <div class="filtro"><label>Origen</label><div class="multi" id="fOrigen"></div></div>
         <div class="filtro"><label>Destino</label><div class="multi" id="fDestino"></div></div>
         <div class="filtro"><label>Canal (pestaña)</label><div class="multi" id="fCanal"></div></div>
+        <div class="filtro"><label>Género</label><div class="multi" id="fGenero"></div></div>
         <div class="filtro"><label>Línea</label><div class="multi" id="fLinea"></div></div>
         <div class="filtro"><label>Sublínea</label><div class="multi" id="fSublinea"></div></div>
         <div class="filtro"><label>Proveedor (Supplier)</label><div class="multi" id="fProveedor"></div></div>
@@ -361,7 +362,7 @@ if (!session) location.href = 'index.html';
 document.getElementById('usuarioActivo').textContent = session?.user?.email || '';
 
 const BUCKET = 'fotos-referencias';
-const COLUMNAS = ['id','linea','sublinea','descripcion','referencia','color','coleccion','origen','destino',
+const COLUMNAS = ['id','linea','sublinea','genero','descripcion','referencia','color','coleccion','origen','destino',
     'proveedor','hoja','unidades_reales','excedentes','segundas','unidades_preventa',
     'fecha_real_bodega','fecha_estimada_bodega','numero_factura'].join(',');
 
@@ -394,6 +395,36 @@ const claveFoto = (desc, color) =>
     `${limpiar(desc) || 'sin-descripcion'}__${limpiar(color) || 'sin-color'}`;
 const urlFoto = clave => supabase.storage.from(BUCKET).getPublicUrl(`${clave}.jpg`).data.publicUrl;
 
+// ---------- Normalización de género ----------
+// Los Excel los llenan personas: "Men", "HOMBRE", "women ", "Femenino"... El filtro compara texto
+// exacto, así que se unifican aquí. Lo ideal (siguiente paso) es hacerlo en el sincronizador de Python.
+
+/** Valor que se muestra cuando el Excel no trae género (para no perder unidades en los totales). */
+const SIN_GENERO = '(SIN GÉNERO)';
+
+/** Sinónimos conocidos → valor canónico. Agrega aquí lo que aparezca en los avisos de la consola. */
+const SINONIMOS_GENERO = new Map([
+    ['men', 'MEN'], ['man', 'MEN'], ['hombre', 'MEN'], ['masculino', 'MEN'], ['caballero', 'MEN'],
+    ['women', 'WOMEN'], ['woman', 'WOMEN'], ['mujer', 'WOMEN'], ['femenino', 'WOMEN'], ['dama', 'WOMEN'],
+    ['unisex', 'UNISEX'],
+]);
+
+/**
+ * Convierte cualquier escritura de género a MEN | WOMEN | UNISEX | (SIN GÉNERO).
+ * @param {unknown} valor - Lo que vino del Excel (puede ser null, número, texto con espacios o tildes).
+ * @param {Set<string>} desconocidos - Acumula los valores no reconocidos, para avisar una sola vez.
+ * @returns {string}
+ */
+function normalizarGenero(valor, desconocidos) {
+    const crudo = (valor ?? '').toString().trim();
+    if (!crudo) return SIN_GENERO;
+    const llave = crudo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const canonico = SINONIMOS_GENERO.get(llave);
+    if (canonico) return canonico;
+    desconocidos.add(crudo);
+    return crudo.toUpperCase();   // se ve en el filtro tal cual, para que lo detectes; no se esconde
+}
+
 // ---------- Carga ----------
 async function cargarDatos() {
     document.getElementById('grafico').innerHTML = '<div class="cargando">Cargando datos…</div>';
@@ -406,11 +437,20 @@ async function cargarDatos() {
             filas = filas.concat(data);
             if (data.length < paso) break;
         }
+
+        // Unificar el género una sola vez, antes de pintar filtros y tablas
+        const desconocidos = new Set();
+        filas.forEach(f => { f.genero = normalizarGenero(f.genero, desconocidos); });
+        if (desconocidos.size) {
+            console.warn(`[produccion] Géneros no reconocidos en los Excel (${desconocidos.size}):`, [...desconocidos]);
+        }
+
         document.getElementById('selloDatos').textContent =
             `${fmt(filas.length)} registros · ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
         await Promise.all([cargarPresupuesto(), cargarFotos()]);
         refrescar();
     } catch (e) {
+        console.error('[produccion] Error cargando datos:', e);
         document.getElementById('grafico').innerHTML = `<div class="cargando">No se pudieron cargar los datos: ${e.message}</div>`;
     }
 }
@@ -438,7 +478,8 @@ async function cargarFotos() {
 
 // ---------- Filtros ----------
 const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
-                  fLinea:'linea', fSublinea:'sublinea', fProveedor:'proveedor', fFactura:'numero_factura' };
+                  fGenero:'genero', fLinea:'linea', fSublinea:'sublinea',
+                  fProveedor:'proveedor', fFactura:'numero_factura' };
 // Cada filtro guarda un conjunto de valores elegidos: vacío = todas
 const seleccion = Object.fromEntries(Object.values(SELECTS).map(c => [c, new Set()]));
 let panelAbierto = null;
@@ -1080,6 +1121,9 @@ window.abrirFicha = async function(id) {
 
     const { data: r, error } = await supabase.from('produccion').select('*').eq('id', id).single();
     if (error || !r) { document.getElementById('fichaTitulo').textContent = 'No se pudo cargar la ficha'; return; }
+
+    // La ficha consulta la fila cruda de la base: se normaliza igual que el filtro para que ambos coincidan
+    r.genero = normalizarGenero(r.genero, new Set());
 
     refFicha = claveFoto(r.descripcion, r.color);
     document.getElementById('fichaTitulo').textContent =
