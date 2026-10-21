@@ -202,7 +202,6 @@
         <div class="filtro"><label>Colección</label><div class="multi" id="fColeccion"></div></div>
         <div class="filtro"><label>Origen</label><div class="multi" id="fOrigen"></div></div>
         <div class="filtro"><label>Destino</label><div class="multi" id="fDestino"></div></div>
-        <div class="filtro"><label>Canal (pestaña)</label><div class="multi" id="fCanal"></div></div>
         <div class="filtro"><label>Género</label><div class="multi" id="fGenero"></div></div>
         <div class="filtro"><label>Línea</label><div class="multi" id="fLinea"></div></div>
         <div class="filtro"><label>Sublínea</label><div class="multi" id="fSublinea"></div></div>
@@ -253,6 +252,19 @@
         <div id="participacionColeccion"></div>
     </div>
     <div class="nota">Solo lo que ya llegó a bodega, ubicado en el mes de su fecha real. Este cuadro sí responde a los filtros.</div>
+</div>
+
+<div class="card" id="cardHistorico">
+    <h3>
+        <span>Unidades totales por año</span>
+        <span class="leyenda">
+            <span class="llave"><i class="cuadro" style="background:#94a3b8"></i> Años cerrados (tabla de colecciones)</span>
+            <span class="llave"><i class="cuadro c-ing"></i> Año en curso (Excel, por fecha de llegada)</span>
+        </span>
+    </h3>
+    <div class="grafico-wrap"><div id="graficoHistorico"></div></div>
+    <div class="nota" id="notaHistorico"></div>
+    <div class="nota">Total de la compañía: no cambia con los filtros. Pasa el mouse por una barra para ver el detalle por colección.</div>
 </div>
 
 <div class="card" id="cardPlan">
@@ -455,7 +467,7 @@ async function cargarDatos() {
 
         document.getElementById('selloDatos').textContent =
             `${fmt(filas.length)} registros · ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
-        await Promise.all([cargarPresupuesto(), cargarFotos(), cargarParametrosProd()]);
+        await Promise.all([cargarPresupuesto(), cargarFotos(), cargarParametrosProd(), cargarHistorico()]);
         refrescar();
     } catch (e) {
         console.error('[produccion] Error cargando datos:', e);
@@ -578,7 +590,7 @@ async function cargarFotos() {
 }
 
 // ---------- Filtros ----------
-const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', fCanal:'hoja',
+const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino',
                   fGenero:'genero', fLinea:'linea', fSublinea:'sublinea',
                   fProveedor:'proveedor', fFactura:'numero_factura' };
 // Cada filtro guarda un conjunto de valores elegidos: vacío = todas
@@ -754,15 +766,161 @@ function refrescar() {
             ? Math.round((new Date(hoy) - new Date(f.fecha_estimada_bodega)) / 86400000) : 0,
     }));
 
+    // Una misma referencia puede venir partida en varias filas del Excel: se muestran como una sola
+    datosIngresadas = agruparFilas(datosIngresadas, ['preventa', 'reales', 'excedentes', 'realIngreso', 'segundas', 'total'])
+        .map(d => ({
+            ...d,
+            // Los porcentajes NO se suman: se recalculan con los totales del grupo
+            pctExcedente: d.preventa ? (d.realIngreso - d.preventa) / d.preventa * 100 : null,
+            excedenteCalc: (d.preventa && d.realIngreso > d.preventa * 1.10) ? d.realIngreso - d.preventa * 1.10 : 0,
+        }));
+    datosPendientes = agruparFilas(datosPendientes, ['total']);
+
     pintarTabla('ing');
     pintarTabla('pen');
     pintarPlan(pendientes);
+    pintarHistorico();
     pintarIngreso(ingMes);
     pintarCumplimiento();
     pintarKpis(ingMes, penMes);
     document.getElementById('mesActivo').textContent = mesSeleccionado ? `Mes filtrado: ${nombreMes(mesSeleccionado)}` : '';
     document.getElementById('chipAtrasadas').innerHTML = soloAtrasadas
         ? '<span class="chip" onclick="alternarAtrasadas()">solo atrasadas ✕</span>' : '';
+}
+
+// ---------- Agrupar filas idénticas ----------
+// Si sublínea, descripción, color, destino y fecha coinciden, las filas del Excel se muestran como UNA,
+// con las unidades sumadas. La fecha es parte de la llave: dos despachos en fechas distintas siguen separados.
+const llaveGrupo = d => [d.sublinea, d.descripcion, d.color, d.destino, d.fecha]
+    .map(v => (v ?? '').toString().trim().toUpperCase()).join('|');
+
+/**
+ * @param {Array<object>} lista - filas ya calculadas (datosIngresadas o datosPendientes)
+ * @param {string[]} camposSuma - columnas numéricas que se suman dentro del grupo
+ * @returns {Array<object>} una fila por grupo; `ids` guarda las filas originales y `nFilas` cuántas son
+ */
+function agruparFilas(lista, camposSuma) {
+    const grupos = new Map();
+    for (const d of lista) {
+        const llave = llaveGrupo(d);
+        const g = grupos.get(llave);
+        if (!g) { grupos.set(llave, { ...d, ids: [d.id], nFilas: 1 }); continue; }
+        camposSuma.forEach(c => { g[c] = num(g[c]) + num(d[c]); });
+        g.ids.push(d.id);
+        g.nFilas++;
+    }
+    return [...grupos.values()];
+}
+
+/** Tooltip para las filas agrupadas. */
+const tituloGrupo = d => d.nFilas > 1
+    ? ` title="Agrupa ${d.nFilas} filas del Excel. La ficha muestra la primera de ellas."` : '';
+
+// ---------- Unidades totales por año ----------
+// Fuente: tabla "colecciones" de Supabase.
+//   · Año CERRADO (todas sus colecciones tienen unidades): se suman las cifras finales de la tabla.
+//   · Año EN CURSO (alguna colección sin unidades): se calcula con los Excel, por fecha real de llegada a bodega.
+//     Así entra todo lo que llegó ese año, incluso lotes de colecciones anteriores (ej. excedentes de Q3-HORSEBEAT en 2026).
+let catalogoColecciones = { listo: false, error: null, filas: [] };
+
+async function cargarHistorico() {
+    try {
+        const { data, error } = await supabase.from('colecciones')
+            .select('anio, coleccion, unidades').order('anio').order('orden');
+        if (error) throw error;
+        catalogoColecciones = {
+            listo: true, error: null,
+            filas: data.map(r => ({ anio: Number(r.anio), coleccion: r.coleccion,
+                                    unidades: r.unidades === null ? null : num(r.unidades) })),
+        };
+    } catch (e) {
+        catalogoColecciones = { listo: false, error: e.message || String(e), filas: [] };
+        console.error('[produccion] No se pudo cargar la tabla de colecciones:', e);
+    }
+}
+
+function pintarHistorico() {
+    const cont = document.getElementById('graficoHistorico');
+    const nota = document.getElementById('notaHistorico');
+    if (!cont) return;
+
+    // 1. Años cerrados según el catálogo
+    const porAnioCatalogo = new Map();   // año → [{ coleccion, unidades }]
+    catalogoColecciones.filas.forEach(c => {
+        if (!porAnioCatalogo.has(c.anio)) porAnioCatalogo.set(c.anio, []);
+        porAnioCatalogo.get(c.anio).push(c);
+    });
+    const porAnio = new Map();           // año → { unidades, fuente, detalle }
+    porAnioCatalogo.forEach((cols, anio) => {
+        if (cols.every(c => c.unidades !== null)) {
+            porAnio.set(anio, {
+                unidades: cols.reduce((s, c) => s + c.unidades, 0),
+                fuente: 'historico',
+                detalle: cols.map(c => `${c.coleccion}: ${fmt(c.unidades)}`).join('\n'),
+            });
+        }
+    });
+
+    // 2. Años en curso: lo que llegó a bodega según los Excel
+    const delExcel = {};
+    filas.filter(esIngresada).forEach(f => {
+        const anio = Number(String(f.fecha_real_bodega).slice(0, 4));
+        if (!anio) return;
+        delExcel[anio] = delExcel[anio] || { unidades: 0, porColeccion: {} };
+        const u = totalIngresado(f);
+        delExcel[anio].unidades += u;
+        const col = (f.coleccion || 'sin colección').trim();
+        delExcel[anio].porColeccion[col] = (delExcel[anio].porColeccion[col] || 0) + u;
+    });
+    const repetidos = [];
+    Object.entries(delExcel).forEach(([a, d]) => {
+        const anio = Number(a);
+        if (porAnio.has(anio)) { repetidos.push(anio); return; }   // el año ya está cerrado: manda el catálogo
+        porAnio.set(anio, {
+            unidades: d.unidades, fuente: 'excel',
+            detalle: Object.entries(d.porColeccion).sort((x, y) => y[1] - x[1])
+                .map(([c, u]) => `${c}: ${fmt(u)}`).join('\n'),
+        });
+    });
+    if (repetidos.length) console.warn('[produccion] Años cerrados en el catálogo que también tienen ingresos en los Excel:', repetidos);
+
+    const avisos = [];
+    if (!catalogoColecciones.listo) avisos.push(`⚠️ No se pudo leer la tabla de colecciones: ${esc(catalogoColecciones.error)}`);
+    if (repetidos.length) avisos.push(`⚠️ El año ${repetidos.join(', ')} ya está cerrado en la tabla de colecciones, pero los Excel tienen ingresos con fecha de ese año: se muestra la cifra cerrada.`);
+    if (nota) nota.innerHTML = avisos.join('<br>');
+
+    const anios = [...porAnio.keys()].sort((a, b) => a - b);
+    if (!anios.length) { cont.innerHTML = '<div class="cargando">Sin datos de ingreso.</div>'; return; }
+
+    const anchoAnio = 84, margenIzq = 74, margenDer = 20, alto = 310, base = alto - 48, tope = 30;
+    const ancho = Math.max(560, margenIzq + anios.length * anchoAnio + margenDer);
+    const max = Math.max(...anios.map(a => porAnio.get(a).unidades), 1);
+    const escala = v => (v / max) * (base - tope);
+
+    const rejilla = [0, .25, .5, .75, 1].map(p => {
+        const y = base - p * (base - tope);
+        return `<line x1="${margenIzq - 8}" y1="${y}" x2="${ancho - margenDer}" y2="${y}" stroke="#e5e7eb"/>
+                <text x="${margenIzq - 12}" y="${y + 4}" text-anchor="end" font-size="10" fill="#6b7280">${fmt(max * p)}</text>`;
+    }).join('');
+
+    const barras = anios.map((a, i) => {
+        const { unidades, fuente, detalle } = porAnio.get(a);
+        const x = margenIzq + i * anchoAnio;
+        const centro = x + (anchoAnio - 8) / 2;
+        const h = escala(unidades);
+        const color = fuente === 'historico' ? '#94a3b8' : '#1e3a8a';
+        const etiqueta = unidades >= 1000 ? Math.round(unidades / 1000) + 'k' : fmt(unidades);
+        return `<g>
+            <rect x="${x + 14}" y="${base - h}" width="${anchoAnio - 36}" height="${h}" fill="${color}" rx="3">
+                <title>${a} · ${fmt(unidades)} unidades (${fuente === 'historico' ? 'cifra cerrada' : 'en curso, según los Excel'})&#10;${esc(detalle)}</title></rect>
+            <text x="${centro}" y="${base - h - 6}" text-anchor="middle" font-size="10" fill="#374151" font-weight="600">${etiqueta}</text>
+            <text x="${centro}" y="${base + 16}" text-anchor="middle" font-size="11" fill="#374151">${a}</text>
+            ${fuente === 'excel' ? `<text x="${centro}" y="${base + 30}" text-anchor="middle" font-size="9" fill="#9ca3af">en curso</text>` : ''}
+        </g>`;
+    }).join('');
+
+    cont.innerHTML = `<svg width="${ancho}" height="${alto}" role="img" aria-label="Unidades totales por año">
+        ${rejilla}<line x1="${margenIzq - 8}" y1="${base}" x2="${ancho - margenDer}" y2="${base}" stroke="#9ca3af"/>${barras}</svg>`;
 }
 
 // ---------- Qué va a ingresar cada mes ----------
@@ -1070,7 +1228,7 @@ function pintarTabla(cual) {
         : `<span class="${p > 10 ? 'no-cumple' : p < 0 ? 'futuro' : 'cumple'}">${p >= 0 ? '+' : ''}${p.toFixed(1)}%</span>`;
 
     const filasHtml = visibles.map(d => esIng
-        ? `<tr onclick="abrirFicha(${d.id})">
+        ? `<tr onclick="abrirFicha(${d.id})"${tituloGrupo(d)}>
              <td>${celdaFoto(d.descripcion, d.color)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
@@ -1086,7 +1244,7 @@ function pintarTabla(cual) {
              <td class="num">${fmt(d.segundas)}</td>
              <td class="num">${fmt(d.total)}</td>
            </tr>`
-        : `<tr onclick="abrirFicha(${d.id})">
+        : `<tr onclick="abrirFicha(${d.id})"${tituloGrupo(d)}>
              <td>${celdaFoto(d.descripcion, d.color)}</td>
              <td class="minuscula">${texto(d.sublinea)}</td>
              <td class="minuscula">${texto(d.descripcion)}</td>
@@ -1213,7 +1371,7 @@ const CAMPOS_FICHA = [
         ['total_usd','total usd x ref'], ['trm','trm'],
     ]],
     ['Margen real', [
-        ['margen_real','margen real'], ['moneda_costo','moneda del costo unitario'],
+        ['margen_real','margen real'],
     ]],
     ['Unidades', [
         ['unidades_preventa','unidades preventa'], ['unidades_reales','unidades reales'],
@@ -1257,7 +1415,6 @@ window.abrirFicha = async function(id) {
 
     const m = calcularMargenProduccion(r);
     r.margen_real = m.margen;
-    r.moneda_costo = m.moneda;
 
     // La etiqueta del costo dice la moneda real de ESTA fila: COP si el origen es Colombia, USD si es importado
     const etiquetaFicha = (campo, etiqueta) => campo === 'precio_unitario_usd'
@@ -1417,7 +1574,7 @@ window.exportar = function(cual) {
 // ---------- Secciones del menú lateral ----------
 const SECCIONES = {
     resumen:   ['kpis', 'cardGrafico', 'cardCumplimiento'],
-    ingresado: ['kpis', 'cardIngresoMes', 'cardIngresadas'],
+    ingresado: ['kpis', 'cardIngresoMes', 'cardHistorico', 'cardIngresadas'],
     pendiente: ['kpis', 'cardPlan', 'cardPendientes'],
 };
 let seccionActual = 'resumen';
@@ -1425,7 +1582,7 @@ let seccionActual = 'resumen';
 window.verSeccion = function(seccion) {
     seccionActual = seccion;
     const visibles = SECCIONES[seccion] || [];
-    ['kpis','cardGrafico','cardCumplimiento','cardIngresoMes','cardPlan','cardIngresadas','cardPendientes'].forEach(id => {
+    ['kpis','cardGrafico','cardCumplimiento','cardIngresoMes','cardHistorico','cardPlan','cardIngresadas','cardPendientes'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = visibles.includes(id) ? '' : 'none';
     });
