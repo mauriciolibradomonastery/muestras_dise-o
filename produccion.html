@@ -455,7 +455,7 @@ async function cargarDatos() {
 
         document.getElementById('selloDatos').textContent =
             `${fmt(filas.length)} registros · ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
-        await Promise.all([cargarPresupuesto(), cargarFotos()]);
+        await Promise.all([cargarPresupuesto(), cargarFotos(), cargarParametrosProd()]);
         refrescar();
     } catch (e) {
         console.error('[produccion] Error cargando datos:', e);
@@ -463,6 +463,99 @@ async function cargarDatos() {
     }
 }
 window.cargarDatos = cargarDatos;
+
+// ---------- Margen real (parámetros SOLO de producción: prod_parametros y prod_nacionalizacion) ----------
+// Producción es un hecho histórico: usa sus propios parámetros (no los del WIP) y la TRM de cada fila del Excel.
+let costeoProd = { listo: false, error: null, params: {}, nacionalizacion: [] };
+
+/** Mayúsculas, sin tildes y con espacios simples: " Turquía " → "TURQUIA". */
+const normalizarClave = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/\s+/g, ' ').trim();
+
+async function cargarParametrosProd() {
+    try {
+        const [p, n] = await Promise.all([
+            supabase.from('prod_parametros').select('clave, valor'),
+            supabase.from('prod_nacionalizacion').select('pais, familia, porcentaje'),
+        ]);
+        if (p.error) throw p.error;
+        if (n.error) throw n.error;
+        if (!p.data.length) throw new Error('prod_parametros llegó vacía');
+        costeoProd = {
+            listo: true,
+            error: null,
+            params: Object.fromEntries(p.data.map(r => [r.clave, r.valor === null ? null : Number(r.valor)])),
+            nacionalizacion: n.data
+                .map(r => ({ pais: normalizarClave(r.pais), familia: normalizarClave(r.familia),
+                             porcentaje: r.porcentaje === null ? null : Number(r.porcentaje) }))
+                .sort((a, b) => b.pais.length - a.pais.length),   // "ITALIA SIN" antes que "ITALIA"
+        };
+    } catch (e) {
+        costeoProd = { listo: false, error: e.message || String(e), params: {}, nacionalizacion: [] };
+        console.error('[produccion] No se pudieron cargar los parámetros de margen:', e);
+    }
+}
+
+/**
+ * % de nacionalización según origen y familia (en producción la familia es la columna "linea": PRENDAS, ACCESORIOS…).
+ * País desconocido o con % vacío → 0 % con alerta (no se inventan porcentajes).
+ * @returns {{ pct: number, alerta: string|null }}
+ */
+function nacionalizacionProd(origen, familia) {
+    const pais = normalizarClave(origen).replace(/\bITALY\b/g, 'ITALIA');
+    const esPrenda = normalizarClave(familia).includes('PRENDA');
+    const candidatos = costeoProd.nacionalizacion.filter(r => pais === r.pais || pais.includes(r.pais));
+    const exactos = candidatos.filter(r => r.pais === pais);
+    const lista = exactos.length ? exactos : candidatos;
+    const fila = (esPrenda && lista.find(r => r.familia === 'PRENDAS')) || lista.find(r => r.familia === '');
+    if (!fila) return { pct: 0, alerta: `Origen sin tarifa de nacionalización (${pais || 'vacío'}): se calculó con 0 %.` };
+    if (fila.porcentaje === null) return { pct: 0, alerta: `${fila.pais}: % de nacionalización sin definir, se calculó con 0 %.` };
+    return { pct: fila.porcentaje, alerta: null };
+}
+
+/**
+ * Margen real de una fila de producción.
+ *   Costo total (COP)  = costo unitario × (1 + % nacionalización) × TRM  +  certificado
+ *                        (origen Colombia → el costo ya está en COP y la TRM es 1;
+ *                         otro origen → el costo está en USD y se usa la TRM de la fila del Excel)
+ *   Precio neto        = PVP ÷ (1 + IVA)
+ *   Precio ponderado   = neto × % canal propio  +  neto × factor distribuidor × % venta distribuidor
+ *   Margen real        = (precio ponderado − costo total) ÷ precio ponderado
+ * @param {object} r - fila completa de la tabla produccion
+ * @returns {{ margen: number|null, costoTotal: number|null, precioPonderado: number|null, moneda: string, alertas: string[] }}
+ */
+function calcularMargenProduccion(r) {
+    const vacio = (alertas, moneda = '—') => ({ margen: null, costoTotal: null, precioPonderado: null, moneda, alertas });
+    if (!costeoProd.listo) return vacio([`No se cargaron los parámetros de margen: ${costeoProd.error || 'desconocido'}.`]);
+
+    const P = costeoProd.params;
+    const faltan = ['iva', 'factor_distribuidor', 'certificado_general', 'certificado_gorra', 'pct_canal_propio', 'pct_venta_distribuidor']
+        .filter(k => !(P[k] >= 0) || P[k] === null);
+    if (faltan.length) return vacio([`Faltan parámetros en prod_parametros: ${faltan.join(', ')}.`]);
+
+    const esNacional = normalizarClave(r.origen).includes('COLOMBIA');
+    const moneda = esNacional ? 'COP' : 'USD';
+    const costoUnit = num(r.precio_unitario_usd);
+    const pvp = num(r.pvp_cop);
+    const alertas = [];
+    if (!(costoUnit > 0)) alertas.push('La fila no tiene costo unitario (UNIT PRICE).');
+    if (!(pvp > 0)) alertas.push('La fila no tiene PVP individual (COP).');
+    const trm = esNacional ? 1 : num(r.trm);
+    if (!(trm > 0)) alertas.push('Producto importado sin TRM en el Excel: no se puede pasar el costo a pesos.');
+    if (alertas.length) return vacio(alertas, moneda);
+
+    const { pct: nac, alerta } = nacionalizacionProd(r.origen, r.linea);
+    if (alerta) alertas.push(alerta);
+    const sub = normalizarClave(r.sublinea);
+    const certificado = (sub.includes('CAP') || sub.includes('GORRA')) ? P.certificado_gorra : P.certificado_general;
+
+    const costoTotal = costoUnit * (1 + nac) * trm + certificado;
+    const neto = pvp / (1 + P.iva);
+    const precioPonderado = neto * P.pct_canal_propio + neto * P.factor_distribuidor * P.pct_venta_distribuidor;
+    if (!(precioPonderado > 0)) return vacio(['El precio ponderado dio 0: revisa los % de distribución en prod_parametros.'], moneda);
+
+    return { margen: (precioPonderado - costoTotal) / precioPonderado, costoTotal, precioPonderado, moneda, alertas };
+}
 
 async function cargarPresupuesto() {
     const { data, error } = await supabase.from('presupuesto_comercial')
@@ -1119,6 +1212,10 @@ const CAMPOS_FICHA = [
         ['pvp_cop','pvp individual (cop)'], ['precio_unitario_usd','unit price (usd)'],
         ['total_usd','total usd x ref'], ['trm','trm'],
     ]],
+    ['Margen real', [
+        ['margen_real','margen real'], ['moneda_costo','moneda del costo unitario'],
+        ['costo_total_cop','costo total puesto en colombia (cop)'], ['precio_ponderado','precio neto ponderado (cop)'],
+    ]],
     ['Unidades', [
         ['unidades_preventa','unidades preventa'], ['unidades_reales','unidades reales'],
         ['excedentes','excedentes'], ['segundas','segundas'],
@@ -1131,7 +1228,7 @@ const CAMPOS_FICHA = [
         ['fecha_estimada_bodega','fecha estimada a la bodega'], ['fecha_real_bodega','fecha real en bodega'],
     ]],
 ];
-const CAMPOS_MONEDA = new Set(['pvp_cop','precio_unitario_usd','total_usd','trm']);
+const CAMPOS_MONEDA = new Set(['pvp_cop','precio_unitario_usd','total_usd','trm','costo_total_cop','precio_ponderado']);
 const CAMPOS_UNIDADES = new Set(['unidades_preventa','unidades_reales','excedentes','segundas']);
 
 window.abrirFicha = async function(id) {
@@ -1159,11 +1256,21 @@ window.abrirFicha = async function(id) {
     const llave = Object.keys(extras).find(k => /real pay.*balance/i.test(k));
     r.balance = llave ? extras[llave] : null;
 
+    const m = calcularMargenProduccion(r);
+    r.margen_real = m.margen;
+    r.costo_total_cop = m.costoTotal;
+    r.precio_ponderado = m.precioPonderado;
+    r.moneda_costo = m.moneda;
+
     const valor = (campo, v) => {
         if (v === null || v === undefined || v === '') return '—';
         if (campo.startsWith('fecha_') || campo === 'balance') {
             const f = String(v);
-            return /^\d{4}-\d{2}-\d{2}/.test(f) ? fechaCorta(f.slice(0, 10)) : f;
+            return /^\d{4}-\d{2}-\d{2}/.test(f) ? fechaCorta(f.slice(0, 10)) : esc(f);
+        }
+        if (campo === 'margen_real') {
+            const pct = num(v) * 100;
+            return `<b class="${pct < 0 ? 'no-cumple' : ''}">${pct.toFixed(2)} %</b>`;
         }
         if (CAMPOS_MONEDA.has(campo)) return '$ ' + num(v).toLocaleString('es-CO', { maximumFractionDigits: 2 });
         if (CAMPOS_UNIDADES.has(campo)) return fmt(num(v));
@@ -1176,7 +1283,11 @@ window.abrirFicha = async function(id) {
             <div class="campo">
                 <div class="et minuscula">${etiqueta}</div>
                 <div class="va minuscula">${valor(campo, r[campo])}</div>
-            </div>`).join('')).join('');
+            </div>`).join('')).join('') +
+        (m.alertas.length
+            ? `<div style="grid-column:1/-1; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; border-radius:8px; padding:8px 12px; font-size:12px;">
+                   ${m.alertas.map(a => `⚠️ ${esc(a)}`).join('<br>')}</div>`
+            : '');
 
     pintarFotoFicha();
 };
