@@ -158,6 +158,8 @@
         .img-action-btn { cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; }
 
         .resizer { position: absolute; top: 0; right: 0; width: 6px; cursor: col-resize; user-select: none; height: 100%; z-index: 25; background-color: transparent; }
+        /* Alerta de costeo: va en ::after para que NO forme parte del texto que se guarda */
+        td[data-alerta]::after { content: ' ⚠️'; cursor: help; }
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; border-right: 1px solid #1d4ed8; }
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
@@ -406,45 +408,118 @@
             filas.forEach(fila => tbody.appendChild(fila));
         };
 
-        window.trmDolarGlobal = 3500;
-
-        window.actualizarTrmGlobal = function(val) {
-            let newTrm = parseFloat(val);
-            if(!isNaN(newTrm) && newTrm > 0) {
-                window.trmDolarGlobal = newTrm;
-                const filas = document.getElementById('tableBody').querySelectorAll('tr');
-                filas.forEach(tr => {
-                    if(tr.style.display !== 'none') {
-                        window.calcularMargenesFila(tr);
-                    }
-                });
-                window.marcarCambios();
-            }
+        // ================= PARÁMETROS DE COSTEO (vienen de Supabase) =================
+        // Tablas: wip_parametros · wip_nacionalizacion · wip_margenes_minimos
+        // Se editan en Supabase (solo los editores de costeo). Si no cargan, el margen NO se calcula:
+        // es mejor una celda vacía con ⚠️ que un número inventado.
+        const costeo = {
+            listo: false,          // true cuando los parámetros cargaron bien
+            error: null,           // mensaje si no cargaron
+            puedeEditar: false,    // ¿el usuario está en editores_costeo?
+            params: {},            // { trm_usd: 3500, trm_eur: null, iva: 0.19, ... }
+            nacionalizacion: [],   // [{ pais: 'CHINA', familia: 'PRENDAS', porcentaje: 0.6 }, ...]
         };
+        /** "SUBLINEA_GENERO" → margen mínimo (genero vacío = cualquier género). Se llena desde Supabase. */
+        const baseMargen = {};
 
-        const baseMargen = {
-            "BACK PACK_MEN": 0.6, "BELT_MEN": 0.6, "BLUSON_": 0.65, "BODY_WOMEN": 0.7, 
-            "BOXER_MEN": 0.5, "SHORT_WOMEN": 0.55, "CAP_MEN": 0.8, "CAP_WOMEN": 0.8, 
-            "CARD HOLER_": 0.65, "CARD HOLDER_": 0.65,
-            "PANT_MEN": 0.6, "PANT_WOMEN": 0.6, "CROPTOP_WOMEN": 0.6, 
-            "SHORT_MEN": 0.55, "DRESS_WOMEN": 0.65, "DUFFLE BAG_MEN": 0.65, "FANNY PACK_MEN": 0.7, 
-            "FRAGANCE_": 0.4, "HAT_": 0.7, "HOODIE_MEN": 0.55, "HOODIE_WOMEN": 0.55, 
-            "JEAN_MEN": 0.65, "JEAN_WOMEN": 0.65, "JOGGER_MEN": 0.55, "JOGGER_WOMEN": 0.55, 
-            "KNITTED DRESS_": 0.6, "KNITTED TOP_": 0.6, "LONG SLEEVE_": 0.6, "LUGGAGE_": 0.45, 
-            "BRA_WOMEN": 0.55, "PANTY_WOMEN": 0.55, 
-            "POCKET HOLER_": 0.65, "POCKET HOLDER_": 0.65,
-            "POLO_MEN": 0.6, "POLO_WOMEN": 0.6, "JACKET_MEN": 0.55, "JACKET_WOMEN": 0.55, "VEST_WOMEN": 0.55, 
-            "SANDAL_UNISEX": 0.7, "SHIRT_MEN": 0.6, "SHOULDER BAG_WOMEN": 0.6, "SILK SET_": 0.5, 
-            "STILETTO_": 0.5, "SNEAKER_MEN": 0.5, "SNEAKER_WOMEN": 0.5, "SOCKS_": 0.6, 
-            "SWEATSHIRT_MEN": 0.6, "SWIN SHORT_MEN": 0.55, "SWIM SHORT_MEN": 0.55,
-            "SWIMSUIT_": 0.55, "TOP_WOMEN": 0.65, 
-            
-            "T-SHIRT MEN_MEN": 0.68, "T-SHIRT_MEN": 0.68,
-            "T-SHIRT_WOMEN": 0.6, "T-SHIRT WOMEN_WOMEN": 0.6,
-            "T-SHIRT_": 0.68, 
+        /** Mayúsculas, sin tildes y con espacios simples: " España " → "ESPANA". */
+        function normalizarClave(t) {
+            return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase().replace(/\s+/g, ' ').trim();
+        }
 
-            "T-SHIRT OVERSIZED_MEN": 0.68, "T-SHIRT PACK_MEN": 0.55, 
-            "WALLET_MEN": 0.65, "SKIRT_WOMEN": 0.6, "LEGGIN_WOMEN": 0.5
+        /** Escapa texto para ponerlo dentro de un atributo HTML. */
+        function escAttr(t) {
+            return String(t ?? '').replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        async function cargarParametrosCosteo() {
+            try {
+                const [p, n, m, editor] = await Promise.all([
+                    supabase.from('wip_parametros').select('clave, valor'),
+                    supabase.from('wip_nacionalizacion').select('pais, familia, porcentaje'),
+                    supabase.from('wip_margenes_minimos').select('sublinea, genero, margen'),
+                    supabase.rpc('es_editor_costeo'),
+                ]);
+                for (const r of [p, n, m]) { if (r.error) throw r.error; }
+                if (!p.data.length) throw new Error('wip_parametros llegó vacía (¿hay sesión iniciada?)');
+
+                costeo.params = Object.fromEntries(p.data.map(r => [r.clave, r.valor === null ? null : Number(r.valor)]));
+                costeo.nacionalizacion = n.data
+                    .map(r => ({ pais: normalizarClave(r.pais), familia: normalizarClave(r.familia),
+                                 porcentaje: r.porcentaje === null ? null : Number(r.porcentaje) }))
+                    .sort((a, b) => b.pais.length - a.pais.length);   // "ITALIA SIN" antes que "ITALIA"
+                Object.keys(baseMargen).forEach(k => delete baseMargen[k]);
+                m.data.forEach(r => { baseMargen[`${normalizarClave(r.sublinea)}_${normalizarClave(r.genero)}`] = Number(r.margen); });
+                costeo.puedeEditar = !editor.error && editor.data === true;
+                costeo.listo = true;
+                costeo.error = null;
+
+                const faltan = ['trm_usd', 'iva', 'factor_distribuidor', 'certificado_general', 'certificado_gorra']
+                    .filter(k => !(costeo.params[k] > 0));
+                if (faltan.length) console.warn('[costeo] Parámetros vacíos en wip_parametros:', faltan);
+            } catch (e) {
+                costeo.listo = false;
+                costeo.error = e.message || String(e);
+                console.error('[costeo] No se pudieron cargar los parámetros de costeo:', e);
+            }
+            pintarCajaTrm();
+        }
+
+        /** Dibuja las TRM (USD y EUR) en el encabezado de MARGEN REAL. Solo los editores pueden cambiarlas. */
+        function pintarCajaTrm() {
+            const caja = document.getElementById('cajaTrm');
+            if (!caja) return;
+            if (!costeo.listo) {
+                caja.innerHTML = `<span style="color:#b91c1c; font-weight:bold;" title="${escAttr(costeo.error)}">⚠️ Parámetros sin cargar</span>`;
+                return;
+            }
+            const bloqueo = costeo.puedeEditar ? '' : 'disabled title="Solo los editores de costeo pueden cambiar la TRM"';
+            const campo = (clave, etiqueta) =>
+                `${etiqueta}: <input type="number" min="1" step="any" value="${costeo.params[clave] ?? ''}" placeholder="—" ${bloqueo}
+                    style="width:58px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;"
+                    onclick="event.stopPropagation()" onchange="actualizarTrmGlobal('${clave}', this)">`;
+            caja.innerHTML = campo('trm_usd', 'TRM USD') + '<br>' + campo('trm_eur', 'TRM EUR');
+        }
+
+        /** Recalcula el margen de TODAS las filas (también las ocultas por filtros). */
+        function recalcularTodosLosMargenes() {
+            document.getElementById('tableBody').querySelectorAll('tr').forEach(tr => window.calcularMargenesFila(tr));
+            window.cachearTodo();
+        }
+
+        /** Cambia la TRM global en Supabase (aplica a todos los usuarios) y recalcula. */
+        window.actualizarTrmGlobal = async function(clave, input) {
+            const anterior = costeo.params[clave] ?? null;
+            const nuevo = parseFloat(input.value);
+            if (!(nuevo > 0)) {
+                alert('La TRM debe ser un número mayor que cero.');
+                input.value = anterior ?? '';
+                return;
+            }
+            if (nuevo === anterior) return;
+            const moneda = clave === 'trm_eur' ? 'del euro' : 'del dólar';
+            if (!confirm(`¿Cambiar la TRM ${moneda} de ${anterior ?? '(vacía)'} a ${nuevo}?\n\nSe recalculará el margen real de TODAS las muestras, para todos los usuarios.`)) {
+                input.value = anterior ?? '';
+                return;
+            }
+            input.disabled = true;
+            try {
+                const { data, error } = await supabase.from('wip_parametros')
+                    .update({ valor: nuevo }).eq('clave', clave).select('valor');
+                if (error) throw error;
+                if (!data || !data.length) throw new Error('Supabase no aplicó el cambio. ¿Tienes permiso de editor de costeo?');
+                costeo.params[clave] = nuevo;
+                recalcularTodosLosMargenes();
+                console.info(`[costeo] TRM ${moneda} actualizada: ${anterior} → ${nuevo}`);
+            } catch (e) {
+                console.error('[costeo] No se pudo guardar la TRM:', e);
+                alert('No se pudo guardar la TRM: ' + (e.message || e));
+                input.value = anterior ?? '';
+            } finally {
+                input.disabled = !costeo.puedeEditar;
+            }
         };
 
         function parseNumeroInteligente(str) {
@@ -475,28 +550,47 @@
             return parseFloat(pct.toFixed(2)) + "%";
         }
 
+        /**
+         * % de nacionalización según el país (y la familia, para China).
+         * País desconocido o con % vacío → 0 % con alerta (decisión del negocio: no inventar porcentajes).
+         * @returns {{ pct: number, alerta: string|null }}
+         */
         function obtenerNacionalizacion(paisOrigen, familia) {
-            let pais = (paisOrigen || "").trim().toUpperCase();
-            let fam = (familia || "").trim().toUpperCase();
-            let esPrenda = fam.includes("PRENDA");
-            
-            if (pais.includes("COLOMBIA")) return 0.0;
-            if (pais.includes("PER")) return 0.03;
-            if (pais.includes("ESPAÑA") || pais.includes("ESPANA")) return 0.140954;
-            if (pais.includes("PORTUGAL") || pais.includes("ITALY SIN") || pais.includes("ITALIA SIN")) return 0.540954;
-            if (pais.includes("ITALY CON") || pais.includes("ITALIA CON")) return 0.15;
-            if (pais.includes("TURQU")) return 0.40;
-            if (pais.includes("CHINA")) return esPrenda ? 0.60 : 0.40;
-            return 0.60;
+            const pais = normalizarClave(paisOrigen).replace(/\bITALY\b/g, 'ITALIA');
+            const esPrenda = normalizarClave(familia).includes('PRENDA');
+            const candidatos = costeo.nacionalizacion.filter(r => pais === r.pais || pais.includes(r.pais));
+            const exactos = candidatos.filter(r => r.pais === pais);
+            const lista = exactos.length ? exactos : candidatos;
+            const fila = (esPrenda && lista.find(r => r.familia === 'PRENDAS')) || lista.find(r => r.familia === '');
+            if (!fila) return { pct: 0, alerta: `País sin tarifa de nacionalización: ${pais}. Se calculó con 0 %.` };
+            if (fila.porcentaje === null) return { pct: 0, alerta: `${fila.pais}: % de nacionalización sin definir. Se calculó con 0 %.` };
+            return { pct: fila.porcentaje, alerta: null };
+        }
+
+        /** TRM según la moneda. EUR usa la TRM del euro (antes usaba la del dólar por error). */
+        function obtenerTrm(moneda) {
+            if (moneda === 'COP') return { trm: 1, alerta: null };
+            if (moneda === 'EUR') {
+                const t = costeo.params.trm_eur;
+                return t > 0 ? { trm: t, alerta: null } : { trm: null, alerta: 'Falta la TRM del euro (wip_parametros → trm_eur). No se puede calcular.' };
+            }
+            const t = costeo.params.trm_usd;
+            return t > 0 ? { trm: t, alerta: null } : { trm: null, alerta: 'Falta la TRM del dólar (wip_parametros → trm_usd).' };
+        }
+
+        /** Pone o quita el ⚠️ de una celda. El texto completo aparece al pasar el mouse. */
+        function marcarAlerta(celda, texto) {
+            if (texto) { celda.dataset.alerta = '1'; celda.title = texto; }
+            else { delete celda.dataset.alerta; celda.removeAttribute('title'); }
         }
 
         window.calcularMargenesFila = function(tr) {
             const celdas = tr.querySelectorAll('td');
             if (celdas.length < 64) return;
 
-            let linea = (celdas[3].innerText || "").toUpperCase().replace("EXTRAS", "").trim();
+            let linea = normalizarClave((celdas[3].innerText || "").toUpperCase().replace("EXTRAS", ""));
             let pais = (celdas[5].innerText || "").trim();
-            let genero = (celdas[7].innerText || "").toUpperCase().trim();
+            let genero = normalizarClave(celdas[7].innerText);
             let familia = (celdas[8].innerText || "").toUpperCase().trim();
             
             let vdStr = (celdas[55].innerText || "").trim(); 
@@ -535,6 +629,15 @@
             let margenMinActual = parseNumeroInteligente(margenMinActualText);
             let targetDecimal = isNaN(margenMinActual) ? null : (margenMinActual > 1 ? margenMinActual / 100 : margenMinActual);
 
+            marcarAlerta(celdaReal, null);
+            if (!costeo.listo) {
+                celdaReal.innerText = "";
+                celdaReal.style.color = "inherit";
+                celdaReal.style.backgroundColor = "#f1f5f9";
+                marcarAlerta(celdaReal, 'No se cargaron los parámetros de costeo: ' + (costeo.error || 'cargando…'));
+                return;
+            }
+
             if (pais === "" || vdStr === "" || cpStr === "" || costoStr === "" || pvpStr === "") {
                 celdaReal.innerText = "";
                 celdaReal.style.color = "inherit";
@@ -550,16 +653,25 @@
             let vd = ventaDistRaw > 1 ? ventaDistRaw / 100 : ventaDistRaw;
             let cp = canalPropioRaw > 1 ? canalPropioRaw / 100 : canalPropioRaw;
 
+            const { trm: multiplicadorTRM, alerta: alertaTrm } = obtenerTrm(moneda);
+            if (multiplicadorTRM === null) {
+                celdaReal.innerText = "";
+                celdaReal.style.color = "inherit";
+                celdaReal.style.backgroundColor = "#f1f5f9";
+                marcarAlerta(celdaReal, alertaTrm);
+                return;
+            }
+
             if (costoUnitRaw > 0 && pvpRaw > 0) {
-                let nac = obtenerNacionalizacion(pais, familia);
-                let costoCertificado = (linea.includes("CAP") || linea.includes("GORRA")) ? 8200 : 3100;
+                const P = costeo.params;
+                const { pct: nac, alerta: alertaNac } = obtenerNacionalizacion(pais, familia);
+                marcarAlerta(celdaReal, alertaNac);
+                let costoCertificado = (linea.includes("CAP") || linea.includes("GORRA")) ? P.certificado_gorra : P.certificado_general;
                 
-                let multiplicadorTRM = (moneda === 'COP') ? 1 : window.trmDolarGlobal;
+                let costoTotalPesos = (costoUnitRaw * (1 + nac) * multiplicadorTRM) + (costoCertificado || 0); 
                 
-                let costoTotalPesos = (costoUnitRaw * (1 + nac) * multiplicadorTRM) + costoCertificado; 
-                
-                let precioSinIVA = pvpRaw / 1.19;
-                let precioPonderado = (precioSinIVA * cp) + ((precioSinIVA * 0.5) * vd);
+                let precioSinIVA = pvpRaw / (1 + P.iva);
+                let precioPonderado = (precioSinIVA * cp) + ((precioSinIVA * P.factor_distribuidor) * vd);
                 
                 if (precioPonderado > 0) {
                     let margenReal = (precioPonderado - costoTotalPesos) / precioPonderado;
@@ -790,7 +902,7 @@
                 if(columnIndex > colsDiseno.length) thTitle.classList.add('col-produccion-header', 'hidden');
 
                 if (colUpper === 'MARGEN REAL') {
-                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span> <br><div style="font-size:10px; margin-top:4px; font-weight:normal;">TRM: <input type="number" id="inputTrmGlobal" value="3500" style="width:50px; padding:2px; text-align:center; color:black; border:1px solid #ccc; border-radius:4px; font-size:10px;" onclick="event.stopPropagation()" oninput="actualizarTrmGlobal(this.value)"></div>`;
+                    thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span> <br><div style="font-size:10px; margin-top:4px; font-weight:normal;"><span id="cajaTrm" onclick="event.stopPropagation()">cargando TRM…</span></div>`;
                 } else {
                     thTitle.innerHTML = `<div style="color:#6b7280; font-size:10px; font-weight:bold; margin-bottom:4px;">#${columnIndex}</div>${col} <span class="sort-icon">↕</span>`;
                 }
@@ -1531,7 +1643,9 @@
 
         // --- SCRIPTS DE INICIO ---
         inicializarEncabezados();
-        cargarDatos();
+        // Primero los parámetros de costeo (TRM, % nacionalización, márgenes mínimos) y luego las muestras,
+        // para que cada fila se calcule con los valores de Supabase desde el primer momento.
+        cargarParametrosCosteo().finally(() => cargarDatos());
     </script>
 </body>
 </html>
