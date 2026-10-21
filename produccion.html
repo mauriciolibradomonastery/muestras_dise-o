@@ -1209,12 +1209,11 @@ const CAMPOS_FICHA = [
         ['descripcion','descripción'], ['color','color'], ['origen','origen'], ['destino','destino'],
     ]],
     ['Precios', [
-        ['pvp_cop','pvp individual (cop)'], ['precio_unitario_usd','unit price (usd)'],
+        ['pvp_cop','pvp individual (cop)'], ['precio_unitario_usd','unit price'],
         ['total_usd','total usd x ref'], ['trm','trm'],
     ]],
     ['Margen real', [
         ['margen_real','margen real'], ['moneda_costo','moneda del costo unitario'],
-        ['costo_total_cop','costo total puesto en colombia (cop)'], ['precio_ponderado','precio neto ponderado (cop)'],
     ]],
     ['Unidades', [
         ['unidades_preventa','unidades preventa'], ['unidades_reales','unidades reales'],
@@ -1228,7 +1227,7 @@ const CAMPOS_FICHA = [
         ['fecha_estimada_bodega','fecha estimada a la bodega'], ['fecha_real_bodega','fecha real en bodega'],
     ]],
 ];
-const CAMPOS_MONEDA = new Set(['pvp_cop','precio_unitario_usd','total_usd','trm','costo_total_cop','precio_ponderado']);
+const CAMPOS_MONEDA = new Set(['pvp_cop','precio_unitario_usd','total_usd','trm']);
 const CAMPOS_UNIDADES = new Set(['unidades_preventa','unidades_reales','excedentes','segundas']);
 
 window.abrirFicha = async function(id) {
@@ -1258,9 +1257,12 @@ window.abrirFicha = async function(id) {
 
     const m = calcularMargenProduccion(r);
     r.margen_real = m.margen;
-    r.costo_total_cop = m.costoTotal;
-    r.precio_ponderado = m.precioPonderado;
     r.moneda_costo = m.moneda;
+
+    // La etiqueta del costo dice la moneda real de ESTA fila: COP si el origen es Colombia, USD si es importado
+    const etiquetaFicha = (campo, etiqueta) => campo === 'precio_unitario_usd'
+        ? (m.moneda === 'COP' || m.moneda === 'USD' ? `unit price (${m.moneda.toLowerCase()})` : 'unit price')
+        : etiqueta;
 
     const valor = (campo, v) => {
         if (v === null || v === undefined || v === '') return '—';
@@ -1281,7 +1283,7 @@ window.abrirFicha = async function(id) {
         `<div class="grupo-titulo">${grupo}</div>` +
         campos.map(([campo, etiqueta]) => `
             <div class="campo">
-                <div class="et minuscula">${etiqueta}</div>
+                <div class="et minuscula">${etiquetaFicha(campo, etiqueta)}</div>
                 <div class="va minuscula">${valor(campo, r[campo])}</div>
             </div>`).join('')).join('') +
         (m.alertas.length
