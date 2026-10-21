@@ -259,12 +259,28 @@
         <span>Unidades totales por año</span>
         <span class="leyenda">
             <span class="llave"><i class="cuadro" style="background:#94a3b8"></i> Años cerrados (tabla de colecciones)</span>
-            <span class="llave"><i class="cuadro c-ing"></i> Año en curso (Excel, por fecha de llegada)</span>
+            <span class="llave"><i class="cuadro c-ing"></i> Ingresado (Excel, por fecha de llegada)</span>
+            <span class="llave"><i class="cuadro c-pen"></i> Por ingresar (preventa, por fecha estimada)</span>
         </span>
     </h3>
     <div class="grafico-wrap"><div id="graficoHistorico"></div></div>
     <div class="nota" id="notaHistorico"></div>
     <div class="nota">Total de la compañía: no cambia con los filtros. Pasa el mouse por una barra para ver el detalle por colección.</div>
+    <h3 style="margin-top:22px;">
+        <span>Detalle por colección</span>
+        <button class="btn-claro" onclick="exportar('colecciones')">📥 Exportar</button>
+    </h3>
+    <div class="tabla-scroll" style="max-height: 560px;">
+        <table id="tablaColecciones">
+            <thead><tr style="cursor:default">
+                <th>Año</th><th>Colección</th><th>Estado</th><th class="num">Unidades ingresadas</th>
+                <th class="num">Por ingresar</th>
+                <th class="num">Referencias</th><th class="num">Costo total (USD)</th><th class="num">Costo prom. por unidad (USD)</th>
+            </tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div class="nota">Colecciones cerradas: cifras finales de la tabla <i>colecciones</i>. Por ingresar: unidades de preventa aún sin fecha real, ubicadas en el año de su fecha estimada (sin fecha: el año de la colección; si la fecha ya pasó: el año actual). Año en curso: el costo es de lo ingresado (reales + excedentes + segundas) × unit price en dólares; si el origen es Colombia, el unit price en pesos se divide por la TRM de la fila del Excel.</div>
 </div>
 
 <div class="card" id="cardPlan">
@@ -375,7 +391,7 @@ document.getElementById('usuarioActivo').textContent = session?.user?.email || '
 const BUCKET = 'fotos-referencias';
 const COLUMNAS = ['id','linea','sublinea','genero','descripcion','referencia','color','coleccion','origen','destino',
     'proveedor','hoja','unidades_reales','excedentes','segundas','unidades_preventa',
-    'fecha_real_bodega','fecha_estimada_bodega','numero_factura'].join(',');
+    'fecha_real_bodega','fecha_estimada_bodega','numero_factura','precio_unitario_usd','trm'].join(',');
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const SIN_FECHA = 'sin-fecha';
@@ -816,22 +832,29 @@ function agruparFilas(lista, camposSuma) {
 const tituloGrupo = d => d.nFilas > 1
     ? ` title="Agrupa ${d.nFilas} filas del Excel. La ficha muestra la primera de ellas."` : '';
 
-// ---------- Unidades totales por año ----------
+// ---------- Unidades totales por año y detalle por colección ----------
 // Fuente: tabla "colecciones" de Supabase.
-//   · Año CERRADO (todas sus colecciones tienen unidades): se suman las cifras finales de la tabla.
-//   · Año EN CURSO (alguna colección sin unidades): se calcula con los Excel, por fecha real de llegada a bodega.
-//     Así entra todo lo que llegó ese año, incluso lotes de colecciones anteriores (ej. excedentes de Q3-HORSEBEAT en 2026).
+//   · Año CERRADO (todas sus colecciones tienen unidades): cifras finales de la tabla.
+//   · Año EN CURSO: se calcula con los Excel, por fecha real de llegada a bodega. Así entra todo lo que
+//     llegó ese año, incluso lotes de colecciones anteriores (ej. excedentes de Q3-HORSEBEAT en 2026).
+//   · POR INGRESAR: preventa de las filas sin fecha real, en el año de su fecha estimada. Sin fecha estimada →
+//     año de la colección. Nunca en un año pasado: lo atrasado todavía puede llegar, así que va al año actual.
 let catalogoColecciones = { listo: false, error: null, filas: [] };
+let datosColecciones = [];   // lo que muestra la tabla (y lo que se exporta)
 
 async function cargarHistorico() {
     try {
         const { data, error } = await supabase.from('colecciones')
-            .select('anio, coleccion, unidades').order('anio').order('orden');
+            .select('anio, coleccion, nombre_en_excel, unidades, referencias, costo_usd').order('anio').order('orden');
         if (error) throw error;
         catalogoColecciones = {
             listo: true, error: null,
-            filas: data.map(r => ({ anio: Number(r.anio), coleccion: r.coleccion,
-                                    unidades: r.unidades === null ? null : num(r.unidades) })),
+            filas: data.map(r => ({
+                anio: Number(r.anio), coleccion: r.coleccion, nombreExcel: r.nombre_en_excel,
+                unidades: r.unidades === null ? null : num(r.unidades),
+                referencias: r.referencias === null ? null : num(r.referencias),
+                costo: r.costo_usd === null ? null : num(r.costo_usd),
+            })),
         };
     } catch (e) {
         catalogoColecciones = { listo: false, error: e.message || String(e), filas: [] };
@@ -839,50 +862,115 @@ async function cargarHistorico() {
     }
 }
 
+/**
+ * Costo en dólares de lo que ingresó en una fila del Excel.
+ * Origen Colombia: el unit price está en pesos → se divide por la TRM de esa fila. Importado: ya está en USD.
+ * @returns {{ costo: number|null, problema: 'sin_precio'|'sin_trm'|null }}
+ */
+function costoUsdFila(f) {
+    const unidades = totalIngresado(f);
+    const precio = num(f.precio_unitario_usd);
+    if (!(precio > 0)) return { costo: null, problema: 'sin_precio' };
+    if (normalizarClave(f.origen).includes('COLOMBIA')) {
+        const trm = num(f.trm);
+        if (!(trm > 0)) return { costo: null, problema: 'sin_trm' };
+        return { costo: unidades * precio / trm, problema: null };
+    }
+    return { costo: unidades * precio, problema: null };
+}
+
+/**
+ * Arma el resumen por año con su detalle por colección.
+ * @returns {{ porAnio: Map<number, object>, repetidos: number[] }}
+ */
+function resumenColecciones() {
+    const catalogo = catalogoColecciones.filas;
+    const buscar = new Map();
+    catalogo.forEach(c => {
+        buscar.set(normalizarClave(c.coleccion), c);
+        if (c.nombreExcel) buscar.set(normalizarClave(c.nombreExcel), c);
+    });
+
+    // 1. Años cerrados
+    const porAnio = new Map();
+    const delCatalogo = new Map();
+    catalogo.forEach(c => { if (!delCatalogo.has(c.anio)) delCatalogo.set(c.anio, []); delCatalogo.get(c.anio).push(c); });
+    delCatalogo.forEach((cols, anio) => {
+        if (!cols.every(c => c.unidades !== null)) return;
+        porAnio.set(anio, {
+            fuente: 'historico',
+            colecciones: cols.map(c => ({ coleccion: c.coleccion, unidades: c.unidades, porIngresar: 0, referencias: c.referencias,
+                                          costo: c.costo, sinPrecio: 0, sinTrm: 0 })),
+        });
+    });
+
+    // 2. Años en curso: lo que llegó a bodega según los Excel
+    const repetidos = new Set();
+    const vivos = new Map();   // año → Map(colección → acumulado)
+    const acumulador = (anio, f) => {
+        const cat = buscar.get(normalizarClave(f.coleccion));
+        let nombre = cat ? cat.coleccion : ((f.coleccion || '').trim().toUpperCase() || 'SIN COLECCIÓN');
+        if (cat && cat.anio !== anio) nombre += ` · lote ${anio}`;      // lote de una colección de otro año
+        if (!vivos.has(anio)) vivos.set(anio, new Map());
+        const porCol = vivos.get(anio);
+        if (!porCol.has(nombre)) porCol.set(nombre, { coleccion: nombre, unidades: 0, porIngresar: 0, refs: new Set(),
+                                                      costo: 0, conCosto: false, sinPrecio: 0, sinTrm: 0 });
+        return porCol.get(nombre);
+    };
+
+    // 2b. Por ingresar
+    filas.filter(f => !esIngresada(f)).forEach(f => {
+        const cat = buscar.get(normalizarClave(f.coleccion));
+        const estimado = f.fecha_estimada_bodega ? Number(String(f.fecha_estimada_bodega).slice(0, 4)) : null;
+        const anio = Math.max(estimado || (cat ? cat.anio : anioHoy), anioHoy);
+        if (porAnio.has(anio)) { repetidos.add(anio); return; }
+        acumulador(anio, f).porIngresar += num(f.unidades_preventa);
+    });
+
+    // 2c. Ingresado
+    filas.filter(esIngresada).forEach(f => {
+        const anio = Number(String(f.fecha_real_bodega).slice(0, 4));
+        if (!anio) return;
+        if (porAnio.has(anio)) { repetidos.add(anio); return; }        // año cerrado: manda el catálogo
+        const acc = acumulador(anio, f);
+        acc.unidades += totalIngresado(f);
+        if (f.descripcion) acc.refs.add(f.descripcion.trim().toUpperCase());
+        const { costo, problema } = costoUsdFila(f);
+        if (costo !== null) { acc.costo += costo; acc.conCosto = true; }
+        if (problema === 'sin_precio') acc.sinPrecio++;
+        if (problema === 'sin_trm') acc.sinTrm++;
+    });
+    vivos.forEach((porCol, anio) => {
+        porAnio.set(anio, {
+            fuente: 'excel',
+            colecciones: [...porCol.values()]
+                .sort((a, b) => a.coleccion.localeCompare(b.coleccion))
+                .map(a => ({ coleccion: a.coleccion, unidades: a.unidades, porIngresar: a.porIngresar,
+                             referencias: a.unidades > 0 ? a.refs.size : null,
+                             costo: a.conCosto ? a.costo : null, sinPrecio: a.sinPrecio, sinTrm: a.sinTrm })),
+        });
+    });
+
+    porAnio.forEach(d => {
+        d.unidades = d.colecciones.reduce((s, c) => s + num(c.unidades), 0);
+        d.porIngresar = d.colecciones.reduce((s, c) => s + num(c.porIngresar), 0);
+        d.referencias = d.colecciones.reduce((s, c) => s + num(c.referencias), 0);
+        d.costo = d.colecciones.some(c => c.costo !== null) ? d.colecciones.reduce((s, c) => s + num(c.costo), 0) : null;
+        d.incompleto = d.colecciones.some(c => (c.unidades > 0 && c.costo === null) || c.sinPrecio || c.sinTrm);
+    });
+    return { porAnio, repetidos: [...repetidos] };
+}
+
+const fmtUsd = (v, dec = 0) => v === null || v === undefined ? '—'
+    : 'US$ ' + num(v).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
 function pintarHistorico() {
     const cont = document.getElementById('graficoHistorico');
     const nota = document.getElementById('notaHistorico');
     if (!cont) return;
 
-    // 1. Años cerrados según el catálogo
-    const porAnioCatalogo = new Map();   // año → [{ coleccion, unidades }]
-    catalogoColecciones.filas.forEach(c => {
-        if (!porAnioCatalogo.has(c.anio)) porAnioCatalogo.set(c.anio, []);
-        porAnioCatalogo.get(c.anio).push(c);
-    });
-    const porAnio = new Map();           // año → { unidades, fuente, detalle }
-    porAnioCatalogo.forEach((cols, anio) => {
-        if (cols.every(c => c.unidades !== null)) {
-            porAnio.set(anio, {
-                unidades: cols.reduce((s, c) => s + c.unidades, 0),
-                fuente: 'historico',
-                detalle: cols.map(c => `${c.coleccion}: ${fmt(c.unidades)}`).join('\n'),
-            });
-        }
-    });
-
-    // 2. Años en curso: lo que llegó a bodega según los Excel
-    const delExcel = {};
-    filas.filter(esIngresada).forEach(f => {
-        const anio = Number(String(f.fecha_real_bodega).slice(0, 4));
-        if (!anio) return;
-        delExcel[anio] = delExcel[anio] || { unidades: 0, porColeccion: {} };
-        const u = totalIngresado(f);
-        delExcel[anio].unidades += u;
-        const col = (f.coleccion || 'sin colección').trim();
-        delExcel[anio].porColeccion[col] = (delExcel[anio].porColeccion[col] || 0) + u;
-    });
-    const repetidos = [];
-    Object.entries(delExcel).forEach(([a, d]) => {
-        const anio = Number(a);
-        if (porAnio.has(anio)) { repetidos.push(anio); return; }   // el año ya está cerrado: manda el catálogo
-        porAnio.set(anio, {
-            unidades: d.unidades, fuente: 'excel',
-            detalle: Object.entries(d.porColeccion).sort((x, y) => y[1] - x[1])
-                .map(([c, u]) => `${c}: ${fmt(u)}`).join('\n'),
-        });
-    });
-    if (repetidos.length) console.warn('[produccion] Años cerrados en el catálogo que también tienen ingresos en los Excel:', repetidos);
+    const { porAnio, repetidos } = resumenColecciones();
+    if (repetidos.length) console.warn('[produccion] Años cerrados que también tienen ingresos en los Excel:', repetidos);
 
     const avisos = [];
     if (!catalogoColecciones.listo) avisos.push(`⚠️ No se pudo leer la tabla de colecciones: ${esc(catalogoColecciones.error)}`);
@@ -890,37 +978,84 @@ function pintarHistorico() {
     if (nota) nota.innerHTML = avisos.join('<br>');
 
     const anios = [...porAnio.keys()].sort((a, b) => a - b);
-    if (!anios.length) { cont.innerHTML = '<div class="cargando">Sin datos de ingreso.</div>'; return; }
 
-    const anchoAnio = 84, margenIzq = 74, margenDer = 20, alto = 310, base = alto - 48, tope = 30;
-    const ancho = Math.max(560, margenIzq + anios.length * anchoAnio + margenDer);
-    const max = Math.max(...anios.map(a => porAnio.get(a).unidades), 1);
-    const escala = v => (v / max) * (base - tope);
+    // ----- Gráfico -----
+    if (!anios.length) {
+        cont.innerHTML = '<div class="cargando">Sin datos de ingreso.</div>';
+    } else {
+        const anchoAnio = 84, margenIzq = 74, margenDer = 20, alto = 310, base = alto - 48, tope = 30;
+        const ancho = Math.max(560, margenIzq + anios.length * anchoAnio + margenDer);
+        const max = Math.max(...anios.map(a => porAnio.get(a).unidades + porAnio.get(a).porIngresar), 1);
+        const escala = v => (v / max) * (base - tope);
+        const rejilla = [0, .25, .5, .75, 1].map(p => {
+            const y = base - p * (base - tope);
+            return `<line x1="${margenIzq - 8}" y1="${y}" x2="${ancho - margenDer}" y2="${y}" stroke="#e5e7eb"/>
+                    <text x="${margenIzq - 12}" y="${y + 4}" text-anchor="end" font-size="10" fill="#6b7280">${fmt(max * p)}</text>`;
+        }).join('');
+        const barras = anios.map((a, i) => {
+            const d = porAnio.get(a);
+            const x = margenIzq + i * anchoAnio;
+            const centro = x + (anchoAnio - 8) / 2;
+            const total = d.unidades + d.porIngresar;
+            const hIng = escala(d.unidades);
+            const hPen = escala(d.porIngresar);
+            const color = d.fuente === 'historico' ? '#94a3b8' : '#1e3a8a';
+            const k = v => v >= 1000 ? Math.round(v / 1000) + 'k' : fmt(v);
+            const detalle = d.colecciones.map(c => `${c.coleccion}: ${fmt(c.unidades)}`
+                + (c.porIngresar ? ` + ${fmt(c.porIngresar)} por ingresar` : '')).join('\n');
+            const titulo = d.fuente === 'historico'
+                ? `${a} · ${fmt(d.unidades)} unidades (cifra cerrada)`
+                : `${a} · ${fmt(d.unidades)} ingresadas + ${fmt(d.porIngresar)} por ingresar = ${fmt(total)}`;
+            return `<g>
+                <title>${titulo}&#10;${esc(detalle)}</title>
+                ${hIng ? `<rect x="${x + 14}" y="${base - hIng}" width="${anchoAnio - 36}" height="${hIng}" fill="${color}" rx="3"/>` : ''}
+                ${hPen ? `<rect x="${x + 14}" y="${base - hIng - hPen}" width="${anchoAnio - 36}" height="${hPen}" fill="#f59e0b" rx="3"/>` : ''}
+                ${d.porIngresar && d.unidades ? `<text x="${centro}" y="${base - hIng / 2 + 4}" text-anchor="middle" font-size="9" fill="#fff">${k(d.unidades)}</text>` : ''}
+                <text x="${centro}" y="${base - hIng - hPen - 6}" text-anchor="middle" font-size="10" fill="#374151" font-weight="600">${k(total)}</text>
+                <text x="${centro}" y="${base + 16}" text-anchor="middle" font-size="11" fill="#374151">${a}</text>
+                ${d.fuente === 'excel' ? `<text x="${centro}" y="${base + 30}" text-anchor="middle" font-size="9" fill="#9ca3af">${d.unidades ? 'en curso' : 'proyectado'}</text>` : ''}
+            </g>`;
+        }).join('');
+        cont.innerHTML = `<svg width="${ancho}" height="${alto}" role="img" aria-label="Unidades totales por año">
+            ${rejilla}<line x1="${margenIzq - 8}" y1="${base}" x2="${ancho - margenDer}" y2="${base}" stroke="#9ca3af"/>${barras}</svg>`;
+    }
 
-    const rejilla = [0, .25, .5, .75, 1].map(p => {
-        const y = base - p * (base - tope);
-        return `<line x1="${margenIzq - 8}" y1="${y}" x2="${ancho - margenDer}" y2="${y}" stroke="#e5e7eb"/>
-                <text x="${margenIzq - 12}" y="${y + 4}" text-anchor="end" font-size="10" fill="#6b7280">${fmt(max * p)}</text>`;
+    // ----- Tabla por colección -----
+    const promedio = (costo, unidades) => (costo !== null && unidades > 0) ? costo / unidades : null;
+    const alertaCosto = c => {
+        const partes = [];
+        if (c.sinPrecio) partes.push(`${c.sinPrecio} fila(s) sin unit price`);
+        if (c.sinTrm) partes.push(`${c.sinTrm} fila(s) de Colombia sin TRM`);
+        return partes.length ? ` <span title="Costo incompleto: ${esc(partes.join(' y '))}" style="cursor:help">⚠️</span>` : '';
+    };
+    datosColecciones = [];
+    const html = anios.map(a => {
+        const d = porAnio.get(a);
+        const estado = d.fuente === 'historico' ? 'Cerrada' : 'En curso';
+        const filasAnio = d.colecciones.map((c, k) => {
+            datosColecciones.push({ anio: a, ...c, estado, promedio: promedio(c.costo, c.unidades) });
+            return `<tr style="cursor:default">
+                <td>${k === 0 ? a : ''}</td>
+                <td>${esc(c.coleccion)}</td>
+                <td class="${d.fuente === 'historico' ? 'futuro' : ''}">${estado}</td>
+                <td class="num">${fmt(c.unidades)}</td>
+                <td class="num ${c.porIngresar ? '' : 'futuro'}">${c.porIngresar ? fmt(c.porIngresar) : '—'}</td>
+                <td class="num">${c.referencias === null ? '—' : fmt(c.referencias)}</td>
+                <td class="num">${fmtUsd(c.costo)}${alertaCosto(c)}</td>
+                <td class="num">${fmtUsd(promedio(c.costo, c.unidades), 2)}</td>
+            </tr>`;
+        }).join('');
+        return filasAnio + `<tr class="sub-total-row">
+            <td colspan="3">Total ${a}</td>
+            <td class="num">${fmt(d.unidades)}</td>
+            <td class="num">${d.porIngresar ? fmt(d.porIngresar) : '—'}</td>
+            <td class="num">${fmt(d.referencias)}</td>
+            <td class="num">${fmtUsd(d.costo)}${d.incompleto ? ' ⚠️' : ''}</td>
+            <td class="num">${fmtUsd(promedio(d.costo, d.unidades), 2)}</td>
+        </tr>`;
     }).join('');
-
-    const barras = anios.map((a, i) => {
-        const { unidades, fuente, detalle } = porAnio.get(a);
-        const x = margenIzq + i * anchoAnio;
-        const centro = x + (anchoAnio - 8) / 2;
-        const h = escala(unidades);
-        const color = fuente === 'historico' ? '#94a3b8' : '#1e3a8a';
-        const etiqueta = unidades >= 1000 ? Math.round(unidades / 1000) + 'k' : fmt(unidades);
-        return `<g>
-            <rect x="${x + 14}" y="${base - h}" width="${anchoAnio - 36}" height="${h}" fill="${color}" rx="3">
-                <title>${a} · ${fmt(unidades)} unidades (${fuente === 'historico' ? 'cifra cerrada' : 'en curso, según los Excel'})&#10;${esc(detalle)}</title></rect>
-            <text x="${centro}" y="${base - h - 6}" text-anchor="middle" font-size="10" fill="#374151" font-weight="600">${etiqueta}</text>
-            <text x="${centro}" y="${base + 16}" text-anchor="middle" font-size="11" fill="#374151">${a}</text>
-            ${fuente === 'excel' ? `<text x="${centro}" y="${base + 30}" text-anchor="middle" font-size="9" fill="#9ca3af">en curso</text>` : ''}
-        </g>`;
-    }).join('');
-
-    cont.innerHTML = `<svg width="${ancho}" height="${alto}" role="img" aria-label="Unidades totales por año">
-        ${rejilla}<line x1="${margenIzq - 8}" y1="${base}" x2="${ancho - margenDer}" y2="${base}" stroke="#9ca3af"/>${barras}</svg>`;
+    const tbody = document.querySelector('#tablaColecciones tbody');
+    if (tbody) tbody.innerHTML = html || '<tr><td colspan="8" class="vacio">Sin datos.</td></tr>';
 }
 
 // ---------- Qué va a ingresar cada mes ----------
@@ -1548,6 +1683,14 @@ window.exportar = function(cual) {
             return fila;
         }));
         nombre = 'Plan_de_ingreso.xlsx';
+    } else if (cual === 'colecciones') {
+        hoja = XLSX.utils.json_to_sheet(datosColecciones.map(d => ({
+            'AÑO': d.anio, 'COLECCIÓN': d.coleccion, 'ESTADO': d.estado, 'UNIDADES INGRESADAS': Math.round(num(d.unidades)), 'POR INGRESAR': Math.round(num(d.porIngresar)),
+            'REFERENCIAS': d.referencias ?? '', 'COSTO TOTAL USD': d.costo === null ? '' : Math.round(d.costo),
+            'COSTO PROMEDIO POR UNIDAD USD': d.promedio === null ? '' : +d.promedio.toFixed(2),
+            'FILAS SIN UNIT PRICE': d.sinPrecio || '', 'FILAS COLOMBIA SIN TRM': d.sinTrm || '',
+        })));
+        nombre = 'Colecciones_por_anio.xlsx';
     } else if (cual === 'ingresadas') {
         hoja = XLSX.utils.json_to_sheet(datosIngresadas.map(d => ({
             'SUBLÍNEA': d.sublinea, 'DESCRIPCIÓN': d.descripcion, 'COLOR': d.color, 'DESTINO': d.destino,
