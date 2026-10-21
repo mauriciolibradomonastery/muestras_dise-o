@@ -212,7 +212,6 @@
         <button class="btn-claro" onclick="limpiarFiltros()">Limpiar filtros</button>
     </div>
 </div>
-</div>
 
 <div class="kpis" id="kpis"></div>
 
@@ -382,10 +381,19 @@ const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const fmt = n => Math.round(n).toLocaleString('es-CO');
 const claveMes = f => f ? String(f).slice(0,7) : SIN_FECHA;
 const nombreMes = c => (!c || c === SIN_FECHA) ? 'Sin fecha' : `${MESES[+c.slice(5,7)-1]} ${c.slice(0,4)}`;
-const hoy = new Date().toISOString().slice(0,10);
+// 'hoy' en hora de Colombia (toISOString usa UTC y a partir de las 7 p.m. ya sería mañana)
+const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });   // AAAA-MM-DD
 const anioHoy = +hoy.slice(0,4);
 const mesActualPpto = anioHoy > ANIO_PPTO ? 12 : anioHoy < ANIO_PPTO ? 0 : +hoy.slice(5,7);
-const texto = v => (v ?? '').toString().trim() || '—';
+/**
+ * Escapa texto para mostrarlo de forma segura dentro de HTML.
+ * Regla: TODO valor que venga del Excel o de la base pasa por aquí antes de ir a innerHTML.
+ * @param {unknown} v
+ * @returns {string}
+ */
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const texto = v => esc((v ?? '').toString().trim() || '—');
 const fechaCorta = f => f ? `${f.slice(8,10)}/${f.slice(5,7)}/${f.slice(0,4)}` : '—';
 // La foto pertenece a una descripción Y un color: "evenky · blue denim" ≠ "evenky · black"
 const limpiar = t => (t || '').toString().trim().toLowerCase()
@@ -432,7 +440,7 @@ async function cargarDatos() {
     try {
         const paso = 1000;
         for (let desde = 0; ; desde += paso) {
-            const { data, error } = await supabase.from('produccion').select(COLUMNAS).range(desde, desde + paso - 1);
+            const { data, error } = await supabase.from('produccion').select(COLUMNAS).order('id').range(desde, desde + paso - 1);
             if (error) throw error;
             filas = filas.concat(data);
             if (data.length < paso) break;
@@ -451,7 +459,7 @@ async function cargarDatos() {
         refrescar();
     } catch (e) {
         console.error('[produccion] Error cargando datos:', e);
-        document.getElementById('grafico').innerHTML = `<div class="cargando">No se pudieron cargar los datos: ${e.message}</div>`;
+        document.getElementById('grafico').innerHTML = `<div class="cargando">No se pudieron cargar los datos: ${esc(e.message)}</div>`;
     }
 }
 window.cargarDatos = cargarDatos;
@@ -483,6 +491,8 @@ const SELECTS = { fColeccion:'coleccion', fOrigen:'origen', fDestino:'destino', 
 // Cada filtro guarda un conjunto de valores elegidos: vacío = todas
 const seleccion = Object.fromEntries(Object.values(SELECTS).map(c => [c, new Set()]));
 let panelAbierto = null;
+/** Opciones visibles de cada filtro. El checkbox guarda solo su posición, nunca el texto. */
+const opcionesFiltro = {};
 
 // Cada lista ofrece solo los valores que existen según los DEMÁS filtros ya elegidos
 function llenarFiltros() {
@@ -504,6 +514,7 @@ function llenarFiltros() {
         const valores = [...new Set(disponibles.map(f => (f[campo] || '').trim()).filter(Boolean))];
         elegidos.forEach(v => { if (!valores.includes(v)) valores.push(v); });   // no perder lo ya elegido
         valores.sort();
+        opcionesFiltro[campo] = valores;
 
         const etiqueta = elegidos.size === 0 ? 'Todas'
             : elegidos.size === 1 ? [...elegidos][0]
@@ -512,20 +523,19 @@ function llenarFiltros() {
         caja.className = 'multi' + (panelAbierto === id ? ' abierto' : '');
         caja.innerHTML = `
             <button class="btn-claro multi-btn ${elegidos.size ? 'activo' : ''}" onclick="abrirPanel('${id}', event)">
-                <span>${etiqueta}</span><span>▾</span>
+                <span>${esc(etiqueta)}</span><span>▾</span>
             </button>
             <div class="multi-panel" onclick="event.stopPropagation()">
                 <input class="multi-buscar" placeholder="Buscar…" oninput="filtrarOpciones('${id}', this.value)">
                 <div class="multi-lista">
-                    ${valores.map(v => `
-                        <label class="multi-op" data-valor="${v.toLowerCase()}">
-                            <input type="checkbox" ${elegidos.has(v) ? 'checked' : ''}
-                                   onchange="marcarOpcion('${campo}', ${JSON.stringify(v).replace(/"/g, '&quot;')}, this.checked)">
-                            <span>${v}</span>
+                    ${valores.map((v, i) => `
+                        <label class="multi-op" data-valor="${esc(v.toLowerCase())}">
+                            <input type="checkbox" data-campo="${campo}" data-idx="${i}" ${elegidos.has(v) ? 'checked' : ''}>
+                            <span>${esc(v)}</span>
                         </label>`).join('') || '<div class="nota">Sin opciones</div>'}
                 </div>
                 <div class="multi-pie">
-                    <button onclick="marcarTodas('${campo}', ${JSON.stringify(valores).replace(/"/g, '&quot;')})">Seleccionar todas</button>
+                    <button onclick="marcarTodas('${campo}')">Seleccionar todas</button>
                     <button onclick="marcarNinguna('${campo}')">Ninguna</button>
                 </div>
             </div>`;
@@ -550,11 +560,24 @@ window.marcarOpcion = function(campo, valor, marcado) {
     refrescar();
 };
 
-window.marcarTodas = function(campo, valores) {
-    valores.forEach(v => seleccion[campo].add(v));
+window.marcarTodas = function(campo) {
+    (opcionesFiltro[campo] || []).forEach(v => seleccion[campo].add(v));
     mesSeleccionado = null;
     refrescar();
 };
+
+// Un solo "vigilante" atiende todas las casillas de todos los filtros (delegación de eventos)
+document.addEventListener('change', e => {
+    const cb = e.target.closest('.multi-op input[type="checkbox"]');
+    if (!cb) return;
+    const { campo, idx } = cb.dataset;
+    const valor = opcionesFiltro[campo]?.[Number(idx)];
+    if (valor === undefined) {
+        console.warn('[produccion] Casilla sin opción asociada:', campo, idx);
+        return;
+    }
+    window.marcarOpcion(campo, valor, cb.checked);
+});
 
 window.marcarNinguna = function(campo) {
     seleccion[campo].clear();
@@ -780,7 +803,7 @@ function pintarIngreso(ingresadas) {
           orden.map(([nombre, u]) => {
               const pct = total ? u / total * 100 : 0;
               return `<div class="barra-col">
-                  <span class="nombre-col" title="${nombre}">${nombre}</span>
+                  <span class="nombre-col" title="${esc(nombre)}">${esc(nombre)}</span>
                   <span class="pista"><span class="relleno" style="width:${pct.toFixed(1)}%"></span></span>
                   <span class="cifra">${fmt(u)} · ${pct.toFixed(1)}%</span>
               </div>`;
@@ -1144,7 +1167,7 @@ window.abrirFicha = async function(id) {
         }
         if (CAMPOS_MONEDA.has(campo)) return '$ ' + num(v).toLocaleString('es-CO', { maximumFractionDigits: 2 });
         if (CAMPOS_UNIDADES.has(campo)) return fmt(num(v));
-        return String(v);
+        return esc(v);
     };
 
     document.getElementById('fichaCampos').innerHTML = CAMPOS_FICHA.map(([grupo, campos]) =>
