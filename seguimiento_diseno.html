@@ -281,12 +281,27 @@
     </div>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
         const supabaseUrl = 'https://emljzsxypeqecevffmwr.supabase.co';
         const supabaseKey = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const supabase = createClient(supabaseUrl, supabaseKey, { auth: { storage: window.localStorage } });
         const BUCKET_ARCHIVOS = 'wips-archivos';
+
+        // Registro de errores en consola con un prefijo fijo para encontrarlos fácil (F12 → Consola)
+        const LOG_WIP = '[WIP muestras]';
+        function registrarError(contexto, detalle) { console.error(`${LOG_WIP} ${contexto}`, detalle); }
+
+        /**
+         * Revisa el resultado de un update/delete que se pidió con .select('id').
+         * Supabase NO devuelve error cuando la fila ya no existe o una política la bloquea:
+         * solo devuelve 0 filas. Por eso se compara lo esperado contra lo realmente afectado.
+         * Devuelve true si todo salió bien.
+         */
+        function resultadoOk(res, esperadas = 1) {
+            if (res.error) return false;
+            return Array.isArray(res.data) && res.data.length === esperadas;
+        }
 
         async function subirArchivo(blob, extension, tipo) {
             const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${extension}`;
@@ -302,7 +317,7 @@
         
         const colsSinFiltro = [
             'RESPONSABLE','CÓDIGO SKU', 'DISEÑADOR', 'COLOR SKU', 
-            'INSUMO ARTE', 'PRECIO', 'MONEDA', 'OBSERVACIONES CAMBIO #1', 
+            'INSUMO ARTE', 'MONEDA', 'OBSERVACIONES CAMBIO #1', 
             'OBSERVACIONES CAMBIO #2', 'OBSERVACIONES APROBACIÓN STRIKE OFF O PROTO', 
             'OBSERVACIONES DE DISEÑO', 'OBSERVACIONES', 'OBSERVACIONES DE DISEÑO2', 
             'OBSERVACIONES2', 'PP SAMPLE APROBADO POR CALIDAD', 'OBSERVACIONES DE DISEÑO23', 
@@ -1351,16 +1366,28 @@
 
         window.cambiarEstadoFila = async function(btn, nuevoEstado) {
             if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
-            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td'); celdas[44].innerText = nuevoEstado; window.cachearFila(tr);
+            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td');
+            const estadoAnterior = celdas[44].innerText;
             const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-            if (nuevoEstado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); } 
-            else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
-            
+            const pintarBotones = (estado) => {
+                if (estado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); }
+                else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
+            };
+            celdas[44].innerText = nuevoEstado; window.cachearFila(tr); pintarBotones(nuevoEstado);
+
             const idDb = tr.dataset.id;
             if(idDb) {
-                let datosFila = window.extraerDatosFila(tr);
-                await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb);
-                tr._hashGuardado = JSON.stringify(datosFila);
+                const datosFila = window.extraerDatosFila(tr);
+                try {
+                    const res = await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb).select('id');
+                    if (!resultadoOk(res)) throw (res.error || new Error('La muestra ya no existe en la base (pudo borrarla otra persona). Recarga la página.'));
+                    tr._hashGuardado = JSON.stringify(datosFila);
+                } catch (err) {
+                    registrarError('No se pudo cambiar el estado', { id: idDb, nuevoEstado, err });
+                    celdas[44].innerText = estadoAnterior; window.cachearFila(tr); pintarBotones(estadoAnterior);
+                    alert("No se pudo guardar el cambio de estado: " + err.message);
+                    return;
+                }
             }
             window.filtrarTablaCompleta(); window.calcularKPIs();
         };
@@ -1380,19 +1407,40 @@
 
                 const idDb = tr.dataset.id;
                 if(idDb) {
-                    let datosFila = window.extraerDatosFila(tr);
-                    promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb) );
-                    tr._hashGuardado = JSON.stringify(datosFila);
+                    const datosFila = window.extraerDatosFila(tr);
+                    promesasUpdate.push({ tr, datosFila, promesa: supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb).select('id') });
                 }
                 window.cachearFila(tr);
             }
-            if (promesasUpdate.length > 0) {
-                const resultados = await Promise.all(promesasUpdate);
-                for (let res of resultados) { if (res.error) { alert("Error: " + res.error.message); return; } }
-            }
+            if (promesasUpdate.length > 0 && !(await confirmarGuardados(promesasUpdate, 'cancelar seleccionadas'))) return;
             document.getElementById('selectAll').checked = false;
             window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
         };
+
+        /**
+         * Espera una lista de { tr, datosFila, promesa } y marca como guardadas SOLO las filas que
+         * Supabase confirmó. Las que fallen quedan como "cambios sin guardar" para no perder el trabajo.
+         * Devuelve true si todas se guardaron.
+         */
+        async function confirmarGuardados(pendientes, contexto) {
+            const resultados = await Promise.allSettled(pendientes.map(p => p.promesa));
+            let fallidas = 0; let primerError = '';
+            resultados.forEach((r, i) => {
+                const { tr, datosFila } = pendientes[i];
+                const res = r.status === 'fulfilled' ? r.value : { error: r.reason };
+                if (resultadoOk(res)) { tr._hashGuardado = JSON.stringify(datosFila); return; }
+                fallidas++;
+                const msg = res.error ? res.error.message : 'la muestra ya no existe en la base';
+                if (!primerError) primerError = msg;
+                registrarError(`Fallo al guardar (${contexto})`, { id: tr.dataset.id, error: res.error || msg });
+            });
+            if (fallidas > 0) {
+                window.marcarCambios();
+                alert(`No se pudieron guardar ${fallidas} de ${pendientes.length} muestras (${primerError}).\nLos cambios siguen en pantalla: usa "Guardar Cambios Visibles" o recarga la página.`);
+                return false;
+            }
+            return true;
+        }
 
         // Cambia el ESTADO de todas las filas seleccionadas y visibles, y lo guarda en Supabase
         async function moverSeleccionadas(nuevoEstado, pregunta) {
@@ -1413,16 +1461,12 @@
 
                 if (tr.dataset.id) {
                     const datosFila = window.extraerDatosFila(tr);
-                    promesas.push(supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id));
-                    tr._hashGuardado = JSON.stringify(datosFila);
+                    promesas.push({ tr, datosFila, promesa: supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id).select('id') });
                 }
                 tr.querySelector('.row-checkbox').checked = false;
                 window.cachearFila(tr);
             }
-            if (promesas.length > 0) {
-                const resultados = await Promise.all(promesas);
-                for (const res of resultados) { if (res.error) { alert("Error: " + res.error.message); return; } }
-            }
+            if (promesas.length > 0 && !(await confirmarGuardados(promesas, `mover a ${nuevoEstado}`))) return;
             document.getElementById('selectAll').checked = false;
             window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
         }
@@ -1444,8 +1488,21 @@
             if (!confirm(`¿Estás COMPLETAMENTE SEGURO de eliminar definitivamente ${rowsToRemove.length} muestras?`)) return;
 
             if (idsToDelete.length > 0) {
-                const { error } = await supabase.from('wips_muestras').delete().in('id', idsToDelete);
-                if(error) { alert("Error al eliminar masivamente"); return; }
+                try {
+                    const { data, error } = await supabase.from('wips_muestras').delete().in('id', idsToDelete).select('id');
+                    if (error) throw error;
+                    const borrados = new Set((data || []).map(r => String(r.id)));
+                    if (borrados.size !== idsToDelete.length) {
+                        // Solo se quitan de la pantalla las que de verdad se borraron
+                        rowsToRemove = rowsToRemove.filter(tr => !tr.dataset.id || borrados.has(String(tr.dataset.id)));
+                        registrarError('Borrado masivo incompleto', { pedidas: idsToDelete.length, borradas: borrados.size });
+                        alert(`Solo se eliminaron ${borrados.size} de ${idsToDelete.length} muestras. Recarga la página para ver el estado real.`);
+                    }
+                } catch (err) {
+                    registrarError('Error al eliminar masivamente', { ids: idsToDelete, err });
+                    alert("Error al eliminar masivamente: " + err.message);
+                    return;
+                }
             }
             rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false;
             window.actualizarContador(); window.calcularKPIs(); window.actualizarSeleccion(); window.actualizarDatalists();
@@ -1500,7 +1557,7 @@
 
                 if (tr.dataset.id) { 
                     if (tr._hashGuardado === hashActual) continue; 
-                    promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id) );
+                    promesasUpdate.push( supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id).select('id') );
                     filasActualizadasDOM.push(tr);
                 } 
                 else { 
@@ -1525,7 +1582,14 @@
                 if (promesasUpdate.length > 0) {
                     btn.innerHTML = `⏳ Actualizando (${promesasUpdate.length})...`;
                     const resultados = await Promise.all(promesasUpdate);
-                    for (let res of resultados) { if (res.error) throw res.error; }
+                    for (let k = 0; k < resultados.length; k++) {
+                        const res = resultados[k];
+                        if (res.error) throw res.error;
+                        if (!resultadoOk(res)) {
+                            registrarError('Actualización sin efecto', { id: filasActualizadasDOM[k].dataset.id });
+                            throw new Error(`la muestra con id ${filasActualizadasDOM[k].dataset.id} ya no existe en la base (pudo borrarla otra persona). Recarga la página`);
+                        }
+                    }
                 }
                 
                 if(registrosNuevos.length > 0) {
@@ -1573,8 +1637,19 @@
             if(!confirm("¿Seguro que deseas eliminar esta muestra definitivamente? No se puede deshacer.")) return;
             const tr = btn.closest('tr'); const idDb = tr.dataset.id;
             if(idDb) {
-                const { error } = await supabase.from('wips_muestras').delete().eq('id', idDb);
-                if(error) { alert("Error al eliminar"); return; }
+                try {
+                    const res = await supabase.from('wips_muestras').delete().eq('id', idDb).select('id');
+                    if (res.error) throw res.error;
+                    if (!resultadoOk(res)) {
+                        registrarError('Borrado sin efecto', { id: idDb });
+                        alert("La muestra no se eliminó (puede que ya no exista). Recarga la página para ver el estado real.");
+                        return;
+                    }
+                } catch (err) {
+                    registrarError('Error al eliminar muestra', { id: idDb, err });
+                    alert("Error al eliminar: " + err.message);
+                    return;
+                }
             }
             tr.remove(); window.actualizarContador(); window.calcularKPIs(); window.actualizarDatalists();
         };
@@ -1638,7 +1713,7 @@
         };
 
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) console.warn('Sin sesión iniciada: podrás ver la información, pero no subir fotos ni PDF.');
+            if (!session) console.warn(`${LOG_WIP} Sin sesión iniciada: no se pueden leer ni guardar muestras. Inicia sesión de nuevo.`);
         });
 
         // --- SCRIPTS DE INICIO ---
