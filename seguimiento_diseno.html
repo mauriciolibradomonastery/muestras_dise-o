@@ -295,6 +295,74 @@
         // "1 muestra" / "3 muestras": los mensajes se ajustan a cuántas filas se seleccionaron
         const textoMuestras = (n) => `${n} ${n === 1 ? 'muestra' : 'muestras'}`;
 
+        // ================= CARGA CONTROLADA DE FOTOS =================
+        // Antes el navegador pedía cientos de fotos a la vez y Supabase rechazaba algunas (error 429).
+        // Ahora: (1) solo se piden las fotos que están cerca de verse en la tabla,
+        //        (2) como máximo MAX_DESCARGAS al mismo tiempo, y
+        //        (3) si una falla, se reintenta esperando cada vez más (1 s, 2 s).
+        // La URL real vive en data-src; es la que se guarda y se exporta.
+        const PIXEL_VACIO = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        const MAX_DESCARGAS = 6;
+        const MAX_INTENTOS = 3;
+        let descargasActivas = 0;
+        const colaFotos = [];
+
+        function procesarColaFotos() {
+            while (descargasActivas < MAX_DESCARGAS && colaFotos.length > 0) {
+                const img = colaFotos.shift();
+                if (!img.isConnected || !img.dataset.src || img.dataset.cargada) continue;
+                descargarFoto(img, 0);
+            }
+        }
+
+        function descargarFoto(img, intento) {
+            const url = img.dataset.src;
+            // En los reintentos se cambia un parámetro para que el navegador no reutilice la respuesta fallida
+            const urlCarga = (intento > 0 && url.startsWith('http')) ? `${url}${url.includes('?') ? '&' : '?'}r=${intento}` : url;
+            descargasActivas++;
+            const prueba = new Image();
+            prueba.onload = () => {
+                descargasActivas--;
+                if (img.dataset.src === url) { img.src = urlCarga; img.dataset.cargada = '1'; }
+                procesarColaFotos();
+            };
+            prueba.onerror = () => {
+                descargasActivas--;
+                if (intento + 1 < MAX_INTENTOS) {
+                    setTimeout(() => reintentarFoto(img, intento + 1), 1000 * 2 ** intento);
+                } else {
+                    registrarError('No se pudo cargar la foto después de varios intentos', { url });
+                    img.title = 'No se pudo cargar la foto. Recarga la página para intentarlo de nuevo.';
+                    img.style.outline = '1px dashed #ef4444';
+                }
+                procesarColaFotos();
+            };
+            prueba.src = urlCarga;
+        }
+
+        // Reintento respetando el límite de descargas simultáneas
+        function reintentarFoto(img, intento) {
+            if (!img.isConnected || img.dataset.cargada) return;
+            if (descargasActivas < MAX_DESCARGAS) descargarFoto(img, intento);
+            else setTimeout(() => reintentarFoto(img, intento), 500);
+        }
+
+        const observadorFotos = ('IntersectionObserver' in window)
+            ? new IntersectionObserver((entradas) => {
+                entradas.forEach(e => {
+                    if (e.isIntersecting) { observadorFotos.unobserve(e.target); colaFotos.push(e.target); }
+                });
+                procesarColaFotos();
+            }, { root: document.querySelector('.table-container'), rootMargin: '400px' })
+            : null;
+
+        function observarFotos(raiz) {
+            raiz.querySelectorAll('img[data-src]:not([data-cargada])').forEach(img => {
+                if (observadorFotos) observadorFotos.observe(img);
+                else img.src = img.dataset.src;   // navegadores muy viejos: carga directa
+            });
+        }
+
         /**
          * Revisa el resultado de un update/delete que se pidió con .select('id').
          * Supabase NO devuelve error cuando la fila ya no existe o una política la bloquea:
@@ -1090,7 +1158,7 @@
                 let indexGlobal = i - 1; let colName = allCols[indexGlobal].toUpperCase();
                 
                 if (colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') { 
-                    const img = celdas[i].querySelector('img'); datosFila.push(img ? img.src : "");
+                    const img = celdas[i].querySelector('img'); datosFila.push(img ? (img.dataset.src || img.src) : "");
                 } else if (colName === 'FICHA TECNICA') { 
                     const link = celdas[i].querySelector('a.ficha-link'); datosFila.push(link ? link.href : "");
                 } else if (colName === 'TIPO DE MONEDA') { 
@@ -1135,7 +1203,7 @@
                     if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <img src="${valorRaw}" loading="lazy" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.src, event)" title="Clic para ampliar">
+                                <img src="${PIXEL_VACIO}" data-src="${valorRaw}" style="height: 40px; width: 40px; border-radius: 4px; object-fit: contain; cursor: zoom-in; background: white;" onclick="abrirModalImagen(this.dataset.src || this.src, event)" title="Clic para ampliar">
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <span class="img-action-btn" title="Cambiar foto" onclick="window.seleccionarImagenCelda(this.closest('td'))">🔄</span>
                                     <span class="img-action-btn" style="color: #ef4444;" title="Eliminar foto" onclick="window.borrarImagenCelda(this.closest('td'))">❌</span>
@@ -1192,6 +1260,7 @@
             tr.appendChild(tdAcciones); 
             
             window.calcularMargenesFila(tr);
+            observarFotos(tr);
 
             return tr;
         }
