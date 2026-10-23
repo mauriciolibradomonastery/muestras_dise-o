@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patronaje en cifras · Reportes</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <script type="module" src="sesion.js" data-login="index_patronaje.html"></script>
+
+    <style>
+        :root {
+            --indigo: #161A46;
+            --indigo-2: #2A1B4E;
+            --hueso: #F6F1E7;
+            --hueso-suave: rgba(246, 241, 231, 0.68);
+            --hueso-tenue: rgba(246, 241, 231, 0.42);
+            --laton: #E8B75A;
+            --turquesa: #3FD0C9;
+            --lavanda: #A99BFF;
+            --coral: #FF7A6B;
+            --ambar: #F4B740;
+            --vidrio: rgba(255, 255, 255, 0.06);
+            --vidrio-fuerte: rgba(255, 255, 255, 0.10);
+            --linea: rgba(255, 255, 255, 0.12);
+            --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+            --sans: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+        html { color-scheme: dark; background: var(--indigo); }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--sans);
+            font-size: 15px;
+            color: var(--hueso);
+            background: radial-gradient(120% 90% at 10% 0%, #23296A 0%, var(--indigo) 45%, var(--indigo-2) 100%) fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---------- Fondo vivo: hilos que se mueven como tela ---------- */
+        #fondoHilos { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .resplandor { position: fixed; border-radius: 50%; filter: blur(90px); opacity: 0.45; z-index: 0; pointer-events: none; }
+        .resplandor.uno  { width: 520px; height: 520px; background: #3B2C8F; top: -120px; right: -80px; animation: deriva1 26s ease-in-out infinite alternate; }
+        .resplandor.dos  { width: 440px; height: 440px; background: #0F5F6B; bottom: -140px; left: -100px; animation: deriva2 32s ease-in-out infinite alternate; }
+        .resplandor.tres { width: 300px; height: 300px; background: #7A3E2A; top: 40%; left: 45%; opacity: 0.28; animation: deriva1 38s ease-in-out infinite alternate-reverse; }
+        @keyframes deriva1 { to { transform: translate(-120px, 90px) scale(1.15); } }
+        @keyframes deriva2 { to { transform: translate(140px, -70px) scale(0.9); } }
+
+        .pagina { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 28px 32px 60px; }
+
+        /* ---------- Barra superior ---------- */
+        .barra { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .marca { display: flex; align-items: center; gap: 14px; }
+        .marca img { height: 40px; width: auto; background: var(--hueso); border-radius: 10px; padding: 5px 9px; }
+        .marca h1 { font-family: var(--serif); font-weight: 500; font-size: 30px; letter-spacing: -0.01em; margin: 0; }
+        .marca small { display: block; font-size: 13px; color: var(--hueso-tenue); margin-top: 2px; }
+        .acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .boton {
+            font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--hueso);
+            background: var(--vidrio); border: 1px solid var(--linea); border-radius: 999px;
+            padding: 9px 18px; cursor: pointer; text-decoration: none; transition: background .2s, border-color .2s;
+        }
+        .boton:hover { background: var(--vidrio-fuerte); border-color: rgba(255,255,255,.25); }
+        .boton.primario { background: var(--laton); color: #2A1B0A; border-color: var(--laton); }
+        .boton.primario:hover { background: #F2C772; }
+        .boton:focus-visible, select:focus-visible, input:focus-visible, .chip button:focus-visible, tr:focus-visible, .segmento button:focus-visible {
+            outline: 2px solid var(--laton); outline-offset: 2px;
+        }
+        .sello { font-size: 13px; color: var(--hueso-tenue); }
+
+        /* ---------- Resumen narrativo ---------- */
+        .resumen {
+            font-family: var(--serif); font-weight: 300; font-size: clamp(24px, 2.6vw, 38px); line-height: 1.25;
+            max-width: 34ch; margin: 42px 0 30px; letter-spacing: -0.01em;
+        }
+        .resumen b { font-weight: 500; color: var(--laton); font-variant-numeric: tabular-nums; }
+
+        /* ---------- Filtros ---------- */
+        .filtros {
+            position: sticky; top: 12px; z-index: 5;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px;
+            padding: 16px 18px; border-radius: 20px;
+            background: rgba(22, 26, 70, 0.72); border: 1px solid var(--linea);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        }
+        .campo label { display: block; font-size: 12px; font-weight: 600; color: var(--hueso-tenue); margin-bottom: 5px; }
+        .campo select, .campo input {
+            width: 100%; font-family: var(--sans); font-size: 14px; color: var(--hueso);
+            background: rgba(255,255,255,.07); border: 1px solid var(--linea); border-radius: 10px; padding: 8px 10px;
+        }
+        .campo select option { background: var(--indigo); color: var(--hueso); }
+        .campo input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .6; }
+        .campo.doble { grid-column: span 2; }
+        .rango { display: flex; gap: 6px; }
+        .rango input { min-width: 0; }
+
+        .fila-control { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 16px 0 6px; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; min-height: 34px; align-items: center; }
+        .chips .vacio { font-size: 13px; color: var(--hueso-tenue); }
+        .chip {
+            display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
+            padding: 6px 8px 6px 14px; border-radius: 999px; background: rgba(232,183,90,.16); border: 1px solid rgba(232,183,90,.45);
+        }
+        .chip button {
+            border: none; background: rgba(255,255,255,.12); color: var(--hueso); width: 22px; height: 22px;
+            border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1;
+        }
+        .segmento { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--vidrio); border: 1px solid var(--linea); }
+        .segmento button {
+            font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--hueso-suave);
+            background: transparent; border: none; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+        }
+        .segmento button.activo { background: var(--hueso); color: var(--indigo); }
+
+        /* ---------- KPIs ---------- */
+        .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0 26px; }
+        .kpi {
+            padding: 18px 20px; border-radius: 22px; background: var(--vidrio); border: 1px solid var(--linea);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: relative; overflow: hidden;
+        }
+        .kpi::before { content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 3px; background: var(--acento, var(--laton)); }
+        .kpi .nombre { font-size: 13px; font-weight: 600; color: var(--hueso-suave); }
+        .kpi .valor { font-family: var(--serif); font-weight: 500; font-size: 40px; line-height: 1.1; margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
+        .kpi .valor small { font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--hueso-suave); margin-left: 4px; }
+        .kpi .detalle { font-size: 13px; color: var(--hueso-tenue); }
+        .kpi .meta { display: inline-flex; align-items: center; gap: 6px; }
+        .kpi .meta input {
+            width: 52px; font-family: var(--sans); font-size: 13px; color: var(--hueso); text-align: center;
+            background: rgba(255,255,255,.08); border: 1px solid var(--linea); border-radius: 8px; padding: 3px 4px;
+        }
+
+        /* ---------- Secciones y tarjetas de gráficos ---------- */
+        .seccion { margin-top: 34px; }
+        .seccion > h2 { font-family: var(--serif); font-weight: 500; font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+        .seccion > p { margin: 0 0 16px; color: var(--hueso-suave); max-width: 70ch; line-height: 1.5; }
+        .grilla { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+        .tarjeta {
+            grid-column: span 6; padding: 18px 20px 16px; border-radius: 18px;
+            background: var(--vidrio); border: 1px solid var(--linea);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .tarjeta.ancha { grid-column: span 8; }
+        .tarjeta.angosta { grid-column: span 4; }
+        .tarjeta.completa { grid-column: span 12; }
+        .tarjeta h3 { font-size: 15px; font-weight: 700; margin: 0; }
+        .tarjeta .ayuda { font-size: 13px; color: var(--hueso-tenue); margin: 3px 0 12px; }
+        .lienzo { position: relative; height: 300px; }
+        .lienzo.bajo { height: 220px; }
+        .lienzo.alto { height: 360px; }
+
+        /* ---------- Tabla de auditoras ---------- */
+        .tabla-scroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+        th { text-align: left; font-size: 12px; font-weight: 600; color: var(--hueso-tenue); padding: 8px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+        td { padding: 11px 10px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
+        th.num, td.num { text-align: right; }
+        tbody tr { cursor: pointer; transition: background .15s; }
+        tbody tr:hover { background: rgba(255,255,255,.05); }
+        tbody tr.elegida { background: rgba(232,183,90,.14); }
+        .barrita { display: inline-block; height: 6px; border-radius: 3px; background: var(--turquesa); vertical-align: middle; margin-left: 8px; }
+        .detalle-auditora { margin-top: 16px; }
+        .detalle-auditora h4 { font-family: var(--serif); font-weight: 500; font-size: 20px; margin: 0 0 10px; }
+        .estado-punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+
+        .nota { margin-top: 40px; font-size: 13px; color: var(--hueso-tenue); line-height: 1.6; max-width: 90ch; }
+
+        /* ---------- Carga y errores ---------- */
+        .cortina {
+            position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+            background: rgba(22,26,70,.85); backdrop-filter: blur(6px); font-family: var(--serif); font-size: 22px;
+        }
+        .cortina.oculta { display: none; }
+        .carrete { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: var(--laton); animation: girar 1s linear infinite; }
+        @keyframes girar { to { transform: rotate(360deg); } }
+        .error { margin-top: 20px; padding: 16px 18px; border-radius: 14px; background: rgba(255,122,107,.15); border: 1px solid rgba(255,122,107,.5); display: none; }
+
+        @media (max-width: 1100px) {
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .tarjeta, .tarjeta.ancha, .tarjeta.angosta { grid-column: span 12; }
+        }
+        @media (max-width: 640px) {
+            .pagina { padding: 18px 14px 40px; }
+            .kpis { grid-template-columns: 1fr; }
+            .filtros { position: static; }
+            .marca h1 { font-size: 24px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .resplandor, .carrete { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fondoHilos" aria-hidden="true"></canvas>
+    <div class="resplandor uno" aria-hidden="true"></div>
+    <div class="resplandor dos" aria-hidden="true"></div>
+    <div class="resplandor tres" aria-hidden="true"></div>
+
+    <div class="cortina" id="cortina"><div class="carrete"></div><span id="textoCarga">Cargando muestras…</span></div>
+
+    <main class="pagina">
+        <header class="barra">
+            <div class="marca">
+                <img src="logo.png" alt="Monastery" onerror="this.style.display='none'">
+                <div>
+                    <h1>Patronaje en cifras</h1>
+                    <small id="sello">Departamento Técnico</small>
+                </div>
+            </div>
+            <div class="acciones">
+                <button class="boton" id="btnActualizar" type="button">Actualizar datos</button>
+                <a class="boton primario" href="patronaje.html">Volver a la tabla</a>
+            </div>
+        </header>
+
+        <div class="error" id="cajaError"></div>
+
+        <p class="resumen" id="resumen" aria-live="polite">Preparando el reporte…</p>
+
+        <section class="filtros" aria-label="Filtros">
+            <div class="campo"><label for="fProveedor">Proveedor</label><select id="fProveedor" data-filtro="proveedor"></select></div>
+            <div class="campo"><label for="fColeccion">Colección</label><select id="fColeccion" data-filtro="coleccion"></select></div>
+            <div class="campo"><label for="fAuditora">Auditora</label><select id="fAuditora" data-filtro="auditora"></select></div>
+            <div class="campo"><label for="fTipo">Tipo de muestra</label><select id="fTipo" data-filtro="tipoMuestra"></select></div>
+            <div class="campo"><label for="fResultado">Resultado</label><select id="fResultado" data-filtro="resultado"></select></div>
+            <div class="campo doble">
+                <label for="fIngresoDesde">Fecha de ingreso</label>
+                <div class="rango">
+                    <input type="date" id="fIngresoDesde" data-filtro="ingresoDesde" aria-label="Ingreso desde">
+                    <input type="date" id="fIngresoHasta" data-filtro="ingresoHasta" aria-label="Ingreso hasta">
+                </div>
+            </div>
+            <div class="campo doble">
+                <label for="fFinalDesde">Fecha final</label>
+                <div class="rango">
+                    <input type="date" id="fFinalDesde" data-filtro="finalDesde" aria-label="Fecha final desde">
+                    <input type="date" id="fFinalHasta" data-filtro="finalHasta" aria-label="Fecha final hasta">
+                </div>
+            </div>
+        </section>
+
+        <div class="fila-control">
+            <div class="chips" id="chips"></div>
+            <div class="acciones">
+                <div class="segmento" role="group" aria-label="Contar por">
+                    <button type="button" data-modo="unidades" class="activo">Unidades</button>
+                    <button type="button" data-modo="muestras">Muestras</button>
+                </div>
+                <button class="boton" id="btnLimpiar" type="button">Quitar filtros</button>
+            </div>
+        </div>
+
+        <section class="kpis" id="kpis" aria-label="Indicadores principales"></section>
+
+        <section class="seccion">
+            <h2>Ingresos y estado</h2>
+            <p>Haz clic en un mes o en un estado para filtrar todo el reporte. Vuelve a hacer clic para quitar el filtro.</p>
+            <div class="grilla">
+                <article class="tarjeta ancha">
+                    <h3>Ingresos por mes</h3>
+                    <div class="ayuda">Según la fecha de ingreso, separados por el estado en que están hoy</div>
+                    <div class="lienzo"><canvas id="gMeses"></canvas></div>
+                </article>
+                <article class="tarjeta angosta">
+                    <h3>Estado actual</h3>
+                    <div class="ayuda">Pendiente, modelado, asignado y finalizado</div>
+                    <div class="lienzo"><canvas id="gEstados"></canvas></div>
+                </article>
+                <article class="tarjeta completa">
+                    <h3>Antigüedad de lo que sigue abierto</h3>
+                    <div class="ayuda">Días hábiles desde el ingreso de las muestras que aún no se finalizan</div>
+                    <div class="lienzo bajo"><canvas id="gAntiguedad"></canvas></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="seccion">
+            <h2>Calidad por proveedor</h2>
+            <p>Aprobadas son las muestras con resultado Cumple; rechazadas, las de No Cumple. Haz clic en un proveedor para ver solo sus muestras.</p>
+            <div class="grilla">
+                <article class="tarjeta ancha">
+                    <h3>Aprobadas y rechazadas por proveedor</h3>
+                    <div class="ayuda">Los 12 proveedores con más resultados</div>
+                    <div class="lienzo alto"><canvas id="gProveedores"></canvas></div>
+                </article>
+                <article class="tarjeta angosta">
+                    <h3>Motivos de rechazo más frecuentes</h3>
+                    <div class="ayuda">Muestras rechazadas que citan cada motivo</div>
+                    <div class="lienzo alto"><canvas id="gMotivos"></canvas></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="seccion">
+            <h2>Lead time completo</h2>
+            <p>Días hábiles desde la fecha de ingreso hasta la fecha final, contados igual que en la tabla. Solo incluye muestras finalizadas.</p>
+            <div class="grilla">
+                <article class="tarjeta ancha">
+                    <h3>Finalizadas y lead time promedio por mes</h3>
+                    <div class="ayuda">Barras: finalizadas en el mes. Línea: lead time completo promedio</div>
+                    <div class="lienzo"><canvas id="gLeadMes"></canvas></div>
+                </article>
+                <article class="tarjeta angosta">
+                    <h3>Dónde se va el tiempo</h3>
+                    <div class="ayuda">Promedio de días hábiles en cada etapa</div>
+                    <div class="lienzo"><canvas id="gEtapas"></canvas></div>
+                </article>
+                <article class="tarjeta completa">
+                    <h3>Distribución del lead time completo</h3>
+                    <div class="ayuda">Las barras en coral superan la meta que definas en el indicador de cumplimiento</div>
+                    <div class="lienzo bajo"><canvas id="gDistribucion"></canvas></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="seccion">
+            <h2>Auditoras</h2>
+            <p>Lo que tiene cada una en curso y cuánto ha auditado en el tiempo, según la fecha de entrega de auditoría. Haz clic en una fila para ver sus muestras abiertas.</p>
+            <div class="grilla">
+                <article class="tarjeta completa">
+                    <h3>Muestras auditadas por mes</h3>
+                    <div class="ayuda">Las seis auditoras con más muestras en el período filtrado</div>
+                    <div class="lienzo"><canvas id="gAuditorasMes"></canvas></div>
+                </article>
+                <article class="tarjeta completa">
+                    <div class="tabla-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Auditora</th>
+                                    <th class="num">En curso</th>
+                                    <th class="num">Finalizadas</th>
+                                    <th class="num">Total</th>
+                                    <th class="num">Aprobadas</th>
+                                    <th class="num">Rechazadas</th>
+                                    <th class="num">Aprobación</th>
+                                    <th class="num">Lead time auditoría</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaAuditoras"></tbody>
+                        </table>
+                    </div>
+                    <div class="detalle-auditora" id="detalleAuditora"></div>
+                </article>
+            </div>
+        </section>
+
+        <p class="nota">
+            Cómo se calcula: el estado se deduce de las fechas igual que en la tabla (medición = modelado, fecha de entrega de auditoría = asignado, fecha final = finalizado).
+            En modo Unidades se suma la columna Cantidad; las filas sin cantidad cuentan como 1. Los promedios de lead time son por muestra.
+            "Lead time auditoría" va de la medición a la entrega de auditoría. Las segundas rondas son precintos que aparecen más de una vez, sin contar "SIN PRECINTO".
+        </p>
+    </main>
+
+    <script>
+        // ================== CONEXIÓN ==================
+        const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co';
+        const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
+        const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
+        window.sbCliente = client;   // sesion.js reutiliza este cliente
+        const LOG = '[reportes]';
+
+        // ================== PALETA ==================
+        const C = {
+            hueso: '#F6F1E7', laton: '#E8B75A', turquesa: '#3FD0C9', lavanda: '#A99BFF', coral: '#FF7A6B', ambar: '#F4B740', gris: '#8E8AA8',
+        };
+        const COLOR_ESTADO = { Pendiente: C.coral, Modelado: C.ambar, Asignado: C.lavanda, Finalizado: C.turquesa };
+        const ESTADOS = ['Pendiente', 'Modelado', 'Asignado', 'Finalizado'];
+        const PALETA_SERIES = [C.turquesa, C.laton, C.lavanda, C.coral, '#7FB2FF', '#F59BD0', C.gris];
+
+        const alfa = (hex, a) => {
+            const n = parseInt(hex.slice(1), 16);
+            return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+        };
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmt = (n, dec = 0) => (n === null || n === undefined || isNaN(n)) ? '—' : n.toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+        const pct = (a, b) => b > 0 ? a / b * 100 : null;
+
+        // ================== FECHAS ==================
+        const fechaLocal = t => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+        const hoyISO = (() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`; })();
+
+        // Días hábiles contando inicio y fin, igual que la tabla de patronaje
+        function diasHabiles(desde, hasta) {
+            const a = fechaLocal(desde), b = fechaLocal(hasta);
+            if (!a || !b || a > b) return null;
+            let dias = 0;
+            for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) { const s = d.getDay(); if (s !== 0 && s !== 6) dias++; }
+            return dias;
+        }
+        const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        const nombreMes = clave => { const [a, m] = clave.split('-'); return `${MESES[+m - 1]} ${a.slice(2)}`; };
+        const nombreMesLargo = clave => { const [a, m] = clave.split('-'); return `${MESES_LARGOS[+m - 1]} de ${a}`; };
+
+        // ================== NORMALIZACIÓN DE CADA FILA ==================
+        const etiqueta = (v, vacio) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase(); return t || vacio; };
+        const soloFecha = v => { const m = /^\d{4}-\d{2}-\d{2}/.exec(String(v ?? '').trim()); return m ? m[0] : ''; };
+        const leerCantidad = v => { const m = /\d+(?:[.,]\d+)?/.exec(String(v ?? '')); const n = m ? parseFloat(m[0].replace(',', '.')) : NaN; return n > 0 ? n : 1; };
+
+        function normalizar(fila) {
+            const d = Array.isArray(fila.datos) ? fila.datos : [];
+            const ingreso = soloFecha(d[1]), medicion = soloFecha(d[15]), entregaAud = soloFecha(d[16]), final = soloFecha(d[25]);
+            let estado = 'Pendiente';
+            if (medicion) estado = 'Modelado';
+            if (entregaAud) estado = 'Asignado';
+            if (final) estado = 'Finalizado';
+            const res = String(d[21] ?? '').trim().toLowerCase();
+            const resultado = res === 'cumple' ? 'Aprobada' : res === 'no cumple' ? 'Rechazada' : res ? 'Otro' : 'Sin resultado';
+            return {
+                id: fila.id,
+                precinto: etiqueta(d[7], ''),
+                referencia: String(d[8] ?? '').trim(),
+                ingreso, medicion, entregaAud, final, estado, resultado,
+                mesIngreso: ingreso.slice(0, 7),
+                mesFinal: final.slice(0, 7),
+                mesAuditoria: entregaAud.slice(0, 7),
+                proveedor: etiqueta(d[4], 'SIN PROVEEDOR'),
+                coleccion: etiqueta(d[6], 'SIN COLECCIÓN'),
+                auditora: etiqueta(d[17], 'SIN ASIGNAR'),
+                tipoMuestra: etiqueta(d[10], 'SIN TIPO'),
+                unidades: leerCantidad(d[12]),
+                motivos: [d[22], d[23], d[24]].map(m => etiqueta(m, '')).filter(Boolean),
+                ltCompleto: final && ingreso ? diasHabiles(ingreso, final) : null,
+                ltIngresoMedicion: ingreso && medicion ? diasHabiles(ingreso, medicion) : null,
+                ltMedicionAud: medicion && entregaAud ? diasHabiles(medicion, entregaAud) : null,
+                ltAudFinal: entregaAud && final ? diasHabiles(entregaAud, final) : null,
+                edad: !final && ingreso ? diasHabiles(ingreso, hoyISO) : null,
+            };
+        }
+
+        // ================== ESTADO DEL REPORTE ==================
+        let filas = [];
+        let modo = 'unidades';
+        let metaLeadTime = Number(localStorage.getItem('reportes_meta_lt')) || 10;
+        const FILTROS_VACIOS = { proveedor: '', coleccion: '', auditora: '', tipoMuestra: '', resultado: '', ingresoDesde: '', ingresoHasta: '', finalDesde: '', finalHasta: '', mes: '', estado: '' };
+        const filtros = { ...FILTROS_VACIOS };
+        const NOMBRE_FILTRO = {
+            proveedor: 'Proveedor', coleccion: 'Colección', auditora: 'Auditora', tipoMuestra: 'Tipo', resultado: 'Resultado',
+            ingresoDesde: 'Ingreso desde', ingresoHasta: 'Ingreso hasta', finalDesde: 'Final desde', finalHasta: 'Final hasta', mes: 'Mes de ingreso', estado: 'Estado',
+        };
+        const peso = r => modo === 'unidades' ? r.unidades : 1;
+        const suma = lista => lista.reduce((t, r) => t + peso(r), 0);
+        const promedio = nums => { const v = nums.filter(n => n !== null && n !== undefined); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+        const mediana = nums => { const v = nums.filter(n => n !== null).sort((a, b) => a - b); if (!v.length) return null; const m = Math.floor(v.length / 2); return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+
+        // Aplica todos los filtros menos `excepto` (así cada gráfico muestra su selección resaltada entre las demás)
+        function filtrar(excepto) {
+            const f = filtros;
+            return filas.filter(r => {
+                for (const k of ['proveedor', 'coleccion', 'auditora', 'tipoMuestra', 'resultado', 'estado']) {
+                    if (k !== excepto && f[k] && r[k] !== f[k]) return false;
+                }
+                if (excepto !== 'mes' && f.mes && r.mesIngreso !== f.mes) return false;
+                if (f.ingresoDesde && (!r.ingreso || r.ingreso < f.ingresoDesde)) return false;
+                if (f.ingresoHasta && (!r.ingreso || r.ingreso > f.ingresoHasta)) return false;
+                if (f.finalDesde && (!r.final || r.final < f.finalDesde)) return false;
+                if (f.finalHasta && (!r.final || r.final > f.finalHasta)) return false;
+                return true;
+            });
+        }
+
+        function alternarFiltro(clave, valor) {
+            filtros[clave] = filtros[clave] === valor ? '' : valor;
+            sincronizarControles();
+            render();
+        }
+
+        // ================== CARGA ==================
+        async function cargar() {
+            const cortina = document.getElementById('cortina');
+            cortina.classList.remove('oculta');
+            document.getElementById('cajaError').style.display = 'none';
+            try {
+                const { data: { session } } = await client.auth.getSession();
+                if (!session) { location.replace('index_patronaje.html'); return; }
+
+                const paso = 1000;
+                let todas = [];
+                for (let desde = 0; ; desde += paso) {
+                    document.getElementById('textoCarga').textContent = `Cargando muestras… ${todas.length}`;
+                    const { data, error } = await client.from('dpto_tecnico').select('id, datos').order('id').range(desde, desde + paso - 1);
+                    if (error) throw error;
+                    todas = todas.concat(data || []);
+                    if (!data || data.length < paso) break;
+                }
+                filas = todas.map(normalizar);
+                llenarSelects();
+                sincronizarControles();
+                render();
+                const ahora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('sello').textContent = `Departamento Técnico. Datos actualizados a las ${ahora}`;
+            } catch (err) {
+                console.error(`${LOG} Error cargando datos:`, err);
+                const caja = document.getElementById('cajaError');
+                caja.innerHTML = `<b>No se pudieron cargar las muestras.</b> ${esc(err.message || err)}. Revisa tu conexión y presiona "Actualizar datos". Si el error dice que no tienes permiso, vuelve a iniciar sesión.`;
+                caja.style.display = 'block';
+            } finally {
+                cortina.classList.add('oculta');
+            }
+        }
+
+        // ================== CONTROLES ==================
+        const SELECTS = { fProveedor: 'proveedor', fColeccion: 'coleccion', fAuditora: 'auditora', fTipo: 'tipoMuestra', fResultado: 'resultado' };
+        const TODOS = { proveedor: 'Todos', coleccion: 'Todas', auditora: 'Todas', tipoMuestra: 'Todos', resultado: 'Todos' };
+
+        function llenarSelects() {
+            for (const [id, clave] of Object.entries(SELECTS)) {
+                const conteo = new Map();
+                filas.forEach(r => conteo.set(r[clave], (conteo.get(r[clave]) || 0) + 1));
+                const opciones = [...conteo.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es'));
+                document.getElementById(id).innerHTML = `<option value="">${TODOS[clave]}</option>` +
+                    opciones.map(([v, n]) => `<option value="${esc(v)}">${esc(v)} (${n})</option>`).join('');
+            }
+        }
+
+        function sincronizarControles() {
+            document.querySelectorAll('[data-filtro]').forEach(el => { el.value = filtros[el.dataset.filtro] || ''; });
+            const chips = document.getElementById('chips');
+            const activos = Object.entries(filtros).filter(([, v]) => v);
+            if (!activos.length) { chips.innerHTML = '<span class="vacio">Sin filtros: estás viendo todas las muestras.</span>'; return; }
+            chips.innerHTML = activos.map(([k, v]) => {
+                const texto = k === 'mes' ? nombreMesLargo(v) : v;
+                return `<span class="chip">${esc(NOMBRE_FILTRO[k])}: ${esc(texto)}<button type="button" data-quitar="${k}" aria-label="Quitar filtro ${esc(NOMBRE_FILTRO[k])}">✕</button></span>`;
+            }).join('');
+        }
+
+        document.querySelectorAll('[data-filtro]').forEach(el => el.addEventListener('change', () => {
+            filtros[el.dataset.filtro] = el.value;
+            sincronizarControles(); render();
+        }));
+        document.getElementById('chips').addEventListener('click', e => {
+            const b = e.target.closest('[data-quitar]'); if (!b) return;
+            filtros[b.dataset.quitar] = ''; sincronizarControles(); render();
+        });
+        document.getElementById('btnLimpiar').addEventListener('click', () => { Object.assign(filtros, FILTROS_VACIOS); sincronizarControles(); render(); });
+        document.getElementById('btnActualizar').addEventListener('click', cargar);
+        document.querySelectorAll('.segmento button').forEach(b => b.addEventListener('click', () => {
+            modo = b.dataset.modo;
+            document.querySelectorAll('.segmento button').forEach(x => x.classList.toggle('activo', x === b));
+            render();
+        }));
+
+        // ================== GRÁFICOS ==================
+        Chart.defaults.color = 'rgba(246, 241, 231, 0.7)';
+        Chart.defaults.font.family = "'Manrope', 'Segoe UI', sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.07)';
+        Chart.defaults.animation.duration = 750;
+        Chart.defaults.animation.easing = 'easeOutQuart';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.boxWidth = 8;
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(22, 26, 70, 0.95)';
+        Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.18)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.padding = 12;
+        Chart.defaults.plugins.tooltip.cornerRadius = 10;
+        Chart.defaults.maintainAspectRatio = false;
+
+        const graficos = {};
+        const textoModo = (n = 2) => modo === 'unidades' ? (n === 1 ? 'unidad' : 'unidades') : (n === 1 ? 'muestra' : 'muestras');
+        const tooltipNumero = ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed[ctx.chart.options.indexAxis === 'y' ? 'x' : 'y'])} ${textoModo()}`;
+        const cursorMano = (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; };
+
+        function crearGraficos() {
+            graficos.meses = new Chart(document.getElementById('gMeses'), {
+                type: 'bar',
+                data: { labels: [], datasets: ESTADOS.map(e => ({ label: e, data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false, stack: 's' })) },
+                options: {
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } },
+                    plugins: { tooltip: { callbacks: { label: tooltipNumero } } },
+                    onHover: cursorMano,
+                    onClick: (e, els, ch) => { if (els.length) alternarFiltro('mes', ch.$claves[els[0].index]); },
+                },
+            });
+
+            graficos.estados = new Chart(document.getElementById('gEstados'), {
+                type: 'doughnut',
+                data: { labels: ESTADOS, datasets: [{ data: [], backgroundColor: [], borderColor: 'rgba(22,26,70,.9)', borderWidth: 3, hoverOffset: 10 }] },
+                options: {
+                    cutout: '64%',
+                    plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => ` ${c.label}: ${fmt(c.parsed)} ${textoModo()}` } } },
+                    onHover: cursorMano,
+                    onClick: (e, els) => { if (els.length) alternarFiltro('estado', ESTADOS[els[0].index]); },
+                },
+                plugins: [{
+                    id: 'centro',
+                    afterDraw(ch) {
+                        const total = ch.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const { ctx, chartArea: a } = ch; if (!a) return;
+                        const x = (a.left + a.right) / 2, y = (a.top + a.bottom) / 2;
+                        ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = C.hueso;
+                        ctx.font = "500 30px 'Fraunces', Georgia, serif"; ctx.fillText(fmt(total), x, y + 4);
+                        ctx.font = "600 12px 'Manrope', sans-serif"; ctx.fillStyle = 'rgba(246,241,231,.55)'; ctx.fillText(textoModo(), x, y + 24);
+                        ctx.restore();
+                    },
+                }],
+            });
+
+            graficos.antiguedad = new Chart(document.getElementById('gAntiguedad'), {
+                type: 'bar',
+                data: { labels: [], datasets: ESTADOS.slice(0, 3).map(e => ({ label: e, data: [], backgroundColor: alfa(COLOR_ESTADO[e], .85), borderRadius: 6, stack: 's' })) },
+                options: {
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } },
+                    plugins: { tooltip: { callbacks: { label: tooltipNumero } } },
+                },
+            });
+
+            graficos.proveedores = new Chart(document.getElementById('gProveedores'), {
+                type: 'bar',
+                data: { labels: [], datasets: [
+                    { label: 'Aprobadas', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
+                    { label: 'Rechazadas', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
+                ] },
+                options: {
+                    indexAxis: 'y',
+                    scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true, grid: { display: false } } },
+                    plugins: { tooltip: { callbacks: {
+                        label: tooltipNumero,
+                        afterBody: items => { const ch = items[0].chart, i = items[0].dataIndex; const a = ch.data.datasets[0].data[i], r = ch.data.datasets[1].data[i]; return `Aprobación: ${fmt(pct(a, a + r), 1)} %`; },
+                    } } },
+                    onHover: cursorMano,
+                    onClick: (e, els, ch) => { if (els.length) alternarFiltro('proveedor', ch.data.labels[els[0].index]); },
+                },
+            });
+
+            graficos.motivos = new Chart(document.getElementById('gMotivos'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Muestras', data: [], backgroundColor: alfa(C.coral, .8), borderRadius: 6 }] },
+                options: { indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } }, plugins: { legend: { display: false } } },
+            });
+
+            graficos.leadMes = new Chart(document.getElementById('gLeadMes'), {
+                type: 'bar',
+                data: { labels: [], datasets: [
+                    { type: 'bar', label: 'Finalizadas', data: [], backgroundColor: alfa(C.turquesa, .55), borderRadius: 6, yAxisID: 'y', order: 2 },
+                    { type: 'line', label: 'Lead time promedio (días hábiles)', data: [], borderColor: C.laton, backgroundColor: C.laton, tension: .35, pointRadius: 4, pointHoverRadius: 7, yAxisID: 'y1', order: 1, spanGaps: true },
+                ] },
+                options: {
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, position: 'left', title: { display: true, text: 'Finalizadas' } },
+                        y1: { beginAtZero: true, position: 'right', grid: { display: false }, title: { display: true, text: 'Días hábiles' } },
+                    },
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.type === 'line' ? ` Lead time: ${fmt(c.parsed.y, 1)} días hábiles` : ` Finalizadas: ${fmt(c.parsed.y)} ${textoModo()}` } } },
+                },
+            });
+
+            graficos.etapas = new Chart(document.getElementById('gEtapas'), {
+                type: 'bar',
+                data: { labels: ['Ingreso a medición', 'Medición a entrega de auditoría', 'Entrega de auditoría a fecha final'],
+                        datasets: [{ label: 'Días hábiles', data: [], backgroundColor: [alfa(C.ambar, .85), alfa(C.lavanda, .85), alfa(C.turquesa, .85)], borderRadius: 8 }] },
+                options: {
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true }, y: { grid: { display: false }, ticks: { callback(v) { const t = this.getLabelForValue(v); return t.length > 18 ? t.split(' a ').join(' a\n').split('\n') : t; } } } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${fmt(c.parsed.x, 1)} días hábiles en promedio` } } },
+                },
+            });
+
+            graficos.distribucion = new Chart(document.getElementById('gDistribucion'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Muestras finalizadas', data: [], backgroundColor: [], borderRadius: 6 }] },
+                options: {
+                    scales: { x: { grid: { display: false }, title: { display: true, text: 'Días hábiles de lead time completo' } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+                    plugins: { legend: { display: false } },
+                },
+            });
+
+            graficos.auditorasMes = new Chart(document.getElementById('gAuditorasMes'), {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    interaction: { mode: 'nearest', intersect: false },
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+                    plugins: { tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} ${textoModo()}` } } },
+                    onHover: cursorMano,
+                    onClick: (e, els, ch) => { if (els.length) alternarFiltro('auditora', ch.data.datasets[els[0].datasetIndex].label); },
+                },
+            });
+        }
+
+        // ================== RENDER ==================
+        function render() {
+            if (!graficos.meses) crearGraficos();
+            const base = filtrar();
+            renderResumen(base);
+            renderKpis(base);
+            renderMeses();
+            renderEstados();
+            renderAntiguedad(base);
+            renderProveedores();
+            renderMotivos(base);
+            renderLeadTime(base);
+            renderAuditoras();
+        }
+
+        function renderResumen(base) {
+            const el = document.getElementById('resumen');
+            if (!filas.length) { el.textContent = 'Todavía no hay muestras registradas en Patronaje.'; return; }
+            if (!base.length) { el.textContent = 'No hay muestras con estos filtros. Quita alguno para ver resultados.'; return; }
+            const total = suma(base), fin = suma(base.filter(r => r.estado === 'Finalizado'));
+            const lt = promedio(base.map(r => r.ltCompleto));
+            el.innerHTML = `De <b>${fmt(total)}</b> ${textoModo(total)} ${total === 1 ? 'ingresada' : 'ingresadas'}, <b>${fmt(fin)}</b> ${fin === 1 ? 'está finalizada' : 'están finalizadas'} y <b>${fmt(total - fin)}</b> ${total - fin === 1 ? 'sigue' : 'siguen'} en proceso.` +
+                (lt !== null ? ` Una muestra tarda en promedio <b>${fmt(lt, 1)}</b> días hábiles desde que ingresa hasta que se finaliza.` : '');
+        }
+
+        function renderKpis(base) {
+            const total = suma(base);
+            const registros = base.length;
+            const unidades = base.reduce((t, r) => t + r.unidades, 0);
+            const porEstado = Object.fromEntries(ESTADOS.map(e => [e, suma(base.filter(r => r.estado === e))]));
+            const abiertos = porEstado.Pendiente + porEstado.Modelado + porEstado.Asignado;
+            const aprob = suma(base.filter(r => r.resultado === 'Aprobada'));
+            const rech = suma(base.filter(r => r.resultado === 'Rechazada'));
+            const lts = base.map(r => r.ltCompleto).filter(v => v !== null);
+            const enMeta = lts.filter(v => v <= metaLeadTime).length;
+            const abiertas = base.filter(r => r.estado !== 'Finalizado');
+            const edadProm = promedio(abiertas.map(r => r.edad));
+            const viejas = abiertas.filter(r => r.edad !== null && r.edad > 20).length;
+            const conteoPrecintos = new Map();
+            filas.forEach(r => { if (r.precinto && r.precinto !== 'SIN PRECINTO') conteoPrecintos.set(r.precinto, (conteoPrecintos.get(r.precinto) || 0) + 1); });
+            const segundas = new Set(base.filter(r => (conteoPrecintos.get(r.precinto) || 0) > 1).map(r => r.precinto)).size;
+
+            const kpis = [
+                { nombre: 'Ingresadas', valor: fmt(total), unidad: textoModo(), detalle: modo === 'unidades' ? `${fmt(registros)} muestras` : `${fmt(unidades)} unidades`, color: C.laton },
+                { nombre: 'En proceso', valor: fmt(abiertos), unidad: textoModo(), detalle: `${fmt(porEstado.Pendiente)} pendientes, ${fmt(porEstado.Modelado)} en modelado, ${fmt(porEstado.Asignado)} asignadas`, color: C.lavanda },
+                { nombre: 'Finalizadas', valor: fmt(porEstado.Finalizado), unidad: textoModo(), detalle: `${fmt(pct(porEstado.Finalizado, total), 1)} % de lo ingresado`, color: C.turquesa },
+                { nombre: 'Aprobación', valor: fmt(pct(aprob, aprob + rech), 1), unidad: '%', detalle: `${fmt(aprob)} aprobadas, ${fmt(rech)} rechazadas`, color: C.turquesa },
+                { nombre: 'Lead time completo', valor: fmt(promedio(lts), 1), unidad: 'días hábiles', detalle: `Mediana ${fmt(mediana(lts), 1)} días, de ${fmt(lts.length)} finalizadas`, color: C.laton },
+                { nombre: 'Dentro de la meta', valor: fmt(pct(enMeta, lts.length), 1), unidad: '%', detalle: `<span class="meta">Meta: <input type="number" min="1" max="120" id="inputMeta" value="${metaLeadTime}" aria-label="Meta de lead time en días hábiles"> días hábiles</span>`, color: C.turquesa },
+                { nombre: 'Antigüedad de lo abierto', valor: fmt(edadProm, 1), unidad: 'días hábiles', detalle: `${fmt(viejas)} muestras abiertas llevan más de 20 días`, color: C.coral },
+                { nombre: 'Segundas rondas', valor: fmt(segundas), unidad: 'precintos', detalle: 'Precintos que han entrado más de una vez', color: C.ambar },
+            ];
+            const cont = document.getElementById('kpis');
+            const enfocadoMeta = document.activeElement && document.activeElement.id === 'inputMeta';
+            cont.innerHTML = kpis.map(k => `
+                <article class="kpi" style="--acento:${k.color}">
+                    <div class="nombre">${k.nombre}</div>
+                    <div class="valor">${k.valor}${k.valor === '—' ? '' : `<small>${k.unidad}</small>`}</div>
+                    <div class="detalle">${k.detalle}</div>
+                </article>`).join('');
+            const inputMeta = document.getElementById('inputMeta');
+            if (enfocadoMeta) inputMeta.focus();
+            inputMeta.addEventListener('change', () => {
+                const v = Math.round(Number(inputMeta.value));
+                if (v >= 1 && v <= 120) { metaLeadTime = v; localStorage.setItem('reportes_meta_lt', String(v)); }
+                render();
+            });
+        }
+
+        function renderMeses() {
+            const datos = filtrar('mes').filter(r => r.mesIngreso);
+            const claves = [...new Set(datos.map(r => r.mesIngreso))].sort();
+            const g = graficos.meses;
+            g.$claves = claves;
+            g.data.labels = claves.map(nombreMes);
+            g.data.datasets.forEach(ds => {
+                ds.data = claves.map(k => suma(datos.filter(r => r.mesIngreso === k && r.estado === ds.label)));
+                ds.backgroundColor = claves.map(k => alfa(COLOR_ESTADO[ds.label], !filtros.mes || filtros.mes === k ? .88 : .22));
+            });
+            g.update();
+        }
+
+        function renderEstados() {
+            const datos = filtrar('estado');
+            const g = graficos.estados;
+            g.data.datasets[0].data = ESTADOS.map(e => suma(datos.filter(r => r.estado === e)));
+            g.data.datasets[0].backgroundColor = ESTADOS.map(e => alfa(COLOR_ESTADO[e], !filtros.estado || filtros.estado === e ? .92 : .22));
+            g.update();
+        }
+
+        function renderAntiguedad(base) {
+            const tramos = [['0 a 5', 0, 5], ['6 a 10', 6, 10], ['11 a 20', 11, 20], ['21 a 40', 21, 40], ['Más de 40', 41, Infinity]];
+            const abiertas = base.filter(r => r.estado !== 'Finalizado' && r.edad !== null);
+            const g = graficos.antiguedad;
+            g.data.labels = tramos.map(t => `${t[0]} días`);
+            g.data.datasets.forEach(ds => { ds.data = tramos.map(([, a, b]) => suma(abiertas.filter(r => r.estado === ds.label && r.edad >= a && r.edad <= b))); });
+            g.update();
+        }
+
+        function renderProveedores() {
+            const datos = filtrar('proveedor').filter(r => r.resultado === 'Aprobada' || r.resultado === 'Rechazada');
+            const mapa = new Map();
+            datos.forEach(r => { const m = mapa.get(r.proveedor) || { a: 0, r: 0 }; if (r.resultado === 'Aprobada') m.a += peso(r); else m.r += peso(r); mapa.set(r.proveedor, m); });
+            const top = [...mapa.entries()].sort((x, y) => (y[1].a + y[1].r) - (x[1].a + x[1].r)).slice(0, 12);
+            if (filtros.proveedor && !top.some(([p]) => p === filtros.proveedor) && mapa.has(filtros.proveedor)) top.push([filtros.proveedor, mapa.get(filtros.proveedor)]);
+            const g = graficos.proveedores;
+            g.data.labels = top.map(([p]) => p);
+            const atenuar = p => filtros.proveedor && filtros.proveedor !== p;
+            g.data.datasets[0].data = top.map(([, m]) => m.a);
+            g.data.datasets[1].data = top.map(([, m]) => m.r);
+            g.data.datasets[0].backgroundColor = top.map(([p]) => alfa(C.turquesa, atenuar(p) ? .2 : .85));
+            g.data.datasets[1].backgroundColor = top.map(([p]) => alfa(C.coral, atenuar(p) ? .2 : .85));
+            g.update();
+        }
+
+        function renderMotivos(base) {
+            const conteo = new Map();
+            base.filter(r => r.resultado === 'Rechazada').forEach(r => new Set(r.motivos).forEach(m => conteo.set(m, (conteo.get(m) || 0) + 1)));
+            const top = [...conteo.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+            const g = graficos.motivos;
+            g.data.labels = top.map(([m]) => m);
+            g.data.datasets[0].data = top.map(([, n]) => n);
+            g.update();
+        }
+
+        function renderLeadTime(base) {
+            const fin = base.filter(r => r.estado === 'Finalizado' && r.mesFinal);
+            const claves = [...new Set(fin.map(r => r.mesFinal))].sort();
+            const g = graficos.leadMes;
+            g.data.labels = claves.map(nombreMes);
+            g.data.datasets[0].data = claves.map(k => suma(fin.filter(r => r.mesFinal === k)));
+            g.data.datasets[1].data = claves.map(k => { const p = promedio(fin.filter(r => r.mesFinal === k).map(r => r.ltCompleto)); return p === null ? null : +p.toFixed(1); });
+            g.update();
+
+            const ge = graficos.etapas;
+            ge.data.datasets[0].data = ['ltIngresoMedicion', 'ltMedicionAud', 'ltAudFinal'].map(k => { const p = promedio(base.map(r => r[k])); return p === null ? 0 : +p.toFixed(1); });
+            ge.update();
+
+            const tramos = [['1 a 5', 1, 5], ['6 a 10', 6, 10], ['11 a 15', 11, 15], ['16 a 20', 16, 20], ['21 a 30', 21, 30], ['Más de 30', 31, Infinity]];
+            const lts = base.map(r => r.ltCompleto).filter(v => v !== null);
+            const gd = graficos.distribucion;
+            gd.data.labels = tramos.map(t => t[0]);
+            gd.data.datasets[0].data = tramos.map(([, a, b]) => lts.filter(v => v >= a && v <= b).length);
+            gd.data.datasets[0].backgroundColor = tramos.map(([, a]) => alfa(a > metaLeadTime ? C.coral : C.turquesa, .8));
+            gd.update();
+        }
+
+        function renderAuditoras() {
+            const datos = filtrar('auditora');
+            const mapa = new Map();
+            datos.forEach(r => {
+                const m = mapa.get(r.auditora) || { curso: 0, fin: 0, total: 0, a: 0, r: 0, lts: [] };
+                m.total += peso(r);
+                if (r.estado === 'Finalizado') m.fin += peso(r); else m.curso += peso(r);
+                if (r.resultado === 'Aprobada') m.a += peso(r);
+                if (r.resultado === 'Rechazada') m.r += peso(r);
+                m.lts.push(r.ltMedicionAud);
+                mapa.set(r.auditora, m);
+            });
+            const lista = [...mapa.entries()].sort((x, y) => (x[0] === 'SIN ASIGNAR') - (y[0] === 'SIN ASIGNAR') || y[1].total - x[1].total);
+            const maxTotal = Math.max(1, ...lista.map(([, m]) => m.total));
+            document.getElementById('tablaAuditoras').innerHTML = lista.length ? lista.map(([nombre, m]) => `
+                <tr data-auditora="${esc(nombre)}" tabindex="0" class="${filtros.auditora === nombre ? 'elegida' : ''}">
+                    <td><b>${esc(nombre)}</b></td>
+                    <td class="num">${fmt(m.curso)}</td>
+                    <td class="num">${fmt(m.fin)}</td>
+                    <td class="num">${fmt(m.total)}<span class="barrita" style="width:${Math.round(m.total / maxTotal * 70)}px"></span></td>
+                    <td class="num">${fmt(m.a)}</td>
+                    <td class="num">${fmt(m.r)}</td>
+                    <td class="num">${m.a + m.r ? fmt(pct(m.a, m.a + m.r), 1) + ' %' : '—'}</td>
+                    <td class="num">${promedio(m.lts) === null ? '—' : fmt(promedio(m.lts), 1) + ' días'}</td>
+                </tr>`).join('') : '<tr><td colspan="8">No hay muestras con estos filtros.</td></tr>';
+
+            // Muestras abiertas de la auditora elegida
+            const det = document.getElementById('detalleAuditora');
+            if (filtros.auditora) {
+                const abiertas = filtrar().filter(r => r.estado !== 'Finalizado').sort((a, b) => (b.edad || 0) - (a.edad || 0));
+                det.innerHTML = `<h4>Muestras abiertas de ${esc(filtros.auditora)} (${abiertas.length})</h4>` + (abiertas.length ? `
+                    <div class="tabla-scroll"><table>
+                        <thead><tr><th>Precinto</th><th>Referencia</th><th>Tipo de muestra</th><th>Estado</th><th>Ingreso</th><th class="num">Días abierta</th></tr></thead>
+                        <tbody>${abiertas.slice(0, 40).map(r => `<tr style="cursor:default">
+                            <td>${esc(r.precinto || '—')}</td><td>${esc(r.referencia || '—')}</td><td>${esc(r.tipoMuestra)}</td>
+                            <td><span class="estado-punto" style="background:${COLOR_ESTADO[r.estado]}"></span>${r.estado}</td>
+                            <td>${esc(r.ingreso || '—')}</td><td class="num">${fmt(r.edad)}</td></tr>`).join('')}</tbody>
+                    </table></div>` + (abiertas.length > 40 ? `<p class="ayuda">Se muestran las 40 más antiguas.</p>` : '') : '<p class="ayuda">No tiene muestras abiertas con los filtros actuales.</p>');
+            } else {
+                det.innerHTML = '';
+            }
+
+            // Muestras auditadas por mes (fecha de entrega de auditoría)
+            const auditadas = datos.filter(r => r.mesAuditoria && r.auditora !== 'SIN ASIGNAR');
+            const claves = [...new Set(auditadas.map(r => r.mesAuditoria))].sort();
+            const ranking = [...new Set(auditadas.map(r => r.auditora))]
+                .map(a => [a, suma(auditadas.filter(r => r.auditora === a))]).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([a]) => a);
+            if (filtros.auditora && !ranking.includes(filtros.auditora) && auditadas.some(r => r.auditora === filtros.auditora)) ranking.push(filtros.auditora);
+            const g = graficos.auditorasMes;
+            g.data.labels = claves.map(nombreMes);
+            g.data.datasets = ranking.map((a, i) => {
+                const color = PALETA_SERIES[i % PALETA_SERIES.length];
+                const tenue = filtros.auditora && filtros.auditora !== a;
+                return {
+                    label: a, data: claves.map(k => suma(auditadas.filter(r => r.auditora === a && r.mesAuditoria === k))),
+                    borderColor: alfa(color, tenue ? .25 : 1), backgroundColor: alfa(color, tenue ? .25 : 1),
+                    borderWidth: filtros.auditora === a ? 4 : 2.5, tension: .35, pointRadius: 3.5, pointHoverRadius: 7,
+                };
+            });
+            g.update();
+        }
+
+        document.getElementById('tablaAuditoras').addEventListener('click', e => {
+            const tr = e.target.closest('tr[data-auditora]'); if (tr) alternarFiltro('auditora', tr.dataset.auditora);
+        });
+        document.getElementById('tablaAuditoras').addEventListener('keydown', e => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const tr = e.target.closest('tr[data-auditora]'); if (tr) { e.preventDefault(); alternarFiltro('auditora', tr.dataset.auditora); }
+        });
+
+        // ================== FONDO: HILOS EN MOVIMIENTO ==================
+        (function iniciarFondo() {
+            const cv = document.getElementById('fondoHilos');
+            const ctx = cv.getContext('2d');
+            const reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const colores = [C.laton, C.turquesa, C.lavanda, C.coral];
+            const hilos = Array.from({ length: 22 }, (_, i) => ({
+                color: colores[i % colores.length],
+                altura: (i + 0.5) / 22,
+                amplitud: 18 + Math.random() * 70,
+                frecuencia: 0.0014 + Math.random() * 0.0022,
+                velocidad: 0.00015 + Math.random() * 0.00035,
+                fase: Math.random() * Math.PI * 2,
+                grosor: 0.6 + Math.random() * 1.5,
+                opacidad: 0.10 + Math.random() * 0.22,
+            }));
+            let ancho = 0, alto = 0;
+            function ajustar() {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                ancho = window.innerWidth; alto = window.innerHeight;
+                cv.width = ancho * dpr; cv.height = alto * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            function dibujar(t) {
+                ctx.clearRect(0, 0, ancho, alto);
+                for (const h of hilos) {
+                    ctx.beginPath();
+                    for (let x = -20; x <= ancho + 20; x += 14) {
+                        const y = alto * h.altura + (x - ancho / 2) * 0.12
+                            + Math.sin(x * h.frecuencia + h.fase + t * h.velocidad) * h.amplitud
+                            + Math.sin(x * h.frecuencia * 2.3 + t * h.velocidad * 1.7) * h.amplitud * 0.3;
+                        x === -20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    }
+                    ctx.strokeStyle = alfa(h.color, h.opacidad);
+                    ctx.lineWidth = h.grosor;
+                    ctx.stroke();
+                }
+            }
+            function bucle(t) { if (!document.hidden) dibujar(t); requestAnimationFrame(bucle); }
+            ajustar();
+            window.addEventListener('resize', () => { ajustar(); if (reducir) dibujar(0); });
+            if (reducir) dibujar(0); else requestAnimationFrame(bucle);
+        })();
+
+        cargar();
+    </script>
+</body>
+</html>
