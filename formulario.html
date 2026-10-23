@@ -174,13 +174,22 @@
             document.getElementById('fechaIngreso').value = hoyFormateado;
         }
 
+        // Supabase devuelve máximo 1000 filas por consulta: se trae todo en bloques
+        async function traerTodo(tabla, columnas) {
+            const paso = 1000;
+            let filas = [];
+            for (let desde = 0; ; desde += paso) {
+                const { data, error } = await supabase.from(tabla).select(columnas).order('id').range(desde, desde + paso - 1);
+                if (error) throw error;
+                filas = filas.concat(data);
+                if (data.length < paso) break;
+            }
+            return filas;
+        }
+
         async function cargarTodosLosSugeridos() {
             try {
-                const { data, error } = await supabase
-                    .from('prendas')
-                    .select('registradoPor, coleccion, referencia, color, proveedor, paisOrigen, ubicacionGeneral, ubicacionDiseno');
-
-                if (error) throw error;
+                const data = await traerTodo('prendas', 'registradoPor, coleccion, referencia, color, proveedor, paisOrigen, ubicacionGeneral, ubicacionDiseno');
 
                 let registrados = new Set();
                 let colecciones = new Set();
@@ -264,7 +273,8 @@
         });
 
         btnGuardar.addEventListener('click', async function() {
-            const numeroDigitado = inputNumeroPrecinto.value.trim();
+            // En mayúsculas: Patronaje busca los precintos en mayúsculas
+            const numeroDigitado = inputNumeroPrecinto.value.trim().toUpperCase();
             if(numeroDigitado === "") { 
                 alert("Por favor ingresa el número del precinto."); 
                 inputNumeroPrecinto.focus();
@@ -285,11 +295,37 @@
             btnGuardar.textContent = "Procesando y guardando... ⏳";
             btnGuardar.disabled = true;
 
+            // ¿El precinto ya existe? (ilike = sin distinguir mayúsculas de minúsculas)
+            const { data: existentes, error: errDup } = await supabase
+                .from('prendas').select('id').ilike('precinto', precintoFinalCompleto).limit(1);
+            if (errDup) {
+                console.error('[formulario] No se pudo validar el precinto:', errDup);
+                alert("No se pudo verificar si el precinto ya existe: " + errDup.message + "\nRevisa tu conexión e intenta de nuevo.");
+                restablecerBoton();
+                return;
+            }
+            if (existentes && existentes.length > 0) {
+                alert(`⚠️ El precinto ${precintoFinalCompleto} ya está registrado en el inventario.\nRevisa el número antes de guardar.`);
+                restablecerBoton();
+                inputNumeroPrecinto.focus();
+                return;
+            }
+
             if(archivoFoto) {
                 const reader = new FileReader();
+                reader.onerror = function() {
+                    console.error('[formulario] No se pudo leer la foto:', reader.error);
+                    alert("No se pudo leer la foto seleccionada. Intenta con otra imagen.");
+                    restablecerBoton();
+                };
                 reader.readAsDataURL(archivoFoto);
                 reader.onload = function(event) {
                     const img = new Image();
+                    img.onerror = function() {
+                        console.error('[formulario] El archivo seleccionado no es una imagen válida.');
+                        alert("El archivo seleccionado no es una imagen válida (usa JPG o PNG).");
+                        restablecerBoton();
+                    };
                     img.src = event.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
