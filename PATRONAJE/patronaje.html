@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     
     <style>
         :root { --w-col-0: 60px; --w-col-1: 110px; --w-col-7: 150px; }
@@ -158,6 +158,25 @@
         const URL_PROYECTO = 'https://emljzsxypeqecevffmwr.supabase.co'; 
         const KEY_PROYECTO = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
         const client = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO, { auth: { storage: window.localStorage } });
+        window.sbCliente = client;   // sesion.js reutiliza este cliente (un solo cliente por página)
+
+        // ================== UTILIDADES ==================
+        // Evita que comillas o etiquetas dentro de un dato rompan el HTML o inyecten código
+        const esc = s => String(s ?? '').replace(/[&<>"']/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        // Solo enlaces https o archivos embebidos (fotos/PDF antiguos); bloquea "javascript:" y similares
+        const urlSegura = u => /^(https:\/\/|data:(image\/|application\/pdf))/i.test(String(u ?? '')) ? String(u) : '';
+        // Fecha de hoy en formato AAAA-MM-DD, en hora local
+        const fechaHoyLocal = () => { const h = new Date(); return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0'); };
+
+        // Ejecuta tareas asíncronas con máximo `limite` simultáneas (evita saturar Supabase)
+        async function enLotes(items, limite, tarea) {
+            const resultados = [];
+            for (let i = 0; i < items.length; i += limite) {
+                resultados.push(...await Promise.allSettled(items.slice(i, i + limite).map(tarea)));
+            }
+            return resultados;
+        }
 
         // ================== ARCHIVOS EN SUPABASE STORAGE ==================
         // Las fotos y PDFs se suben al bucket y en la tabla solo se guarda el enlace.
@@ -329,10 +348,15 @@
             }
         }
         window.cerrarSesion = async function() {
-            if ((hayCambiosSinGuardar || guardandoAhora) && !confirm("Tienes cambios SIN GUARDAR. Si cierras sesión se perderán.\n\n¿Cerrar sesión de todas formas?")) return;
+            try {
+                await window.guardarAntesDeSalir();   // guarda lo pendiente antes de salir
+            } catch (e) {
+                console.warn('[sesion] Quedaron cambios sin guardar al cerrar sesión:', e);
+                if (!confirm("No se pudieron guardar todos los cambios. Si cierras sesión se perderán.\n\n¿Cerrar sesión de todas formas?")) return;
+            }
             hayCambiosSinGuardar = false; guardandoAhora = false;
             await client.auth.signOut(); window.location.href = "index_patronaje.html";
-        }
+        };
 
         // 🔒 AVISO AL CERRAR O RECARGAR LA PÁGINA CON CAMBIOS SIN GUARDAR
         window.addEventListener('beforeunload', function(e) {
@@ -411,16 +435,22 @@
             marcarCambios();
         };
 
+        // "2026-03-16" se interpreta como fecha LOCAL. Con new Date(texto) se tomaba como UTC
+        // y en Colombia (UTC-5) caía en el día anterior, desplazando los fines de semana.
+        function fechaLocal(texto) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto || '');
+            return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+        }
+
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
-            if (!fechaInicioStr || !fechaFinStr) return "";
-            let start = new Date(fechaInicioStr); let end = new Date(fechaFinStr);
-            if (isNaN(start) || isNaN(end) || start > end) return "";
-            let count = 0; let current = new Date(start);
-            while (current <= end) {
-                let dayOfWeek = current.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; }
-                current.setDate(current.getDate() + 1);
-            } return count.toString();
+            const inicio = fechaLocal(fechaInicioStr), fin = fechaLocal(fechaFinStr);
+            if (!inicio || !fin || inicio > fin) return "";
+            let dias = 0;
+            for (const d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+                const dia = d.getDay();
+                if (dia !== 0 && dia !== 6) dias++;
+            }
+            return String(dias);
         }
 
         window.recalcularFila = function(tr) {
@@ -586,8 +616,8 @@
             
             let allData = [];
             let from = 0;
-            // Bloques pequeños mientras existan filas antiguas con base64; tras migrar puedes subirlo a 200
-            const step = 25; 
+            // La migración de base64 ya está completa: bloques grandes = menos viajes al servidor
+            const step = 500;
 
             while (true) {
                 document.getElementById('loadingText').innerText = `Descargando registros: ${allData.length}...`;
@@ -596,7 +626,7 @@
                 // Reintenta hasta 3 veces antes de rendirse
                 for (let intento = 1; intento <= 3; intento++) {
                     ({ data, error } = await client.from('dpto_tecnico')
-                        .select('*')
+                        .select('id, datos, created_at')
                         .order('created_at', { ascending: false })
                         .order('id', { ascending: false }) // orden estable: evita filas repetidas o saltadas
                         .range(from, from + step - 1));
@@ -690,8 +720,7 @@
         window.agregarFilaVacia = function() {
             const tbody = document.getElementById('tableBody');
             const emptyDatos = new Array(30).fill('');
-            const hoy = new Date(); 
-            emptyDatos[1] = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+            emptyDatos[1] = fechaHoyLocal();
             
             const newTr = crearFilaHTML(null, emptyDatos);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
@@ -731,7 +760,7 @@
                     let imgSource = (valorStr && valorStr.includes('http') || valorStr.includes('data:image')) ? valorStr : 'logo.png';
                     td.innerHTML = `
                         <div style="position:relative; width:45px; height:45px; margin:auto;">
-                            <img src="${imgSource}" class="img-foto-prenda" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in; border:1px solid #d1d5db; border-radius:4px; background:white;" onclick="abrirModalImagen(this.src, event)">
+                            <img src="${esc(urlSegura(imgSource) || 'logo.png')}" class="img-foto-prenda" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in; border:1px solid #d1d5db; border-radius:4px; background:white;" onclick="abrirModalImagen(this.src, event)">
                             <button onclick="this.nextElementSibling.click()" style="position:absolute; top:-8px; right:-8px; background:#fff; border:1px solid #d1d5db; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);" title="Cambiar Foto">✏️</button>
                             <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">
                         </div>`;
@@ -740,9 +769,9 @@
                     td.contentEditable = "false"; td.style.textAlign = "center";
                     if(valorStr && (valorStr.startsWith('data:application/pdf') || valorStr.startsWith('http'))) {
                         td.innerHTML = `<div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                            <a href="${valorStr}" ${valorStr.startsWith('http') ? 'target="_blank" rel="noopener"' : 'download="Auditoria.pdf"'} class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
+                            <a href="${esc(urlSegura(valorStr))}" ${valorStr.startsWith('http') ? 'target="_blank" rel="noopener"' : 'download="Auditoria.pdf"'} class="pdf-link" style="font-weight:bold; font-size:12px; text-decoration:none;">📄 Ver PDF</a>
                             <button onclick="eliminarPdf(this)" style="background:transparent; border:none; cursor:pointer; color:inherit;" title="Quitar">❌</button>
-                            <input type="hidden" value="${valorStr}" class="pdf-data">
+                            <input type="hidden" value="${esc(valorStr)}" class="pdf-data">
                         </div>`;
                     } else {
                         td.innerHTML = `<button onclick="this.nextElementSibling.click()" class="btn" style="padding: 4px 8px; font-size:11px;">📎 Subir PDF</button>
@@ -755,20 +784,28 @@
                 }
                 else if (colName === 'RESULTADO') { 
                     td.contentEditable = "false";
+                    const opciones = ['', 'Cumple', 'No Cumple'];
+                    // Si la BD trae otro valor (CANCELADO, OBSEQUIO, CUMPLE...), se muestra en vez de perderse
+                    if (valorStr && !opciones.includes(valorStr)) opciones.push(valorStr);
                     td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; cursor:pointer; outline: none;" onchange="this.closest('tr')._modificado=true; this.setAttribute('data-val', this.value); recalcularFila(this.closest('tr')); marcarCambios();">
-                        <option value="" style="color:black;"></option>
-                        <option value="Cumple" style="color:black;" ${valorStr === 'Cumple' ? 'selected' : ''}>Cumple</option>
-                        <option value="No Cumple" style="color:black;" ${valorStr === 'No Cumple' ? 'selected' : ''}>No Cumple</option>
+                        ${opciones.map(o => `<option value="${esc(o)}" style="color:black;" ${o === valorStr ? 'selected' : ''}>${esc(o)}</option>`).join('')}
                     </select>`;
                 } 
                 else if (colName.includes('MOTIVO')) {
                     td.contentEditable = "false";
-                    td.innerHTML = `<input type="text" list="listMotivos" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="this.closest('tr')._modificado=true; marcarCambios()" onchange="this.setAttribute('value', this.value); agregarMotivoDatalist(this.value); recalcularFila(this.closest('tr'));">`;
+                    td.innerHTML = `<input type="text" list="listMotivos" value="${esc(valorStr)}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor:text;" placeholder="Elegir o escribir..." oninput="this.closest('tr')._modificado=true; marcarCambios()" onchange="this.setAttribute('value', this.value); agregarMotivoDatalist(this.value); recalcularFila(this.closest('tr'));">`;
                 }
                 else if (colName.includes('FECHA') || colName.includes('INGRESO HÚMEDO') || colName.includes('SALIDA HÚMEDO') || colName.includes('MEDICIÓN:')) { 
                     td.contentEditable = "false"; 
                     // 🔥 ANCLAJE DE FECHAS
-                    td.innerHTML = `<input type="date" value="${valorStr}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor: pointer;" onchange="this.closest('tr')._modificado=true; this.setAttribute('value', this.value); recalcularFila(this.closest('tr')); marcarCambios();">`;
+                    const fecha = /^\d{4}-\d{2}-\d{2}/.test(valorStr) ? valorStr.slice(0, 10) : valorStr;
+                    const alCambiar = `this.closest('tr')._modificado=true; this.setAttribute('value', this.value); recalcularFila(this.closest('tr')); marcarCambios();`;
+                    if (fecha === '' || /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+                        td.innerHTML = `<input type="date" value="${esc(fecha)}" style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; outline: none; cursor: pointer;" onchange="${alCambiar}">`;
+                    } else {
+                        // "N/A", "15/03/2026"...: un input de fecha lo borraría; se muestra como texto para corregirlo a mano
+                        td.innerHTML = `<input type="text" value="${esc(fecha)}" title="Fecha con formato no reconocido: corrígela a AAAA-MM-DD" style="width:100%; border:none; background:transparent; font-size:13px; color:#b45309; outline: none;" onchange="${alCambiar}">`;
+                    }
                 } 
                 else if (colName === 'LEAD TIME AUD' || colName === 'LEAD TIME ENTREGA' || colName === 'LEAD TIME GENERAL' || colName === 'TIPO') {
                     td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
@@ -856,10 +893,41 @@
             return pendiente;
         }
 
+        // Solo los campos que el usuario cambió respecto a lo que cargó de la BD
+        function calcularCambios(local, base) {
+            const cambios = {};
+            local.forEach((valor, i) => { if (valor !== base[i]) cambios[i] = valor; });
+            return cambios;
+        }
+
+        // Guarda una fila enviando SOLO sus campos cambiados. La función SQL
+        // actualizar_campos_dpto aplica el cambio con la fila bloqueada, así que
+        // dos personas guardando la misma fila nunca se pisan.
+        async function guardarFilaPorCampos(a) {
+            const id = a.tr.dataset.id;
+            const cambios = calcularCambios(a.local, a.base);
+            if (Object.keys(cambios).length === 0) { a.final = [...a.base]; return; }
+
+            const { data, error } = await client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: cambios });
+            if (error) throw error;
+            if (data === null) { a.borrada = true; a.final = null; return; }   // otra persona la eliminó
+
+            // La fila final mezcla tus campos con los de otros: se recalculan estado y lead times
+            const final = normalizarDatos(id, data);
+            const calculados = {};
+            COLUMNAS_CALCULADAS.forEach(i => { if (final[i] !== String(data[i] ?? '')) calculados[i] = final[i]; });
+            if (Object.keys(calculados).length > 0) {
+                const { error: errCalc } = await client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: calculados });
+                if (errCalc) console.warn('[guardar] No se actualizaron los campos calculados de la fila', id, errCalc);
+            }
+            a.final = final;
+        }
+
         window.guardarCambiosVisibles = async function() {
             if (guardandoAhora) return;
             const btn = document.getElementById('btnGuardarGlobal');
             guardandoAhora = true;
+            window.ultimoGuardadoFallo = false;
             btn.innerHTML = "⏳ Guardando...";
             btn.disabled = true;
             btn.classList.remove('unsaved');
@@ -880,42 +948,18 @@
                 }
             }
 
-            let conflictos = 0, borradas = [];
+            let borradas = [];
             try {
                 if (actualizar.length > 0) {
-                    // 1) Leer la versión ACTUAL en la BD (por si otra persona cambió algo)
-                    btn.innerHTML = "⏳ Revisando cambios de otros usuarios...";
-                    const ids = actualizar.map(a => a.tr.dataset.id);
-                    const enServidor = new Map();
-                    for (let i = 0; i < ids.length; i += 100) {
-                        const { data, error } = await client.from('dpto_tecnico').select('id, datos').in('id', ids.slice(i, i + 100));
-                        if (error) throw error;
-                        (data || []).forEach(r => enServidor.set(r.id, r.datos));
-                    }
-
-                    // 2) Combinar: lo que TÚ cambiaste + lo que OTROS cambiaron
+                    // 1) y 2) Guardar solo los campos cambiados (máximo 6 filas a la vez)
                     btn.innerHTML = `⏳ Actualizando (${actualizar.length})...`;
-                    for (const a of actualizar) {
-                        const id = a.tr.dataset.id;
-                        if (!enServidor.has(id)) { a.borrada = true; continue; }
-                        const srv = normalizarDatos(id, enServidor.get(id));
-                        const mezcla = a.local.map((v, i) => {
-                            if (v !== a.base[i]) {
-                                if (!COLUMNAS_CALCULADAS.has(i) && srv[i] !== a.base[i] && srv[i] !== v) conflictos++;
-                                return v;          // tu cambio
-                            }
-                            return srv[i];         // valor más reciente de la BD
-                        });
-                        a.final = normalizarDatos(id, mezcla);   // recalcula estado y lead times
-                        // .select() confirma cuántas filas se actualizaron de verdad
-                        a.promesa = client.from('dpto_tecnico').update({ datos: a.final, precinto: a.final[7] }).eq('id', id).select('id');
-                    }
-
-                    for (const a of actualizar) {
-                        if (!a.promesa) continue;
-                        const { data, error } = await a.promesa;
-                        if (error) throw error;
-                        if (!data || data.length === 0) { a.borrada = true; a.final = null; }
+                    const resultados = await enLotes(actualizar, 6, guardarFilaPorCampos);
+                    const fallidas = resultados.filter(r => r.status === 'rejected');
+                    if (fallidas.length > 0) {
+                        fallidas.forEach(f => console.error('[guardar] Fila no guardada:', f.reason));
+                        // Las filas que sí se guardaron se confirman en pantalla antes de avisar del error
+                        for (const a of actualizar) { if (a.final) despuesDeGuardar(a.tr, a.local, a.final); }
+                        throw new Error(`${fallidas.length} de ${actualizar.length} fila(s) no se guardaron. ${fallidas[0].reason?.message || ''}`);
                     }
                 }
 
@@ -948,9 +992,6 @@
                 if (borradas.length > 0) {
                     alert(`⚠️ Otra persona eliminó ${borradas.length} muestra(s) que estabas editando:\n${borradas.join(', ')}\n\nTus datos siguen en pantalla. Presiona "Guardar Cambios" otra vez para volver a crearlas, o elimínalas si ya no se necesitan.`);
                 }
-                if (conflictos > 0) {
-                    alert(`ℹ️ En ${conflictos} campo(s) otra persona había escrito un valor distinto mientras trabajabas. Se guardó tu versión; revisa que sea la correcta.`);
-                }
 
                 if (recalcularPendientes()) {
                     btn.innerHTML = "⚠️ Guardar Cambios";   // quedaron cambios hechos durante el guardado
@@ -959,13 +1000,38 @@
                     setTimeout(() => { if (!hayCambiosSinGuardar && !guardandoAhora) btn.innerHTML = "💾 Guardar Cambios"; }, 3000);
                 }
             } catch (err) {
-                console.error(err);
+                window.ultimoGuardadoFallo = true;   // detiene el autoguardado hasta un guardado manual exitoso
+                console.error('[guardar] Error:', err);
                 alert("❌ NO se guardaron los cambios: " + (err.message || err) + "\n\nNo cierres la página. Revisa tu conexión y vuelve a presionar Guardar Cambios.");
                 window.marcarCambios();
             } finally {
                 guardandoAhora = false;
                 btn.disabled = false;
             }
+        };
+
+        // ================== AUTOGUARDADO ==================
+        // Guarda 5 s después de la última modificación. Si un guardado falla, se detiene
+        // (el usuario ya vio el error) hasta que un guardado manual funcione.
+        const SEGUNDOS_AUTOGUARDADO = 5;
+        let timerAutoguardado = null;
+        const marcarCambiosBase = window.marcarCambios;
+        window.marcarCambios = function() {
+            marcarCambiosBase();
+            clearTimeout(timerAutoguardado);
+            if (window.ultimoGuardadoFallo) return;
+            timerAutoguardado = setTimeout(() => {
+                if (!guardandoAhora && hayCambiosSinGuardar) window.guardarCambiosVisibles();
+            }, SEGUNDOS_AUTOGUARDADO * 1000);
+        };
+
+        // sesion.js llama esto antes de cerrar la sesión por cambio de día o inactividad
+        window.guardarAntesDeSalir = async function() {
+            clearTimeout(timerAutoguardado);
+            const limite = Date.now() + 60000;
+            while (guardandoAhora && Date.now() < limite) await new Promise(r => setTimeout(r, 300));
+            if (hayCambiosSinGuardar) await window.guardarCambiosVisibles();
+            if (hayCambiosSinGuardar) throw new Error('Quedaron cambios sin guardar');
         };
 
         window.procesarExcelImportado = function(event) {
@@ -1131,118 +1197,144 @@
         };
 
         window.prendasAImportar = [];
+        window.precintosRepetidos = [];
+
         window.buscarPrecintoEnDiseno = async function(e) {
-            const btn = e.target; btn.textContent = "⏳ Buscando..."; btn.disabled = true;
-            const resDiv = document.getElementById('resultadoBusqueda'); resDiv.style.display = 'none'; window.prendasAImportar = [];
+            const btn = e.target;
+            const restaurarBoton = () => { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; };
+            btn.textContent = "⏳ Buscando..."; btn.disabled = true;
+            const resDiv = document.getElementById('resultadoBusqueda'); resDiv.style.display = 'none';
+            window.prendasAImportar = []; window.precintosRepetidos = [];
 
             const rawText = document.getElementById('inputBuscarPrecinto').value;
-            let precintos = rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== '');
+            const precintos = [...new Set(rawText.split(/[\n,\s]+/).map(p => p.trim().toUpperCase()).filter(p => p !== ''))];
+            if (precintos.length === 0) { restaurarBoton(); return alert("Escribe al menos un precinto."); }
 
-            if(precintos.length === 0) { btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false; return alert("Escribe al menos un precinto."); }
+            try {
+                // 1) Buscar en Muestras (tabla prendas)
+                const { data: prendasDiseno, error: errBusqueda } = await client.from('prendas').select('*').in('precinto', precintos);
+                if (errBusqueda) throw errBusqueda;
 
-            const { data: prendasDiseño } = await client.from('prendas').select('*').in('precinto', precintos);
-            
-            let prendasEncontradas = prendasDiseño || [];
-            let encontradosPrecintos = prendasEncontradas.map(p => (p.precinto || p.id).toUpperCase());
-            
-            let faltantes = precintos.filter(p => !encontradosPrecintos.includes(p));
-            if (faltantes.length > 0) {
-                const { data: prendasPorId } = await client.from('prendas').select('*').in('id', faltantes);
-                if (prendasPorId && prendasPorId.length > 0) { prendasEncontradas = prendasEncontradas.concat(prendasPorId); }
-            }
-
-            let mapPrendas = new Map();
-            prendasEncontradas.forEach(p => mapPrendas.set((p.precinto || p.id).toUpperCase(), p));
-            
-            let noEncontradosCount = 0;
-            precintos.forEach(p => {
-                if (mapPrendas.has(p)) window.prendasAImportar.push(mapPrendas.get(p));
-                else noEncontradosCount++;
-            });
-
-            let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
-            if (window.prendasAImportar.length > 0) {
-                htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} muestras encontradas listas para importar.</div>`;
-                htmlResumen += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">`;
-                window.prendasAImportar.forEach(p => {
-                    const foto = p.fotoUrl || 'logo.png';
-                    htmlResumen += `<div style="display:flex; gap:10px; align-items:center; background:#fff; padding:8px; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                        <img src="${foto}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #d1d5db;">
-                        <div>
-                            <div style="font-weight:bold; color:#2563eb; font-size:14px;">${p.precinto || p.id}</div>
-                            <div style="font-size:11px; color:#6b7280;">Ref: ${p.referencia || '-'} | Gen: ${p.genero || '-'}</div>
-                        </div>
-                    </div>`;
+                // Si un precinto está repetido en Muestras, se toma el registro más reciente
+                const mapPrendas = new Map();
+                (prendasDiseno || []).forEach(p => {
+                    const clave = String(p.precinto || '').toUpperCase();
+                    const actual = mapPrendas.get(clave);
+                    if (!actual || String(p.created_at || '') > String(actual.created_at || '')) mapPrendas.set(clave, p);
                 });
+
+                const noEncontrados = precintos.filter(p => !mapPrendas.has(p));
+                window.prendasAImportar = precintos.filter(p => mapPrendas.has(p)).map(p => mapPrendas.get(p));
+
+                // 2) ¿Cuáles ya están en Patronaje? Se permite repetir (segunda ronda), pero se avisa
+                const { data: yaEnPatronaje, error: errDup } = await client.from('dpto_tecnico').select('precinto').in('precinto', precintos);
+                if (errDup) console.warn('[importar] No se pudo revisar si ya existen en Patronaje:', errDup);
+                window.precintosRepetidos = [...new Set((yaEnPatronaje || []).map(r => String(r.precinto || '').toUpperCase()))];
+
+                // 3) Resumen
+                let htmlResumen = `<div style="font-size: 13px; color: #374151;">`;
+                if (window.prendasAImportar.length > 0) {
+                    htmlResumen += `<div style="color:#10b981; font-weight:bold; font-size:15px; margin-bottom:8px;">✅ ${window.prendasAImportar.length} muestras encontradas listas para importar.</div>`;
+                    htmlResumen += `<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">`;
+                    window.prendasAImportar.forEach(p => {
+                        const foto = urlSegura(p.fotoUrl) || 'logo.png';
+                        const repetido = window.precintosRepetidos.includes(String(p.precinto || '').toUpperCase());
+                        htmlResumen += `<div style="display:flex; gap:10px; align-items:center; background:#fff; padding:8px; border-radius:6px; border:1px solid ${repetido ? '#f59e0b' : '#e5e7eb'}; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <img src="${esc(foto)}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #d1d5db;">
+                            <div>
+                                <div style="font-weight:bold; color:#2563eb; font-size:14px;">${esc(p.precinto)}${repetido ? ' <span style="color:#b45309; font-size:11px;">⚠️ ya está en Patronaje</span>' : ''}</div>
+                                <div style="font-size:11px; color:#6b7280;">Ref: ${esc(p.referencia || '-')} | Gen: ${esc(p.genero || '-')}</div>
+                            </div>
+                        </div>`;
+                    });
+                    htmlResumen += `</div>`;
+                }
+                if (noEncontrados.length > 0) {
+                    htmlResumen += `<div style="color:#ef4444; margin-top:10px;">❌ <b>${noEncontrados.length}</b> precinto(s) no existen en el sistema de Diseño: ${esc(noEncontrados.join(', '))}</div>`;
+                }
                 htmlResumen += `</div>`;
-            }
-            if (noEncontradosCount > 0) {
-                htmlResumen += `<div style="color:#ef4444; margin-top:10px;">❌ <b>${noEncontradosCount}</b> precintos no existen en el sistema de Diseño.</div>`;
-            }
-            htmlResumen += `</div>`;
 
-            if (window.prendasAImportar.length > 0) {
-                htmlResumen += `<button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronajeMulti(event)">➕ Confirmar y Agregar ${window.prendasAImportar.length} Filas</button>`;
-            }
+                if (window.prendasAImportar.length > 0) {
+                    htmlResumen += `<button class="btn" style="width:100%; margin-top:15px; background-color: #10b981; color: white; border: none; font-weight: bold;" onclick="agregarAPatronajeMulti(event)">➕ Confirmar y Agregar ${window.prendasAImportar.length} Filas</button>`;
+                }
 
-            resDiv.innerHTML = htmlResumen;
-            resDiv.style.display = 'block';
-            btn.textContent = "🔍 Buscar y Validar"; btn.disabled = false;
-        }
+                resDiv.innerHTML = htmlResumen;
+                resDiv.style.display = 'block';
+            } catch (err) {
+                console.error('[importar] Error consultando Muestras:', err);
+                alert("❌ No se pudo consultar Muestras: " + (err.message || err) +
+                    "\n\nEsto NO significa que el precinto no exista. Revisa tu conexión o vuelve a iniciar sesión.");
+            } finally {
+                restaurarBoton();
+            }
+        };
 
         window.agregarAPatronajeMulti = async function(e) {
-            const btn = e.target; btn.textContent = "⏳ Agregando..."; btn.disabled = true;
-            
-            let registrosInsert = [];
-            const hoy = new Date(); const fechaIngreso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+            const btn = e.target;
+            const textoBoton = btn.textContent;
+            let prendas = [...window.prendasAImportar];
 
-            for (const prenda of window.prendasAImportar) {
-                const precintoReal = prenda.precinto || prenda.id;
-                let datosNuevos = new Array(30).fill(''); 
-                
-                try { datosNuevos[0] = await asegurarUrl(prenda.fotoUrl || '', 'fotos'); }
-                catch (err) { console.error('No se pudo subir la foto de', precintoReal, err); datosNuevos[0] = ''; }
-                datosNuevos[1] = fechaIngreso; 
-                datosNuevos[2] = prenda.registradoPor || prenda.disenador || ''; 
-                datosNuevos[3] = prenda.genero || ''; 
-                datosNuevos[4] = prenda.proveedor || ''; 
-                datosNuevos[5] = prenda.paisOrigen || prenda.pais_origen || ''; 
-                datosNuevos[6] = prenda.coleccion || ''; 
-                datosNuevos[7] = precintoReal;
-                datosNuevos[8] = prenda.referencia || ''; 
-                datosNuevos[9] = prenda.talla || ''; 
-                datosNuevos[10] = prenda.clasificacion || '';
-                datosNuevos[11] = prenda.color || ''; 
-                datosNuevos[12] = prenda.cantidad || ''; 
-                datosNuevos[13] = prenda.linea || '';
-                
-                registrosInsert.push({ precinto: precintoReal, datos: datosNuevos });
+            if (window.precintosRepetidos.length > 0) {
+                const agregarDeNuevo = confirm(`⚠️ Estos precintos YA están en Patronaje:\n${window.precintosRepetidos.join(', ')}\n\n` +
+                    `ACEPTAR = agregarlos otra vez (ej. segunda ronda)\nCANCELAR = agregar solo los que no están`);
+                if (!agregarDeNuevo) {
+                    prendas = prendas.filter(p => !window.precintosRepetidos.includes(String(p.precinto || '').toUpperCase()));
+                    if (prendas.length === 0) return alert("Todos los precintos ya están en Patronaje. No se agregó nada.");
+                }
             }
 
-            const { data: insertedData, error } = await client.from('dpto_tecnico').insert(registrosInsert).select();
-            
-            if(error) { 
-                alert("Error al vincular: " + error.message); 
-                btn.textContent = `➕ Confirmar y Agregar ${window.prendasAImportar.length} Filas`; btn.disabled = false;
-            } else { 
-                cerrarModal('modal-agregar'); 
-                
+            btn.textContent = "⏳ Agregando..."; btn.disabled = true;
+            const fechaIngreso = fechaHoyLocal();
+
+            try {
+                // Las fotos se suben en paralelo (máximo 4 a la vez) en lugar de una por una
+                const resultados = await enLotes(prendas, 4, async (prenda) => {
+                    const datosNuevos = new Array(30).fill('');
+                    try { datosNuevos[0] = urlSegura(await asegurarUrl(prenda.fotoUrl || '', 'fotos')); }
+                    catch (err) { console.warn('[importar] No se pudo subir la foto de', prenda.precinto, err); }
+                    datosNuevos[1] = fechaIngreso;
+                    datosNuevos[2] = prenda.registradoPor || '';
+                    datosNuevos[3] = prenda.genero || '';
+                    datosNuevos[4] = prenda.proveedor || '';
+                    datosNuevos[5] = prenda.paisOrigen || '';
+                    datosNuevos[6] = prenda.coleccion || '';
+                    datosNuevos[7] = String(prenda.precinto || '').toUpperCase();
+                    datosNuevos[8] = prenda.referencia || '';
+                    datosNuevos[9] = prenda.talla || '';
+                    datosNuevos[10] = prenda.clasificacion || '';
+                    datosNuevos[11] = prenda.color || '';
+                    datosNuevos[12] = prenda.cantidad != null ? String(prenda.cantidad) : '';
+                    datosNuevos[13] = prenda.linea || '';
+                    return { precinto: datosNuevos[7], datos: datosNuevos };
+                });
+                const registrosInsert = resultados.filter(r => r.status === 'fulfilled').map(r => r.value);
+                if (registrosInsert.length === 0) throw new Error("No se pudo preparar ninguna fila para importar.");
+
+                const { data: insertedData, error } = await client.from('dpto_tecnico').insert(registrosInsert).select('id, datos');
+                if (error) throw error;
+                if (!insertedData || insertedData.length !== registrosInsert.length) {
+                    throw new Error("La base de datos no confirmó todas las filas. Recarga la página antes de reintentar para no duplicarlas.");
+                }
+
+                cerrarModal('modal-agregar');
                 const tbody = document.getElementById('tableBody');
                 const fragment = document.createDocumentFragment();
-                let rowsToRender = insertedData || registrosInsert; 
-                
-                rowsToRender.forEach(row => { 
-                    let trCreado = crearFilaHTML(row.id, row.datos);
+                insertedData.forEach(row => {
+                    const trCreado = crearFilaHTML(row.id, row.datos);
                     trCreado._base = window.extraerDatosFila(trCreado);
                     trCreado._hashGuardado = JSON.stringify(trCreado._base);
-                    fragment.appendChild(trCreado); 
+                    fragment.appendChild(trCreado);
                 });
                 tbody.insertBefore(fragment, tbody.firstChild);
 
                 window.actualizarDatalists(); window.actualizarSticky(); window.ejecutarFiltro();
                 recalcularPendientes();
+            } catch (err) {
+                console.error('[importar] Error al agregar a Patronaje:', err);
+                alert("❌ Error al agregar a Patronaje: " + (err.message || err));
+                btn.textContent = textoBoton; btn.disabled = false;
             }
-        }
+        };
 
         window.toggleSelectAll = function() {
             const isChecked = document.getElementById('selectAll').checked; const filas = document.getElementById('tableBody').querySelectorAll('tr');
@@ -1263,7 +1355,7 @@
             if (rowsToRemove.length === 0) return;
             if (!confirm(`¿Estás seguro de eliminar definitivamente ${rowsToRemove.length} muestras de Patronaje?`)) return;
             
-            if (idsToDelete.length > 0) { const { error } = await client.from('dpto_tecnico').delete().in('id', idsToDelete); if(error) { alert("Error al eliminar masivamente"); return; } }
+            if (idsToDelete.length > 0) { const { error } = await client.from('dpto_tecnico').delete().in('id', idsToDelete); if(error) { console.error('[eliminar] Error:', error); alert("❌ Error al eliminar: " + error.message); return; } }
             rowsToRemove.forEach(tr => tr.remove()); document.getElementById('selectAll').checked = false; window.actualizarSeleccion(); window.actualizarDatalists(); window.ejecutarFiltro();
             recalcularPendientes();
         };
