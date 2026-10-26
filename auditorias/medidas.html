@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banco de tablas de medidas</title>
+<link rel="icon" type="image/png" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta name="theme-color" content="#15100E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --tinta: #15100E; --hueso: #FDFBF7; --laton: #B08945; --laton-hover: #9A7638;
+        --papel: #F4F1EB; --texto: #2A2421; --texto-claro: #736961; --borde: #E6E1D8;
+        --azul: #1E3A8A; --verde: #197A56; --ambar: #B45309; --vino: #8C2026;
+        --sombra-card: 0 4px 12px rgba(21,16,14,0.04);
+        --transicion: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+        margin: 0; font-family: 'Inter', sans-serif; background: var(--papel);
+        color: var(--texto); padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+
+    .barra {
+        background: rgba(21, 16, 14, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: var(--hueso); padding: calc(14px + env(safe-area-inset-top)) 24px 14px;
+        position: sticky; top: 0; z-index: 30; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .barra-fila { display: flex; align-items: center; gap: 16px; }
+    .volver { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--hueso); font-size: 20px; cursor: pointer; padding: 4px 12px; transition: var(--transicion); }
+    .volver:hover { background: rgba(255,255,255,0.15); }
+    .barra h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 22px; margin: 0; flex: 1; letter-spacing: 0.02em; line-height: 1.2;}
+    .barra .sub { font-size: 12px; color: rgba(253,251,247,0.7); margin-top: 4px; letter-spacing: 0.03em; }
+
+    .pasos { display: flex; gap: 8px; margin-top: 16px; }
+    .paso-punto { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; transition: var(--transicion);}
+    .paso-punto.activo { background: var(--laton); box-shadow: 0 0 8px rgba(176,137,69,0.5); }
+    .paso-punto.hecho { background: rgba(176,137,69,0.4); }
+
+    .contenido { padding: 24px; max-width: 900px; margin: 0 auto; }
+    .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: var(--sombra-card); }
+    .tarjeta h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; margin: 0 0 16px 0; color: var(--tinta); }
+    
+    label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-claro); margin-bottom: 8px; }
+    input, select, textarea {
+        width: 100%; padding: 12px 16px; font-size: 15px; border: 1px solid var(--borde);
+        border-radius: 8px; font-family: inherit; color: var(--texto); background: #fff; outline: none; transition: var(--transicion);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--laton); box-shadow: 0 0 0 3px rgba(176,137,69,0.1); }
+    textarea { min-height: 90px; resize: vertical; }
+    .fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; transition: var(--transicion); box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+    .btn:hover { background: #F9F8F6; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05);}
+    .btn-oscuro { background: var(--tinta); color: var(--hueso); border-color: var(--tinta); }
+    .btn-oscuro:hover { background: #000; }
+    .btn-laton { background: var(--laton); color: #fff; border-color: var(--laton); box-shadow: 0 4px 12px rgba(176,137,69,0.2);}
+    .btn-laton:hover { background: var(--laton-hover); border-color: var(--laton-hover); }
+    .btn-chico { padding: 8px 12px; font-size: 13px; font-weight: 500;}
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; font-size: 11px; font-weight: 700; color: var(--texto-claro); text-transform: uppercase; padding: 12px 8px; border-bottom: 1px solid var(--borde); letter-spacing: 0.03em;}
+    td { padding: 10px 8px; border-bottom: 1px solid #F4F1EB; }
+    td input { padding: 8px; font-size: 14px; text-align: center; }
+    .tabla-scroll { overflow-x: auto; margin: 0 -8px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .quitar { background: #F9F8F6; border: none; border-radius: 6px; color: var(--texto-claro); font-size: 14px; cursor: pointer; padding: 6px 10px; transition: var(--transicion);}
+    .quitar:hover { background: #FCF0F0; color: var(--vino); }
+
+    .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 12px; }
+    .cifra { background: #F9F8F6; border-radius: 8px; padding: 16px; text-align: center; border: 1px solid var(--borde);}
+    .cifra .n { font-size: 24px; font-weight: 600; line-height: 1; color: var(--tinta); }
+    .cifra .t { font-size: 11px; color: var(--texto-claro); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;}
+
+    .pastilla { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;}
+    .pastilla.menor { background: #FEF6E7; color: var(--ambar); }
+    .pastilla.mayor { background: #FDEDE4; color: #C2410C; }
+    .pastilla.critico { background: #FCF0F0; color: var(--vino); }
+    .pastilla.pass { background: #EEF7F2; color: var(--verde); }
+    .pastilla.fail { background: #FCF0F0; color: var(--vino); }
+
+    .checklist-grid { display: flex; flex-direction: column; gap: 12px; }
+    .checklist-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; gap: 12px; }
+    .checklist-info { flex: 1; }
+    .checklist-nombre { font-size: 14px; font-weight: 600; color: var(--tinta); }
+    .checklist-opciones { display: flex; gap: 6px; }
+    .btn-opt { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--borde); background: #F9F8F6; font-size: 12px; font-weight: 700; cursor: pointer; transition: var(--transicion); }
+    .btn-opt.sel-pass { background: #EEF7F2; color: var(--verde); border-color: var(--verde); }
+    .btn-opt.sel-fail { background: #FCF0F0; color: var(--vino); border-color: var(--vino); }
+    .btn-opt.sel-na   { background: #F3F4F6; color: #4B5563; border-color: #9CA3AF; }
+
+    .tallas-inputs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .talla-item { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; transition: var(--transicion);}
+    .talla-item span { font-size: 11px; font-weight: 700; color: var(--texto-claro); margin-bottom: 6px; }
+    .talla-item input { width: 50px; padding: 8px; font-size: 15px; text-align: center; border: 1px solid var(--borde); border-radius: 6px; background: #F9F8F6;}
+
+    .fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 16px; }
+    .foto-box { background: #fff; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--sombra-card);}
+    .foto { position: relative; aspect-ratio: 3/4; overflow: hidden; background: #F9F8F6; }
+    .foto img { width: 100%; height: 100%; object-fit: cover; }
+    .foto button { position: absolute; top: 8px; right: 8px; background: rgba(21,16,14,0.7); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+    .foto-obs { padding: 8px; border-top: 1px solid var(--borde); background: #FAFAFA;}
+    .foto-obs input { font-size: 12px; padding: 6px; }
+    .agregar-foto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 160px;}
+
+    .sugerencia-aql-box { padding: 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; border: 1px solid; }
+    .sugerencia-aql-box.aprobado { background: #EEF7F2; color: var(--verde); border-color: #BFE2D0; }
+    .sugerencia-aql-box.rechazado { background: #FCF0F0; color: var(--vino); border-color: #F2C8C9; }
+
+    .resultado-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;}
+    .resultado-botones button { padding: 18px; border-radius: 12px; border: 2px solid var(--borde); background: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: var(--transicion); color: var(--texto-claro);}
+    .resultado-botones button.sel-aprobado { border-color: var(--verde); background: #EEF7F2; color: var(--verde); box-shadow: 0 4px 12px rgba(25,122,86,0.15);}
+    .resultado-botones button.sel-rechazado { border-color: var(--vino); background: #FCF0F0; color: var(--vino); box-shadow: 0 4px 12px rgba(140,32,38,0.15);}
+
+    .pie-fijo { 
+        position: fixed; left: 0; right: 0; bottom: 0; 
+        background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(0,0,0,0.08); padding: 16px 24px calc(16px + env(safe-area-inset-bottom)); 
+        display: flex; gap: 12px; justify-content: space-between; z-index: 25;
+    }
+    .pie-fijo .btn, .pie-fijo .btn-laton { flex: 1; max-width: 240px; padding: 16px; font-size: 16px;}
+    .mensaje { display: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .mensaje.info { display: block; background: #F2F5FC; color: #1E3A8A; border: 1px solid #CBD9F5; }
+    .cargando { padding: 60px; text-align: center; color: var(--texto-claro); font-weight: 500;}
+    .oculto { display: none !important; }
+
+    /* Tabla militar AQL integrada */
+    .tabla-aql { border-collapse: collapse; width: 100%; min-width: 520px; }
+    .tabla-aql th, .tabla-aql td { text-align: center; border: 1px solid var(--borde); padding: 8px 6px; font-size: 13px; }
+    .tabla-aql th { background: #F9F8F6; color: var(--texto); font-size: 11px; }
+    .tabla-aql .col-sel { background: #FBF3E4; }
+    .tabla-aql th.col-sel { background: var(--laton); color: #fff; }
+    .tabla-aql tr.fila-sel td { background: #F7EEDD; font-weight: 600; }
+    .tabla-aql td.celda-sel { background: var(--tinta) !important; color: var(--hueso); font-weight: 700; }
+    .tabla-aql .flecha { color: var(--texto-claro); font-size: 16px; }
+    .tabla-aql .sev-critico { background: #FCF0F0; color: var(--vino); }
+    .tabla-aql .sev-mayor { background: #FDEDE4; color: #C2410C; }
+    .tabla-aql .sev-menor { background: #FEF6E7; color: var(--ambar); }
+    .calc-aql td:first-child { text-align: left; }
+    .calc-aql .obs { font-size: 12px; color: var(--texto-claro); text-align: left; }
+    details.ref-aql { border: 1px solid var(--borde); border-radius: 10px; margin-top: 12px; background: #fff; }
+    details.ref-aql summary { cursor: pointer; padding: 14px 16px; font-weight: 600; font-size: 14px; color: var(--tinta); list-style: none; }
+    details.ref-aql summary::before { content: '▸ '; color: var(--laton); }
+    details.ref-aql[open] summary::before { content: '▾ '; }
+    details.ref-aql .cuerpo { padding: 0 16px 16px; }
+    .leyenda-aql { font-size: 12px; color: var(--texto-claro); margin-top: 10px; line-height: 1.6; }
+
+    @media (max-width: 640px) { .fila { grid-template-columns: 1fr; gap: 12px;} .contenido { padding: 16px; } .tarjeta { padding: 16px; } }
+
+
+    /* ===== Banco de tablas de medidas ===== */
+    .acciones-top { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+    .acciones-top input { flex: 1; min-width: 220px; }
+    .lista-tablas { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .tm { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 16px; box-shadow: var(--sombra-card); display: flex; flex-direction: column; gap: 8px; }
+    .tm .tm-nombre { font-weight: 700; font-size: 16px; color: var(--tinta); }
+    .tm .tm-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tm .chip { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #F4F1EB; color: var(--texto); }
+    .tm .tm-meta { font-size: 12px; color: var(--texto-claro); }
+    .tm .tm-acc { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .btn-mini { padding: 8px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid var(--borde); background: #fff; cursor: pointer; font-family: inherit; color: var(--tinta); }
+    .btn-mini:hover { background: #F9F8F6; }
+    .btn-mini.rojo { color: var(--vino); border-color: #E8C4C6; }
+    .vacio { background: #fff; border: 1px dashed var(--borde); border-radius: 12px; padding: 30px; text-align: center; color: var(--texto-claro); }
+    .fondo { position: fixed; inset: 0; background: rgba(21,16,14,.55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .fondo.abierto { display: flex; }
+    .ventana { background: #FDFBF7; border-radius: 16px; width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; }
+    .ventana.ancha { max-width: 1000px; }
+    .ventana-cab { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--borde); background: #fff; position: sticky; top: 0; z-index: 1; }
+    .ventana-cab h2 { margin: 0; font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 24px; }
+    .ventana-cuerpo { padding: 20px 22px; }
+    .ventana-pie { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--borde); background: #fff; position: sticky; bottom: 0; }
+    .cerrar-x { width: 34px; height: 34px; border-radius: 50%; border: none; background: #F4F1EB; cursor: pointer; font-size: 16px; }
+    .rejilla3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 640px) { .rejilla3 { grid-template-columns: 1fr; } }
+    .tabla-ver { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tabla-ver th, .tabla-ver td { border: 1px solid var(--borde); padding: 6px 8px; text-align: center; }
+    .tabla-ver th { background: #F4F1EB; font-size: 11px; }
+    .tabla-ver td.izq { text-align: left; }
+    .tabla-ver td.izq small { display: block; color: var(--texto-claro); font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="barra">
+    <div class="barra-fila">
+        <button class="volver" id="btnVolver">‹</button>
+        <div style="flex: 1">
+            <h1>Banco de tablas de medidas</h1>
+            <div class="sub">Una tabla por línea, género y silueta. Se reutiliza en todas las auditorías.</div>
+        </div>
+    </div>
+</div>
+
+<div class="contenido">
+    <div class="acciones-top">
+        <input type="search" id="buscar" placeholder="Buscar por línea, género o silueta…">
+        <a class="btn btn-chico" href="plantilla_tabla_medidas.xlsx" download style="text-decoration:none;">⬇ Plantilla</a>
+        <button class="btn btn-oscuro" id="btnNueva">+ Nueva tabla</button>
+    </div>
+    <div class="mensaje" id="aviso"></div>
+    <div class="lista-tablas" id="lista"><div class="vacio">Cargando…</div></div>
+</div>
+
+<!-- Crear / actualizar -->
+<div class="fondo" id="modalForm">
+    <div class="ventana">
+        <div class="ventana-cab"><h2 id="tituloForm">Nueva tabla de medidas</h2><button class="cerrar-x" data-cerrar="modalForm">✕</button></div>
+        <div class="ventana-cuerpo">
+            <div class="mensaje" id="avisoForm"></div>
+            <div class="rejilla3">
+                <div><label>Línea</label><input id="fLinea" list="dlLinea" placeholder="Ej: T-shirt"></div>
+                <div><label>Género</label><input id="fGenero" list="dlGenero" placeholder="Ej: Men"></div>
+                <div><label>Silueta</label><input id="fSilueta" list="dlSilueta" placeholder="Ej: Regular"></div>
+            </div>
+            <datalist id="dlLinea"></datalist><datalist id="dlGenero"></datalist><datalist id="dlSilueta"></datalist>
+            <label style="margin-top:16px;" id="lblArchivo">Excel de medidas (plantilla llena)</label>
+            <input type="file" id="fArchivo" accept=".xlsx,.xls">
+            <div style="font-size:12px; color:var(--texto-claro); margin-top:8px;" id="pistaForm">Descarga la plantilla, llena las medidas ideales y tolerancias, guárdala y súbela aquí.</div>
+        </div>
+        <div class="ventana-pie"><button class="btn" data-cerrar="modalForm">Cancelar</button><button class="btn btn-oscuro" id="btnGuardarForm">Guardar en el banco</button></div>
+    </div>
+</div>
+
+<!-- Ver tabla -->
+<div class="fondo" id="modalVer">
+    <div class="ventana ancha">
+        <div class="ventana-cab"><h2 id="tituloVer">Tabla</h2><button class="cerrar-x" data-cerrar="modalVer">✕</button></div>
+        <div class="ventana-cuerpo" id="cuerpoVer"></div>
+    </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
+const $ = function(id) { return document.getElementById(id); };
+const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
+const r2 = function(n) { return Math.round(n * 100) / 100; };
+const cm = function(n) { return String(r2(Number(n))).replace('.', ','); };
+const titulo = function(t) { return String(t || '').trim().replace(/\s+/g, ' ').replace(/(^|\s)\S/g, function(x) { return x.toUpperCase(); }); };
+const nombreTabla = function(t) { return [t.linea, t.genero, t.silueta].map(titulo).join(' · '); };
+const fechaTxt = function(f) { return f ? new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+
+const { data: ses } = await supabase.auth.getSession();
+if (!ses || !ses.session) location.replace('index.html');
+const yoId = ses && ses.session ? ses.session.user.id : null;
+const volverA = new URLSearchParams(location.search).get('volver');
+$('btnVolver').addEventListener('click', function() { location.href = volverA || 'agenda.html'; });
+document.querySelectorAll('[data-cerrar]').forEach(function(b) { b.addEventListener('click', function() { $(b.dataset.cerrar).classList.remove('abierto'); }); });
+
+let tablas = [], editando = null;
+
+// ---------- Leer el Excel (plantilla oficial) ----------
+function leerExcel(filas) {
+    const txt = function(v) { return String(v == null ? '' : v).trim(); };
+    const nume = function(v) { if (v === null || v === undefined || v === '') return null; const n = Number(String(v).replace(',', '.')); return isNaN(n) ? null : r2(n); };
+    const h = filas.findIndex(function(f) { return f && f.some(function(c) { return /^medida$/i.test(txt(c)); }) && f.some(function(c) { return /descripci/i.test(txt(c)); }); });
+    if (h < 0) throw new Error('No encontré la fila de títulos con "MEDIDA" y "DESCRIPCIÓN".');
+    const cab = filas[h], sub = filas[h + 1] || [];
+    const cMed = cab.findIndex(function(c) { return /^medida$/i.test(txt(c)); });
+    const cDesc = cab.findIndex(function(c) { return /descripci/i.test(txt(c)); });
+    const cNum = cab.findIndex(function(c) { return /^#/.test(txt(c)); });
+    const cNeg = cab.findIndex(function(c) { return /tol/i.test(txt(c)) && /-/.test(txt(c)); });
+    const cPos = cab.findIndex(function(c) { return /tol/i.test(txt(c)) && /\+/.test(txt(c)); });
+    if (cNeg < 0 || cPos < 0) throw new Error('No encontré las columnas "TOL /-" y "TOL /+".');
+    const tallas = [];
+    for (let c = 0; c < cNeg; c++) if (txt(cab[c]) && /ideal/i.test(txt(sub[c])) && c !== cMed && c !== cDesc) tallas.push({ talla: txt(cab[c]), col: c });
+    if (!tallas.length) throw new Error('No encontré columnas de tallas con "IDEAL".');
+    const puntos = []; let orden = 0;
+    for (let r = h + 2; r < filas.length; r++) {
+        const f = filas[r] || [], punto = txt(f[cMed]);
+        if (!punto) continue;
+        const ideales = {};
+        tallas.forEach(function(t) { const v = nume(f[t.col]); if (v !== null) ideales[t.talla] = v; });
+        if (!Object.keys(ideales).length) continue;
+        orden = nume(f[cNum]) || orden + 1;
+        puntos.push({ orden: orden, punto: punto, descripcion: txt(f[cDesc]), tol_neg: Math.abs(nume(f[cNeg]) || 0), tol_pos: Math.abs(nume(f[cPos]) || 0), ideales: ideales });
+    }
+    if (!puntos.length) throw new Error('No encontré puntos de medida con valores IDEAL.');
+    return { tallas: tallas.map(function(t) { return t.talla; }), puntos: puntos };
+}
+async function leerArchivo(archivo) {
+    if (typeof XLSX === 'undefined') throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión.');
+    const libro = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
+    const hoja = libro.Sheets[libro.SheetNames.find(function(n) { return /tabla de medida/i.test(n); }) || libro.SheetNames[0]];
+    return leerExcel(XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: null }));
+}
+
+// ---------- Descargar una tabla como Excel (misma estructura de la plantilla) ----------
+function descargarExcel(t) {
+    const filas = [['#', 'MEDIDA', 'DESCRIPCIÓN'], [null, null, 'MEDIDAS EN CENTIMETROS']];
+    t.tallas.forEach(function(ta) { filas[0].push(ta, null); filas[1].push('IDEAL', 'REAL'); });
+    filas[0].push('TOL /-', 'TOL /+'); filas[1].push(null, null);
+    t.puntos.slice().sort(function(a, b) { return a.orden - b.orden; }).forEach(function(p) {
+        const f = [p.orden, p.punto, p.descripcion];
+        t.tallas.forEach(function(ta) { f.push(p.ideales[ta] === undefined ? null : p.ideales[ta], null); });
+        f.push(p.tol_neg, p.tol_pos); filas.push(f);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }]
+        .concat(t.tallas.map(function(_, i) { return { s: { r: 0, c: 3 + i * 2 }, e: { r: 0, c: 4 + i * 2 } }; }));
+    ws['!cols'] = [{ wch: 5 }, { wch: 40 }, { wch: 45 }].concat(t.tallas.flatMap(function() { return [{ wch: 9 }, { wch: 9 }]; })).concat([{ wch: 8 }, { wch: 8 }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'TABLA DE MEDIDA');
+    XLSX.writeFile(wb, ('Tabla_medidas_' + nombreTabla(t) + '_v' + t.version).replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]+/g, '_') + '.xlsx');
+}
+
+// ---------- Cargar y pintar ----------
+async function cargar() {
+    const { data, error } = await supabase.from('tablas_medidas').select('*').order('linea').order('genero').order('silueta');
+    if (error) { $('lista').innerHTML = '<div class="vacio" style="color:var(--vino)">No se pudo cargar el banco: ' + esc(error.message) + '</div>'; return; }
+    tablas = data || [];
+    const unicos = function(k) { return Array.from(new Set(tablas.map(function(t) { return titulo(t[k]); }))).sort(); };
+    $('dlLinea').innerHTML = unicos('linea').map(function(v) { return '<option value="' + esc(v) + '">'; }).join('');
+    $('dlGenero').innerHTML = unicos('genero').map(function(v) { return '<option value="' + esc(v) + '">'; }).join('');
+    $('dlSilueta').innerHTML = unicos('silueta').map(function(v) { return '<option value="' + esc(v) + '">'; }).join('');
+    pintar();
+}
+function pintar() {
+    const q = $('buscar').value.toLowerCase().trim();
+    const vis = tablas.filter(function(t) { return !q || nombreTabla(t).toLowerCase().indexOf(q) >= 0; });
+    if (!tablas.length) { $('lista').innerHTML = '<div class="vacio">Aún no hay tablas en el banco. Crea la primera con "+ Nueva tabla".</div>'; return; }
+    if (!vis.length) { $('lista').innerHTML = '<div class="vacio">No hay tablas que coincidan con la búsqueda.</div>'; return; }
+    $('lista').innerHTML = vis.map(function(t) {
+        return '<div class="tm">' +
+            '<div class="tm-nombre">' + esc(nombreTabla(t)) + '</div>' +
+            '<div class="tm-chips"><span class="chip">' + t.puntos.length + ' puntos</span><span class="chip">' + esc(t.tallas.join(' · ')) + '</span><span class="chip">Versión ' + t.version + '</span></div>' +
+            '<div class="tm-meta">Actualizada el ' + fechaTxt(t.actualizado_en) + '</div>' +
+            '<div class="tm-acc">' +
+                '<button class="btn-mini" onclick="verTabla(' + t.id + ')">Ver</button>' +
+                '<button class="btn-mini" onclick="abrirActualizar(' + t.id + ')">Actualizar</button>' +
+                '<button class="btn-mini" onclick="bajarTabla(' + t.id + ')">⬇ Excel</button>' +
+                '<button class="btn-mini rojo" onclick="eliminarTabla(' + t.id + ')">🗑</button>' +
+            '</div></div>';
+    }).join('');
+}
+$('buscar').addEventListener('input', pintar);
+
+window.verTabla = function(id) {
+    const t = tablas.find(function(x) { return x.id === id; }); if (!t) return;
+    $('tituloVer').textContent = nombreTabla(t) + ' · v' + t.version;
+    $('cuerpoVer').innerHTML = '<div style="overflow-x:auto"><table class="tabla-ver"><thead><tr><th>#</th><th>Punto de medida</th>' +
+        t.tallas.map(function(ta) { return '<th>' + esc(ta) + '</th>'; }).join('') + '<th>Tol −</th><th>Tol +</th></tr></thead><tbody>' +
+        t.puntos.slice().sort(function(a, b) { return a.orden - b.orden; }).map(function(p) {
+            return '<tr><td>' + p.orden + '</td><td class="izq"><b>' + esc(p.punto) + '</b>' + (p.descripcion ? '<small>' + esc(p.descripcion) + '</small>' : '') + '</td>' +
+                t.tallas.map(function(ta) { return '<td>' + (p.ideales[ta] === undefined ? '—' : cm(p.ideales[ta])) + '</td>'; }).join('') +
+                '<td>' + cm(p.tol_neg) + '</td><td>' + cm(p.tol_pos) + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    $('modalVer').classList.add('abierto');
+};
+window.bajarTabla = function(id) { const t = tablas.find(function(x) { return x.id === id; }); if (t) descargarExcel(t); };
+
+// ---------- Crear / actualizar ----------
+$('btnNueva').addEventListener('click', function() {
+    editando = null;
+    $('tituloForm').textContent = 'Nueva tabla de medidas';
+    $('fLinea').value = ''; $('fGenero').value = ''; $('fSilueta').value = ''; $('fArchivo').value = '';
+    $('lblArchivo').textContent = 'Excel de medidas (plantilla llena)';
+    $('pistaForm').textContent = 'Descarga la plantilla, llena las medidas ideales y tolerancias, guárdala y súbela aquí.';
+    $('avisoForm').className = 'mensaje';
+    $('modalForm').classList.add('abierto');
+});
+window.abrirActualizar = function(id) {
+    editando = tablas.find(function(x) { return x.id === id; }); if (!editando) return;
+    $('tituloForm').textContent = 'Actualizar tabla';
+    $('fLinea').value = titulo(editando.linea); $('fGenero').value = titulo(editando.genero); $('fSilueta').value = titulo(editando.silueta); $('fArchivo').value = '';
+    $('lblArchivo').textContent = 'Excel con las medidas nuevas (opcional si solo cambias el nombre)';
+    $('pistaForm').textContent = 'Tip: con "⬇ Excel" descargas la tabla actual, la corriges y la subes aquí. Las auditorías ya hechas no cambian.';
+    $('avisoForm').className = 'mensaje';
+    $('modalForm').classList.add('abierto');
+};
+$('btnGuardarForm').addEventListener('click', async function() {
+    const aviso = $('avisoForm'), btn = $('btnGuardarForm');
+    const linea = titulo($('fLinea').value), genero = titulo($('fGenero').value), silueta = titulo($('fSilueta').value);
+    const archivo = $('fArchivo').files[0];
+    const err = function(m) { aviso.className = 'mensaje error'; aviso.textContent = m; };
+    if (!linea || !genero || !silueta) return err('Escribe la línea, el género y la silueta.');
+    if (!editando && !archivo) return err('Sube el Excel de medidas.');
+    const igual = tablas.find(function(t) { return t !== editando && titulo(t.linea) === linea && titulo(t.genero) === genero && titulo(t.silueta) === silueta; });
+    if (igual) return err('Ya existe la tabla "' + nombreTabla(igual) + '". Usa "Actualizar" en esa tabla.');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+        let datos = { linea: linea, genero: genero, silueta: silueta, actualizado_por: yoId, actualizado_en: new Date().toISOString() };
+        if (archivo) {
+            const leido = await leerArchivo(archivo);
+            datos.tallas = leido.tallas; datos.puntos = leido.puntos;
+        }
+        let res;
+        if (editando) {
+            if (archivo) datos.version = (editando.version || 1) + 1;
+            if (!confirm('¿Guardar los cambios en "' + nombreTabla(editando) + '"?' + (archivo ? '\n\nQuedará como versión ' + datos.version + '. Las auditorías ya hechas conservan las medidas con las que se auditaron.' : ''))) { btn.disabled = false; btn.textContent = 'Guardar en el banco'; return; }
+            res = await supabase.from('tablas_medidas').update(datos).eq('id', editando.id);
+        } else {
+            datos.version = 1; datos.creado_por = yoId;
+            res = await supabase.from('tablas_medidas').insert(datos);
+        }
+        if (res.error) throw res.error;
+        $('modalForm').classList.remove('abierto');
+        $('aviso').className = 'mensaje info'; $('aviso').textContent = 'Tabla "' + linea + ' · ' + genero + ' · ' + silueta + '" guardada en el banco.';
+        await cargar();
+    } catch (e) { err('No se pudo guardar: ' + (e.message || e) + (archivo ? ' Usa la plantilla oficial sin cambiar sus títulos.' : '')); }
+    btn.disabled = false; btn.textContent = 'Guardar en el banco';
+});
+
+window.eliminarTabla = async function(id) {
+    const t = tablas.find(function(x) { return x.id === id; }); if (!t) return;
+    if (!confirm('¿Estás segura de eliminar la tabla "' + nombreTabla(t) + '" del banco?\n\nLas auditorías que ya la usaron conservan sus medidas. Esta acción no se puede deshacer.')) return;
+    const { data, error } = await supabase.from('tablas_medidas').delete().eq('id', id).select('id');
+    if (error || !data || !data.length) { alert('No se pudo eliminar: ' + (error ? error.message : 'sin permiso')); return; }
+    await cargar();
+};
+
+await cargar();
+</script>
+</body>
+</html>
