@@ -551,12 +551,13 @@ function htmlResumenInspeccion(det, plan, rDef, med, prue, evis) {
     // B. Mano de obra
     const bRes = rDef.pasa === null ? RES.pendiente : rDef.pasa ? RES.cumple : RES.nocumple;
     const bObs = `Crítico ${rDef.enc.critico} · Mayor ${rDef.enc.mayor} · Menor ${rDef.enc.menor}`;
-    // C. Especificaciones del producto (medidas)
-    const fuera = med.filter(m => !m.cumple);
-    const cRes = !med.length ? RES.pendiente : fuera.length ? RES.nocumple : RES.cumple;
-    const cObs = !med.length ? 'Sin medidas registradas' : fuera.length
-        ? `${fuera.length} de ${med.length} medidas fuera de tolerancia: ` + fuera.slice(0, 4).map(m => `${esc(m.punto_medida)} talla ${esc(m.talla)}`).join(', ') + (fuera.length > 4 ? '…' : '')
-        : `${med.length} medidas dentro de tolerancia`;
+    // C. Especificaciones del producto (medidas): solo las que tienen medida real
+    const tomadas = med.filter(m => m.medida_real !== null && m.medida_real !== undefined);
+    const fuera = tomadas.filter(m => m.cumple === false);
+    const cRes = !tomadas.length ? RES.pendiente : fuera.length ? RES.nocumple : RES.cumple;
+    const cObs = !tomadas.length ? (med.length ? 'Tabla de medidas cargada, sin medidas reales tomadas' : 'Sin medidas registradas') : fuera.length
+        ? `${fuera.length} de ${tomadas.length} medidas fuera de tolerancia: ` + fuera.slice(0, 4).map(m => `${esc(m.punto_medida)} (talla ${esc(String(m.talla).split('/')[0])})`).join(', ') + (fuera.length > 4 ? '…' : '')
+        : `${tomadas.length} medidas dentro de tolerancia`;
     // D. Empaque / E. Pruebas en sitio
     const esEmpaque = p => /empaque|silica|c[oó]digo de barras|qr|etiqueta|marquilla de empaque/i.test(p.prueba || '');
     const evaluar = lista => {
@@ -691,6 +692,63 @@ async function htmlHistorialYProceso(det, usuarios) {
                 return b + `</div>`;
             }).join('') + `</div>`;
         }
+    }
+    return html;
+}
+
+// ================= TABLA DE MEDIDAS DEL INFORME =================
+function htmlMedidasInforme(det, med) {
+    const r2 = n => Math.round(n * 100) / 100;
+    const cm = n => String(r2(Number(n))).replace('.', ',');
+    const tieneReal = m => m.medida_real !== null && m.medida_real !== undefined;
+    const matriz = med.filter(m => m.orden !== null && m.orden !== undefined);
+    const anteriores = med.filter(m => m.orden === null || m.orden === undefined);
+    let html = '';
+
+    if (matriz.length) {
+        // Tallas en el orden del Excel; solo las que tienen medidas tomadas
+        const tallas = [];
+        matriz.forEach(m => { if (tallas.indexOf(m.talla) < 0) tallas.push(m.talla); });
+        const medidas = tallas.filter(t => matriz.some(m => m.talla === t && tieneReal(m)));
+        const puntos = [];
+        matriz.slice().sort((a, b) => a.orden - b.orden).forEach(m => { if (!puntos.find(p => p.orden === m.orden)) puntos.push({ orden: m.orden, nombre: m.punto_medida, desc: m.descripcion, neg: m.tolerancia_neg, pos: m.tolerancia_pos }); });
+        const tomadas = matriz.filter(tieneReal), fuera = tomadas.filter(m => m.cumple === false);
+        const dif = m => {
+            const min = r2(Number(m.medida_teorica) - Number(m.tolerancia_neg)), max = r2(Number(m.medida_teorica) + Number(m.tolerancia_pos)), real = Number(m.medida_real);
+            if (real < min - 1e-9) return `<span class="res-nocumple">${cm(real - min)}</span>`;
+            if (real > max + 1e-9) return `<span class="res-nocumple">+${cm(real - max)}</span>`;
+            return '<span class="res-cumple">CUMPLE</span>';
+        };
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Tabla de medidas · Real vs. patronaje</h4>
+            <p style="font-size:11px; color:var(--texto-claro); margin:0 0 8px;">${esc(det.tipo_silueta || '')}${det.tipo_silueta ? ' · ' : ''}${puntos.length} puntos de medida · ${tomadas.length} medidas tomadas · <b style="color:${fuera.length ? 'var(--vino)' : 'var(--verde)'}">${fuera.length} fuera de tolerancia</b></p>`;
+        if (!medidas.length) {
+            html += `<p style="font-size:12px; color:var(--texto-claro);">Se cargó la tabla de medidas, pero no se registraron medidas reales.</p></div>`;
+        } else {
+            html += `<div style="overflow-x:auto;"><table class="tabla-informe" style="font-size:10px;">
+                <thead>
+                    <tr><th rowspan="2" style="width:22px">#</th><th rowspan="2" style="text-align:left; min-width:150px;">Punto de medida</th><th rowspan="2">Tol −/+</th>
+                    ${medidas.map(t => `<th colspan="3">${esc(t)}</th>`).join('')}</tr>
+                    <tr>${medidas.map(() => '<th>Ideal</th><th>Real</th><th>Resultado</th>').join('')}</tr>
+                </thead><tbody>` +
+                puntos.map(p => `<tr><td class="centro">${p.orden}</td><td><b>${esc(p.nombre)}</b></td><td class="centro" style="white-space:nowrap">−${cm(p.neg)} / +${cm(p.pos)}</td>` +
+                    medidas.map(t => {
+                        const m = matriz.find(x => x.orden === p.orden && x.talla === t);
+                        if (!m) return '<td></td><td></td><td></td>';
+                        return `<td class="centro">${cm(m.medida_teorica)}</td><td class="centro"><b>${tieneReal(m) ? cm(m.medida_real) : '—'}</b></td><td class="centro">${tieneReal(m) ? dif(m) : ''}</td>`;
+                    }).join('') + `</tr>`).join('') +
+                `</tbody></table></div>
+                <p style="font-size:10px; color:var(--texto-claro); margin:6px 0 0;">Resultado: CUMPLE si la medida real está entre (ideal − tol) y (ideal + tol). Si no, se muestra cuánto falta (−) o cuánto se pasa (+), en cm.</p></div>`;
+        }
+    }
+
+    if (anteriores.length) {
+        html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${anteriores.length})</h4>
+            <table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>` +
+            anteriores.map(m => `<tr><td><b>${esc(m.punto_medida)}</b></td><td>${esc(m.talla)}</td><td class="num">${m.medida_teorica} cm</td><td class="num">±${m.tolerancia}</td><td class="num"><b>${m.medida_real} cm</b></td>
+                <td><span class="pastilla ${m.cumple ? 'pass' : 'fail'}">${m.cumple ? 'CUMPLE' : 'FUERA'}</span></td></tr>`).join('') + `</tbody></table></div>`;
+    }
+    if (!matriz.length && !anteriores.length) {
+        html += `<div class="seccion-detalle"><h4 class="titulo-informe">Tabla de medidas · Real vs. patronaje</h4><p style="font-size:12px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p></div>`;
     }
     return html;
 }
@@ -1132,23 +1190,8 @@ window.verDetalle = async function(id) {
         html += `<div class="seccion-detalle"><h4 class="titulo-informe">Resultado de defectos</h4>${resDefectos.html}` +
             (planDet ? `<p style="font-size:10px; color:var(--texto-claro); margin:6px 0 0;">Tabla militar MIL-STD-105E / ISO 2859-1 · Nivel ${planDet.nivel} · Letra código ${planDet.letra} · Inspección normal, muestreo simple.</p>` : '') + `</div>`;
 
-        // 3. TABLA DE CONTROL DE MEDIDAS (POM)
-        html += `<div class="seccion-detalle"><h4>Tabla de Medidas de Patronaje (POM) (${med.length})</h4>`;
-        if (med.length > 0) {
-            html += `<table style="margin-bottom:12px;"><thead><tr><th>Punto de Medida</th><th>Talla</th><th class="num">Teórica</th><th class="num">Tol. (+/-)</th><th class="num">Medida Real</th><th>Resultado</th></tr></thead><tbody>`;
-            med.forEach(m => {
-                html += `<tr>
-                    <td><b>${m.punto_medida}</b></td>
-                    <td>${m.talla}</td>
-                    <td class="num">${m.medida_teorica} cm</td>
-                    <td class="num">±${m.tolerancia}</td>
-                    <td class="num"><b>${m.medida_real} cm</b></td>
-                    <td><span class="pastilla ${m.cumple ? 'pass' : 'fail'}">${m.cumple ? 'CUMPLE' : 'FUERA'}</span></td>
-                </tr>`;
-            });
-            html += `</tbody></table>`;
-        } else { html += `<p style="font-size:12px; color:var(--texto-claro);">No se registraron medidas técnicas en esta auditoría.</p>`; }
-        html += `</div>`;
+        // 3. TABLA DE MEDIDAS (matriz cargada desde el Excel de la referencia)
+        html += htmlMedidasInforme(det, med);
 
         // 4. CHECKLIST DE PRUEBAS FÍSICAS
         html += `<div class="seccion-detalle"><h4>Pruebas Físicas e Inspección de Empaque (${prue.length})</h4>`;
