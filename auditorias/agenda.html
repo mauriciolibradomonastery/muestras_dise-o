@@ -281,7 +281,6 @@
 <div class="barra">
     <h1>Agenda de auditorías</h1>
     <div class="quien"><b id="miNombre">…</b><span id="miRol"></span></div>
-    <a href="medidas.html" class="btn-nav">Tablas de medidas</a>
     <a href="reportes.html" class="btn-nav">Reportes</a>
     <button class="btn-nav salir" id="btnSalir">Salir</button>
 </div>
@@ -676,7 +675,7 @@ window.abrirReaud = function(id) {
     $('mensajeReaud').className = 'mensaje';
     $('cuerpoReaud').innerHTML =
         '<div style="font-size:14px; margin-bottom:16px;"><b>' + esc(p.referencia || '') + '</b> · ' + esc((proveedores.find(function(x) { return x.id === p.proveedor_id; }) || {}).nombre || '') + (p.numero_factura ? ' · OC ' + esc(p.numero_factura) : '') +
-        '<div style="font-size:12px; color:var(--texto-claro); margin-top:4px;">Se copian los datos de la referencia, las unidades por color y talla, la foto de la prenda y el PDF de patronaje.</div></div>' +
+        '<div style="font-size:12px; color:var(--texto-claro); margin-top:4px;">Se copian los datos de la referencia, las unidades por color y talla, la tabla de medidas, la foto de la prenda y el PDF de patronaje.</div></div>' +
         '<div class="caja-siguiente" style="background:#FCF0F0; border-color:#F2C8C9; margin:0;"><div class="rejilla">' +
             '<div class="campo"><label>Auditora</label><select id="reAud">' + (auditoras.length ? auditoras : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === p.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
             '<div class="campo"><label>Fecha</label><input type="date" id="reFecha" value="' + hoyISO + '"></div>' +
@@ -737,6 +736,18 @@ $('btnGuardarReaud').addEventListener('click', async function() {
         ]);
         if (cants.data && cants.data.length) await supabase.from('auditoria_cantidades').insert(cants.data.map(function(c) { return { auditoria_id: nueva.id, color: c.color, talla: c.talla, cantidad: c.cantidad }; }));
         if (refs.data && refs.data.length) await supabase.from('auditoria_evidencias').insert(refs.data.map(function(r) { return { auditoria_id: nueva.id, url: r.url, nombre: r.nombre, observacion: r.observacion || '' }; }));
+        // Copiar la tabla de medidas de la referencia (solo los ideales; las prendas se miden de nuevo)
+        try {
+            const { data: tabla } = await supabase.from('auditoria_medidas').select('*').eq('auditoria_id', p.id).is('prenda', null).not('orden', 'is', null);
+            if (tabla && tabla.length) {
+                await supabase.from('auditoria_medidas').insert(tabla.map(function(m) {
+                    return { auditoria_id: nueva.id, punto_medida: m.punto_medida, talla: m.talla, medida_teorica: m.medida_teorica, tolerancia: m.tolerancia,
+                        tolerancia_neg: m.tolerancia_neg, tolerancia_pos: m.tolerancia_pos, descripcion: m.descripcion, orden: m.orden, medida_real: null, cumple: null };
+                }));
+                const { data: origen } = await supabase.from('auditorias').select('tipo_silueta').eq('id', p.id).maybeSingle();
+                if (origen && origen.tipo_silueta) await supabase.from('auditorias').update({ tipo_silueta: origen.tipo_silueta }).eq('id', nueva.id);
+            }
+        } catch (e2) { console.warn('No se copió la tabla de medidas', e2); }
         cerrarReaud();
         await cargarAuditorias();
     } catch (e) { msg.className = 'mensaje error'; msg.textContent = e.message || String(e); }

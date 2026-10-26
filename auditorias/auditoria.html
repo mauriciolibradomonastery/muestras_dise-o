@@ -675,71 +675,33 @@ function evaluarMedida(m) {
     return { estado: 'ok', texto: 'CUMPLE', cumple: true };
 }
 
-// ---------- Banco de tablas de medidas ----------
-let bancoTablas = null, elegirTabla = false, bancoCargadoEn = 0, cargandoBanco = false;
-const tituloTM = function(t) { return String(t || '').trim().replace(/\s+/g, ' ').replace(/(^|\s)\S/g, function(x) { return x.toUpperCase(); }); };
-const nombreTM = function(t) { return [t.linea, t.genero, t.silueta].map(tituloTM).join(' · '); };
-async function cargarBanco() {
-    cargandoBanco = true;
-    const { data, error } = await supabase.from('tablas_medidas').select('*').order('linea').order('genero').order('silueta');
-    bancoTablas = error ? (bancoTablas || []) : (data || []);
-    if (error) console.error(error);
-    bancoCargadoEn = Date.now(); cargandoBanco = false;
-}
-function htmlListaBanco() {
-    if (bancoTablas === null) return '<div style="color:var(--texto-claro); font-size:13px;">Cargando el banco…</div>';
-    const q = ($('bancoBuscar') ? $('bancoBuscar').value : '').toLowerCase().trim();
-    const vis = bancoTablas.filter(function(t) { return !q || nombreTM(t).toLowerCase().indexOf(q) >= 0; });
-    if (!bancoTablas.length) return '<div style="color:var(--texto-claro); font-size:13px;">El banco todavía está vacío. Crea la primera tabla abajo.</div>';
-    if (!vis.length) return '<div style="color:var(--texto-claro); font-size:13px;">No hay tablas con ese nombre. Si no existe, créala abajo.</div>';
-    return vis.map(function(t) {
-        return '<div class="banco-item"><div class="bi-info"><b>' + esc(nombreTM(t)) + '</b>' + t.puntos.length + ' puntos · ' + esc(t.tallas.join(' · ')) + ' · versión ' + t.version + '</div>' +
-            '<button class="btn btn-chico" onclick="usarTablaBanco(' + t.id + ')">Usar</button></div>';
-    }).join('');
-}
-window.filtrarBanco = function() { $('bancoLista').innerHTML = htmlListaBanco(); };
-
 function pasoMedidas() {
     const matriz = medidasMatriz();
     const anteriores = medidas.filter(function(m) { return !esMatriz(m); });
     let html = '<div class="tarjeta"><h2>3. Tabla de Medidas Real vs. Patronaje (POM)</h2>';
-    // Consultar el banco al entrar al paso (máximo cada 20 segundos) por si alguien lo actualizó
-    if (!cargandoBanco && Date.now() - bancoCargadoEn > 20000) cargarBanco().then(function() { if (paso === 3) pasoMedidas(); });
 
-    if (!matriz.length || elegirTabla) {
-        const unicos = function(k) { return Array.from(new Set((bancoTablas || []).map(function(t) { return tituloTM(t[k]); }))).sort(); };
-        const opciones = function(k) { return unicos(k).map(function(v) { return '<option value="' + esc(v) + '">'; }).join(''); };
-        html += '<label>Elegir una tabla del banco (línea · género · silueta)</label>' +
-            '<input type="search" id="bancoBuscar" placeholder="Buscar, ej: t-shirt men regular" oninput="filtrarBanco()">' +
-            '<div class="banco-lista" id="bancoLista">' + htmlListaBanco() + '</div>' +
-            (elegirTabla && matriz.length ? '<button class="btn btn-chico" style="margin-top:12px;" onclick="cancelarCambioTabla()">Cancelar y seguir con la tabla actual</button>' : '') +
-        '</div>' +
-        '<div class="tarjeta">' +
-            '<h2>¿No está en el banco? Crea una tabla nueva</h2>' +
-            '<div style="font-size:13px; color:var(--texto-claro); line-height:1.5;">1. Descarga la plantilla y llena las medidas ideales y tolerancias.<br>2. Escribe la línea, el género y la silueta.<br>3. Sube el Excel: queda guardado en el banco para las próximas auditorías y se usa en esta.</div>' +
-            '<a class="btn btn-chico" href="plantilla_tabla_medidas.xlsx" download style="text-decoration:none; display:inline-block; margin-top:12px;">⬇ Descargar plantilla</a>' +
-            '<div class="rejilla-tm">' +
-                '<div><label>Línea</label><input id="tmLinea" list="dlTmLinea" placeholder="Ej: Crop top"></div>' +
-                '<div><label>Género</label><input id="tmGenero" list="dlTmGenero" placeholder="Ej: Women"></div>' +
-                '<div><label>Silueta</label><input id="tmSilueta" list="dlTmSilueta" placeholder="Ej: Pequeña"></div>' +
+    if (!matriz.length) {
+        html += '<div class="subir-excel">' +
+            '<p>Carga la <b>tabla de medidas de esta referencia</b>:</p>' +
+            '<p style="text-align:left; display:inline-block; margin-top:0;">1. Descarga la plantilla.<br>2. Copia ahí los datos de patronaje: medidas, descripción, ideales por talla y tolerancias −/+.<br>3. Guarda el archivo y súbelo aquí.</p>' +
+            '<input type="file" id="archivoMedidas" accept=".xlsx,.xls" class="oculto" onchange="cargarExcelMedidas(event)">' +
+            '<div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">' +
+                '<a class="btn btn-chico" href="plantilla_tabla_medidas.xlsx" download style="text-decoration:none; display:inline-flex; align-items:center;">⬇ Descargar plantilla</a>' +
+                '<button class="btn btn-oscuro" onclick="document.getElementById(\'archivoMedidas\').click()">📊 Subir Excel de medidas</button>' +
             '</div>' +
-            '<datalist id="dlTmLinea">' + opciones('linea') + '</datalist><datalist id="dlTmGenero">' + opciones('genero') + '</datalist><datalist id="dlTmSilueta">' + opciones('silueta') + '</datalist>' +
-            '<input type="file" id="archivoMedidas" accept=".xlsx,.xls" class="oculto" onchange="crearTablaDesdeExcel(event)">' +
-            '<button class="btn btn-oscuro" style="margin-top:14px;" onclick="document.getElementById(\'archivoMedidas\').click()">📊 Subir Excel y guardar en el banco</button>' +
             '<div class="mensaje" id="avisoExcel" style="margin-top:14px;"></div>' +
-            '<div style="font-size:12px; margin-top:12px;"><a href="medidas.html?volver=' + encodeURIComponent('auditoria.html?id=' + idAuditoria) + '" style="color:var(--laton); font-weight:600;">Administrar el banco de tablas ›</a></div>';
+        '</div>';
     } else {
         const tls = tallasMatriz();
         const prendas = listaPrendas();
         if (!prendas.find(function(p) { return p.n === prendaSel; })) prendaSel = prendas.length ? prendas[prendas.length - 1].n : null;
-        const delBanco = (bancoTablas || []).find(function(t) { return t.id === auditoria.tabla_medidas_id; });
-        html += (delBanco && delBanco.version > (auditoria.tabla_medidas_version || 1) ?
-            '<div class="aviso-version"><span>La tabla <b>' + esc(nombreTM(delBanco)) + '</b> se actualizó en el banco (versión ' + delBanco.version + '). Esta auditoría usa la versión ' + (auditoria.tabla_medidas_version || 1) + '.</span>' +
-            '<button class="btn btn-chico" onclick="usarTablaBanco(' + delBanco.id + ')">Usar versión ' + delBanco.version + '</button></div>' : '') +
-            '<div class="cab-matriz">' +
-            '<div class="silueta"><b>' + esc(auditoria.tipo_silueta || 'Tabla de medidas') + '</b>' + (matriz.length / tls.length) + ' puntos de medida · ' + tls.length + ' tallas' + (auditoria.tabla_medidas_version ? ' · versión ' + auditoria.tabla_medidas_version : '') + '</div>' +
-            '<div><button class="btn btn-chico" onclick="cambiarTablaMedidas()">Cambiar tabla</button></div>' +
-        '</div>';
+        html += '<div class="cab-matriz">' +
+            '<div class="silueta"><b>Tabla de medidas · ' + esc(auditoria.referencia || '') + '</b>' + (matriz.length / tls.length) + ' puntos de medida · ' + tls.length + ' tallas' + (auditoria.tipo_silueta ? ' · ' + esc(auditoria.tipo_silueta) : '') + '</div>' +
+            '<div><input type="file" id="archivoMedidas" accept=".xlsx,.xls" class="oculto" onchange="cargarExcelMedidas(event)">' +
+            '<a class="btn btn-chico" href="plantilla_tabla_medidas.xlsx" download style="text-decoration:none; margin-right:6px;">⬇ Plantilla</a>' +
+            '<button class="btn btn-chico" onclick="document.getElementById(\'archivoMedidas\').click()">Cambiar Excel</button></div>' +
+        '</div>' +
+        '<div class="mensaje" id="avisoExcel"></div>';
         const cols = colores().filter(Boolean);
         html += '<label>Agregar una prenda para medir</label>' +
             '<div class="form-prenda">' +
@@ -893,49 +855,27 @@ async function aplicarTabla(t) {
         if (n) { m.medida_teorica = n.medida_teorica; m.tolerancia_neg = n.tolerancia_neg; m.tolerancia_pos = n.tolerancia_pos; m.tolerancia = n.tolerancia; m.orden = n.orden; m.descripcion = n.descripcion; m.cumple = evaluarMedida(m).cumple; }
     });
     medidas = medidas.filter(function(m) { return !esMatriz(m); }).concat(nuevas).concat(prendasActuales);
-    auditoria.tipo_silueta = nombreTM(t);
-    auditoria.tabla_medidas_id = t.id;
-    auditoria.tabla_medidas_version = t.version;
-    await supabase.from('auditorias').update({ tipo_silueta: auditoria.tipo_silueta, tabla_medidas_id: t.id, tabla_medidas_version: t.version }).eq('id', idAuditoria);
+    auditoria.tipo_silueta = t.archivo ? 'Archivo: ' + t.archivo : (auditoria.tipo_silueta || '');
+    await supabase.from('auditorias').update({ tipo_silueta: auditoria.tipo_silueta }).eq('id', idAuditoria);
     await guardarMedidasBD();
-    elegirTabla = false; tallaMedidaSel = null; prendaSel = null;
+    tallaMedidaSel = null; prendaSel = null;
     pintar();
 }
-window.usarTablaBanco = async function(id) {
-    const t = (bancoTablas || []).find(function(x) { return x.id === id; }); if (!t) return;
-    const conReales = filasPrendas().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; }).length;
-    if (conReales && !confirm('Ya hay ' + listaPrendas().length + ' prenda(s) con ' + conReales + ' medidas reales.\n¿Usar la tabla "' + nombreTM(t) + '" (versión ' + t.version + ')?\n\nLas medidas reales se conservan y se comparan contra los ideales de la nueva tabla.')) return;
-    await aplicarTabla(t);
-};
-window.cambiarTablaMedidas = function() { elegirTabla = true; pasoMedidas(); };
-window.cancelarCambioTabla = function() { elegirTabla = false; pasoMedidas(); };
-
-// Crear una tabla nueva en el banco desde el Excel y usarla en esta auditoría
-window.crearTablaDesdeExcel = async function(e) {
+// Subir el Excel (plantilla oficial) con la tabla de medidas de la referencia
+window.cargarExcelMedidas = async function(e) {
     const archivo = e.target.files[0]; if (!archivo) return;
     const aviso = $('avisoExcel');
-    const err = function(m) { aviso.className = 'mensaje error'; aviso.textContent = m; };
-    const linea = tituloTM($('tmLinea').value), genero = tituloTM($('tmGenero').value), silueta = tituloTM($('tmSilueta').value);
     try {
-        if (!linea || !genero || !silueta) { err('Primero escribe la línea, el género y la silueta de la tabla.'); e.target.value = ''; return; }
-        const existe = (bancoTablas || []).find(function(t) { return tituloTM(t.linea) === linea && tituloTM(t.genero) === genero && tituloTM(t.silueta) === silueta; });
-        if (existe) { err('Ya existe "' + nombreTM(existe) + '" en el banco. Úsala de la lista de arriba, o actualízala en "Administrar el banco de tablas".'); e.target.value = ''; return; }
         if (typeof XLSX === 'undefined') throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
         const libro = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
         const hoja = libro.Sheets[libro.SheetNames.find(function(n) { return /tabla de medida/i.test(n); }) || libro.SheetNames[0]];
         const leido = leerExcelBanco(XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: null }));
-        const sesion = await supabase.auth.getSession();
-        const uid = sesion.data && sesion.data.session ? sesion.data.session.user.id : null;
-        const { data: nueva, error } = await supabase.from('tablas_medidas').insert({
-            linea: linea, genero: genero, silueta: silueta, tallas: leido.tallas, puntos: leido.puntos, version: 1,
-            creado_por: uid, actualizado_por: uid, actualizado_en: new Date().toISOString()
-        }).select().single();
-        if (error) throw error;
-        bancoTablas = (bancoTablas || []).concat([nueva]);
-        await aplicarTabla(nueva);
+        const conReales = filasPrendas().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; }).length;
+        if (conReales && !confirm('Ya hay ' + listaPrendas().length + ' prenda(s) con ' + conReales + ' medidas reales.\n¿Cambiar la tabla de medidas?\n\nLas medidas reales se conservan y se comparan contra los ideales del Excel nuevo.')) { e.target.value = ''; return; }
+        await aplicarTabla({ tallas: leido.tallas, puntos: leido.puntos, archivo: archivo.name });
     } catch (ex) {
         console.error(ex);
-        err('No se pudo leer o guardar el Excel: ' + (ex.message || ex) + ' Usa la plantilla oficial sin cambiar sus títulos.');
+        if (aviso) { aviso.className = 'mensaje error'; aviso.textContent = 'No se pudo leer el Excel: ' + (ex.message || ex) + ' Usa la plantilla oficial (botón "Descargar plantilla") sin cambiar sus títulos.'; }
     }
     e.target.value = '';
 };
