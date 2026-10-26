@@ -904,12 +904,30 @@
         // Guarda una fila enviando SOLO sus campos cambiados. La función SQL
         // actualizar_campos_dpto aplica el cambio con la fila bloqueada, así que
         // dos personas guardando la misma fila nunca se pisan.
+        // "JWT issued at future" / token vencido: el servidor rechaza la petición ANTES de escribir,
+        // así que reintentar es seguro. Primero se espera (desfase de reloj de pocos segundos);
+        // si persiste, se renueva la sesión y se intenta una última vez.
+        const esErrorDeToken = e => /jwt/i.test(String(e?.message || '')) || ['PGRST301', 'PGRST302', 'PGRST303'].includes(e?.code);
+        const esperar = ms => new Promise(r => setTimeout(r, ms));
+        async function conReintentoSesion(operacion) {
+            let r = await operacion();
+            if (!r.error || !esErrorDeToken(r.error)) return r;
+            console.warn('[sesion] Token rechazado, reintentando en 2 s:', r.error.message);
+            await esperar(2000);
+            r = await operacion();
+            if (!r.error || !esErrorDeToken(r.error)) return r;
+            console.warn('[sesion] Token rechazado otra vez, renovando la sesión:', r.error.message);
+            try { await client.auth.refreshSession(); } catch (e) { console.warn('[sesion] No se pudo renovar la sesión:', e); }
+            await esperar(2000);
+            return operacion();
+        }
+
         async function guardarFilaPorCampos(a) {
             const id = a.tr.dataset.id;
             const cambios = calcularCambios(a.local, a.base);
             if (Object.keys(cambios).length === 0) { a.final = [...a.base]; return; }
 
-            const { data, error } = await client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: cambios });
+            const { data, error } = await conReintentoSesion(() => client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: cambios }));
             if (error) throw error;
             if (data === null) { a.borrada = true; a.final = null; return; }   // otra persona la eliminó
 
@@ -918,7 +936,7 @@
             const calculados = {};
             COLUMNAS_CALCULADAS.forEach(i => { if (final[i] !== String(data[i] ?? '')) calculados[i] = final[i]; });
             if (Object.keys(calculados).length > 0) {
-                const { error: errCalc } = await client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: calculados });
+                const { error: errCalc } = await conReintentoSesion(() => client.rpc('actualizar_campos_dpto', { p_id: id, p_cambios: calculados }));
                 if (errCalc) console.warn('[guardar] No se actualizaron los campos calculados de la fila', id, errCalc);
             }
             a.final = final;
@@ -969,8 +987,8 @@
                 for (let i = 0; i < nuevos.length; i += chunkSize) {
                     btn.innerHTML = `⏳ Creando nuevos... (${i + 1} de ${nuevos.length})`;
                     const chunk = nuevos.slice(i, i + chunkSize);
-                    const { data: inserted, error } = await client.from('dpto_tecnico')
-                        .insert(chunk.map(n => ({ datos: n.local, precinto: n.local[7] }))).select('id');
+                    const { data: inserted, error } = await conReintentoSesion(() => client.from('dpto_tecnico')
+                        .insert(chunk.map(n => ({ datos: n.local, precinto: n.local[7] }))).select('id'));
                     if (error) throw error;
                     if (!inserted || inserted.length !== chunk.length) throw new Error("La base de datos no confirmó la creación de todas las filas nuevas.");
                     inserted.forEach((row, j) => { chunk[j].tr.dataset.id = row.id; });
@@ -1003,7 +1021,10 @@
             } catch (err) {
                 window.ultimoGuardadoFallo = true;   // detiene el autoguardado hasta un guardado manual exitoso
                 console.error('[guardar] Error:', err);
-                alert("❌ NO se guardaron los cambios: " + (err.message || err) + "\n\nNo cierres la página. Revisa tu conexión y vuelve a presionar Guardar Cambios.");
+                const ayudaReloj = /jwt/i.test(String(err.message || err))
+                    ? "\n\nEste error suele deberse a que la fecha y hora de este computador no están sincronizadas. En Windows: Configuración > Hora e idioma > Fecha y hora > Sincronizar ahora. Después vuelve a presionar Guardar Cambios."
+                    : "\n\nRevisa tu conexión y vuelve a presionar Guardar Cambios.";
+                alert("❌ NO se guardaron los cambios: " + (err.message || err) + "\n\nNo cierres la página: tus cambios siguen en pantalla." + ayudaReloj);
                 window.marcarCambios();
             } finally {
                 guardandoAhora = false;
