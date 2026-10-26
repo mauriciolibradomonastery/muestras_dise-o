@@ -699,7 +699,8 @@ function pasoMedidas() {
             '<div class="silueta"><b>Tabla de medidas · ' + esc(auditoria.referencia || '') + '</b>' + (matriz.length / tls.length) + ' puntos de medida · ' + tls.length + ' tallas' + (auditoria.tipo_silueta ? ' · ' + esc(auditoria.tipo_silueta) : '') + '</div>' +
             '<div><input type="file" id="archivoMedidas" accept=".xlsx,.xls" class="oculto" onchange="cargarExcelMedidas(event)">' +
             '<a class="btn btn-chico" href="plantilla_tabla_medidas.xlsx" download style="text-decoration:none; margin-right:6px;">⬇ Plantilla</a>' +
-            '<button class="btn btn-chico" onclick="document.getElementById(\'archivoMedidas\').click()">Cambiar Excel</button></div>' +
+            '<button class="btn btn-chico" onclick="document.getElementById(\'archivoMedidas\').click()">Cambiar Excel</button>' +
+            '<button class="btn btn-chico" style="margin-left:6px; color:var(--vino); border-color:#E8C4C6;" onclick="quitarTablaMedidas()">🗑 Quitar tabla</button></div>' +
         '</div>' +
         '<div class="mensaje" id="avisoExcel"></div>';
         const cols = colores().filter(Boolean);
@@ -861,6 +862,21 @@ async function aplicarTabla(t) {
     tallaMedidaSel = null; prendaSel = null;
     pintar();
 }
+// Quitar la tabla de medidas de esta auditoría (con sus prendas medidas)
+window.quitarTablaMedidas = async function() {
+    const prendas = listaPrendas().length;
+    const reales = filasPrendas().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; }).length;
+    if (!confirm('¿Estás segura de quitar la tabla de medidas de esta auditoría?' +
+        (prendas ? '\n\nTambién se borrarán ' + prendas + ' prenda(s) medidas con ' + reales + ' medidas reales.' : '') +
+        '\n\nDespués podrás subir el Excel correcto. Esta acción no se puede deshacer.')) return;
+    medidas = medidas.filter(function(m) { return !esMatriz(m); });
+    auditoria.tipo_silueta = null;
+    prendaSel = null;
+    await supabase.from('auditorias').update({ tipo_silueta: null }).eq('id', idAuditoria);
+    await guardarMedidasBD();
+    pasoMedidas();
+};
+
 // Subir el Excel (plantilla oficial) con la tabla de medidas de la referencia
 window.cargarExcelMedidas = async function(e) {
     const archivo = e.target.files[0]; if (!archivo) return;
