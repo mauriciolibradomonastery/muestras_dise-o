@@ -556,7 +556,7 @@ function htmlResumenInspeccion(det, plan, rDef, med, prue, evis) {
     const fuera = tomadas.filter(m => m.cumple === false);
     const cRes = !tomadas.length ? RES.pendiente : fuera.length ? RES.nocumple : RES.cumple;
     const cObs = !tomadas.length ? (med.length ? 'Tabla de medidas cargada, sin medidas reales tomadas' : 'Sin medidas registradas') : fuera.length
-        ? `${fuera.length} de ${tomadas.length} medidas fuera de tolerancia: ` + fuera.slice(0, 4).map(m => `${esc(m.punto_medida)} (talla ${esc(String(m.talla).split('/')[0])})`).join(', ') + (fuera.length > 4 ? '…' : '')
+        ? `${fuera.length} de ${tomadas.length} medidas fuera de tolerancia: ` + fuera.slice(0, 4).map(m => `${esc(m.punto_medida)} (${m.prenda ? 'P' + m.prenda + ' · ' : ''}talla ${esc(String(m.talla).split('/')[0])}${m.color ? ' · ' + esc(m.color) : ''})`).join(', ') + (fuera.length > 4 ? '…' : '')
         : `${tomadas.length} medidas dentro de tolerancia`;
     // D. Empaque / E. Pruebas en sitio
     const esEmpaque = p => /empaque|silica|c[oó]digo de barras|qr|etiqueta|marquilla de empaque/i.test(p.prueba || '');
@@ -706,13 +706,23 @@ function htmlMedidasInforme(det, med) {
     let html = '';
 
     if (matriz.length) {
-        // Tallas en el orden del Excel; solo las que tienen medidas tomadas
-        const tallas = [];
-        matriz.forEach(m => { if (tallas.indexOf(m.talla) < 0) tallas.push(m.talla); });
-        const medidas = tallas.filter(t => matriz.some(m => m.talla === t && tieneReal(m)));
-        const puntos = [];
-        matriz.slice().sort((a, b) => a.orden - b.orden).forEach(m => { if (!puntos.find(p => p.orden === m.orden)) puntos.push({ orden: m.orden, nombre: m.punto_medida, desc: m.descripcion, neg: m.tolerancia_neg, pos: m.tolerancia_pos }); });
-        const tomadas = matriz.filter(tieneReal), fuera = tomadas.filter(m => m.cumple === false);
+        // Filas de la tabla (ideales) y filas de prendas medidas (talla, color, reales)
+        const esPrenda = m => m.prenda !== null && m.prenda !== undefined;
+        const base = matriz.filter(m => !esPrenda(m));
+        let filasP = matriz.filter(esPrenda);
+        // Auditorías del sistema anterior (una prenda por talla, sin color)
+        if (!filasP.length) {
+            const tallasCon = [];
+            base.filter(tieneReal).forEach(m => { if (tallasCon.indexOf(m.talla) < 0) tallasCon.push(m.talla); });
+            filasP = base.filter(m => tallasCon.indexOf(m.talla) >= 0).map(m => Object.assign({}, m, { prenda: tallasCon.indexOf(m.talla) + 1, color: '' }));
+        }
+        const ordenTallas = [];
+        base.concat(filasP).forEach(m => { if (ordenTallas.indexOf(m.talla) < 0) ordenTallas.push(m.talla); });
+        const prendas = {};
+        filasP.forEach(m => { prendas[m.prenda] = prendas[m.prenda] || { n: Number(m.prenda), talla: m.talla, color: m.color || '' }; });
+        const listaP = Object.values(prendas).sort((a, b) => a.n - b.n);
+        const tomadas = filasP.filter(tieneReal), fuera = tomadas.filter(m => m.cumple === false);
+        const nPuntos = new Set(base.concat(filasP).map(m => m.orden)).size;
         const dif = m => {
             const min = r2(Number(m.medida_teorica) - Number(m.tolerancia_neg)), max = r2(Number(m.medida_teorica) + Number(m.tolerancia_pos)), real = Number(m.medida_real);
             if (real < min - 1e-9) return `<span class="res-nocumple">${cm(real - min)}</span>`;
@@ -720,24 +730,32 @@ function htmlMedidasInforme(det, med) {
             return '<span class="res-cumple">CUMPLE</span>';
         };
         html += `<div class="seccion-detalle"><h4 class="titulo-informe">Tabla de medidas · Real vs. patronaje</h4>
-            <p style="font-size:11px; color:var(--texto-claro); margin:0 0 8px;">${esc(det.tipo_silueta || '')}${det.tipo_silueta ? ' · ' : ''}${puntos.length} puntos de medida · ${tomadas.length} medidas tomadas · <b style="color:${fuera.length ? 'var(--vino)' : 'var(--verde)'}">${fuera.length} fuera de tolerancia</b></p>`;
-        if (!medidas.length) {
-            html += `<p style="font-size:12px; color:var(--texto-claro);">Se cargó la tabla de medidas, pero no se registraron medidas reales.</p></div>`;
+            <p style="font-size:11px; color:var(--texto-claro); margin:0 0 8px;">${esc(det.tipo_silueta || '')}${det.tipo_silueta ? ' · ' : ''}${nPuntos} puntos de medida · ${listaP.length} prenda(s) medidas · ${tomadas.length} medidas tomadas · <b style="color:${fuera.length ? 'var(--vino)' : 'var(--verde)'}">${fuera.length} fuera de tolerancia</b></p>`;
+        if (!listaP.length) {
+            html += `<p style="font-size:12px; color:var(--texto-claro);">Se cargó la tabla de medidas, pero no se registraron prendas medidas.</p></div>`;
         } else {
-            html += `<div style="overflow-x:auto;"><table class="tabla-informe" style="font-size:10px;">
-                <thead>
-                    <tr><th rowspan="2" style="width:22px">#</th><th rowspan="2" style="text-align:left; min-width:150px;">Punto de medida</th><th rowspan="2">Tol −/+</th>
-                    ${medidas.map(t => `<th colspan="3">${esc(t)}</th>`).join('')}</tr>
-                    <tr>${medidas.map(() => '<th>Ideal</th><th>Real</th><th>Resultado</th>').join('')}</tr>
-                </thead><tbody>` +
-                puntos.map(p => `<tr><td class="centro">${p.orden}</td><td><b>${esc(p.nombre)}</b></td><td class="centro" style="white-space:nowrap">−${cm(p.neg)} / +${cm(p.pos)}</td>` +
-                    medidas.map(t => {
-                        const m = matriz.find(x => x.orden === p.orden && x.talla === t);
-                        if (!m) return '<td></td><td></td><td></td>';
-                        return `<td class="centro">${cm(m.medida_teorica)}</td><td class="centro"><b>${tieneReal(m) ? cm(m.medida_real) : '—'}</b></td><td class="centro">${tieneReal(m) ? dif(m) : ''}</td>`;
-                    }).join('') + `</tr>`).join('') +
-                `</tbody></table></div>
-                <p style="font-size:10px; color:var(--texto-claro); margin:6px 0 0;">Resultado: CUMPLE si la medida real está entre (ideal − tol) y (ideal + tol). Si no, se muestra cuánto falta (−) o cuánto se pasa (+), en cm.</p></div>`;
+            // Una tabla por talla, con una columna (real + resultado) por cada prenda
+            ordenTallas.filter(t => listaP.some(p => p.talla === t)).forEach(t => {
+                const deTalla = listaP.filter(p => p.talla === t);
+                const filasT = filasP.filter(m => m.talla === t);
+                const puntos = [];
+                filasT.slice().sort((a, b) => a.orden - b.orden).forEach(m => { if (!puntos.find(x => x.orden === m.orden)) puntos.push(m); });
+                html += `<p style="font-size:12px; font-weight:700; margin:12px 0 6px; color:var(--tinta);">Talla ${esc(t)}</p>
+                <div style="overflow-x:auto;"><table class="tabla-informe" style="font-size:10px;">
+                    <thead>
+                        <tr><th rowspan="2" style="width:22px">#</th><th rowspan="2" style="text-align:left; min-width:150px;">Punto de medida</th><th rowspan="2">Ideal</th><th rowspan="2">Tol −/+</th>
+                        ${deTalla.map(p => `<th colspan="2">P${p.n}${p.color ? ' · ' + esc(p.color) : ''}</th>`).join('')}</tr>
+                        <tr>${deTalla.map(() => '<th>Real</th><th>Resultado</th>').join('')}</tr>
+                    </thead><tbody>` +
+                    puntos.map(pt => `<tr><td class="centro">${pt.orden}</td><td><b>${esc(pt.punto_medida)}</b></td><td class="centro">${cm(pt.medida_teorica)}</td><td class="centro" style="white-space:nowrap">−${cm(pt.tolerancia_neg)} / +${cm(pt.tolerancia_pos)}</td>` +
+                        deTalla.map(p => {
+                            const m = filasT.find(x => Number(x.prenda) === p.n && x.orden === pt.orden);
+                            if (!m || !tieneReal(m)) return '<td class="centro">—</td><td></td>';
+                            return `<td class="centro"><b>${cm(m.medida_real)}</b></td><td class="centro">${dif(m)}</td>`;
+                        }).join('') + `</tr>`).join('') +
+                    `</tbody></table></div>`;
+            });
+            html += `<p style="font-size:10px; color:var(--texto-claro); margin:6px 0 0;">Resultado: CUMPLE si la medida real está entre (ideal − tol) y (ideal + tol). Si no, se muestra cuánto falta (−) o cuánto se pasa (+), en cm. P1, P2… = prendas medidas, con su color.</p></div>`;
         }
     }
 

@@ -181,6 +181,13 @@
     .res-pom.vacio { color: #C3BCB4; }
     .resumen-pom { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
     .resumen-pom span { padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+    .form-prenda { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; background: #F9F8F6; border: 1px solid var(--borde); border-radius: 12px; padding: 14px; margin: 6px 0 16px; }
+    .form-prenda label { margin-top: 0; }
+    .cab-prenda { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 10px; background: var(--tinta); color: #fff; margin-bottom: 8px; }
+    .cab-prenda b { font-size: 15px; }
+    .cab-prenda button { background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; cursor: pointer; }
+    .sin-prendas { text-align: center; color: var(--texto-claro); font-size: 14px; padding: 24px; border: 1px dashed var(--borde); border-radius: 12px; }
+    @media (max-width: 640px) { .form-prenda { grid-template-columns: 1fr 1fr; } .form-prenda .btn { grid-column: 1 / -1; } }
     .banco-lista { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; margin-top: 12px; }
     .banco-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
     .banco-item .bi-info { flex: 1; font-size: 12px; color: var(--texto-claro); }
@@ -286,6 +293,7 @@ async function cargar() {
         try {
             const resMed = await supabase.from('auditoria_medidas').select('*').eq('auditoria_id', idAuditoria).order('id');
             medidas = (resMed.data || []).map(function(m) { return Object.assign({}, m); });
+            migrarMedidasPorTalla();
         } catch (e) { medidas = []; }
 
         try {
@@ -624,7 +632,33 @@ let tallaMedidaSel = null;
 const r2 = function(n) { return Math.round(n * 100) / 100; };
 const fmtCm = function(n) { return String(r2(n)).replace('.', ','); };
 const esMatriz = function(m) { return m.orden !== null && m.orden !== undefined; };
-const medidasMatriz = function() { return medidas.filter(esMatriz); };
+const esPrenda = function(m) { return m.prenda !== null && m.prenda !== undefined && m.prenda !== ''; };
+// Filas de la tabla (ideales de todas las tallas, sin medidas reales)
+const medidasMatriz = function() { return medidas.filter(function(m) { return esMatriz(m) && !esPrenda(m); }); };
+// Filas de las prendas medidas (cada prenda tiene talla, color y sus medidas reales)
+const filasPrendas = function() { return medidas.filter(function(m) { return esMatriz(m) && esPrenda(m); }); };
+let prendaSel = null;
+function listaPrendas() {
+    const mapa = {};
+    filasPrendas().forEach(function(m) {
+        mapa[m.prenda] = mapa[m.prenda] || { n: +m.prenda, talla: m.talla, color: m.color || '', filas: [] };
+        mapa[m.prenda].filas.push(m);
+    });
+    return Object.values(mapa).sort(function(a, b) { return a.n - b.n; });
+}
+// Auditorías hechas con el sistema anterior (una prenda por talla): pasar sus medidas a prendas
+function migrarMedidasPorTalla() {
+    const conReal = medidasMatriz().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; });
+    if (!conReal.length || filasPrendas().length) return;
+    const tallasCon = [];
+    conReal.forEach(function(m) { if (tallasCon.indexOf(m.talla) < 0) tallasCon.push(m.talla); });
+    tallasCon.forEach(function(t, i) {
+        medidasMatriz().filter(function(m) { return m.talla === t; }).forEach(function(m) {
+            medidas.push(Object.assign({}, m, { id: undefined, prenda: i + 1, color: '' }));
+            m.medida_real = null; m.cumple = null;
+        });
+    });
+}
 const tallasMatriz = function() {
     const vistas = [];
     medidasMatriz().forEach(function(m) { if (vistas.indexOf(m.talla) < 0) vistas.push(m.talla); });
@@ -696,9 +730,8 @@ function pasoMedidas() {
             '<div style="font-size:12px; margin-top:12px;"><a href="medidas.html?volver=' + encodeURIComponent('auditoria.html?id=' + idAuditoria) + '" style="color:var(--laton); font-weight:600;">Administrar el banco de tablas ›</a></div>';
     } else {
         const tls = tallasMatriz();
-        if (tls.indexOf(tallaMedidaSel) < 0) tallaMedidaSel = tls[0];
-        const tomadas = matriz.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; });
-        const fuera = tomadas.filter(function(m) { return evaluarMedida(m).estado === 'mal'; });
+        const prendas = listaPrendas();
+        if (!prendas.find(function(p) { return p.n === prendaSel; })) prendaSel = prendas.length ? prendas[prendas.length - 1].n : null;
         const delBanco = (bancoTablas || []).find(function(t) { return t.id === auditoria.tabla_medidas_id; });
         html += (delBanco && delBanco.version > (auditoria.tabla_medidas_version || 1) ?
             '<div class="aviso-version"><span>La tabla <b>' + esc(nombreTM(delBanco)) + '</b> se actualizó en el banco (versión ' + delBanco.version + '). Esta auditoría usa la versión ' + (auditoria.tabla_medidas_version || 1) + '.</span>' +
@@ -706,27 +739,41 @@ function pasoMedidas() {
             '<div class="cab-matriz">' +
             '<div class="silueta"><b>' + esc(auditoria.tipo_silueta || 'Tabla de medidas') + '</b>' + (matriz.length / tls.length) + ' puntos de medida · ' + tls.length + ' tallas' + (auditoria.tabla_medidas_version ? ' · versión ' + auditoria.tabla_medidas_version : '') + '</div>' +
             '<div><button class="btn btn-chico" onclick="cambiarTablaMedidas()">Cambiar tabla</button></div>' +
-        '</div>' +
-        '<div class="mensaje" id="avisoExcel"></div>' +
-        '<label>Talla</label>' +
-        '<div class="tabs-talla" id="tabsTalla">' + htmlTabsTalla() + '</div>' +
-        '<div class="tabla-scroll"><table class="tabla-pom">' +
-            '<thead><tr><th>#</th><th>Punto de medida</th><th>Ideal</th><th>Tol − / +</th><th>Rango permitido</th><th>Real (cm)</th><th>Resultado</th></tr></thead>' +
-            '<tbody>' + matriz.filter(function(m) { return m.talla === tallaMedidaSel; }).sort(function(x, y) { return x.orden - y.orden; }).map(function(m) {
-                const idx = medidas.indexOf(m), ev = evaluarMedida(m);
-                return '<tr>' +
-                    '<td class="c-num" style="color:var(--texto-claro)">' + m.orden + '</td>' +
-                    '<td class="pom"><b>' + esc(m.punto_medida) + '</b>' + (m.descripcion ? '<small>' + esc(m.descripcion) + '</small>' : '') + '</td>' +
-                    '<td class="ideal" data-l="Ideal">' + fmtCm(m.medida_teorica) + '</td>' +
-                    '<td class="rango c-tol" data-l="Tol − / +">−' + fmtCm(m.tolerancia_neg) + ' / +' + fmtCm(m.tolerancia_pos) + '</td>' +
-                    '<td class="rango c-rango" data-l="Rango permitido">' + fmtCm(num(m.medida_teorica) - num(m.tolerancia_neg)) + ' – ' + fmtCm(num(m.medida_teorica) + num(m.tolerancia_pos)) + '</td>' +
-                    '<td class="c-real"><input type="number" step="0.1" inputmode="decimal" placeholder="Real" value="' + (m.medida_real === null || m.medida_real === undefined ? '' : m.medida_real) + '" oninput="escribirReal(' + idx + ', this.value)" onchange="guardarMedidasBD(); actualizarContadoresMedidas()"></td>' +
-                    '<td class="c-res"><span class="res-pom ' + ev.estado + '" id="res' + idx + '">' + ev.texto + '</span></td>' +
-                '</tr>';
-            }).join('') + '</tbody>' +
-        '</table></div>' +
-        '<div class="resumen-pom" id="resumenPom">' + htmlResumenPom() + '</div>' +
-        '<div style="font-size:12px; color:var(--texto-claro); margin-top:10px;">Resultado: <b>CUMPLE</b> si la medida real está dentro del rango. Si no, muestra cuánto falta (−) o cuánto se pasa (+). Los cambios se guardan solos.</div>';
+        '</div>';
+        const cols = colores().filter(Boolean);
+        html += '<label>Agregar una prenda para medir</label>' +
+            '<div class="form-prenda">' +
+                '<div><label>Talla</label><select id="nuevaTalla">' + tls.map(function(t) { return '<option value="' + esc(t) + '">' + esc(t) + '</option>'; }).join('') + '</select></div>' +
+                '<div><label>Color</label>' + (cols.length
+                    ? '<select id="nuevoColor">' + cols.map(function(c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>'
+                    : '<input id="nuevoColor" placeholder="Ej: NEGRO">') + '</div>' +
+                '<button class="btn btn-oscuro" onclick="agregarPrenda()">+ Agregar prenda</button>' +
+            '</div>' +
+            (prendas.length ? '<label>Prendas medidas (' + prendas.length + ')</label><div class="tabs-talla" id="tabsPrendas">' + htmlPrendas() + '</div>' : '');
+        const actual = prendas.find(function(p) { return p.n === prendaSel; });
+        if (!actual) {
+            html += '<div class="sin-prendas">Agrega la primera prenda: elige su talla y su color, y presiona <b>"+ Agregar prenda"</b>.<br>Puedes medir varias prendas de la misma talla.</div>';
+        } else {
+            html += '<div class="cab-prenda"><span><b>Prenda ' + actual.n + '</b> · Talla ' + esc(actual.talla) + ' · Color ' + esc(actual.color || 'sin color') + '</span>' +
+                '<button onclick="eliminarPrenda(' + actual.n + ')">🗑 Eliminar prenda</button></div>' +
+            '<div class="tabla-scroll"><table class="tabla-pom">' +
+                '<thead><tr><th>#</th><th>Punto de medida</th><th>Ideal</th><th>Tol − / +</th><th>Rango permitido</th><th>Real (cm)</th><th>Resultado</th></tr></thead>' +
+                '<tbody>' + actual.filas.slice().sort(function(x, y) { return x.orden - y.orden; }).map(function(m) {
+                    const idx = medidas.indexOf(m), ev = evaluarMedida(m);
+                    return '<tr>' +
+                        '<td class="c-num" style="color:var(--texto-claro)">' + m.orden + '</td>' +
+                        '<td class="pom"><b>' + esc(m.punto_medida) + '</b>' + (m.descripcion ? '<small>' + esc(m.descripcion) + '</small>' : '') + '</td>' +
+                        '<td class="ideal" data-l="Ideal">' + fmtCm(m.medida_teorica) + '</td>' +
+                        '<td class="rango c-tol" data-l="Tol − / +">−' + fmtCm(m.tolerancia_neg) + ' / +' + fmtCm(m.tolerancia_pos) + '</td>' +
+                        '<td class="rango c-rango" data-l="Rango permitido">' + fmtCm(num(m.medida_teorica) - num(m.tolerancia_neg)) + ' – ' + fmtCm(num(m.medida_teorica) + num(m.tolerancia_pos)) + '</td>' +
+                        '<td class="c-real"><input type="number" step="0.1" inputmode="decimal" placeholder="Real" value="' + (m.medida_real === null || m.medida_real === undefined ? '' : m.medida_real) + '" oninput="escribirReal(' + idx + ', this.value)" onchange="guardarMedidasBD(); actualizarContadoresMedidas()"></td>' +
+                        '<td class="c-res"><span class="res-pom ' + ev.estado + '" id="res' + idx + '">' + ev.texto + '</span></td>' +
+                    '</tr>';
+                }).join('') + '</tbody>' +
+            '</table></div>';
+        }
+        html += '<div class="resumen-pom" id="resumenPom">' + htmlResumenPom() + '</div>' +
+            '<div style="font-size:12px; color:var(--texto-claro); margin-top:10px;">Resultado: <b>CUMPLE</b> si la medida real está dentro del rango. Si no, muestra cuánto falta (−) o cuánto se pasa (+). Los cambios se guardan solos.</div>';
     }
     html += '</div>';
 
@@ -741,30 +788,49 @@ function pasoMedidas() {
     }
     $('contenido').innerHTML = html;
 }
-function htmlTabsTalla() {
-    const matriz = medidasMatriz();
-    return tallasMatriz().map(function(t) {
-        const deT = matriz.filter(function(m) { return m.talla === t; });
-        const hechas = deT.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; }).length;
-        const malas = deT.filter(function(m) { return evaluarMedida(m).estado === 'mal'; }).length;
-        const partes = String(t).split('/');
-        return '<button class="tab-talla' + (t === tallaMedidaSel ? ' activa' : '') + '" onclick="elegirTallaMedida(\'' + esc(t) + '\')">' +
-            '<b>' + esc(partes[0]) + '</b><small>' + esc(partes.slice(1).join('/')) + '</small><small style="display:block">' + hechas + '/' + deT.length + (malas ? ' · <span class="mal">' + malas + ' ✕</span>' : '') + '</small></button>';
+function htmlPrendas() {
+    return listaPrendas().map(function(p) {
+        const hechas = p.filas.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; }).length;
+        const malas = p.filas.filter(function(m) { return evaluarMedida(m).estado === 'mal'; }).length;
+        return '<button class="tab-talla' + (p.n === prendaSel ? ' activa' : '') + '" onclick="elegirPrenda(' + p.n + ')">' +
+            '<b>P' + p.n + '</b><small>' + esc(String(p.talla).split('/')[0]) + ' · ' + esc(p.color || 'sin color') + '</small>' +
+            '<small style="display:block">' + hechas + '/' + p.filas.length + (malas ? ' · <span class="mal">' + malas + ' ✕</span>' : '') + '</small></button>';
     }).join('');
 }
 function htmlResumenPom() {
-    const matriz = medidasMatriz();
-    const tomadas = matriz.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; });
+    const filas = filasPrendas();
+    const tomadas = filas.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; });
     const fuera = tomadas.filter(function(m) { return evaluarMedida(m).estado === 'mal'; });
-    return '<span style="background:#F4F1EB; color:var(--texto);">Tomadas: ' + tomadas.length + ' de ' + matriz.length + '</span>' +
+    return '<span style="background:#F4F1EB; color:var(--texto);">Prendas: ' + listaPrendas().length + '</span>' +
+        '<span style="background:#F4F1EB; color:var(--texto);">Medidas tomadas: ' + tomadas.length + '</span>' +
         '<span style="background:#EEF7F2; color:var(--verde);">Cumplen: ' + (tomadas.length - fuera.length) + '</span>' +
         '<span style="background:#FCF0F0; color:var(--vino);">Fuera de tolerancia: ' + fuera.length + '</span>';
 }
 window.actualizarContadoresMedidas = function() {
-    if ($('tabsTalla')) $('tabsTalla').innerHTML = htmlTabsTalla();
+    if ($('tabsPrendas')) $('tabsPrendas').innerHTML = htmlPrendas();
     if ($('resumenPom')) $('resumenPom').innerHTML = htmlResumenPom();
 };
-window.elegirTallaMedida = function(t) { tallaMedidaSel = t; pasoMedidas(); };
+window.elegirPrenda = function(n) { prendaSel = n; pasoMedidas(); };
+window.agregarPrenda = async function() {
+    const talla = $('nuevaTalla').value, color = String($('nuevoColor').value || '').trim().toUpperCase();
+    if (!color) { alert('Elige o escribe el color de la prenda.'); return; }
+    const base = medidasMatriz().filter(function(m) { return m.talla === talla; });
+    if (!base.length) return;
+    const n = listaPrendas().reduce(function(mx, p) { return Math.max(mx, p.n); }, 0) + 1;
+    base.forEach(function(m) { medidas.push(Object.assign({}, m, { id: undefined, prenda: n, color: color, medida_real: null, cumple: null })); });
+    prendaSel = n;
+    pasoMedidas();
+    await guardarMedidasBD();
+};
+window.eliminarPrenda = async function(n) {
+    const p = listaPrendas().find(function(x) { return x.n === n; }); if (!p) return;
+    const tomadas = p.filas.filter(function(m) { return evaluarMedida(m).estado !== 'vacio'; }).length;
+    if (!confirm('¿Estás segura de eliminar la Prenda ' + n + ' (talla ' + p.talla + ', color ' + (p.color || 'sin color') + ')?' + (tomadas ? '\n\nSe borrarán sus ' + tomadas + ' medidas reales.' : ''))) return;
+    medidas = medidas.filter(function(m) { return !(esPrenda(m) && +m.prenda === n); });
+    prendaSel = null;
+    pasoMedidas();
+    await guardarMedidasBD();
+};
 window.escribirReal = function(idx, v) {
     const m = medidas[idx];
     m.medida_real = v === '' ? null : r2(num(v));
@@ -811,31 +877,34 @@ function leerExcelBanco(filas) {
 
 // Copia la tabla del banco a esta auditoría (conserva las medidas reales que coincidan)
 async function aplicarTabla(t) {
-    const previas = medidasMatriz().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; });
     const nuevas = [];
     t.puntos.slice().sort(function(a, b) { return a.orden - b.orden; }).forEach(function(p) {
         t.tallas.forEach(function(ta) {
             if (p.ideales[ta] === undefined) return;
             const n = { punto_medida: p.punto, descripcion: p.descripcion, orden: p.orden, talla: ta, medida_teorica: p.ideales[ta],
                 tolerancia_neg: p.tol_neg, tolerancia_pos: p.tol_pos, tolerancia: Math.max(p.tol_neg, p.tol_pos), medida_real: null, cumple: null };
-            const v = previas.find(function(x) { return x.punto_medida === n.punto_medida && x.talla === n.talla; });
-            if (v) { n.medida_real = v.medida_real; n.cumple = evaluarMedida(n).cumple; }
             nuevas.push(n);
         });
     });
-    medidas = medidas.filter(function(m) { return !esMatriz(m); }).concat(nuevas);
+    // Las prendas ya medidas toman los ideales y tolerancias de la nueva tabla (sus medidas reales se conservan)
+    const prendasActuales = filasPrendas();
+    prendasActuales.forEach(function(m) {
+        const n = nuevas.find(function(x) { return x.punto_medida === m.punto_medida && x.talla === m.talla; });
+        if (n) { m.medida_teorica = n.medida_teorica; m.tolerancia_neg = n.tolerancia_neg; m.tolerancia_pos = n.tolerancia_pos; m.tolerancia = n.tolerancia; m.orden = n.orden; m.descripcion = n.descripcion; m.cumple = evaluarMedida(m).cumple; }
+    });
+    medidas = medidas.filter(function(m) { return !esMatriz(m); }).concat(nuevas).concat(prendasActuales);
     auditoria.tipo_silueta = nombreTM(t);
     auditoria.tabla_medidas_id = t.id;
     auditoria.tabla_medidas_version = t.version;
     await supabase.from('auditorias').update({ tipo_silueta: auditoria.tipo_silueta, tabla_medidas_id: t.id, tabla_medidas_version: t.version }).eq('id', idAuditoria);
     await guardarMedidasBD();
-    elegirTabla = false; tallaMedidaSel = null;
+    elegirTabla = false; tallaMedidaSel = null; prendaSel = null;
     pintar();
 }
 window.usarTablaBanco = async function(id) {
     const t = (bancoTablas || []).find(function(x) { return x.id === id; }); if (!t) return;
-    const conReales = medidasMatriz().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; }).length;
-    if (conReales && !confirm('Ya hay ' + conReales + ' medidas reales escritas.\n¿Usar la tabla "' + nombreTM(t) + '" (versión ' + t.version + ')?\n\nSe conservan las medidas reales de los puntos y tallas que coincidan.')) return;
+    const conReales = filasPrendas().filter(function(m) { return m.medida_real !== null && m.medida_real !== undefined; }).length;
+    if (conReales && !confirm('Ya hay ' + listaPrendas().length + ' prenda(s) con ' + conReales + ' medidas reales.\n¿Usar la tabla "' + nombreTM(t) + '" (versión ' + t.version + ')?\n\nLas medidas reales se conservan y se comparan contra los ideales de la nueva tabla.')) return;
     await aplicarTabla(t);
 };
 window.cambiarTablaMedidas = function() { elegirTabla = true; pasoMedidas(); };
@@ -885,7 +954,8 @@ async function guardarMedidasBD() {
                         tolerancia: m.tolerancia, medida_real: m.medida_real, cumple: m.cumple,
                         tolerancia_neg: m.tolerancia_neg === undefined ? null : m.tolerancia_neg,
                         tolerancia_pos: m.tolerancia_pos === undefined ? null : m.tolerancia_pos,
-                        descripcion: m.descripcion || null, orden: m.orden === undefined ? null : m.orden };
+                        descripcion: m.descripcion || null, orden: m.orden === undefined ? null : m.orden,
+                        prenda: esPrenda(m) ? +m.prenda : null, color: esPrenda(m) ? (m.color || null) : null };
                 }));
                 if (error) { console.error(error); alert('No se pudieron guardar las medidas: ' + error.message); }
             }
