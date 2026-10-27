@@ -235,7 +235,7 @@
     <div class="tabs-container">
         <button id="tabActivas" class="tab-btn activa" onclick="cambiarVista('activas')">📂 Muestras Activas</button>
         <button id="tabCanceladas" class="tab-btn" onclick="cambiarVista('canceladas')">🚫 Muestras Canceladas</button>
-        <button id="tabProtos" class="tab-btn" onclick="cambiarVista('protos')">🛠️ Desarrollos</button>
+        <button id="tabProtos" class="tab-btn" onclick="cambiarVista('desarrollos')">🛠️ Desarrollos</button>
     </div>
 
     <div class="header-actions">
@@ -396,17 +396,19 @@
 
         window.produccionVisible = false;
         window.vistaActual = 'activas'; 
-        const ESTADO_PROTO = 'PROTO / SIN COLECCIÓN';   // valor que se guarda en la columna ESTADO
-        const ESTADO_DESARROLLO = 'DESARROLLO';          // filas creadas en la pestaña Desarrollos
-        // Devuelve a qué pestaña pertenece una fila según su ESTADO
-        function vistaDeEstado(estado) {
+        // La pestaña de cada muestra se guarda en su propia columna de la base (wips_muestras.pestana).
+        // La columna ESTADO (posición 43) es SOLO del equipo: ningún botón la modifica.
+        const PESTANAS = ['activas', 'canceladas', 'desarrollos'];
+        // Respaldo de transición: filas que aún no tengan "pestana" en la base se ubican
+        // con la regla antigua (según ESTADO), para que ninguna desaparezca de la vista.
+        function pestanaDesdeEstadoAntiguo(estado) {
             const e = (estado || '').trim().toUpperCase();
             if (e === 'CANCELADO') return 'canceladas';
-            if (e === ESTADO_PROTO) return 'protos';
-            // La antigua pestaña Desarrollos se eliminó: si quedara alguna fila con ese estado,
-            // se muestra en la pestaña Desarrollos actual (antes "Protos y sin colección") para que no se pierda de vista.
-            if (e === ESTADO_DESARROLLO) return 'protos';
+            if (e === 'PROTO / SIN COLECCIÓN' || e === 'DESARROLLO') return 'desarrollos';
             return 'activas';
+        }
+        function pestanaValida(valor, estado) {
+            return PESTANAS.includes(valor) ? valor : pestanaDesdeEstadoAntiguo(estado);
         }
         window.categoriaActiva = 'todas'; 
         window.hayCambiosSinGuardar = false;
@@ -1047,7 +1049,7 @@
                         else if (d.length === 63) { d.splice(56, 0, ""); }
                         while(d.length < 64) d.push("");
                     }
-                    let trCreado = crearFilaHTML(filaBD.id, d);
+                    let trCreado = crearFilaHTML(filaBD.id, d, pestanaValida(filaBD.pestana, d[43]));
                     trCreado._hashGuardado = JSON.stringify(window.extraerDatosFila(trCreado));
                     tbody.appendChild(trCreado);
                 });
@@ -1176,9 +1178,10 @@
             } return datosFila;
         };
 
-        function crearFilaHTML(id = null, datos = []) {
+        function crearFilaHTML(id = null, datos = [], pestana = 'activas') {
             const tr = document.createElement('tr');
             if (id) tr.dataset.id = id;
+            tr.dataset.pestana = pestana;
             
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox';
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
@@ -1250,12 +1253,12 @@
                 tr.appendChild(td); indexGlobal++;
             });
 
-            const estadoActual = (datos[43] || '').trim().toUpperCase(); const esCancelado = estadoActual === 'CANCELADO'; const esDesarrollo = estadoActual === ESTADO_DESARROLLO;
+            const esCancelado = pestana === 'canceladas';
             const tdAcciones = document.createElement('td');
             tdAcciones.innerHTML = `
                 <button class="btn-insert" onclick="insertarFilaAbajo(this)" title="Insertar fila abajo">➕</button>
-                <button class="btn-cancelar-fila ${(esCancelado || esDesarrollo) ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'CANCELADO')" title="Cancelar Muestra">🚫</button>
-                <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'EN PROCESO')" title="Reactivar Muestra">✅</button>
+                <button class="btn-cancelar-fila ${esCancelado ? 'hidden' : ''}" onclick="cambiarEstadoFila(this, 'canceladas')" title="Cancelar Muestra">🚫</button>
+                <button class="btn-reactivar-fila ${esCancelado ? '' : 'hidden'}" onclick="cambiarEstadoFila(this, 'activas')" title="Reactivar Muestra">✅</button>
                 <button class="btn-delete" onclick="eliminarFila(this)" title="Eliminar Permanente">🗑️</button>
             `;
             tr.appendChild(tdAcciones); 
@@ -1275,7 +1278,7 @@
             filas.forEach(fila => {
                 if (!fila.dataset.id) return; 
                 const textos = fila._textos; if (!textos || textos.length < 64) return;
-                const estado = (textos[44] || '').toUpperCase(); if (estado === 'CANCELADO' || estado === ESTADO_PROTO || estado === ESTADO_DESARROLLO) return; 
+                if (fila.dataset.pestana !== 'activas') return; 
 
                 let coincideCategoria = true;
                 const genero = (textos[7] || '').toUpperCase();
@@ -1337,15 +1340,15 @@
             window.vistaActual = vista;
             document.getElementById('tabActivas').classList.toggle('activa', vista === 'activas');
             document.getElementById('tabCanceladas').classList.toggle('activa', vista === 'canceladas');
-            document.getElementById('tabProtos').classList.toggle('activa', vista === 'protos');
+            document.getElementById('tabProtos').classList.toggle('activa', vista === 'desarrollos');
             // Se pueden crear filas en Activas y en Desarrollos
-            document.getElementById('btnAgregarFila').style.display = (vista === 'activas' || vista === 'protos') ? 'inline-flex' : 'none';
+            document.getElementById('btnAgregarFila').style.display = (vista === 'activas' || vista === 'desarrollos') ? 'inline-flex' : 'none';
             // En Canceladas no tiene sentido volver a cancelar
             document.getElementById('btnBulkCancelar').style.display = vista === 'canceladas' ? 'none' : 'inline-flex';
             // Botones masivos según la pestaña
             document.getElementById('btnBulkProto').style.display = vista === 'activas' ? 'inline-flex' : 'none';
             // "Retornar a Activas" sirve tanto para Protos como para reactivar Canceladas
-            document.getElementById('btnBulkRetornar').style.display = (vista === 'protos' || vista === 'canceladas') ? 'inline-flex' : 'none';
+            document.getElementById('btnBulkRetornar').style.display = (vista === 'desarrollos' || vista === 'canceladas') ? 'inline-flex' : 'none';
             const selAll = document.getElementById('selectAll'); if (selAll) selAll.checked = false;
             // Mostrar u ocultar indicadores según la pestaña, sin cambiar la preferencia del usuario
             window.toggleIndicadores(localStorage.getItem('wips_kpi_visible') !== 'no');
@@ -1382,7 +1385,6 @@
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.trim().toLowerCase();
             const filas = document.getElementById('tableBody').children;
-            const indiceEstado = 44;
 
             const activos = [];
             document.querySelectorAll('.col-filter').forEach(input => {
@@ -1408,7 +1410,7 @@
                 const textos = fila._textos || window.cachearFila(fila);
                 let mostrar = true;
 
-                if (vistaDeEstado(textos[indiceEstado]) !== vistaActual) mostrar = false;
+                if (fila.dataset.pestana !== vistaActual) mostrar = false;
 
                 if (mostrar && cat !== 'todas' && fila.dataset.id) {
                     const genero = (textos[7] || '').toUpperCase();
@@ -1444,57 +1446,38 @@
             temporizadorFiltro = setTimeout(window.filtrarTablaCompleta, 180);
         };
 
-        window.cambiarEstadoFila = async function(btn, nuevoEstado) {
-            if(!confirm(nuevoEstado === 'CANCELADO' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
-            const tr = btn.closest('tr'); const celdas = tr.querySelectorAll('td');
-            const estadoAnterior = celdas[44].innerText;
+        // Mueve una fila de pestaña. Solo cambia la columna "pestana": el ESTADO que escribió el equipo no se toca.
+        function pintarBotonesFila(tr) {
             const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-            const pintarBotones = (estado) => {
-                if (estado === 'CANCELADO') { btnCancelar.classList.add('hidden'); btnReactivar.classList.remove('hidden'); }
-                else { btnCancelar.classList.remove('hidden'); btnReactivar.classList.add('hidden'); }
-            };
-            celdas[44].innerText = nuevoEstado; window.cachearFila(tr); pintarBotones(nuevoEstado);
+            const cancelada = tr.dataset.pestana === 'canceladas';
+            if (btnCancelar) btnCancelar.classList.toggle('hidden', cancelada);
+            if (btnReactivar) btnReactivar.classList.toggle('hidden', !cancelada);
+        }
+
+        window.cambiarEstadoFila = async function(btn, nuevaPestana) {
+            if (!PESTANAS.includes(nuevaPestana)) { registrarError('Pestaña desconocida', { nuevaPestana }); return; }
+            if(!confirm(nuevaPestana === 'canceladas' ? "¿Seguro que deseas CANCELAR esta muestra?" : "¿Deseas REACTIVAR esta muestra?")) return;
+            const tr = btn.closest('tr');
+            const pestanaAnterior = tr.dataset.pestana;
+            tr.dataset.pestana = nuevaPestana; pintarBotonesFila(tr);
 
             const idDb = tr.dataset.id;
             if(idDb) {
-                const datosFila = window.extraerDatosFila(tr);
                 try {
-                    const res = await supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb).select('id');
+                    const res = await supabase.from('wips_muestras').update({ pestana: nuevaPestana }).eq('id', idDb).select('id');
                     if (!resultadoOk(res)) throw (res.error || new Error('La muestra ya no existe en la base (pudo borrarla otra persona). Recarga la página.'));
-                    tr._hashGuardado = JSON.stringify(datosFila);
                 } catch (err) {
-                    registrarError('No se pudo cambiar el estado', { id: idDb, nuevoEstado, err });
-                    celdas[44].innerText = estadoAnterior; window.cachearFila(tr); pintarBotones(estadoAnterior);
-                    alert("No se pudo guardar el cambio de estado: " + err.message);
+                    registrarError('No se pudo cambiar la pestaña', { id: idDb, nuevaPestana, err });
+                    tr.dataset.pestana = pestanaAnterior; pintarBotonesFila(tr);
+                    alert("No se pudo mover la muestra: " + err.message);
                     return;
                 }
             }
             window.filtrarTablaCompleta(); window.calcularKPIs();
         };
 
-        window.cancelarSeleccionadas = async function() {
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            let rowsToUpdate = []; let promesasUpdate = [];
-            checkboxes.forEach(cb => { const tr = cb.closest('tr'); if(tr.style.display !== 'none') rowsToUpdate.push(tr); });
-
-            if (rowsToUpdate.length === 0) return;
-            if (!confirm(`¿Seguro que deseas CANCELAR ${textoMuestras(rowsToUpdate.length)}?`)) return;
-
-            for (let tr of rowsToUpdate) {
-                const celdas = tr.querySelectorAll('td'); celdas[44].innerText = 'CANCELADO'; 
-                const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-                if (btnCancelar) btnCancelar.classList.add('hidden'); if (btnReactivar) btnReactivar.classList.remove('hidden');
-
-                const idDb = tr.dataset.id;
-                if(idDb) {
-                    const datosFila = window.extraerDatosFila(tr);
-                    promesasUpdate.push({ tr, datosFila, promesa: supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', idDb).select('id') });
-                }
-                window.cachearFila(tr);
-            }
-            if (promesasUpdate.length > 0 && !(await confirmarGuardados(promesasUpdate, 'cancelar seleccionadas'))) return;
-            document.getElementById('selectAll').checked = false;
-            window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
+        window.cancelarSeleccionadas = function() {
+            return moverSeleccionadas('canceladas', '¿Seguro que deseas CANCELAR {n}?');
         };
 
         /**
@@ -1508,7 +1491,7 @@
             resultados.forEach((r, i) => {
                 const { tr, datosFila } = pendientes[i];
                 const res = r.status === 'fulfilled' ? r.value : { error: r.reason };
-                if (resultadoOk(res)) { tr._hashGuardado = JSON.stringify(datosFila); return; }
+                if (resultadoOk(res)) { if (datosFila) tr._hashGuardado = JSON.stringify(datosFila); return; }
                 fallidas++;
                 const msg = res.error ? res.error.message : 'la muestra ya no existe en la base';
                 if (!primerError) primerError = msg;
@@ -1522,8 +1505,10 @@
             return true;
         }
 
-        // Cambia el ESTADO de todas las filas seleccionadas y visibles, y lo guarda en Supabase
-        async function moverSeleccionadas(nuevoEstado, pregunta) {
+        // Mueve las filas seleccionadas y visibles a otra pestaña. Solo cambia la columna "pestana";
+        // el ESTADO que escribió el equipo se conserva intacto.
+        async function moverSeleccionadas(nuevaPestana, pregunta) {
+            if (!PESTANAS.includes(nuevaPestana)) { registrarError('Pestaña desconocida', { nuevaPestana }); return; }
             const filas = [];
             document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
                 const tr = cb.closest('tr'); if (tr.style.display !== 'none') filas.push(tr);
@@ -1531,32 +1516,41 @@
             if (filas.length === 0) return;
             if (!confirm(pregunta.replace('{n}', textoMuestras(filas.length)))) return;
 
-            const promesas = [];
+            const promesas = []; const anteriores = new Map();
             for (const tr of filas) {
-                const celdas = tr.querySelectorAll('td');
-                celdas[44].innerText = nuevoEstado;
-                const btnCancelar = tr.querySelector('.btn-cancelar-fila'); const btnReactivar = tr.querySelector('.btn-reactivar-fila');
-                if (btnCancelar) btnCancelar.classList.remove('hidden');
-                if (btnReactivar) btnReactivar.classList.add('hidden');
-
+                anteriores.set(tr, tr.dataset.pestana);
+                tr.dataset.pestana = nuevaPestana; pintarBotonesFila(tr);
                 if (tr.dataset.id) {
-                    const datosFila = window.extraerDatosFila(tr);
-                    promesas.push({ tr, datosFila, promesa: supabase.from('wips_muestras').update({ datos: datosFila }).eq('id', tr.dataset.id).select('id') });
+                    promesas.push({ tr, datosFila: null, promesa: supabase.from('wips_muestras').update({ pestana: nuevaPestana }).eq('id', tr.dataset.id).select('id') });
                 }
                 tr.querySelector('.row-checkbox').checked = false;
-                window.cachearFila(tr);
             }
-            if (promesas.length > 0 && !(await confirmarGuardados(promesas, `mover a ${nuevoEstado}`))) return;
+            if (promesas.length > 0) {
+                const resultados = await Promise.allSettled(promesas.map(p => p.promesa));
+                let fallidas = 0; let primerError = '';
+                resultados.forEach((r, i) => {
+                    const res = r.status === 'fulfilled' ? r.value : { error: r.reason };
+                    if (resultadoOk(res)) return;
+                    const tr = promesas[i].tr;
+                    fallidas++;
+                    const msg = res.error ? res.error.message : 'la muestra ya no existe en la base';
+                    if (!primerError) primerError = msg;
+                    registrarError(`Fallo al mover a ${nuevaPestana}`, { id: tr.dataset.id, error: res.error || msg });
+                    // Si la base no confirmó el movimiento, la fila vuelve a su pestaña: la pantalla nunca muestra algo que no se guardó
+                    tr.dataset.pestana = anteriores.get(tr); pintarBotonesFila(tr);
+                });
+                if (fallidas > 0) alert(`No se pudieron mover ${fallidas} de ${promesas.length} muestras (${primerError}). Se dejaron en su pestaña original.`);
+            }
             document.getElementById('selectAll').checked = false;
             window.filtrarTablaCompleta(); window.calcularKPIs(); window.actualizarSeleccion();
         }
 
         window.enviarSeleccionadasAProtos = function() {
-            return moverSeleccionadas(ESTADO_PROTO, '¿Enviar {n} a "Desarrollos"?');
+            return moverSeleccionadas('desarrollos', '¿Enviar {n} a "Desarrollos"?');
         };
 
         window.retornarSeleccionadasAActivas = function() {
-            return moverSeleccionadas('EN PROCESO', '¿Retornar {n} a "Muestras Activas"?');
+            return moverSeleccionadas('activas', '¿Retornar {n} a "Muestras Activas"?');
         };
 
         window.eliminarSeleccionadas = async function() {
@@ -1593,9 +1587,8 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-            // Las filas creadas en la pestaña Desarrollos nacen con su estado, para que se queden en esa pestaña
-            if (window.vistaActual === 'protos') { datosInic[43] = ESTADO_PROTO; }
-            const newTr = crearFilaHTML(null, datosInic);
+            // La fila nace en la pestaña donde se crea (Activas o Desarrollos); ESTADO queda libre para el equipo
+            const newTr = crearFilaHTML(null, datosInic, window.vistaActual === 'desarrollos' ? 'desarrollos' : 'activas');
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             document.getElementById('tableBody').appendChild(newTr);
             window.cachearFila(newTr);
@@ -1608,9 +1601,8 @@
             if (window.categoriaActiva === 'femenina') { datosInic[6] = 'WOMEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'masculina') { datosInic[6] = 'MEN'; datosInic[7] = 'PRENDAS'; }
             if (window.categoriaActiva === 'accesorios') { datosInic[7] = 'ACCESORIOS'; }
-            // Las filas creadas en la pestaña Desarrollos nacen con su estado, para que se queden en esa pestaña
-            if (window.vistaActual === 'protos') { datosInic[43] = ESTADO_PROTO; }
-            const newTr = crearFilaHTML(null, datosInic);
+            // La fila nace en la pestaña donde se crea (Activas o Desarrollos); ESTADO queda libre para el equipo
+            const newTr = crearFilaHTML(null, datosInic, window.vistaActual === 'desarrollos' ? 'desarrollos' : 'activas');
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
             const trActual = btn.closest('tr'); trActual.insertAdjacentElement('afterend', newTr);
             window.cachearFila(newTr);
@@ -1643,11 +1635,11 @@
                     filasActualizadasDOM.push(tr);
                 } 
                 else { 
-                    // No se guardan filas nuevas vacías (solo con el ESTADO puesto): así no aparecen
+                    // No se guardan filas nuevas vacías: así no aparecen
                     // muestras fantasma como "(SIN COLECCIÓN)" en los indicadores.
-                    const tieneContenido = datosFila.some((v, i) => i !== 43 && String(v ?? '').trim() !== '');
+                    const tieneContenido = datosFila.some(v => String(v ?? '').trim() !== '');
                     if (!tieneContenido) continue;
-                    registrosNuevos.push({ datos: datosFila }); 
+                    registrosNuevos.push({ datos: datosFila, pestana: pestanaValida(tr.dataset.pestana) }); 
                     filasNuevasDOM.push(tr); 
                 }
             }
@@ -1785,8 +1777,8 @@
                     const registrosParaSupabase = filasCSV.map(fila => {
                         let datosLimpios = fila.map(celda => String(celda).trim());
                         while(datosLimpios.length < 64) datosLimpios.push(""); 
-                        if (window.vistaActual === 'protos' && !datosLimpios[43]) datosLimpios[43] = ESTADO_PROTO;
-                        return { datos: datosLimpios.slice(0, 64) };
+                        // Las filas cargadas en Desarrollos quedan en Desarrollos; desde cualquier otra pestaña, en Activas
+                        return { datos: datosLimpios.slice(0, 64), pestana: window.vistaActual === 'desarrollos' ? 'desarrollos' : 'activas' };
                     }).filter(r => r.datos.join("").trim() !== ""); 
 
                     if(registrosParaSupabase.length === 0) { alert("Archivo vacío."); btn.innerHTML = textoOriginal; btn.disabled = false; document.getElementById('fileCSV').value = ""; return; }
