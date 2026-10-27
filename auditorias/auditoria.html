@@ -1002,6 +1002,7 @@ window.cargarExcelMedidas = async function(e) {
         const r = realesEscritas();
         if (r && !confirm('Ya hay ' + listaPrendas().length + ' prenda(s) con ' + r + ' medidas reales.\n¿Cambiar la tabla de medidas?\n\nLas medidas reales se conservan y se comparan contra los ideales del Excel nuevo.')) { e.target.value = ''; return; }
         await aplicarTabla(leido, { etiqueta: 'Archivo: ' + archivo.name, tablaId: null, version: null });
+        abrirGuardarComo(true);
     } catch (ex) {
         console.error(ex);
         if (aviso) { aviso.className = 'mensaje error'; aviso.textContent = 'No se pudo leer el Excel: ' + (ex.message || ex) + ' Usa la plantilla oficial (botón "Descargar plantilla") sin cambiar sus títulos.'; }
@@ -1062,16 +1063,16 @@ window.aplicarEditor = async function(guardarDespues) {
 };
 
 // ---------- Guardar como (en el banco) ----------
-window.abrirGuardarComo = function() {
+window.abrirGuardarComo = function(recienCargada) {
     const origen = tablaDelBanco(auditoria.tabla_medidas_id);
     const unicos = function(k) { return Array.from(new Set((bancoTablas || []).map(function(t) { return tituloTM(t[k]); }).filter(Boolean))).sort(); };
     const lista = function(id, k) { return '<datalist id="' + id + '">' + unicos(k).map(function(v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>'; };
     const val = function(k) { return origen ? esc(tituloTM(origen[k])) : ''; };
-    abrirVentana('💾 Guardar tabla en el banco',
+    abrirVentana(recienCargada === true ? '✓ Tabla cargada · ¿Guardarla en el banco?' : '💾 Guardar tabla en el banco',
         (origen ? '<div class="opciones-guardar">' +
             '<label class="op"><input type="radio" name="modoGuardar" value="nueva" checked onchange="cambiarModoGuardar()"> <span><b>Guardar como tabla nueva</b><small>Se crea otra tabla con el nombre que escribas. "' + esc(nombreTM(origen)) + '" queda igual.</small></span></label>' +
             '<label class="op"><input type="radio" name="modoGuardar" value="actualizar" onchange="cambiarModoGuardar()"> <span><b>Actualizar "' + esc(nombreTM(origen)) + '"</b><small>Reemplaza la tabla del banco y pasa a la versión ' + (origen.version + 1) + '. Las auditorías ya hechas no cambian.</small></span></label>' +
-        '</div>' : '<div style="font-size:12px; color:var(--texto-claro); margin-bottom:12px;">La tabla quedará en el banco para usarla en próximas auditorías.</div>') +
+        '</div>' : '<div style="font-size:13px; color:var(--texto-claro); margin-bottom:14px; line-height:1.5;">' + (recienCargada === true ? 'La tabla ya está en esta auditoría. Si la guardas en el banco, la podrás usar en próximas auditorías sin volver a subir el Excel.' : 'La tabla quedará en el banco para usarla en próximas auditorías.') + '</div>') +
         '<div class="rejilla-tm4">' +
             '<div><label>Línea</label><input id="gLinea" list="dlGLinea" value="' + val('linea') + '" placeholder="Ej: Crop top"></div>' +
             '<div><label>Género</label><input id="gGenero" list="dlGGenero" value="' + val('genero') + '" placeholder="Ej: Women"></div>' +
@@ -1079,7 +1080,7 @@ window.abrirGuardarComo = function() {
             '<div><label>Base textil</label><input id="gBase" list="dlGBase" value="' + val('base_textil') + '" placeholder="Ej: Rib"></div>' +
         '</div>' + lista('dlGLinea', 'linea') + lista('dlGGenero', 'genero') + lista('dlGSilueta', 'silueta') + lista('dlGBase', 'base_textil') +
         '<div class="mensaje" id="avisoGuardar" style="margin-top:12px;"></div>',
-        '<button class="btn" onclick="cerrarVentana()">Cancelar</button><button class="btn btn-oscuro" id="btnGuardarComo" onclick="guardarComo()">Guardar en el banco</button>');
+        '<button class="btn" onclick="cerrarVentana()">' + (recienCargada === true ? 'Ahora no' : 'Cancelar') + '</button><button class="btn btn-oscuro" id="btnGuardarComo" onclick="guardarComo()">Guardar en el banco</button>');
 };
 window.cambiarModoGuardar = function() {
     const act = document.querySelector('input[name="modoGuardar"]:checked').value === 'actualizar';
@@ -1149,13 +1150,17 @@ async function guardarMedidasBD() {
 
 // Paso 4
 function pasoDefectosYPruebas() {
-    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : '';
+    const cols = colores(); const autoColor = cols.length === 1 ? cols[0] : (cols.indexOf(colorDefecto) >= 0 ? colorDefecto : '');
     $('contenido').innerHTML = 
     '<div class="tarjeta">' +
         '<h2>4. Registro de Defectos Físicos</h2>' +
         '<div class="fila">' +
-            '<div><label>Severidad</label><select id="dSeveridad">' + SEVERIDADES.map(function(s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('') + '</select></div>' +
-            '<div><label>Defecto</label><input id="dDefecto" list="listaDefectos"><datalist id="listaDefectos">' + catalogo.map(function(c) { return '<option value="' + esc(c.nombre) + '">'; }).join('') + '</datalist></div>' +
+            '<div><label>Categoría de defecto</label><select id="dSeveridad" onchange="filtrarDefectos()">' +
+                '<option value="">Elegir categoría…</option>' +
+                SEVERIDADES.map(function(s) { return '<option value="' + s[0] + '"' + (s[0] === categoriaDefecto ? ' selected' : '') + '>' + ({ menor: 'Defectos menores', mayor: 'Defectos mayores', critico: 'Defectos críticos' })[s[0]] + '</option>'; }).join('') +
+            '</select></div>' +
+            '<div><label>Defecto</label><select id="dDefectoSel" onchange="cambiarDefectoSel()">' + opcionesDefecto(categoriaDefecto) + '</select>' +
+                '<input id="dDefecto" class="oculto" placeholder="Escribe el defecto" style="margin-top:8px;"></div>' +
         '</div>' +
         '<div class="fila">' +
             '<div><label>Color</label><select id="dColor">' + (cols.length!==1?'<option value="">Elegir...</option>':'') + cols.map(function(c) { return '<option ' + (c===autoColor?'selected':'') + '>' + esc(c) + '</option>'; }).join('') + '</select></div>' +
@@ -1195,8 +1200,35 @@ function pasoDefectosYPruebas() {
         '</div>' +
     '</div>';
 }
+// Lista de defectos según la categoría elegida (crítico, mayor o menor)
+let categoriaDefecto = '', colorDefecto = '';
+const severidadNorm = function(v) { return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+function opcionesDefecto(cat) {
+    if (!cat) return '<option value="">Primero elige la categoría</option>';
+    const deCat = catalogo.filter(function(c) { return severidadNorm(c.severidad) === cat; });
+    const sinCat = catalogo.filter(function(c) { return ['critico', 'mayor', 'menor'].indexOf(severidadNorm(c.severidad)) < 0; });
+    return '<option value="">Elegir defecto (' + deCat.length + ')…</option>' +
+        deCat.map(function(c) { return '<option value="' + esc(c.nombre) + '">' + esc(c.nombre) + '</option>'; }).join('') +
+        (sinCat.length ? '<optgroup label="Sin categoría en el catálogo">' + sinCat.map(function(c) { return '<option value="' + esc(c.nombre) + '">' + esc(c.nombre) + '</option>'; }).join('') + '</optgroup>' : '') +
+        '<option value="__otro">✏️ Otro (escribir)…</option>';
+}
+window.filtrarDefectos = function() {
+    categoriaDefecto = $('dSeveridad').value;
+    $('dDefectoSel').innerHTML = opcionesDefecto(categoriaDefecto);
+    cambiarDefectoSel();
+};
+window.cambiarDefectoSel = function() {
+    const otro = $('dDefectoSel').value === '__otro';
+    $('dDefecto').classList.toggle('oculto', !otro);
+    if (otro) $('dDefecto').focus(); else $('dDefecto').value = '';
+};
 window.agregarDefecto = function() {
-    const defecto = $('dDefecto').value.trim(); const color = $('dColor').value; const severidad = $('dSeveridad').value;
+    const severidad = $('dSeveridad').value;
+    const elegido = $('dDefectoSel').value;
+    const defecto = (elegido === '__otro' ? $('dDefecto').value : elegido).trim();
+    const color = $('dColor').value;
+    if (!severidad) return alert('Elige la categoría del defecto (menor, mayor o crítico).');
+    colorDefecto = color;
     if (!defecto || !color) return alert('Selecciona el defecto y el color.');
     let agregados = 0;
     document.querySelectorAll('.input-talla-defecto').forEach(function(input) {
