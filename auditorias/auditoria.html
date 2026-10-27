@@ -770,7 +770,7 @@ function pasoMedidas() {
 
     if (!matriz.length || eligiendoTabla) {
         html += '<label>Elegir una tabla del banco (línea · género · silueta · base textil)</label>' +
-            '<input type="search" id="bancoBuscar" placeholder="Buscar, ej: crop top women rib" oninput="filtrarBanco()">' +
+            '<input type="search" id="bancoBuscar" placeholder="Buscar, ej: T-shirt Men Regular Monastery" oninput="filtrarBanco()">' +
             '<div class="banco-lista" id="bancoLista">' + htmlListaBanco() + '</div>' +
             (eligiendoTabla && matriz.length ? '<button class="btn btn-chico" style="margin-top:12px;" onclick="cancelarCambioTabla()">Cancelar y seguir con la tabla actual</button>' : '') +
         '</div>' +
