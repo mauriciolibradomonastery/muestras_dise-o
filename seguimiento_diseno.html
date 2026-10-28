@@ -163,6 +163,18 @@
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; border-right: 1px solid #1d4ed8; }
             /* Punto en las pestañas que tienen filtros activos */
         .tab-btn.con-filtros::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: #f59e0b; vertical-align: middle; }
+            /* Soporte proforma con varios archivos */
+        .soportes-grid { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: 190px; margin: 0 auto; }
+        .soporte-item { position: relative; width: 40px; height: 40px; }
+        .soporte-img { width: 40px; height: 40px; border-radius: 4px; object-fit: contain; background: #fff; border: 1px solid #e5e7eb; cursor: zoom-in; }
+        .soporte-pdf { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 4px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; text-decoration: none; font-size: 15px; line-height: 1; }
+        .soporte-pdf span { font-size: 9px; font-weight: 700; margin-top: 2px; }
+        .soporte-quitar { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 10px; line-height: 16px; text-align: center; cursor: pointer; display: none; }
+        .soporte-item:hover .soporte-quitar { display: block; }
+        .soporte-mas { width: 40px; height: 40px; border: 1px dashed #9ca3af; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #4b5563; font-size: 18px; }
+        .soporte-mas:hover { background: #f3f4f6; }
+        .btn-soporte-agregar { background: #374151; color: white; padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; }
+        @media (hover: none) { .soporte-quitar { display: block; } }
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
@@ -1081,6 +1093,127 @@
             document.querySelectorAll('datalist').forEach(d => d.innerHTML = '');   
         };
 
+        /* ===================== SOPORTE PROFORMA: varios archivos por muestra =====================
+         * La celda guarda una lista de URLs como texto JSON: ["https://…/a.jpg","https://…/b.pdf"].
+         * Compatibilidad: si la celda tiene el formato antiguo (una sola URL), se lee como lista de 1.
+         */
+        const MAX_SOPORTES = 10;
+        const MAX_MB_PDF = 20;
+
+        function esPdf(url) { return /\.pdf($|\?)/i.test(url) || url.startsWith('data:application/pdf'); }
+        function esUrlValida(v) { return typeof v === 'string' && (v.startsWith('http') || v.startsWith('data:')); }
+
+        // Convierte el valor guardado en una lista de URLs, tolerando el formato antiguo y datos dañados
+        function leerSoportes(valor) {
+            const v = String(valor ?? '').trim();
+            if (v === '') return [];
+            if (v.startsWith('[')) {
+                try {
+                    const lista = JSON.parse(v);
+                    return Array.isArray(lista) ? lista.filter(esUrlValida) : [];
+                } catch (err) {
+                    registrarError('Soporte proforma con formato inválido', { valor: v.slice(0, 120), err });
+                    return [];
+                }
+            }
+            return esUrlValida(v) ? [v] : [];
+        }
+
+        function escribirSoportes(lista) { return lista.length === 0 ? '' : JSON.stringify(lista); }
+
+        function soportesDeCelda(td) {
+            try { return JSON.parse(td.dataset.soportes || '[]'); }
+            catch (err) { registrarError('Estado de soportes ilegible en la celda', err); return []; }
+        }
+
+        const escaparAttr = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+        function pintarSoportes(td, lista) {
+            td.dataset.soportes = JSON.stringify(lista);
+            const items = lista.map((url, i) => {
+                const u = escaparAttr(url);
+                const vista = esPdf(url)
+                    ? `<a href="${u}" target="_blank" rel="noopener" class="soporte-pdf" title="Abrir PDF">📄<span>PDF</span></a>`
+                    : `<img src="${PIXEL_VACIO}" data-src="${u}" class="soporte-img" onclick="abrirModalImagen(this.dataset.src || this.src, event)" title="Clic para ampliar">`;
+                return `<div class="soporte-item">${vista}<span class="soporte-quitar" title="Quitar este soporte" onclick="window.quitarSoporte(this.closest('td'), ${i})">✕</span></div>`;
+            }).join('');
+            const puedeAgregar = lista.length < MAX_SOPORTES;
+            const boton = lista.length === 0
+                ? `<button class="btn-soporte-agregar" onclick="window.agregarSoportes(this.closest('td'))">📎 Agregar</button>`
+                : (puedeAgregar ? `<span class="soporte-mas" title="Agregar más fotos o PDF" onclick="window.agregarSoportes(this.closest('td'))">＋</span>` : '');
+            td.innerHTML = lista.length === 0 ? boton : `<div class="soportes-grid">${items}${boton}</div>`;
+            observarFotos(td);
+        }
+
+        // Reduce una foto a máximo 800 px de ancho (JPG) antes de subirla, igual que la columna IMAGEN
+        function comprimirImagen(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`No se pudo leer ${file.name}`));
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error(`${file.name} no es una imagen válida`));
+                    img.onload = () => {
+                        const escala = img.width > 800 ? 800 / img.width : 1;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width * escala; canvas.height = img.height * escala;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(b => b ? resolve(b) : reject(new Error(`No se pudo procesar ${file.name}`)), 'image/jpeg', 0.85);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.agregarSoportes = function(td) {
+            const input = document.createElement('input');
+            input.type = 'file'; input.multiple = true; input.accept = 'image/*,application/pdf';
+            input.onchange = async function(e) {
+                const archivos = Array.from(e.target.files || []);
+                if (archivos.length === 0) return;
+                const actuales = soportesDeCelda(td);
+                const cupo = MAX_SOPORTES - actuales.length;
+                if (archivos.length > cupo) {
+                    alert(`Cada muestra admite hasta ${MAX_SOPORTES} soportes. Puedes agregar ${cupo} más.`);
+                    return;
+                }
+                const nuevos = []; const fallos = [];
+                for (let k = 0; k < archivos.length; k++) {
+                    const file = archivos[k];
+                    td.innerHTML = `<span style="font-size:11px; color:#6b7280;">⏳ Subiendo ${k + 1} de ${archivos.length}…</span>`;
+                    try {
+                        if (file.type === 'application/pdf') {
+                            if (file.size > MAX_MB_PDF * 1024 * 1024) throw new Error(`pesa más de ${MAX_MB_PDF} MB`);
+                            nuevos.push(await subirArchivo(file, 'pdf', 'application/pdf'));
+                        } else if (file.type.startsWith('image/')) {
+                            nuevos.push(await subirArchivo(await comprimirImagen(file), 'jpg', 'image/jpeg'));
+                        } else {
+                            throw new Error('solo se permiten fotos o PDF');
+                        }
+                    } catch (err) {
+                        registrarError('No se pudo subir un soporte', { archivo: file.name, err });
+                        fallos.push(`${file.name}: ${err.message}`);
+                    }
+                }
+                // Lo que sí subió se conserva aunque otro archivo haya fallado
+                pintarSoportes(td, actuales.concat(nuevos));
+                if (nuevos.length > 0) { window.cachearFila(td.closest('tr')); window.marcarCambios(); }
+                if (fallos.length > 0) alert(`No se pudieron subir ${fallos.length} archivo(s):\n` + fallos.join('\n'));
+            };
+            input.click();
+        };
+
+        window.quitarSoporte = function(td, indice) {
+            const lista = soportesDeCelda(td);
+            if (indice < 0 || indice >= lista.length) return;
+            if (!confirm('¿Quitar este soporte de la muestra?')) return;
+            lista.splice(indice, 1);
+            pintarSoportes(td, lista);
+            window.cachearFila(td.closest('tr'));
+            window.marcarCambios();
+        };
+
         window.seleccionarImagenCelda = function(td) {
             const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
             input.onchange = function(e) {
@@ -1162,7 +1295,9 @@
             for(let i = 1; i < celdas.length - 1; i++) { 
                 let indexGlobal = i - 1; let colName = allCols[indexGlobal].toUpperCase();
                 
-                if (colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') { 
+                if (colName === 'SOPORTE PROFORMA (IMAGEN)') {
+                    datosFila.push(escribirSoportes(soportesDeCelda(celdas[i])));
+                } else if (colName === 'IMAGEN') { 
                     const img = celdas[i].querySelector('img'); datosFila.push(img ? (img.dataset.src || img.src) : "");
                 } else if (colName === 'FICHA TECNICA') { 
                     const link = celdas[i].querySelector('a.ficha-link'); datosFila.push(link ? link.href : "");
@@ -1204,7 +1339,10 @@
                 
                 const valorRaw = datos[indexGlobal] || '';
 
-                if(colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') { 
+                if (colName === 'SOPORTE PROFORMA (IMAGEN)') {
+                    td.contentEditable = "false"; td.style.textAlign = "center"; td.style.verticalAlign = "middle";
+                    pintarSoportes(td, leerSoportes(valorRaw));
+                } else if(colName === 'IMAGEN') { 
                     td.contentEditable = "false"; td.style.textAlign = "center"; td.style.verticalAlign = "middle";
                     if(valorRaw.startsWith('data:image') || valorRaw.startsWith('http')) {
                         td.innerHTML = `
@@ -1796,7 +1934,12 @@
                     let filaData = window.extraerDatosFila(fila);
                     for(let i = 0; i < filaData.length; i++) { 
                         let colName = allCols[i].toUpperCase();
-                        if((colName === 'IMAGEN' || colName === 'SOPORTE PROFORMA (IMAGEN)') && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) {
+                        if (colName === 'SOPORTE PROFORMA (IMAGEN)') {
+                            const n = leerSoportes(filaData[i]).length;
+                            filaData[i] = n === 0 ? '' : `📎 ${n} ${n === 1 ? 'soporte' : 'soportes'}`;
+                            continue;
+                        }
+                        if(colName === 'IMAGEN' && (filaData[i].startsWith('data:image') || filaData[i].startsWith('http'))) {
                             filaData[i] = "🖼️ Imagen Cargada";
                         }
                         if(colName === 'FICHA TECNICA' && (filaData[i].startsWith('data:application/pdf') || filaData[i].startsWith('http'))) {
