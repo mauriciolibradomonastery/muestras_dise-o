@@ -161,6 +161,8 @@
         /* Alerta de costeo: va en ::after para que NO forme parte del texto que se guarda */
         td[data-alerta]::after { content: ' ⚠️'; cursor: help; }
         .resizer:hover, .resizer.resizing { background-color: #3b82f6; border-right: 1px solid #1d4ed8; }
+            /* Punto en las pestañas que tienen filtros activos */
+        .tab-btn.con-filtros::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: #f59e0b; vertical-align: middle; }
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
@@ -1336,7 +1338,50 @@
                 </tr>`;
         };
 
+        // Cada pestaña recuerda sus propios filtros (búsqueda global + filtros por columna),
+        // igual que cada hoja de Excel tiene los suyos. Viven en memoria: se pierden al recargar, como antes.
+        const filtrosPorPestana = { activas: null, canceladas: null, desarrollos: null };
+        const BOTON_DE_PESTANA = { activas: 'tabActivas', canceladas: 'tabCanceladas', desarrollos: 'tabProtos' };
+
+        function leerFiltrosEnPantalla() {
+            const columnas = {};
+            document.querySelectorAll('.col-filter').forEach(input => {
+                if (input.value.trim() !== '') columnas[input.getAttribute('data-colindex')] = input.value;
+            });
+            return { global: document.getElementById('inputBusquedaGlobal').value, columnas };
+        }
+
+        function aplicarFiltrosEnPantalla(filtros) {
+            const f = filtros || { global: '', columnas: {} };
+            document.getElementById('inputBusquedaGlobal').value = f.global || '';
+            document.querySelectorAll('.col-filter').forEach(input => {
+                input.value = f.columnas[input.getAttribute('data-colindex')] ?? '';
+            });
+        }
+
+        function tieneFiltros(filtros) {
+            return !!filtros && (filtros.global.trim() !== '' || Object.keys(filtros.columnas).length > 0);
+        }
+
+        // Marca con un punto las pestañas que tienen filtros activos, para que nadie piense que "no hay datos"
+        function marcarPestanasConFiltro() {
+            for (const [pestana, idBoton] of Object.entries(BOTON_DE_PESTANA)) {
+                const filtros = pestana === window.vistaActual ? leerFiltrosEnPantalla() : filtrosPorPestana[pestana];
+                const boton = document.getElementById(idBoton);
+                if (boton) {
+                    boton.classList.toggle('con-filtros', tieneFiltros(filtros));
+                    boton.title = tieneFiltros(filtros) ? 'Esta pestaña tiene filtros activos' : '';
+                }
+            }
+        }
+
         window.cambiarVista = function(vista) {
+            if (!(vista in filtrosPorPestana)) { registrarError('Pestaña desconocida', { vista }); return; }
+            if (vista !== window.vistaActual) {
+                filtrosPorPestana[window.vistaActual] = leerFiltrosEnPantalla();
+                aplicarFiltrosEnPantalla(filtrosPorPestana[vista]);
+                window.actualizarDatalists();   // las sugerencias de los filtros se recalculan con los datos de la nueva pestaña
+            }
             window.vistaActual = vista;
             document.getElementById('tabActivas').classList.toggle('activa', vista === 'activas');
             document.getElementById('tabCanceladas').classList.toggle('activa', vista === 'canceladas');
@@ -1383,6 +1428,7 @@
         };
 
         window.filtrarTablaCompleta = function() {
+            marcarPestanasConFiltro();
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.trim().toLowerCase();
             const filas = document.getElementById('tableBody').children;
 
