@@ -460,12 +460,17 @@ const claveNivel = 'aqlNivel_' + idAuditoria;
 let nivelInspeccion = AQL_NIVEL_DEFECTO;
 try { nivelInspeccion = localStorage.getItem(claveNivel) || AQL_NIVEL_DEFECTO; } catch (e) {}
 
+// Solo sube al inicio cuando se cambia de paso; si se sigue en el mismo paso, la página se queda donde estaba
+let ultimoPasoPintado = null;
 function pintar() {
+    const yAntes = window.scrollY, cambioDePaso = paso !== ultimoPasoPintado;
     $('pasos').innerHTML = [1,2,3,4,5].map(function(p) { return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>'; }).join('');
     $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
     $('btnSiguiente').textContent = paso === 5 ? 'Finalizar auditoría' : 'Siguiente';
     ({ 1: pasoLote, 2: pasoMuestraAQL, 3: pasoMedidas, 4: pasoDefectosYPruebas, 5: pasoCierre })[paso]();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (cambioDePaso) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo(0, yAntes);
+    ultimoPasoPintado = paso;
 }
 
 // Paso 1

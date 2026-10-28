@@ -333,12 +333,17 @@ function medidasAPrendas(filas) {
 const prendaCumple = function(p) { return Object.values(p.medidas).every(function(m) { return m.cumple; }); };
 
 // ================= NAVEGACIÓN =================
+// Solo sube al inicio cuando se cambia de paso; si se sigue en el mismo paso, la página se queda donde estaba
+let ultimoPasoPintado = null;
 function pintar() {
+    const yAntes = window.scrollY, cambioDePaso = paso !== ultimoPasoPintado;
     $('pasos').innerHTML = [1,2,3].map(function(p) { return '<div class="paso-punto ' + (p === paso ? 'activo' : p < paso ? 'hecho' : '') + '"></div>'; }).join('');
     $('btnAtras').style.visibility = paso === 1 ? 'hidden' : 'visible';
     $('btnSiguiente').textContent = paso === TOTAL_PASOS ? 'Finalizar revisión' : 'Siguiente';
     ({ 1: pasoLote, 2: pasoValidaciones, 3: pasoResultado })[paso]();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (cambioDePaso) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo(0, yAntes);
+    ultimoPasoPintado = paso;
 }
 
 // ================= PASO 1: INFORMACIÓN DEL LOTE + MUESTRA 3% =================
