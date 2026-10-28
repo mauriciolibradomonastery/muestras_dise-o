@@ -493,7 +493,8 @@ function htmlResultadoDefectos(det, defs, plan) {
         const sev = ['critico', 'mayor', 'menor'].includes(d.severidad) ? d.severidad : 'menor';
         const nombre = String(d.defecto || 'No especificado').trim();
         const k = sev + '|' + nombre.toLowerCase();
-        grupos[k] = grupos[k] || { nombre, sev, cant: 0, detalle: {} };
+        grupos[k] = grupos[k] || { nombre, sev, cant: 0, detalle: {}, familia: '' };
+        if (d.familia && !grupos[k].familia) grupos[k].familia = d.familia;
         grupos[k].cant += Number(d.cantidad) || 0;
         const ct = [d.color, d.talla].filter(Boolean).join(' / ');
         if (ct) grupos[k].detalle[ct] = (grupos[k].detalle[ct] || 0) + (Number(d.cantidad) || 0);
@@ -522,7 +523,7 @@ function htmlResultadoDefectos(det, defs, plan) {
         filas.forEach((f, i) => {
             const det2 = Object.entries(f.detalle).map(([k, v]) => `${esc(k)} (${fmtN(v)})`).join(' · ');
             html += `<tr><td class="centro">B${i + 1}</td><td>${ref}</td>
-                <td>${esc(f.nombre.charAt(0).toUpperCase() + f.nombre.slice(1))}${det2 ? `<span class="det-defecto">${det2}</span>` : ''}</td>
+                <td>${esc(f.nombre.charAt(0).toUpperCase() + f.nombre.slice(1))}${f.familia || det2 ? `<span class="det-defecto">${f.familia ? 'Familia: ' + esc(f.familia) + (det2 ? ' · ' : '') : ''}${det2}</span>` : ''}</td>
                 ${sevs.map(sv => `<td class="centro">${f.sev === sv ? fmtN(f.cant) : ''}</td>`).join('')}</tr>`;
         });
     } else {
