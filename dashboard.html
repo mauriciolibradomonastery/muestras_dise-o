@@ -103,6 +103,7 @@
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
+    <script src="utilidades.js"></script>
 </head>
 <body>
 
@@ -346,7 +347,16 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
-        client.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTabla(); }).subscribe();
+        // Capa 1: las recargas se agrupan para no descargar la tabla una vez por cada fila modificada.
+        const logPrendas = crearLogger('dashboard/prendas');
+        const recargarTabla = crearRecargaAgrupada(cargarTabla, { log: logPrendas });
+
+        client.channel('cambios-prendas')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => recargarTabla('evento Realtime'))
+            .subscribe((estado, err) => {
+                if (err) logPrendas.error('Error en la suscripción Realtime', err);
+                else logPrendas.info(`Realtime: ${estado}`);
+            });
 
         function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
@@ -521,7 +531,7 @@
 
                 alert(`✅ Se eliminaron con éxito los ${seleccionados.length} registros.`);
                 document.getElementById('check-all').checked = false;
-                cargarTabla();
+                recargarTabla('eliminación');
                 actualizarContadorBorrar();
             } catch (err) { 
                 console.error("Error al borrar:", err); 
@@ -561,7 +571,7 @@
             if (error) throw error;
             
             alert("✅ Salida registrada exitosamente.\n\nLa prenda se ha movido al historial de Bajas/Salidas.");
-            cerrarModalSalida(); cargarTabla(); 
+            cerrarModalSalida(); recargarTabla('registro de salida'); 
             btn.textContent = "📤 Confirmar"; btn.disabled = false;
         }
 
@@ -692,7 +702,7 @@
                 if (fechaSalidaRevisada !== "") { alert("✅ Prenda actualizada.\n\nComo le asignaste una 'Fecha de Salida', esta prenda se ha movido al Historial de Salidas."); } 
                 else { alert("✅ Información actualizada correctamente."); }
                 
-                window.cerrarModalEditar(); cargarTabla();
+                window.cerrarModalEditar(); recargarTabla('edición');
             } catch(e) { alert("❌ Error al guardar."); console.error(e); } 
             finally { btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; }
         }
@@ -777,14 +787,14 @@
                         
                         const { error } = await client.from('prendas').insert(registrosInsertar);
                         if (error) throw error;
-                        alert("✅ Importación exitosa."); cargarTabla();
+                        alert("✅ Importación exitosa."); recargarTabla('importación');
                     }
                 } catch (error) { console.error("Error importando Excel:", error); alert("❌ Error al importar: " + error.message); }
                 finally { e.target.value = ""; document.getElementById('mensajeCarga').style.display = "none"; }
             }; reader.readAsArrayBuffer(file);
         });
 
-        document.addEventListener("DOMContentLoaded", cargarTabla);
+        document.addEventListener("DOMContentLoaded", () => recargarTabla('carga inicial', { inmediato: true }));
     </script>
 </body>
 </html>

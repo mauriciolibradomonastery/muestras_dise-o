@@ -103,6 +103,7 @@
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
+    <script src="utilidades.js"></script>
 </head>
 <body>
 
@@ -228,7 +229,7 @@
                         <option value="SALIDA DEL INVENTARIO">SALIDA DEL INVENTARIO</option>
                         <option value="PARA FOTOS">PARA FOTOS</option>
                         <option value="PARA MERCADEO">PARA MERCADEO</option>
-                        <option value="PARA MERCADEO">PRESTAMO PROVEEDOR</option>
+                        <option value="PRESTAMO A PROVEEDOR">PRESTAMO A PROVEEDOR</option>
                         <option value="PARA COMERCIAL">PARA COMERCIAL</option>
                         <option value="OBSEQUIO">OBSEQUIO</option>
                         <option value="DEVOLUCION A PROVEEDOR">DEVOLUCION A PROVEEDOR</option>
@@ -307,7 +308,16 @@
         window.cerrarSesion = async function() { await client.auth.signOut(); window.location.href = "index.html"; }
         verificarSesion();
 
-        client.channel('cambios-prendas').on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => { cargarTablaSalidas(); }).subscribe();
+        // Capa 1: las recargas se agrupan para no descargar la tabla una vez por cada fila modificada.
+        const logSalidas = crearLogger('salidas/prendas');
+        const recargarTablaSalidas = crearRecargaAgrupada(cargarTablaSalidas, { log: logSalidas });
+
+        client.channel('cambios-prendas')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => recargarTablaSalidas('evento Realtime'))
+            .subscribe((estado, err) => {
+                if (err) logSalidas.error('Error en la suscripción Realtime', err);
+                else logSalidas.info(`Realtime: ${estado}`);
+            });
 
         function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {
@@ -413,7 +423,7 @@
                 }
                 
                 alert("¡Acción realizada! La prenda regresó al Dashboard (Bodega). 🟢");
-                cargarTablaSalidas();
+                recargarTablaSalidas('retorno a inventario');
             }
         }
 
@@ -498,7 +508,7 @@
 
                 alert(`✅ Se eliminaron con éxito los ${seleccionados.length} registros.`);
                 document.getElementById('check-all').checked = false;
-                cargarTablaSalidas();
+                recargarTablaSalidas('eliminación');
                 actualizarContadorBorrar();
             } catch (err) { 
                 console.error("Error al borrar:", err); 
@@ -645,7 +655,7 @@
                     alert("✅ Información actualizada correctamente.");
                 }
 
-                cerrarModal('modal-edicion'); cargarTablaSalidas();
+                cerrarModal('modal-edicion'); recargarTablaSalidas('edición');
             } catch (err) { alert("❌ Error al guardar."); console.error(err);
             } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
         }
@@ -727,14 +737,14 @@
                         
                         const { error } = await client.from('prendas').insert(registrosInsertar);
                         if (error) throw error;
-                        alert("✅ Importación exitosa."); cargarTablaSalidas();
+                        alert("✅ Importación exitosa."); recargarTablaSalidas('importación');
                     }
                 } catch (error) { console.error("Error importando:", error); alert("❌ Error al importar: " + error.message); }
                 finally { e.target.value = ""; document.getElementById('mensajeCarga').style.display = "none"; }
             }; reader.readAsArrayBuffer(file);
         });
 
-        document.addEventListener("DOMContentLoaded", cargarTablaSalidas);
+        document.addEventListener("DOMContentLoaded", () => recargarTablaSalidas('carga inicial', { inmediato: true }));
     </script>
 </body>
 </html>
