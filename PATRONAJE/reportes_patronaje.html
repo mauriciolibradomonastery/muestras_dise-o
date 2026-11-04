@@ -112,6 +112,13 @@
             border: none; background: rgba(255,255,255,.12); color: var(--hueso); width: 22px; height: 22px;
             border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1;
         }
+        .interruptor { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; color: var(--hueso-suave); cursor: pointer; user-select: none; }
+        .interruptor input { appearance: none; -webkit-appearance: none; width: 38px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid var(--linea); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+        .interruptor input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--hueso); transition: transform .2s; }
+        .interruptor input:checked { background: var(--laton); border-color: var(--laton); }
+        .interruptor input:checked::after { transform: translateX(16px); }
+        .interruptor input:focus-visible { outline: 2px solid var(--laton); outline-offset: 2px; }
+        .aviso-historico { font-size: 13px; color: var(--hueso-tenue); margin-top: 4px; }
         .segmento { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--vidrio); border: 1px solid var(--linea); }
         .segmento button {
             font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--hueso-suave);
@@ -248,6 +255,9 @@
         <div class="fila-control">
             <div class="chips" id="chips"></div>
             <div class="acciones">
+                <label class="interruptor" title="Muestras anteriores a agosto de 2026, cargadas solo para reportes">
+                    <input type="checkbox" id="chkHistorico" checked> Incluir histórico
+                </label>
                 <div class="segmento" role="group" aria-label="Contar por">
                     <button type="button" data-modo="unidades" class="activo">Unidades</button>
                     <button type="button" data-modo="muestras">Muestras</button>
@@ -256,7 +266,26 @@
             </div>
         </div>
 
+        <div class="aviso-historico" id="avisoHistorico"></div>
+
         <section class="kpis" id="kpis" aria-label="Indicadores principales"></section>
+
+        <section class="seccion">
+            <h2>Unidades</h2>
+            <p>Suma de la columna Cantidad, sin importar el selector de unidades o muestras. Haz clic en un mes o en una colección para filtrar el reporte.</p>
+            <div class="grilla">
+                <article class="tarjeta">
+                    <h3>Unidades por mes</h3>
+                    <div class="ayuda">Según la fecha de ingreso. El histórico se muestra en gris</div>
+                    <div class="lienzo alto"><canvas id="gUnidadesMes"></canvas></div>
+                </article>
+                <article class="tarjeta">
+                    <h3>Unidades por colección</h3>
+                    <div class="ayuda">Las 15 colecciones con más unidades</div>
+                    <div class="lienzo alto"><canvas id="gColecciones"></canvas></div>
+                </article>
+            </div>
+        </section>
 
         <section class="seccion">
             <h2>Ingresos y estado</h2>
@@ -354,7 +383,8 @@
         <p class="nota">
             Cómo se calcula: el estado se deduce de las fechas igual que en la tabla (medición = modelado, fecha de entrega de auditoría = asignado, fecha final = finalizado).
             En modo Unidades se suma la columna Cantidad; las filas sin cantidad cuentan como 1. Los promedios de lead time son por muestra.
-            "Lead time auditoría" va de la medición a la entrega de auditoría. Las segundas rondas son precintos que aparecen más de una vez, sin contar "SIN PRECINTO".
+            "Lead time auditoría" va de la medición a la entrega de auditoría.
+            El histórico son muestras anteriores a agosto de 2026 guardadas en una tabla aparte: aparecen en los reportes pero no en la tabla de trabajo; las que no tienen fecha final figuran con estado "Histórico" y no cuentan como abiertas. Las segundas rondas son precintos que aparecen más de una vez, sin contar "SIN PRECINTO".
         </p>
     </main>
 
@@ -370,8 +400,11 @@
         const C = {
             hueso: '#F6F1E7', laton: '#E8B75A', turquesa: '#3FD0C9', lavanda: '#A99BFF', coral: '#FF7A6B', ambar: '#F4B740', gris: '#8E8AA8',
         };
-        const COLOR_ESTADO = { Pendiente: C.coral, Modelado: C.ambar, Asignado: C.lavanda, Finalizado: C.turquesa };
-        const ESTADOS = ['Pendiente', 'Modelado', 'Asignado', 'Finalizado'];
+        const COLOR_ESTADO = { Pendiente: C.coral, Modelado: C.ambar, Asignado: C.lavanda, Finalizado: C.turquesa, 'Histórico': C.gris };
+        const ESTADOS = ['Pendiente', 'Modelado', 'Asignado', 'Finalizado', 'Histórico'];
+        const ABIERTOS = ['Pendiente', 'Modelado', 'Asignado'];
+        // El histórico solo cubre lo anterior a esta fecha; desde aquí manda la tabla de trabajo (evita contar doble)
+        const CORTE_HISTORICO = '2026-08-01';
         const PALETA_SERIES = [C.turquesa, C.laton, C.lavanda, C.coral, '#7FB2FF', '#F59BD0', C.gris];
 
         const alfa = (hex, a) => {
@@ -400,21 +433,44 @@
         const nombreMesLargo = clave => { const [a, m] = clave.split('-'); return `${MESES_LARGOS[+m - 1]} de ${a}`; };
 
         // ================== NORMALIZACIÓN DE CADA FILA ==================
-        const etiqueta = (v, vacio) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase(); return t || vacio; };
-        const soloFecha = v => { const m = /^\d{4}-\d{2}-\d{2}/.exec(String(v ?? '').trim()); return m ? m[0] : ''; };
+        // Unifica nombres escritos distinto: mayúsculas, sin tildes (conserva la Ñ), espacios simples y sin espacios alrededor de "/"
+        // Así "360/Panamá", "360 / PANAMA" y "360/PANAMA" cuentan como el mismo proveedor
+        const unificar = t => String(t ?? '')
+            .replace(/Ñ/g, '\u0000').replace(/ñ/g, '\u0001')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/\u0000/g, 'Ñ').replace(/\u0001/g, 'Ñ')
+            .toUpperCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+        const etiqueta = (v, vacio) => { const t = unificar(v); return (t && t !== '0') ? t : unificar(vacio); };
+        // Acepta 2026-07-15, 15/07/2026, 15-07-2026 y números de fecha de Excel (ej. 46218)
+        function soloFecha(v) {
+            const t = String(v ?? '').trim();
+            let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+            if (m) return m[0];
+            m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(t);
+            if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+            if (/^\d{5}$/.test(t)) {
+                const d = new Date(1899, 11, 30 + Number(t));
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            return '';
+        }
         const leerCantidad = v => { const m = /\d+(?:[.,]\d+)?/.exec(String(v ?? '')); const n = m ? parseFloat(m[0].replace(',', '.')) : NaN; return n > 0 ? n : 1; };
 
-        function normalizar(fila) {
+        function normalizar(fila, origen = 'sistema') {
             const d = Array.isArray(fila.datos) ? fila.datos : [];
             const ingreso = soloFecha(d[1]), medicion = soloFecha(d[15]), entregaAud = soloFecha(d[16]), final = soloFecha(d[25]);
             let estado = 'Pendiente';
             if (medicion) estado = 'Modelado';
             if (entregaAud) estado = 'Asignado';
             if (final) estado = 'Finalizado';
+            // Una muestra histórica sin fecha final no está "abierta": simplemente no se registró ese dato
+            if (origen === 'historico' && !final) estado = 'Histórico';
+            const esHistorico = origen === 'historico';
             const res = String(d[21] ?? '').trim().toLowerCase();
             const resultado = res === 'cumple' ? 'Aprobada' : res === 'no cumple' ? 'Rechazada' : res ? 'Otro' : 'Sin resultado';
             return {
                 id: fila.id,
+                origen,
                 precinto: etiqueta(d[7], ''),
                 referencia: String(d[8] ?? '').trim(),
                 ingreso, medicion, entregaAud, final, estado, resultado,
@@ -431,13 +487,21 @@
                 ltIngresoMedicion: ingreso && medicion ? diasHabiles(ingreso, medicion) : null,
                 ltMedicionAud: medicion && entregaAud ? diasHabiles(medicion, entregaAud) : null,
                 ltAudFinal: entregaAud && final ? diasHabiles(entregaAud, final) : null,
-                edad: !final && ingreso ? diasHabiles(ingreso, hoyISO) : null,
+                edad: !final && ingreso && !esHistorico ? diasHabiles(ingreso, hoyISO) : null,
             };
         }
+
+        const COLUMNAS_HISTORICO = {
+            1: 'fecha_ingreso', 2: 'disenador', 3: 'genero', 4: 'proveedor', 5: 'pais', 6: 'coleccion', 7: 'precinto', 8: 'referencia',
+            9: 'talla', 10: 'tipo_muestra', 11: 'color', 12: 'cantidad', 13: 'descripcion', 15: 'fecha_medicion', 16: 'fecha_entrega_auditoria',
+            17: 'auditora', 21: 'resultado', 22: 'motivo_1', 23: 'motivo_2', 24: 'motivo_3', 25: 'fecha_final', 28: 'tipo',
+        };
+        const historicoADatos = h => { const d = new Array(30).fill(''); for (const [i, col] of Object.entries(COLUMNAS_HISTORICO)) d[i] = h[col] ?? ''; return d; };
 
         // ================== ESTADO DEL REPORTE ==================
         let filas = [];
         let modo = 'unidades';
+        let incluirHistorico = true;
         let metaLeadTime = Number(localStorage.getItem('reportes_meta_lt')) || 10;
         const FILTROS_VACIOS = { proveedor: '', coleccion: '', auditora: '', tipoMuestra: '', resultado: '', ingresoDesde: '', ingresoHasta: '', finalDesde: '', finalHasta: '', mes: '', estado: '' };
         const filtros = { ...FILTROS_VACIOS };
@@ -454,6 +518,7 @@
         function filtrar(excepto) {
             const f = filtros;
             return filas.filter(r => {
+                if (!incluirHistorico && r.origen === 'historico') return false;
                 for (const k of ['proveedor', 'coleccion', 'auditora', 'tipoMuestra', 'resultado', 'estado']) {
                     if (k !== excepto && f[k] && r[k] !== f[k]) return false;
                 }
@@ -490,7 +555,31 @@
                     todas = todas.concat(data || []);
                     if (!data || data.length < paso) break;
                 }
-                filas = todas.map(normalizar);
+                filas = todas.map(f => normalizar(f, 'sistema'));
+
+                // Histórico: tabla aparte, solo lectura. Si falla, el reporte sigue con los datos del sistema
+                const aviso = document.getElementById('avisoHistorico');
+                try {
+                    let historico = [];
+                    for (let desde = 0; ; desde += paso) {
+                        document.getElementById('textoCarga').textContent = `Cargando histórico… ${historico.length}`;
+                        const { data, error } = await client.from('dpto_tecnico_historico').select('*').order('id').range(desde, desde + paso - 1);
+                        if (error) throw error;
+                        historico = historico.concat(data || []);
+                        if (!data || data.length < paso) break;
+                    }
+                    const normalizadas = historico.map(h => normalizar({ id: 'h-' + h.id, datos: historicoADatos(h) }, 'historico'));
+                    const validas = normalizadas.filter(r => r.ingreso && r.ingreso < CORTE_HISTORICO);
+                    const descartadas = normalizadas.length - validas.length;
+                    if (descartadas) console.warn(`${LOG} ${descartadas} filas del histórico se ignoraron por no tener fecha de ingreso válida o ser de agosto de 2026 en adelante.`);
+                    filas = filas.concat(validas);
+                    aviso.textContent = validas.length
+                        ? `Incluye ${fmt(validas.length)} muestras históricas anteriores a agosto de 2026.` + (descartadas ? ` ${fmt(descartadas)} filas del histórico se ignoraron (sin fecha de ingreso válida o posteriores al corte).` : '')
+                        : '';
+                } catch (errHist) {
+                    console.warn(`${LOG} No se pudo cargar el histórico:`, errHist);
+                    aviso.textContent = 'El histórico no está disponible todavía; el reporte muestra solo los datos del sistema.';
+                }
                 llenarSelects();
                 sincronizarControles();
                 render();
@@ -541,6 +630,7 @@
         });
         document.getElementById('btnLimpiar').addEventListener('click', () => { Object.assign(filtros, FILTROS_VACIOS); sincronizarControles(); render(); });
         document.getElementById('btnActualizar').addEventListener('click', cargar);
+        document.getElementById('chkHistorico').addEventListener('change', e => { incluirHistorico = e.target.checked; render(); });
         document.querySelectorAll('.segmento button').forEach(b => b.addEventListener('click', () => {
             modo = b.dataset.modo;
             document.querySelectorAll('.segmento button').forEach(x => x.classList.toggle('activo', x === b));
@@ -568,7 +658,68 @@
         const tooltipNumero = ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed[ctx.chart.options.indexAxis === 'y' ? 'x' : 'y'])} ${textoModo()}`;
         const cursorMano = (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; };
 
+        // Escribe el total encima de cada barra (o al final, en barras horizontales)
+        const pluginTotales = {
+            id: 'totales',
+            afterDatasetsDraw(ch) {
+                const horizontal = ch.options.indexAxis === 'y';
+                const visibles = ch.data.datasets.map((d, i) => i).filter(i => ch.isDatasetVisible(i));
+                if (!visibles.length) return;
+                const { ctx } = ch;
+                ctx.save();
+                ctx.font = "600 11px 'Manrope', sans-serif";
+                ctx.fillStyle = 'rgba(246, 241, 231, 0.85)';
+                ctx.textAlign = horizontal ? 'left' : 'center';
+                ctx.textBaseline = horizontal ? 'middle' : 'bottom';
+                ch.data.labels.forEach((_, i) => {
+                    const total = visibles.reduce((t, d) => t + (Number(ch.data.datasets[d].data[i]) || 0), 0);
+                    if (!total) return;
+                    const elementos = visibles.map(d => ch.getDatasetMeta(d).data[i]).filter(Boolean);
+                    if (!elementos.length) return;
+                    if (horizontal) ctx.fillText(fmt(total), Math.max(...elementos.map(e => e.x)) + 6, elementos[0].y);
+                    else ctx.fillText(fmt(total), elementos[0].x, Math.min(...elementos.map(e => e.y)) - 4);
+                });
+                ctx.restore();
+            },
+        };
+
         function crearGraficos() {
+            graficos.unidadesMes = new Chart(document.getElementById('gUnidadesMes'), {
+                type: 'bar',
+                data: { labels: [], datasets: [
+                    { label: 'Histórico', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
+                    { label: 'Sistema', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
+                ] },
+                options: {
+                    layout: { padding: { top: 18 } },
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } },
+                    plugins: { tooltip: { callbacks: {
+                        label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} unidades`,
+                        footer: items => `Total: ${fmt(items.reduce((t, i) => t + i.parsed.y, 0))} unidades`,
+                    } } },
+                    onHover: cursorMano,
+                    onClick: (e, els, ch) => { if (els.length) alternarFiltro('mes', ch.$claves[els[0].index]); },
+                },
+                plugins: [pluginTotales],
+            });
+
+            graficos.colecciones = new Chart(document.getElementById('gColecciones'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Unidades', data: [], backgroundColor: [], borderRadius: 6 }] },
+                options: {
+                    indexAxis: 'y',
+                    layout: { padding: { right: 44 } },
+                    scales: { x: { beginAtZero: true }, y: { grid: { display: false } } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: {
+                        label: c => ` ${fmt(c.parsed.x)} unidades`,
+                        afterLabel: c => { const t = c.chart.$total || 0; return t ? ` ${fmt(pct(c.parsed.x, t), 1)} % de las unidades filtradas` : ''; },
+                    } } },
+                    onHover: cursorMano,
+                    onClick: (e, els, ch) => { if (els.length) alternarFiltro('coleccion', ch.data.labels[els[0].index]); },
+                },
+                plugins: [pluginTotales],
+            });
+
             graficos.meses = new Chart(document.getElementById('gMeses'), {
                 type: 'bar',
                 data: { labels: [], datasets: ESTADOS.map(e => ({ label: e, data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false, stack: 's' })) },
@@ -585,7 +736,7 @@
                 data: { labels: ESTADOS, datasets: [{ data: [], backgroundColor: [], borderColor: 'rgba(22,26,70,.9)', borderWidth: 3, hoverOffset: 10 }] },
                 options: {
                     cutout: '64%',
-                    plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => ` ${c.label}: ${fmt(c.parsed)} ${textoModo()}` } } },
+                    plugins: { legend: { position: 'bottom', labels: { filter: (item, data) => (data.datasets[0].data[item.index] || 0) > 0 } }, tooltip: { callbacks: { label: c => ` ${c.label}: ${fmt(c.parsed)} ${textoModo()}` } } },
                     onHover: cursorMano,
                     onClick: (e, els) => { if (els.length) alternarFiltro('estado', ESTADOS[els[0].index]); },
                 },
@@ -691,6 +842,7 @@
             const base = filtrar();
             renderResumen(base);
             renderKpis(base);
+            renderUnidades();
             renderMeses();
             renderEstados();
             renderAntiguedad(base);
@@ -705,8 +857,9 @@
             if (!filas.length) { el.textContent = 'Todavía no hay muestras registradas en Patronaje.'; return; }
             if (!base.length) { el.textContent = 'No hay muestras con estos filtros. Quita alguno para ver resultados.'; return; }
             const total = suma(base), fin = suma(base.filter(r => r.estado === 'Finalizado'));
+            const proceso = suma(base.filter(r => ABIERTOS.includes(r.estado)));
             const lt = promedio(base.map(r => r.ltCompleto));
-            el.innerHTML = `De <b>${fmt(total)}</b> ${textoModo(total)} ${total === 1 ? 'ingresada' : 'ingresadas'}, <b>${fmt(fin)}</b> ${fin === 1 ? 'está finalizada' : 'están finalizadas'} y <b>${fmt(total - fin)}</b> ${total - fin === 1 ? 'sigue' : 'siguen'} en proceso.` +
+            el.innerHTML = `De <b>${fmt(total)}</b> ${textoModo(total)} ${total === 1 ? 'ingresada' : 'ingresadas'}, <b>${fmt(fin)}</b> ${fin === 1 ? 'está finalizada' : 'están finalizadas'} y <b>${fmt(proceso)}</b> ${proceso === 1 ? 'sigue' : 'siguen'} en proceso.` +
                 (lt !== null ? ` Una muestra tarda en promedio <b>${fmt(lt, 1)}</b> días hábiles desde que ingresa hasta que se finaliza.` : '');
         }
 
@@ -715,12 +868,12 @@
             const registros = base.length;
             const unidades = base.reduce((t, r) => t + r.unidades, 0);
             const porEstado = Object.fromEntries(ESTADOS.map(e => [e, suma(base.filter(r => r.estado === e))]));
-            const abiertos = porEstado.Pendiente + porEstado.Modelado + porEstado.Asignado;
+            const abiertos = ABIERTOS.reduce((t, e) => t + porEstado[e], 0);
             const aprob = suma(base.filter(r => r.resultado === 'Aprobada'));
             const rech = suma(base.filter(r => r.resultado === 'Rechazada'));
             const lts = base.map(r => r.ltCompleto).filter(v => v !== null);
             const enMeta = lts.filter(v => v <= metaLeadTime).length;
-            const abiertas = base.filter(r => r.estado !== 'Finalizado');
+            const abiertas = base.filter(r => ABIERTOS.includes(r.estado));
             const edadProm = promedio(abiertas.map(r => r.edad));
             const viejas = abiertas.filter(r => r.edad !== null && r.edad > 20).length;
             const conteoPrecintos = new Map();
@@ -754,6 +907,34 @@
             });
         }
 
+        function renderUnidades() {
+            const unid = lista => lista.reduce((t, r) => t + r.unidades, 0);
+
+            const datosMes = filtrar('mes').filter(r => r.mesIngreso);
+            const claves = [...new Set(datosMes.map(r => r.mesIngreso))].sort();
+            const g = graficos.unidadesMes;
+            g.$claves = claves;
+            g.data.labels = claves.map(nombreMes);
+            const activo = k => !filtros.mes || filtros.mes === k;
+            g.data.datasets[0].data = claves.map(k => unid(datosMes.filter(r => r.mesIngreso === k && r.origen === 'historico')));
+            g.data.datasets[1].data = claves.map(k => unid(datosMes.filter(r => r.mesIngreso === k && r.origen === 'sistema')));
+            g.data.datasets[0].backgroundColor = claves.map(k => alfa(C.gris, activo(k) ? .8 : .2));
+            g.data.datasets[1].backgroundColor = claves.map(k => alfa(C.laton, activo(k) ? .9 : .22));
+            g.update();
+
+            const datosCol = filtrar('coleccion');
+            const mapa = new Map();
+            datosCol.forEach(r => mapa.set(r.coleccion, (mapa.get(r.coleccion) || 0) + r.unidades));
+            const top = [...mapa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+            if (filtros.coleccion && !top.some(([c]) => c === filtros.coleccion) && mapa.has(filtros.coleccion)) top.push([filtros.coleccion, mapa.get(filtros.coleccion)]);
+            const gc = graficos.colecciones;
+            gc.$total = unid(datosCol);
+            gc.data.labels = top.map(([c]) => c);
+            gc.data.datasets[0].data = top.map(([, n]) => n);
+            gc.data.datasets[0].backgroundColor = top.map(([c]) => alfa(C.turquesa, !filtros.coleccion || filtros.coleccion === c ? .85 : .2));
+            gc.update();
+        }
+
         function renderMeses() {
             const datos = filtrar('mes').filter(r => r.mesIngreso);
             const claves = [...new Set(datos.map(r => r.mesIngreso))].sort();
@@ -777,7 +958,7 @@
 
         function renderAntiguedad(base) {
             const tramos = [['0 a 5', 0, 5], ['6 a 10', 6, 10], ['11 a 20', 11, 20], ['21 a 40', 21, 40], ['Más de 40', 41, Infinity]];
-            const abiertas = base.filter(r => r.estado !== 'Finalizado' && r.edad !== null);
+            const abiertas = base.filter(r => ABIERTOS.includes(r.estado) && r.edad !== null);
             const g = graficos.antiguedad;
             g.data.labels = tramos.map(t => `${t[0]} días`);
             g.data.datasets.forEach(ds => { ds.data = tramos.map(([, a, b]) => suma(abiertas.filter(r => r.estado === ds.label && r.edad >= a && r.edad <= b))); });
@@ -838,7 +1019,7 @@
             datos.forEach(r => {
                 const m = mapa.get(r.auditora) || { curso: 0, fin: 0, total: 0, a: 0, r: 0, lts: [] };
                 m.total += peso(r);
-                if (r.estado === 'Finalizado') m.fin += peso(r); else m.curso += peso(r);
+                if (r.estado === 'Finalizado') m.fin += peso(r); else if (ABIERTOS.includes(r.estado)) m.curso += peso(r);
                 if (r.resultado === 'Aprobada') m.a += peso(r);
                 if (r.resultado === 'Rechazada') m.r += peso(r);
                 m.lts.push(r.ltMedicionAud);
@@ -861,7 +1042,7 @@
             // Muestras abiertas de la auditora elegida
             const det = document.getElementById('detalleAuditora');
             if (filtros.auditora) {
-                const abiertas = filtrar().filter(r => r.estado !== 'Finalizado').sort((a, b) => (b.edad || 0) - (a.edad || 0));
+                const abiertas = filtrar().filter(r => ABIERTOS.includes(r.estado)).sort((a, b) => (b.edad || 0) - (a.edad || 0));
                 det.innerHTML = `<h4>Muestras abiertas de ${esc(filtros.auditora)} (${abiertas.length})</h4>` + (abiertas.length ? `
                     <div class="tabla-scroll"><table>
                         <thead><tr><th>Precinto</th><th>Referencia</th><th>Tipo de muestra</th><th>Estado</th><th>Ingreso</th><th class="num">Días abierta</th></tr></thead>
