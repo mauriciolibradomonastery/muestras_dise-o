@@ -112,13 +112,6 @@
             border: none; background: rgba(255,255,255,.12); color: var(--hueso); width: 22px; height: 22px;
             border-radius: 50%; cursor: pointer; font-size: 12px; line-height: 1;
         }
-        .interruptor { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; color: var(--hueso-suave); cursor: pointer; user-select: none; }
-        .interruptor input { appearance: none; -webkit-appearance: none; width: 38px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid var(--linea); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
-        .interruptor input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--hueso); transition: transform .2s; }
-        .interruptor input:checked { background: var(--laton); border-color: var(--laton); }
-        .interruptor input:checked::after { transform: translateX(16px); }
-        .interruptor input:focus-visible { outline: 2px solid var(--laton); outline-offset: 2px; }
-        .aviso-historico { font-size: 13px; color: var(--hueso-tenue); margin-top: 4px; }
         .segmento { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--vidrio); border: 1px solid var(--linea); }
         .segmento button {
             font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--hueso-suave);
@@ -255,9 +248,6 @@
         <div class="fila-control">
             <div class="chips" id="chips"></div>
             <div class="acciones">
-                <label class="interruptor" title="Muestras anteriores a agosto de 2026, cargadas solo para reportes">
-                    <input type="checkbox" id="chkHistorico" checked> Incluir histórico
-                </label>
                 <div class="segmento" role="group" aria-label="Contar por">
                     <button type="button" data-modo="unidades" class="activo">Unidades</button>
                     <button type="button" data-modo="muestras">Muestras</button>
@@ -265,8 +255,6 @@
                 <button class="boton" id="btnLimpiar" type="button">Quitar filtros</button>
             </div>
         </div>
-
-        <div class="aviso-historico" id="avisoHistorico"></div>
 
         <section class="kpis" id="kpis" aria-label="Indicadores principales"></section>
 
@@ -276,7 +264,7 @@
             <div class="grilla">
                 <article class="tarjeta">
                     <h3>Unidades por mes</h3>
-                    <div class="ayuda">Según la fecha de ingreso. El histórico se muestra en gris</div>
+                    <div class="ayuda">Según la fecha de ingreso</div>
                     <div class="lienzo alto"><canvas id="gUnidadesMes"></canvas></div>
                 </article>
                 <article class="tarjeta">
@@ -384,7 +372,7 @@
             Cómo se calcula: el estado se deduce de las fechas igual que en la tabla (medición = modelado, fecha de entrega de auditoría = asignado, fecha final = finalizado).
             En modo Unidades se suma la columna Cantidad; las filas sin cantidad cuentan como 1. Los promedios de lead time son por muestra.
             "Lead time auditoría" va de la medición a la entrega de auditoría.
-            El histórico son muestras anteriores a agosto de 2026 guardadas en una tabla aparte: aparecen en los reportes pero no en la tabla de trabajo; las que no tienen fecha final figuran con estado "Histórico" y no cuentan como abiertas. Las segundas rondas son precintos que aparecen más de una vez, sin contar "SIN PRECINTO".
+            Las muestras de enero a julio de 2026 vienen del archivo histórico de Excel y se suman a las del sistema como muestras finalizadas. Las segundas rondas son precintos que aparecen más de una vez, sin contar "SIN PRECINTO".
         </p>
     </main>
 
@@ -400,8 +388,8 @@
         const C = {
             hueso: '#F6F1E7', laton: '#E8B75A', turquesa: '#3FD0C9', lavanda: '#A99BFF', coral: '#FF7A6B', ambar: '#F4B740', gris: '#8E8AA8',
         };
-        const COLOR_ESTADO = { Pendiente: C.coral, Modelado: C.ambar, Asignado: C.lavanda, Finalizado: C.turquesa, 'Histórico': C.gris };
-        const ESTADOS = ['Pendiente', 'Modelado', 'Asignado', 'Finalizado', 'Histórico'];
+        const COLOR_ESTADO = { Pendiente: C.coral, Modelado: C.ambar, Asignado: C.lavanda, Finalizado: C.turquesa };
+        const ESTADOS = ['Pendiente', 'Modelado', 'Asignado', 'Finalizado'];
         const ABIERTOS = ['Pendiente', 'Modelado', 'Asignado'];
         // El histórico solo cubre lo anterior a esta fecha; desde aquí manda la tabla de trabajo (evita contar doble)
         const CORTE_HISTORICO = '2026-08-01';
@@ -463,8 +451,8 @@
             if (medicion) estado = 'Modelado';
             if (entregaAud) estado = 'Asignado';
             if (final) estado = 'Finalizado';
-            // Una muestra histórica sin fecha final no está "abierta": simplemente no se registró ese dato
-            if (origen === 'historico' && !final) estado = 'Histórico';
+            // Todo el histórico corresponde a muestras ya terminadas
+            if (origen === 'historico') estado = 'Finalizado';
             const esHistorico = origen === 'historico';
             const res = String(d[21] ?? '').trim().toLowerCase();
             const resultado = res === 'cumple' ? 'Aprobada' : res === 'no cumple' ? 'Rechazada' : res ? 'Otro' : 'Sin resultado';
@@ -501,7 +489,6 @@
         // ================== ESTADO DEL REPORTE ==================
         let filas = [];
         let modo = 'unidades';
-        let incluirHistorico = true;
         let metaLeadTime = Number(localStorage.getItem('reportes_meta_lt')) || 10;
         const FILTROS_VACIOS = { proveedor: '', coleccion: '', auditora: '', tipoMuestra: '', resultado: '', ingresoDesde: '', ingresoHasta: '', finalDesde: '', finalHasta: '', mes: '', estado: '' };
         const filtros = { ...FILTROS_VACIOS };
@@ -518,7 +505,6 @@
         function filtrar(excepto) {
             const f = filtros;
             return filas.filter(r => {
-                if (!incluirHistorico && r.origen === 'historico') return false;
                 for (const k of ['proveedor', 'coleccion', 'auditora', 'tipoMuestra', 'resultado', 'estado']) {
                     if (k !== excepto && f[k] && r[k] !== f[k]) return false;
                 }
@@ -557,8 +543,7 @@
                 }
                 filas = todas.map(f => normalizar(f, 'sistema'));
 
-                // Histórico: tabla aparte, solo lectura. Si falla, el reporte sigue con los datos del sistema
-                const aviso = document.getElementById('avisoHistorico');
+                // Histórico (antes de agosto de 2026): tabla aparte, solo lectura, se suma a los datos del sistema
                 try {
                     let historico = [];
                     for (let desde = 0; ; desde += paso) {
@@ -573,12 +558,11 @@
                     const descartadas = normalizadas.length - validas.length;
                     if (descartadas) console.warn(`${LOG} ${descartadas} filas del histórico se ignoraron por no tener fecha de ingreso válida o ser de agosto de 2026 en adelante.`);
                     filas = filas.concat(validas);
-                    aviso.textContent = validas.length
-                        ? `Incluye ${fmt(validas.length)} muestras históricas anteriores a agosto de 2026.` + (descartadas ? ` ${fmt(descartadas)} filas del histórico se ignoraron (sin fecha de ingreso válida o posteriores al corte).` : '')
-                        : '';
                 } catch (errHist) {
-                    console.warn(`${LOG} No se pudo cargar el histórico:`, errHist);
-                    aviso.textContent = 'El histórico no está disponible todavía; el reporte muestra solo los datos del sistema.';
+                    console.error(`${LOG} No se pudo cargar el histórico:`, errHist);
+                    const caja = document.getElementById('cajaError');
+                    caja.innerHTML = '<b>No se pudo cargar el histórico (enero a julio de 2026).</b> Las cifras de esos meses están incompletas. Presiona "Actualizar datos" para reintentar.';
+                    caja.style.display = 'block';
                 }
                 llenarSelects();
                 sincronizarControles();
@@ -630,7 +614,6 @@
         });
         document.getElementById('btnLimpiar').addEventListener('click', () => { Object.assign(filtros, FILTROS_VACIOS); sincronizarControles(); render(); });
         document.getElementById('btnActualizar').addEventListener('click', cargar);
-        document.getElementById('chkHistorico').addEventListener('change', e => { incluirHistorico = e.target.checked; render(); });
         document.querySelectorAll('.segmento button').forEach(b => b.addEventListener('click', () => {
             modo = b.dataset.modo;
             document.querySelectorAll('.segmento button').forEach(x => x.classList.toggle('activo', x === b));
@@ -686,17 +669,11 @@
         function crearGraficos() {
             graficos.unidadesMes = new Chart(document.getElementById('gUnidadesMes'), {
                 type: 'bar',
-                data: { labels: [], datasets: [
-                    { label: 'Histórico', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
-                    { label: 'Sistema', data: [], backgroundColor: [], borderRadius: 6, stack: 's' },
-                ] },
+                data: { labels: [], datasets: [{ label: 'Unidades', data: [], backgroundColor: [], borderRadius: 6 }] },
                 options: {
                     layout: { padding: { top: 18 } },
-                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } },
-                    plugins: { tooltip: { callbacks: {
-                        label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} unidades`,
-                        footer: items => `Total: ${fmt(items.reduce((t, i) => t + i.parsed.y, 0))} unidades`,
-                    } } },
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${fmt(c.parsed.y)} unidades` } } },
                     onHover: cursorMano,
                     onClick: (e, els, ch) => { if (els.length) alternarFiltro('mes', ch.$claves[els[0].index]); },
                 },
@@ -916,10 +893,8 @@
             g.$claves = claves;
             g.data.labels = claves.map(nombreMes);
             const activo = k => !filtros.mes || filtros.mes === k;
-            g.data.datasets[0].data = claves.map(k => unid(datosMes.filter(r => r.mesIngreso === k && r.origen === 'historico')));
-            g.data.datasets[1].data = claves.map(k => unid(datosMes.filter(r => r.mesIngreso === k && r.origen === 'sistema')));
-            g.data.datasets[0].backgroundColor = claves.map(k => alfa(C.gris, activo(k) ? .8 : .2));
-            g.data.datasets[1].backgroundColor = claves.map(k => alfa(C.laton, activo(k) ? .9 : .22));
+            g.data.datasets[0].data = claves.map(k => unid(datosMes.filter(r => r.mesIngreso === k)));
+            g.data.datasets[0].backgroundColor = claves.map(k => alfa(C.laton, activo(k) ? .9 : .22));
             g.update();
 
             const datosCol = filtrar('coleccion');
