@@ -345,6 +345,7 @@
             } else {
                 // Solo inicializa y descarga si el usuario está comprobado
                 inicializarEncabezados(); 
+                await cargarFestivos();   // antes de pintar filas, para que el lead time ya los descuente
                 cargarDatos();
             }
         }
@@ -443,13 +444,29 @@
             return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
         }
 
+        // Festivos de lunes a viernes (tabla "festivos" en Supabase): no cuentan en el lead time
+        const FESTIVOS = new Set();
+        async function cargarFestivos() {
+            try {
+                const { data, error } = await client.from('festivos').select('fecha');
+                if (error) throw error;
+                FESTIVOS.clear();
+                (data || []).forEach(f => FESTIVOS.add(String(f.fecha).slice(0, 10)));
+            } catch (err) {
+                // Sin festivos el lead time se calcula solo sin fines de semana: se avisa en consola y se sigue
+                console.error('[festivos] No se pudieron cargar los festivos; el lead time no los descontará:', err);
+            }
+        }
+        const isoLocal = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        // Días hábiles contando inicio y fin, sin sábados, domingos ni festivos (igual que DIAS.LAB del Excel)
         function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
             const inicio = fechaLocal(fechaInicioStr), fin = fechaLocal(fechaFinStr);
             if (!inicio || !fin || inicio > fin) return "";
             let dias = 0;
             for (const d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
                 const dia = d.getDay();
-                if (dia !== 0 && dia !== 6) dias++;
+                if (dia !== 0 && dia !== 6 && !FESTIVOS.has(isoLocal(d))) dias++;
             }
             return String(dias);
         }

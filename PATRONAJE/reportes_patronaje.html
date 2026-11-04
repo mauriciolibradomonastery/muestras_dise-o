@@ -316,7 +316,7 @@
 
         <section class="seccion">
             <h2>Lead time completo</h2>
-            <p>Días hábiles desde la fecha de ingreso hasta la fecha final, contados igual que en la tabla. Solo incluye muestras finalizadas.</p>
+            <p>Días hábiles desde la fecha de ingreso hasta la fecha final, sin fines de semana ni festivos, contados igual que en la tabla y en el Excel. Solo incluye muestras finalizadas.</p>
             <div class="grilla">
                 <article class="tarjeta ancha">
                     <h3>Finalizadas y lead time promedio por mes</h3>
@@ -407,12 +407,14 @@
         const fechaLocal = t => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
         const hoyISO = (() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`; })();
 
-        // Días hábiles contando inicio y fin, igual que la tabla de patronaje
+        // Días hábiles contando inicio y fin, sin sábados, domingos ni festivos (igual que la tabla de patronaje y el Excel)
+        const FESTIVOS = new Set();
+        const isoLocal = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         function diasHabiles(desde, hasta) {
             const a = fechaLocal(desde), b = fechaLocal(hasta);
             if (!a || !b || a > b) return null;
             let dias = 0;
-            for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) { const s = d.getDay(); if (s !== 0 && s !== 6) dias++; }
+            for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) { const s = d.getDay(); if (s !== 0 && s !== 6 && !FESTIVOS.has(isoLocal(d))) dias++; }
             return dias;
         }
         const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -531,6 +533,16 @@
             try {
                 const { data: { session } } = await client.auth.getSession();
                 if (!session) { location.replace('index_patronaje.html'); return; }
+
+                // Festivos primero: el lead time de cada fila se calcula al normalizarla
+                try {
+                    const { data: fest, error: errFest } = await client.from('festivos').select('fecha');
+                    if (errFest) throw errFest;
+                    FESTIVOS.clear();
+                    (fest || []).forEach(f => FESTIVOS.add(String(f.fecha).slice(0, 10)));
+                } catch (errFest) {
+                    console.error(`${LOG} No se pudieron cargar los festivos; el lead time no los descontará:`, errFest);
+                }
 
                 const paso = 1000;
                 let todas = [];
