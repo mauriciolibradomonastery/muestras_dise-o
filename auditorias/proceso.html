@@ -190,6 +190,7 @@
     .agregar-adjunto { aspect-ratio: 3/4; border: 2px dashed #D4CDC3; border-radius: 12px; background: #FAFAFA; color: var(--texto-claro); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
     .agregar-adjunto span { font-size: 28px; }
     .etiqueta-estado { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .adjunto .nota-adjunto { position: static; width: 100%; border: none; border-top: 1px solid var(--borde); border-radius: 0; padding: 8px 10px; font-size: 12px; background: #fff; }
 </style>
 </head>
 <body>
@@ -335,7 +336,8 @@ function pintar() {
     '</div>';
 
     if (items.length) {
-        html += '<div class="tarjeta" id="tarjetaCheck">' + htmlChecklist() + '</div>';
+        html += '<div class="tarjeta" id="tarjetaCheck">' + htmlChecklist() + '</div>' +
+            htmlAdjuntos('Evidencias fotográficas', '📷', 'Tomar / subir foto');
     } else {
         // Confección: observaciones + documento o fotografía
         html +=
@@ -343,24 +345,36 @@ function pintar() {
             '<h2>Observaciones</h2>' +
             '<textarea id="eObservaciones" placeholder="Escribe aquí lo que encontraste en la confección...">' + esc(auditoria.observaciones || '') + '</textarea>' +
         '</div>' +
-        '<div class="tarjeta">' +
-            '<h2>Documento o fotografía (' + adjuntos.length + ')</h2>' +
-            '<input type="file" id="archivo" accept="image/*,application/pdf" multiple class="oculto" onchange="subirArchivos(event)">' +
-            '<div class="adjuntos">' +
-                adjuntos.map(function(a, i) {
-                    const esImg = /\.(jpe?g|png|gif|webp|heic)$/i.test(a.url) || /\.(jpe?g|png|gif|webp|heic)$/i.test(a.nombre || '');
-                    return '<div class="adjunto">' +
-                        (esImg ? '<a href="' + esc(a.url) + '" target="_blank"><img src="' + esc(a.url) + '"></a>'
-                               : '<a class="doc" href="' + esc(a.url) + '" target="_blank"><span>📄</span>' + esc(a.nombre || 'Documento') + '</a>') +
-                        '<button onclick="quitarAdjunto(' + i + ')" aria-label="Quitar">✕</button></div>';
-                }).join('') +
-                '<button class="agregar-adjunto" onclick="document.getElementById(\'archivo\').click()"><span>📎</span>Adjuntar documento o foto</button>' +
-            '</div>' +
-            '<div class="mensaje" id="avisoArchivo" style="margin-top:14px;"></div>' +
-        '</div>';
+        htmlAdjuntos('Documento o fotografía', '📎', 'Adjuntar documento o foto');
     }
     $('contenido').innerHTML = html;
 }
+
+// Tarjeta de evidencias (fotos o documentos) del subproceso
+function htmlAdjuntos(titulo, icono, textoBoton) {
+    return '<div class="tarjeta">' +
+        '<h2>' + titulo + ' (' + adjuntos.length + ')</h2>' +
+        '<input type="file" id="archivo" accept="image/*,application/pdf" multiple class="oculto" onchange="subirArchivos(event)">' +
+        '<div class="adjuntos">' +
+            adjuntos.map(function(a, i) {
+                const esImg = /\.(jpe?g|png|gif|webp|heic)$/i.test(a.url) || /\.(jpe?g|png|gif|webp|heic)$/i.test(a.nombre || '');
+                return '<div class="adjunto">' +
+                    (esImg ? '<a href="' + esc(a.url) + '" target="_blank"><img src="' + esc(a.url) + '"></a>'
+                           : '<a class="doc" href="' + esc(a.url) + '" target="_blank"><span>📄</span>' + esc(a.nombre || 'Documento') + '</a>') +
+                    '<button onclick="quitarAdjunto(' + i + ')" aria-label="Quitar">✕</button>' +
+                    '<input class="nota-adjunto" type="text" placeholder="Nota..." value="' + esc(a.observacion || '') + '" onchange="notaAdjunto(' + i + ', this.value)">' +
+                '</div>';
+            }).join('') +
+            '<button class="agregar-adjunto" onclick="document.getElementById(\'archivo\').click()"><span>' + icono + '</span>' + textoBoton + '</button>' +
+        '</div>' +
+        '<div class="mensaje" id="avisoArchivo" style="margin-top:14px;"></div>' +
+    '</div>';
+}
+window.notaAdjunto = async function(i, v) {
+    const a = adjuntos[i]; if (!a) return;
+    a.observacion = v;
+    if (a.id) await supabase.from('auditoria_evidencias').update({ observacion: v }).eq('id', a.id);
+};
 
 function htmlChecklist() {
     const cumple = items.filter(function(x) { return x.resultado === 'PASS'; }).length;
