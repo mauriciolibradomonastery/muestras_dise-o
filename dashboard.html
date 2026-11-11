@@ -524,7 +524,9 @@
                     btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
 
                     // 🛠️ CORRECCIÓN: Borrar estrictamente por ID interno para no borrar duplicados
-                    await client.from('prendas').delete().in('id', lote);
+                    // Supabase NO lanza excepción: devuelve { error }. Si no se revisa, un fallo se reporta como "éxito".
+                    const { error } = await client.from('prendas').delete().in('id', lote);
+                    if (error) throw error;
 
                     procesados += lote.length;
                 }
@@ -535,7 +537,7 @@
                 actualizarContadorBorrar();
             } catch (err) { 
                 console.error("Error al borrar:", err); 
-                alert("❌ Ocurrió un error al intentar eliminar los registros. Revisa la consola."); 
+                alert("❌ Ocurrió un error al intentar eliminar los registros: " + (err?.message || err));
             } finally { 
                 btnBorrar.textContent = textoOriginal; 
                 btnBorrar.disabled = false; 
@@ -545,7 +547,8 @@
         // MÓDULO: DAR SALIDA
         window.abrirModalDarSalida = function(idBD) {
             idRegistroSeleccionado = idBD; // 🛠️ CORRECCIÓN: Guardamos el ID interno
-            document.getElementById('salidaFecha').value = new Date().toISOString().split('T')[0];
+            // 🛠️ CORRECCIÓN: toISOString() usa hora UTC → después de las 7 p.m. en Colombia ponía la fecha de MAÑANA
+            document.getElementById('salidaFecha').value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
             document.getElementById('salidaRemision').value = '';
             document.getElementById('salidaTipo').value = '';
             document.getElementById('salidaTo').value = ''; 
@@ -566,13 +569,19 @@
             const btn = document.getElementById('btn-confirmar-salida');
             btn.textContent = "Guardando... ⏳"; btn.disabled = true;
 
-            // 🛠️ CORRECCIÓN: Actualizamos usando el ID interno
-            const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idRegistroSeleccionado);
-            if (error) throw error;
-            
-            alert("✅ Salida registrada exitosamente.\n\nLa prenda se ha movido al historial de Bajas/Salidas.");
-            cerrarModalSalida(); recargarTabla('registro de salida'); 
-            btn.textContent = "📤 Confirmar"; btn.disabled = false;
+            // 🛠️ CORRECCIÓN: antes el 'throw' no tenía try/catch → el botón quedaba bloqueado en "Guardando..." sin avisar
+            try {
+                const { error } = await client.from('prendas').update({ estado: tipo, salidaRemision: remision, salidaFecha: fecha, salidaTo: toVal }).eq('id', idRegistroSeleccionado);
+                if (error) throw error;
+
+                alert("✅ Salida registrada exitosamente.\n\nLa prenda se ha movido al historial de Bajas/Salidas.");
+                cerrarModalSalida(); recargarTabla('registro de salida');
+            } catch (err) {
+                console.error('[dashboard/guardarSalida] Falló el UPDATE en prendas:', err);
+                alert("❌ Error al registrar la salida: " + (err?.message || err));
+            } finally {
+                btn.textContent = "📤 Confirmar"; btn.disabled = false;
+            }
         }
 
         // MÓDULOS: VER Y EDITAR
@@ -703,7 +712,10 @@
                 else { alert("✅ Información actualizada correctamente."); }
                 
                 window.cerrarModalEditar(); recargarTabla('edición');
-            } catch(e) { alert("❌ Error al guardar."); console.error(e); } 
+            } catch(e) {
+                console.error('[dashboard/guardarEdicion] Falló el UPDATE en prendas:', e);
+                alert("❌ Error al guardar: " + (e?.message || e));
+            }
             finally { btn.textContent = "💾 Guardar Cambios"; btn.disabled = false; }
         }
 

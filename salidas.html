@@ -501,7 +501,9 @@
                     btnBorrar.textContent = `⏳ Borrando (${procesados}/${seleccionados.length})...`;
 
                     // 🛠️ CORRECCIÓN: Borrado únicamente por ID interno
-                    await client.from('prendas').delete().in('id', lote);
+                    // Supabase NO lanza excepción: devuelve { error }. Si no se revisa, un fallo se reporta como "éxito".
+                    const { error } = await client.from('prendas').delete().in('id', lote);
+                    if (error) throw error;
 
                     procesados += lote.length;
                 }
@@ -512,7 +514,7 @@
                 actualizarContadorBorrar();
             } catch (err) { 
                 console.error("Error al borrar:", err); 
-                alert("❌ Ocurrió un error al intentar eliminar los registros."); 
+                alert("❌ Ocurrió un error al intentar eliminar los registros: " + (err?.message || err));
             } finally { 
                 btnBorrar.textContent = textoOriginal; 
                 btnBorrar.disabled = false; 
@@ -634,7 +636,8 @@
                     referencia: document.getElementById('edit-referencia').value, linea: document.getElementById('edit-linea').value,
                     color: document.getElementById('edit-color').value, talla: document.getElementById('edit-talla').value,
                     genero: document.getElementById('edit-genero').value, proveedor: document.getElementById('edit-proveedor').value,
-                    paisOrigen: document.getElementById('edit-paisOrigen').value, precio: document.getElementById('edit-precio').value,
+                    // 🛠️ CORRECCIÓN: la columna 'precio' es NUMERIC; un campo vacío ("") hacía fallar todo el UPDATE
+                    paisOrigen: document.getElementById('edit-paisOrigen').value, precio: aNumeroONull(document.getElementById('edit-precio').value),
                     moneda: document.getElementById('edit-moneda').value, cantidad: parseInt(document.getElementById('edit-cantidad').value) || 1,
                     clasificacion: document.getElementById('edit-clasificacion').value, 
                     salidaFecha: fechaSalidaRevisada, 
@@ -656,8 +659,20 @@
                 }
 
                 cerrarModal('modal-edicion'); recargarTablaSalidas('edición');
-            } catch (err) { alert("❌ Error al guardar."); console.error(err);
+            } catch (err) {
+                // 🛠️ CORRECCIÓN: ya no es un fallo silencioso, se muestra el motivo real
+                console.error('[salidas/guardarEdicion] Falló el UPDATE en prendas:', err);
+                alert("❌ Error al guardar: " + (err?.message || err));
             } finally { btnGuardar.disabled = false; btnGuardar.innerHTML = "💾 Guardar Cambios"; }
+        }
+
+        // Convierte el texto de un <input type="number"> en número o null.
+        // "" → null (Postgres no acepta "" en una columna NUMERIC). Acepta coma decimal.
+        function aNumeroONull(valorTexto) {
+            const v = (valorTexto ?? '').toString().trim();
+            if (v === '') return null;
+            const n = parseFloat(v.replace(',', '.'));
+            return Number.isFinite(n) ? n : null;
         }
 
         function exportarExcelSalidas() {
