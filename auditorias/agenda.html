@@ -207,7 +207,20 @@
     .bloque-proceso { margin-top: 32px; }
     .bloque-proceso h2 { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 26px; margin: 0 0 6px; color: var(--tinta); }
     .bloque-proceso .ayuda { font-size: 13px; color: var(--texto-claro); margin: 0 0 16px; }
-    .lineas { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+    .lineas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+    .col-lineas { background: #EFEBE4; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
+    .col-cab { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--texto); }
+    .col-cab .cuenta { background: #fff; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+    .col-cab .punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+    .col-vacia { font-size: 13px; color: var(--texto-claro); text-align: center; padding: 18px 8px; border: 1px dashed #D4CDC3; border-radius: 10px; }
+    .linea.sin-prog { border-left-color: #A39C94; }
+    .linea .l-pend { font-size: 12px; color: var(--texto); margin-top: 2px; }
+    .chips-color { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .chip-color { font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--borde); background: #fff; cursor: pointer; font-family: inherit; color: var(--tinta); }
+    .chip-color.hecho { background: #EEF7F2; border-color: #BFE2D0; color: var(--verde); }
+    .chip-color.programado { background: #EFF4FE; border-color: #C9D8F5; color: var(--azul); }
+    .chip-color.en_curso { background: #FEF8EE; border-color: #F5D9A8; color: var(--ambar); }
+    .btn-mas-color { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; border: 1px dashed var(--laton); background: transparent; color: var(--laton); cursor: pointer; font-family: inherit; }
     .linea { background: #fff; border: 1px solid var(--borde); border-left: 6px solid #7C3AED; border-radius: 12px; padding: 16px; cursor: pointer; box-shadow: var(--sombra-card); transition: var(--transicion); }
     .linea:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
     .linea.lista-final { border-left-color: var(--verde); background: #FBFEFC; }
@@ -263,6 +276,7 @@
 
     @media (max-width: 1024px) {
         .caja-siguiente .rejilla, .caja-final .rejilla { grid-template-columns: 1fr; }
+        .lineas { grid-template-columns: 1fr; }
         .grilla-mes { gap: 3px; }
         .mes-dia { min-height: 56px; padding: 4px; cursor: pointer; }
         .mini-cita, .mas-citas { display: none; }
@@ -332,7 +346,11 @@
 
             <div class="campo ancho" id="campoSubproceso" style="display:none;"><label for="fSubproceso">Subproceso</label>
                 <select id="fSubproceso"></select>
-                <div class="pista" id="pistaSubproceso">Orden de la línea: corte → estampado → bordado → lavandería → sublimado → confección. Si la referencia no lleva los primeros, elige desde dónde empieza.</div></div>
+                <div class="pista" id="pistaSubproceso">Orden de la línea: corte → estampado → bordado → lavandería → sublimado → confección. Si la referencia no lleva los primeros, elige desde dónde empieza.</div>
+                <label for="fColorProceso" style="margin-top:12px;">Color a revisar</label>
+                <input id="fColorProceso" list="dlColoresProceso" placeholder="Ej: NEGRO">
+                <datalist id="dlColoresProceso"></datalist>
+                <div class="pista">Cada color se revisa por separado. Los demás colores se programan después desde "Auditorías en proceso".</div></div>
 
             <div class="campo"><label for="fFecha">Fecha</label>
                 <input type="date" id="fFecha"></div>
@@ -617,10 +635,10 @@ async function cargarAuditorias() {
     auditorias = data || [];
     // Campos nuevos (tipo, subproceso, línea) que la vista no trae
     if (auditorias.length) {
-        const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso, linea_id').in('id', auditorias.map(function(x) { return x.id; }));
+        const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso, linea_id, color_proceso').in('id', auditorias.map(function(x) { return x.id; }));
         (extra || []).forEach(function(e) {
             const c = auditorias.find(function(x) { return x.id === e.id; });
-            if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; c.linea_id = e.linea_id; }
+            if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; c.linea_id = e.linea_id; c.color_proceso = e.color_proceso; }
         });
     }
     pintar();
@@ -763,8 +781,8 @@ async function cargarAtrasadas() {
         if (error) throw error;
         atrasadas = data || [];
         if (atrasadas.length) {
-            const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso').in('id', atrasadas.map(function(x) { return x.id; }));
-            (extra || []).forEach(function(e) { const c = atrasadas.find(function(x) { return x.id === e.id; }); if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; } });
+            const { data: extra } = await supabase.from('auditorias').select('id, tipo_id, subproceso, color_proceso').in('id', atrasadas.map(function(x) { return x.id; }));
+            (extra || []).forEach(function(e) { const c = atrasadas.find(function(x) { return x.id === e.id; }); if (c) { c.tipo_id = e.tipo_id; c.subproceso = e.subproceso; c.color_proceso = e.color_proceso; } });
         }
     } catch (e) { console.error(e); atrasadas = []; }
     pintarResumen();
@@ -776,7 +794,7 @@ function atrasadasVisibles() {
 function etiquetaTipo(c) {
     const t = tipos.find(function(x) { return x.id === c.tipo_id; });
     if (!t) return '';
-    return esProceso(t.nombre) ? 'Proceso · ' + nombreSub(c.subproceso || 'corte') : t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1);
+    return esProceso(t.nombre) ? 'Proceso · ' + nombreSub(c.subproceso || 'corte') + (c.color_proceso ? ' · ' + c.color_proceso : '') : t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1);
 }
 function abrirAtrasadas() {
     const lista = atrasadasVisibles();
@@ -813,7 +831,7 @@ async function cargarLineas() {
     const tp = tipoProceso();
     if (!tp) { $('lineas').innerHTML = '<div class="vacio-lineas">No existe el tipo "proceso" en la base de datos.</div>'; return; }
     const { data, error } = await supabase.from('auditorias')
-        .select('id, linea_id, subproceso, estado, resultado, fecha_programada, hora_programada, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, tipo_id, programada_por')
+        .select('id, linea_id, subproceso, color_proceso, estado, resultado, fecha_programada, hora_programada, referencia, sku, numero_factura, proveedor_id, auditora_id, coleccion, sublinea, tipo_id, programada_por')
         .eq('tipo_id', tp.id).neq('estado', 'cancelada').order('id');
     // Líneas que ya tienen su auditoría final programada (esas salen de la lista)
     const tf = tipoFinal();
@@ -843,17 +861,53 @@ async function cargarLineas() {
   }
 }
 
+// Una línea agrupa las revisiones de proceso de una referencia. Cada subproceso puede tener varias revisiones (una por color)
 function armarLinea(id, filas) {
-    const base = filas[0];
+    const base = filas.slice().sort(function(a, b) { return a.id - b.id; })[0];
     const maxOrden = filas.reduce(function(m, f) { return Math.max(m, ordenSub(f.subproceso)); }, -1);
     const estados = SUBPROCESOS.map(function(s, i) {
-        const fila = filas.find(function(f) { return f.subproceso === s.clave; });
-        if (fila) return { sub: s, fila: fila, estado: fila.estado === 'finalizada' ? 'hecho' : fila.estado === 'en_curso' ? 'en_curso' : 'programado' };
-        return { sub: s, fila: null, estado: i < maxOrden ? 'omitido' : 'pendiente' };
+        const deSub = filas.filter(function(f) { return f.subproceso === s.clave; })
+            .sort(function(a, b) { return String(a.fecha_programada || '').localeCompare(String(b.fecha_programada || '')) || a.id - b.id; });
+        if (deSub.length) {
+            const pend = deSub.filter(function(f) { return f.estado !== 'finalizada'; });
+            const hechas = deSub.length - pend.length;
+            const estado = pend.some(function(f) { return f.estado === 'en_curso'; }) ? 'en_curso' : pend.length ? 'programado' : 'hecho';
+            return { sub: s, filas: deSub, fila: deSub[deSub.length - 1], hechas: hechas, pendientes: pend, estado: estado };
+        }
+        return { sub: s, filas: [], fila: null, hechas: 0, pendientes: [], estado: i < maxOrden ? 'omitido' : 'pendiente' };
     });
     const ultima = estados[maxOrden];
-    const completa = maxOrden === SUBPROCESOS.length - 1 && ultima && ultima.estado === 'hecho';
-    return { id: id, base: base, filas: filas, estados: estados, maxOrden: maxOrden, ultima: ultima, completa: completa };
+    const pendientes = filas.filter(function(f) { return f.estado !== 'finalizada'; })
+        .sort(function(a, b) { return String(a.fecha_programada || '').localeCompare(String(b.fecha_programada || '')); });
+    const puedeAvanzar = !!(ultima && ultima.hechas > 0);
+    const completa = maxOrden === SUBPROCESOS.length - 1 && puedeAvanzar && !pendientes.length;
+    const columna = completa ? 'final' : pendientes.length ? 'programada' : 'sinprog';
+    return { id: id, base: base, filas: filas, estados: estados, maxOrden: maxOrden, ultima: ultima, pendientes: pendientes, puedeAvanzar: puedeAvanzar, completa: completa, columna: columna };
+}
+const etiquetaRevision = function(f) { return nombreSub(f.subproceso) + (f.color_proceso ? ' · ' + f.color_proceso : ''); };
+
+function htmlTarjetaLinea(l) {
+    const prov = proveedores.find(function(p) { return p.id === l.base.proveedor_id; });
+    let estadoTxt;
+    if (l.columna === 'final') {
+        estadoTxt = 'Proceso completo · <b style="color:var(--verde)">listo para auditoría final</b>';
+    } else if (l.columna === 'programada') {
+        estadoTxt = l.pendientes.slice(0, 2).map(function(f) {
+            return '<div class="l-pend"><b>' + esc(etiquetaRevision(f)) + '</b> · ' + (f.estado === 'en_curso' ? 'en curso' : 'programado para el ' + fechaCorta(f.fecha_programada)) + '</div>';
+        }).join('') + (l.pendientes.length > 2 ? '<div class="l-pend" style="color:var(--texto-claro)">+' + (l.pendientes.length - 2) + ' más</div>' : '');
+    } else {
+        const sig = SUBPROCESOS[l.maxOrden + 1];
+        estadoTxt = sig ? 'Siguiente: <b>' + sig.nombre + '</b> · sin programar' : 'Sin revisiones programadas';
+    }
+    return '<div class="linea' + (l.columna === 'final' ? ' lista-final' : l.columna === 'sinprog' ? ' sin-prog' : '') + '" onclick="abrirLinea(' + l.id + ')">' +
+        '<div class="l-ref">' + esc(l.base.referencia || 'Sin referencia') + (l.base.sku ? ' <small style="font-weight:500; color:var(--texto-claro)">(' + esc(l.base.sku) + ')</small>' : '') + '</div>' +
+        '<div class="l-sub">' + esc(prov ? prov.nombre : '') + (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + '</div>' +
+        '<div class="pasos-linea">' + l.estados.map(function(e) {
+            const n = e.filas.length > 1 ? ' ×' + e.filas.length : '';
+            return '<div class="pl ' + e.estado + '" title="' + e.sub.nombre + (e.filas.length ? ': ' + e.filas.map(function(f) { return (f.color_proceso || 'sin color') + (f.estado === 'finalizada' ? ' ✓' : ''); }).join(', ') : '') + '">' + ({ corte: 'Corte', estampado: 'Estamp.', bordado: 'Bordado', lavanderia: 'Lavand.', sublimado: 'Sublim.', confeccion: 'Confec.' })[e.sub.clave] + n + '</div>';
+        }).join('') + '</div>' +
+        '<div class="l-estado">' + estadoTxt + '</div>' +
+    '</div>';
 }
 
 function pintarLineas() {
@@ -861,33 +915,32 @@ function pintarLineas() {
     const visibles = lineasProceso.filter(function(l) {
         return !l.tieneFinal && (!a || l.filas.some(function(f) { return f.auditora_id === a; }));
     });
-    if (!visibles.length) { $('lineas').innerHTML = '<div class="vacio-lineas">No hay auditorías de proceso abiertas.</div>'; return; }
-    $('lineas').innerHTML = visibles.map(function(l) {
-        const prov = proveedores.find(function(p) { return p.id === l.base.proveedor_id; });
-        let estadoTxt;
-        if (l.completa) {
-            estadoTxt = 'Proceso completo · <b style="color:var(--verde)">listo para auditoría final</b>';
-        } else if (l.ultima.estado === 'hecho') {
-            const sig = SUBPROCESOS[l.maxOrden + 1];
-            estadoTxt = 'Siguiente: <b>' + sig.nombre + '</b> · sin programar';
-        } else {
-            estadoTxt = '<b>' + l.ultima.sub.nombre + '</b> · ' + (l.ultima.estado === 'en_curso' ? 'en curso' : 'programado para el ' + fechaCorta(l.ultima.fila.fecha_programada));
-        }
-        return '<div class="linea' + (l.completa ? ' lista-final' : '') + '" onclick="abrirLinea(' + l.id + ')">' +
-            '<div class="l-ref">' + esc(l.base.referencia || 'Sin referencia') + (l.base.sku ? ' <small style="font-weight:500; color:var(--texto-claro)">(' + esc(l.base.sku) + ')</small>' : '') + '</div>' +
-            '<div class="l-sub">' + esc(prov ? prov.nombre : '') + (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + '</div>' +
-            '<div class="pasos-linea">' + l.estados.map(function(e) { return '<div class="pl ' + e.estado + '" title="' + e.sub.nombre + '">' + ({ corte: 'Corte', estampado: 'Estamp.', bordado: 'Bordado', lavanderia: 'Lavand.', sublimado: 'Sublim.', confeccion: 'Confec.' })[e.sub.clave] + '</div>'; }).join('') + '</div>' +
-            '<div class="l-estado">' + estadoTxt + '</div>' +
-        '</div>';
+    const columnas = [
+        { clave: 'sinprog', titulo: 'Sin programar', color: '#A39C94', vacio: 'Ninguna línea pendiente por programar.' },
+        { clave: 'programada', titulo: 'Programadas', color: '#7C3AED', vacio: 'No hay revisiones programadas.' },
+        { clave: 'final', titulo: 'Listas para auditoría final', color: 'var(--verde)', vacio: 'Ninguna línea lista para la final.' }
+    ];
+    $('lineas').innerHTML = columnas.map(function(c) {
+        const deCol = visibles.filter(function(l) { return l.columna === c.clave; });
+        return '<div class="col-lineas"><div class="col-cab"><span><span class="punto" style="background:' + c.color + '"></span>' + c.titulo + '</span><span class="cuenta">' + deCol.length + '</span></div>' +
+            (deCol.length ? deCol.map(htmlTarjetaLinea).join('') : '<div class="col-vacia">' + c.vacio + '</div>') + '</div>';
     }).join('');
 }
 
 // ---------- Panel de una línea ----------
-window.abrirLinea = function(id) {
+window.abrirLinea = async function(id) {
     lineaAbierta = lineasProceso.find(function(l) { return l.id === id; });
     if (!lineaAbierta) return;
     pintarPanelLinea();
     $('modalLinea').classList.add('abierto');
+    // Colores de la referencia (base de producción) para sugerirlos
+    try {
+        const ref = (lineaAbierta.base.referencia || '').trim();
+        const { data } = ref ? await supabase.from('produccion').select('color').ilike('descripcion', ref) : { data: [] };
+        lineaAbierta.colores = Array.from(new Set((data || []).map(function(r) { return String(r.color || '').trim().toUpperCase(); })
+            .concat(lineaAbierta.filas.map(function(f) { return String(f.color_proceso || '').toUpperCase(); })).filter(Boolean))).sort();
+        if ($('dlColoresLinea')) $('dlColoresLinea').innerHTML = lineaAbierta.colores.map(function(c) { return '<option value="' + esc(c) + '">'; }).join('');
+    } catch (e) { console.warn(e); }
 };
 function pintarPanelLinea() {
     const l = lineaAbierta;
@@ -900,40 +953,50 @@ function pintarPanelLinea() {
     let html = '<div style="font-size:13px; color:var(--texto-claro); margin-bottom:16px;">' + esc(prov ? prov.nombre : '') +
         (l.base.numero_factura ? ' · OC ' + esc(l.base.numero_factura) : '') + (l.base.sku ? ' · SKU ' + esc(l.base.sku) : '') + '</div>';
     html += '<div class="sub-lista">' + l.estados.map(function(e, i) {
-        let detalle = etiqueta[e.estado];
-        if (e.fila && e.estado !== 'hecho') detalle += ' · ' + fechaCorta(e.fila.fecha_programada) + ' ' + (e.fila.hora_programada || '').slice(0, 5);
-        if (e.fila) detalle += ' · ' + esc(auditoraNombre(e.fila.auditora_id));
-        const accion = e.fila ? '<button class="btn-mini" onclick="irSubproceso(' + e.fila.id + ')">' + (e.estado === 'hecho' ? 'Ver / editar' : e.estado === 'en_curso' ? 'Continuar' : 'Iniciar') + '</button>' : '';
-        return '<div class="sub-fila ' + e.estado + '"><div class="num">' + (i + 1) + '</div><div class="nombre">' + e.sub.nombre + '<small>' + detalle + '</small></div>' + accion + '</div>';
+        const permitido = i <= l.maxOrden || (l.puedeAvanzar && i === l.maxOrden + 1);
+        const resumen = e.filas.length ? e.hechas + ' de ' + e.filas.length + ' color(es) realizados' : etiqueta[e.estado];
+        const chips = e.filas.map(function(f) {
+            const est = f.estado === 'finalizada' ? 'hecho' : f.estado === 'en_curso' ? 'en_curso' : 'programado';
+            const txt = (f.color_proceso || 'Sin color') + ' · ' + (est === 'hecho' ? '✓' : est === 'en_curso' ? 'en curso' : fechaCorta(f.fecha_programada));
+            return '<button class="chip-color ' + est + '" title="' + (est === 'hecho' ? 'Ver / editar' : 'Abrir') + ' · ' + esc(auditoraNombre(f.auditora_id)) + '" onclick="irSubproceso(' + f.id + ')">' + esc(txt) + '</button>';
+        }).join('');
+        return '<div class="sub-fila ' + e.estado + '" style="flex-wrap:wrap;"><div class="num">' + (i + 1) + '</div><div class="nombre">' + e.sub.nombre + '<small>' + resumen + '</small>' +
+            (chips || permitido ? '<div class="chips-color">' + chips + (permitido ? '<button class="btn-mas-color" onclick="prepararRevision(\'' + e.sub.clave + '\')">+ ' + (e.filas.length ? 'Otro color' : 'Programar') + '</button>' : '') + '</div>' : '') +
+        '</div></div>';
     }).join('') + '</div>';
 
-    // Programar el siguiente subproceso (solo cuando el último ya terminó)
-    if (l.ultima && l.ultima.estado === 'hecho' && l.maxOrden < SUBPROCESOS.length - 1) {
-        const opciones = SUBPROCESOS.slice(l.maxOrden + 1);
-        const auditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
-        html += '<div class="caja-siguiente"><h3>Programar el siguiente subproceso</h3><div class="rejilla">' +
-            '<div class="campo"><label>Subproceso</label><select id="sigSub">' + opciones.map(function(s) { return '<option value="' + s.clave + '">' + s.nombre + '</option>'; }).join('') + '</select>' +
-                '<div class="pista">Si eliges uno más adelante, los anteriores quedan como "No aplica".</div></div>' +
-            '<div class="campo"><label>Auditora</label><select id="sigAud">' + (auditoras.length ? auditoras : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === l.ultima.fila.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
-            '<div class="campo"><label>Fecha</label><input type="date" id="sigFecha" value="' + hoyISO + '"></div>' +
-            '<div class="campo"><label>Hora</label><input type="time" id="sigHora" value="08:00"></div>' +
-        '</div><button class="btn-guardar" style="width:100%; margin-top:14px;" onclick="programarSiguiente()">Programar</button></div>';
-    } else if (l.ultima && l.ultima.estado !== 'hecho') {
-        html += '<div class="pista" style="margin-top:14px; font-size:12px;">Cuando se termine <b>' + l.ultima.sub.nombre + '</b> podrás programar el siguiente subproceso o pasar a la auditoría final desde aquí.</div>';
-    }
-    // Pasar a auditoría final (cuando el último subproceso hecho ya terminó)
-    if (l.ultima && l.ultima.estado === 'hecho') {
+    // Programar una revisión (otro color de un subproceso ya iniciado, o el siguiente subproceso)
+    const opciones = SUBPROCESOS.filter(function(s, i) { return i <= l.maxOrden || (l.puedeAvanzar && i === l.maxOrden + 1) || (l.puedeAvanzar && i > l.maxOrden); });
+    const sugerido = l.puedeAvanzar && SUBPROCESOS[l.maxOrden + 1] ? SUBPROCESOS[l.maxOrden + 1].clave : (l.ultima ? l.ultima.sub.clave : 'corte');
+    const auditoras = usuarios.filter(function(u) { return u.rol === 'auditora'; });
+    const ultimaAud = l.filas.slice().sort(function(a, b) { return b.id - a.id; })[0].auditora_id;
+    html += '<div class="caja-siguiente" id="cajaRevision"><h3>Programar una revisión</h3><div class="rejilla">' +
+        '<div class="campo"><label>Subproceso</label><select id="sigSub">' + opciones.map(function(s) { return '<option value="' + s.clave + '"' + (s.clave === sugerido ? ' selected' : '') + '>' + s.nombre + '</option>'; }).join('') + '</select>' +
+            '<div class="pista">' + (l.puedeAvanzar ? 'Puedes programar otro color de un subproceso ya iniciado o pasar al siguiente. Si eliges uno más adelante, los anteriores quedan como "No aplica".' : 'Cuando <b>' + l.ultima.sub.nombre + '</b> tenga al menos un color terminado podrás pasar al siguiente subproceso. Mientras tanto puedes programar otros colores.') + '</div></div>' +
+        '<div class="campo"><label>Color a revisar</label><input id="sigColor" list="dlColoresLinea" placeholder="Ej: NAVY"><datalist id="dlColoresLinea">' + (l.colores || []).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></div>' +
+        '<div class="campo"><label>Auditora</label><select id="sigAud">' + (auditoras.length ? auditoras : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === ultimaAud ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo"><label>Fecha</label><input type="date" id="sigFecha" value="' + hoyISO + '"></div>' +
+        '<div class="campo"><label>Hora</label><input type="time" id="sigHora" value="08:00"></div>' +
+    '</div><button class="btn-guardar" style="width:100%; margin-top:14px;" onclick="programarSiguiente()">Programar revisión</button></div>';
+
+    // Pasar a auditoría final (cuando el último subproceso tiene al menos un color terminado)
+    if (l.puedeAvanzar) {
         const auditorasF = usuarios.filter(function(u) { return u.rol === 'auditora'; });
         html += '<div class="caja-final"><h3>' + (l.completa ? 'Proceso completo: programar auditoría final' : '¿Ya no faltan procesos? Pasar a auditoría final') + '</h3>' +
-            '<p>' + (l.completa ? 'Todos los subprocesos terminaron.' : 'Los subprocesos que no se hicieron quedarán como "No aplica".') + ' La línea saldrá de "Auditorías en proceso" y la auditoría final aparecerá en el calendario.</p>' +
+            '<p>' + (l.completa ? 'Todos los subprocesos terminaron.' : (l.pendientes.length ? 'Ojo: hay ' + l.pendientes.length + ' revisión(es) de proceso sin terminar. ' : '') + 'Los subprocesos que no se hicieron quedarán como "No aplica".') + ' La línea saldrá de "Auditorías en proceso" y la auditoría final aparecerá en el calendario.</p>' +
             '<div class="rejilla">' +
-                '<div class="campo"><label>Auditora</label><select id="finAud">' + (auditorasF.length ? auditorasF : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === l.ultima.fila.auditora_id ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
+                '<div class="campo"><label>Auditora</label><select id="finAud">' + (auditorasF.length ? auditorasF : usuarios).map(function(u) { return '<option value="' + u.id + '"' + (u.id === ultimaAud ? ' selected' : '') + '>' + esc(u.nombre) + '</option>'; }).join('') + '</select></div>' +
                 '<div class="campo"><label>Fecha</label><input type="date" id="finFecha" value="' + hoyISO + '"></div>' +
                 '<div class="campo"><label>Hora</label><input type="time" id="finHora" value="08:00"></div>' +
             '</div><button class="btn-final" onclick="programarFinal()">Programar auditoría final</button></div>';
     }
     $('cuerpoLinea').innerHTML = html;
 }
+window.prepararRevision = function(clave) {
+    $('sigSub').value = clave;
+    $('cajaRevision').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function() { $('sigColor').focus(); }, 300);
+};
 window.irSubproceso = function(id) { location.href = 'proceso.html?id=' + id; };
 window.programarSiguiente = async function() {
     const l = lineaAbierta, b = l.base;
@@ -941,9 +1004,13 @@ window.programarSiguiente = async function() {
         proveedor_id: b.proveedor_id, tipo_id: b.tipo_id, auditora_id: $('sigAud').value,
         fecha_programada: $('sigFecha').value, hora_programada: $('sigHora').value,
         numero_factura: b.numero_factura, referencia: b.referencia, coleccion: b.coleccion, sublinea: b.sublinea, sku: b.sku,
-        subproceso: $('sigSub').value, linea_id: l.id, programada_por: yo.id
+        subproceso: $('sigSub').value, color_proceso: $('sigColor').value.trim().toUpperCase(), linea_id: l.id, programada_por: yo.id
     };
-    if (!datos.fecha_programada || !datos.hora_programada) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = 'Elige fecha y hora.'; return; }
+    const msgL = $('mensajeLinea');
+    if (!datos.color_proceso) { msgL.className = 'mensaje error'; msgL.textContent = 'Escribe el color que se va a revisar.'; $('sigColor').focus(); return; }
+    if (!datos.fecha_programada || !datos.hora_programada) { msgL.className = 'mensaje error'; msgL.textContent = 'Elige fecha y hora.'; return; }
+    const repetida = l.filas.find(function(f) { return f.subproceso === datos.subproceso && String(f.color_proceso || '').toUpperCase() === datos.color_proceso; });
+    if (repetida && !confirm('Ya existe una revisión de ' + nombreSub(datos.subproceso) + ' · ' + datos.color_proceso + ' (' + (repetida.estado === 'finalizada' ? 'realizada' : 'programada') + ').\n\n¿Programar otra revisión del mismo color?')) return;
     const { error } = await supabase.from('auditorias').insert(datos);
     if (error) { $('mensajeLinea').className = 'mensaje error'; $('mensajeLinea').textContent = error.message; return; }
     $('modalLinea').classList.remove('abierto');
@@ -954,13 +1021,13 @@ window.programarFinal = async function() {
     const msg = $('mensajeLinea');
     if (!tf) { msg.className = 'mensaje error'; msg.textContent = 'No existe el tipo "final" en la base de datos.'; return; }
     if (!$('finFecha').value || !$('finHora').value) { msg.className = 'mensaje error'; msg.textContent = 'Elige fecha y hora para la auditoría final.'; return; }
-    if (!confirm('¿Programar la auditoría final de ' + (b.referencia || 'esta referencia') + ' para el ' + fechaCorta($('finFecha').value) + '?\n\nLa línea saldrá de "Auditorías en proceso".')) return;
+    if (!confirm('¿Programar la auditoría final de ' + (b.referencia || 'esta referencia') + ' para el ' + fechaCorta($('finFecha').value) + '?' + (l.pendientes.length ? '\n\nOjo: hay ' + l.pendientes.length + ' revisión(es) de proceso sin terminar.' : '') + '\n\nLa línea saldrá de "Auditorías en proceso".')) return;
     const datos = {
         proveedor_id: b.proveedor_id, tipo_id: tf.id, auditora_id: $('finAud').value,
         fecha_programada: $('finFecha').value, hora_programada: $('finHora').value,
         numero_factura: b.numero_factura, referencia: b.referencia, coleccion: b.coleccion, sublinea: b.sublinea, sku: b.sku,
         linea_id: l.id, programada_por: yo.id,
-        nota_programacion: 'Viene de la línea de proceso (' + l.estados.filter(function(e) { return e.estado === 'hecho'; }).map(function(e) { return e.sub.nombre.toLowerCase(); }).join(', ') + ').'
+        nota_programacion: 'Viene de la línea de proceso (' + l.estados.filter(function(e) { return e.hechas > 0; }).map(function(e) { return e.sub.nombre.toLowerCase() + (e.filas.some(function(f) { return f.color_proceso; }) ? ' [' + e.filas.filter(function(f) { return f.estado === 'finalizada'; }).map(function(f) { return f.color_proceso || 'sin color'; }).join(', ') + ']' : ''); }).join(', ') + ').'
     };
     const { data: nueva, error } = await supabase.from('auditorias').insert(datos).select().single();
     if (error) { msg.className = 'mensaje error'; msg.textContent = error.message; return; }
@@ -1107,6 +1174,7 @@ function abrirHoja(cita) {
     $('fFotoRef').value = ''; 
     $('fPdfPatronaje').value = '';
     $('fSubproceso').value = (cita && cita.subproceso) || 'corte';
+    $('fColorProceso').value = (cita && cita.color_proceso) || '';
     // Un subproceso ya creado no cambia de lugar en la línea
     $('fSubproceso').disabled = !!(cita && cita.subproceso);
     actualizarCampoSubproceso();
@@ -1132,6 +1200,7 @@ window.abrirCita = async function(id) {
 function actualizarCampoSubproceso() {
     const t = tipos.find(function(x) { return String(x.id) === String($('fTipo').value); });
     $('campoSubproceso').style.display = t && esProceso(t.nombre) ? '' : 'none';
+    if (t && esProceso(t.nombre)) cargarColoresReferencia();
 }
 $('fTipo').addEventListener('change', actualizarCampoSubproceso);
 const cerrarHoja = function() { $('modal').classList.remove('abierto'); };
@@ -1149,6 +1218,17 @@ $('btnEjecutar').addEventListener('click', function() {
 });
 
 // Auto-completar
+// Colores de la referencia para sugerirlos en "Color a revisar"
+async function cargarColoresReferencia() {
+    const ref = $('fReferencia').value.trim();
+    if (!ref) { $('dlColoresProceso').innerHTML = ''; return; }
+    try {
+        const { data } = await supabase.from('produccion').select('color').ilike('descripcion', ref);
+        $('dlColoresProceso').innerHTML = Array.from(new Set((data || []).map(function(r) { return String(r.color || '').trim().toUpperCase(); }).filter(Boolean))).sort()
+            .map(function(c) { return '<option value="' + esc(c) + '">'; }).join('');
+    } catch (e) { console.warn(e); }
+}
+$('fReferencia').addEventListener('change', cargarColoresReferencia);
 $('fReferencia').addEventListener('change', function() {
     const buscada = $('fReferencia').value.trim().toUpperCase();
     const r = referencias.find(function(x) { return (x.descripcion || '').trim().toUpperCase() === buscada; });
@@ -1180,8 +1260,8 @@ $('btnGuardar').addEventListener('click', async () => {
     };
     const tipoSel = tipos.find(function(x) { return x.id === datos.tipo_id; });
     const esProc = tipoSel && esProceso(tipoSel.nombre);
-    if (esProc) datos.subproceso = $('fSubproceso').value;
-    else datos.subproceso = null;
+    if (esProc) { datos.subproceso = $('fSubproceso').value; datos.color_proceso = $('fColorProceso').value.trim().toUpperCase() || null; }
+    else { datos.subproceso = null; datos.color_proceso = null; }
 
     if (!datos.proveedor_id || !datos.tipo_id || !datos.auditora_id || !datos.fecha_programada || !datos.hora_programada) {
         msg.className = 'mensaje error'; msg.textContent = 'Faltan datos obligatorios.'; return;

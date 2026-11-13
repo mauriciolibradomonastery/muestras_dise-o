@@ -282,7 +282,7 @@ async function cargar() {
 
         // Línea completa (para el avance y los archivos de referencia)
         const linea = auditoria.linea_id || auditoria.id;
-        const { data: filas } = await supabase.from('auditorias').select('id, subproceso, estado, fecha_programada')
+        const { data: filas } = await supabase.from('auditorias').select('id, subproceso, color_proceso, estado, fecha_programada')
             .or('linea_id.eq.' + linea + ',id.eq.' + linea).neq('estado', 'cancelada');
         filasLinea = filas || [];
         const { data: refs } = await supabase.from('auditoria_evidencias').select('url, nombre')
@@ -290,7 +290,7 @@ async function cargar() {
             .in('nombre', ['Foto Prenda Referencia', 'Informe de Patronaje']);
         adjuntosRef = refs || [];
 
-        $('titulo').textContent = nombreSub(auditoria.subproceso) + ' · ' + (auditoria.referencia || 'Auditoría de proceso');
+        $('titulo').textContent = nombreSub(auditoria.subproceso) + (auditoria.color_proceso ? ' · ' + auditoria.color_proceso : '') + ' · ' + (auditoria.referencia || 'Auditoría de proceso');
         $('subtitulo').textContent = 'Auditoría de proceso' + (auditoria._proveedor ? ' · ' + auditoria._proveedor : '');
 
         if (auditoria.estado === 'programada') {
@@ -310,8 +310,10 @@ async function cargar() {
 function pintar() {
     const maxOrden = filasLinea.reduce(function(m, f) { return Math.max(m, ordenSub(f.subproceso)); }, ordenSub(auditoria.subproceso));
     const avance = SUBPROCESOS.map(function(s, i) {
-        const f = filasLinea.find(function(x) { return x.subproceso === s.clave; });
-        const est = f ? (f.estado === 'finalizada' ? 'hecho' : f.estado === 'en_curso' ? 'en_curso' : 'programado') : (i < maxOrden ? 'omitido' : '');
+        // Un subproceso puede tener varias revisiones (una por color)
+        const deSub = filasLinea.filter(function(x) { return x.subproceso === s.clave; });
+        const f = deSub.length ? deSub[0] : null;
+        const est = f ? (deSub.some(function(x) { return x.estado === 'en_curso'; }) ? 'en_curso' : deSub.some(function(x) { return x.estado !== 'finalizada'; }) ? 'programado' : 'hecho') : (i < maxOrden ? 'omitido' : '');
         return '<div class="pa ' + est + (s.clave === auditoria.subproceso ? ' actual' : '') + '">' + s.nombre + '</div>';
     }).join('');
     const foto = adjuntosRef.find(function(e) { return e.nombre === 'Foto Prenda Referencia'; });
@@ -325,6 +327,7 @@ function pintar() {
             '<div><b>SKU</b>' + esc(auditoria.sku || '—') + '</div>' +
             '<div><b>Proveedor</b>' + esc(auditoria._proveedor || '—') + '</div>' +
             '<div><b>N° orden de compra</b>' + esc(auditoria.numero_factura || '—') + '</div>' +
+            '<div><b>Color revisado</b>' + esc(auditoria.color_proceso || '—') + '</div>' +
             '<div><b>Auditora</b>' + esc(auditoria._auditora || '—') + '</div>' +
         '</div>' +
         '<label>Avance de la línea de procesos</label>' +

@@ -663,9 +663,9 @@ async function htmlHistorialYProceso(det, usuarios) {
 
     // Auditorías de proceso previas
     if (lineaProceso) {
-        const { data: subs } = await supabase.from('auditorias').select('id, subproceso, fecha_auditoria, fecha_programada, auditora_id, estado, resultado, observaciones, tipo_id')
+        const { data: subs } = await supabase.from('auditorias').select('id, subproceso, color_proceso, fecha_auditoria, fecha_programada, auditora_id, estado, resultado, observaciones, tipo_id')
             .or('linea_id.eq.' + lineaProceso + ',id.eq.' + lineaProceso).neq('estado', 'cancelada');
-        const lista = (subs || []).filter(x => esProc(x.tipo_id)).sort((a, b) => SUBPROCESOS_R.indexOf(a.subproceso || 'corte') - SUBPROCESOS_R.indexOf(b.subproceso || 'corte'));
+        const lista = (subs || []).filter(x => esProc(x.tipo_id)).sort((a, b) => SUBPROCESOS_R.indexOf(a.subproceso || 'corte') - SUBPROCESOS_R.indexOf(b.subproceso || 'corte') || String(a.fecha_auditoria || a.fecha_programada || '').localeCompare(String(b.fecha_auditoria || b.fecha_programada || '')) || a.id - b.id);
         if (lista.length) {
             const ids = lista.map(x => x.id);
             const [pr, ev] = await Promise.all([
@@ -678,7 +678,7 @@ async function htmlHistorialYProceso(det, usuarios) {
                 const adj = (ev.data || []).filter(x => x.auditoria_id === sp.id && !['Foto Prenda Referencia', 'Informe de Patronaje'].includes(x.nombre));
                 const estado = sp.estado !== 'finalizada' ? '<span class="res-pendiente">' + (sp.estado === 'en_curso' ? 'EN CURSO' : 'PROGRAMADO') + '</span>'
                     : sp.resultado === 'rechazado' ? '<span class="res-nocumple">NO CUMPLE</span>' : sp.resultado === 'aprobado' ? '<span class="res-cumple">CUMPLE</span>' : '<span class="res-cumple">REALIZADO</span>';
-                let b = `<div class="bloque-sub"><div class="bs-cab"><b>${NOMBRE_SUB_R[sp.subproceso || 'corte'] || esc(sp.subproceso)}</b>
+                let b = `<div class="bloque-sub"><div class="bs-cab"><b>${NOMBRE_SUB_R[sp.subproceso || 'corte'] || esc(sp.subproceso)}${sp.color_proceso ? ' · ' + esc(sp.color_proceso) : ''}</b>
                     <span>${esc(sp.fecha_auditoria || sp.fecha_programada || '')} · ${esc(nombreUsuario(sp.auditora_id))} · ${estado}</span></div>`;
                 if (items.length) {
                     b += `<table class="tabla-informe"><thead><tr><th style="text-align:left">Descripción</th><th style="width:70px">Cumple</th><th style="width:80px">No cumple</th><th style="width:50px">N/A</th><th>Observaciones</th></tr></thead><tbody>` +
