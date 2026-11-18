@@ -183,6 +183,7 @@
         <span id="selloDatos" class="sello-datos"></span>
         <button class="btn-claro" onclick="cargarDatos()">🔄 Actualizar pantalla</button>
         <button class="btn-oscuro" id="btnReleer" onclick="pedirSincronizacion()">📂 Releer Excel del servidor</button>
+        <button class="btn-claro" id="btnCheckin" onclick="copiarCheckinTability()">📋 Copiar check-in Tability</button>
         <a href="menu.html" class="btn-back">⬅ Volver al Menú Principal</a>
     </div>
 </div>
@@ -1644,6 +1645,127 @@ document.getElementById('fTexto').addEventListener('input', () => { mesSeleccion
 
 verSeccion('resumen');
 cargarDatos();
+
+// ---------- Check-in de Tability (OKR: producción a tiempo) ----------
+// Arma el texto del check-in a partir de la vista v_checkin_tability y lo copia
+// al portapapeles. La persona lo pega en Tability y escribe las observaciones.
+// Regla de negocio: "ingresado" = tiene fecha_real_bodega (igual que esIngresada).
+const ANIO_OKR = 2026;               // Año del OKR. Se cambia a mano cuando empiece el ciclo nuevo.
+const HORAS_DATOS_VIEJOS = 24;       // Si la última sincronización es más vieja, el texto lo advierte.
+const ORDEN_ORIGEN = ['CHINA', 'PERU', 'TURQUIA', 'COLOMBIA'];   // Mismo orden del check-in manual.
+const NOMBRE_ORIGEN = { CHINA: 'China', PERU: 'Perú', TURQUIA: 'Turquía', COLOMBIA: 'Colombia', PORTUGAL: 'Portugal' };
+const logCheckin = typeof crearLogger === 'function' ? crearLogger('produccion/checkin-tability') : console;
+
+/**
+ * @typedef {{ coleccion: string, anio: number|null, orden: number|null, origen: string|null,
+ *             preventa: number, ingresadas: number, pendientes: number,
+ *             sincronizado_en: string|null }} FilaCheckin
+ */
+
+const fmtNum = (/** @type {number} */ n) => Number(n || 0).toLocaleString('es-CO');
+const nombreOrigen = (/** @type {string|null} */ o) =>
+    NOMBRE_ORIGEN[o] || (o ? o.charAt(0) + o.slice(1).toLowerCase() : 'Sin origen');
+const nombreColeccion = (/** @type {string} */ c) => {
+    const n = String(c || 'Sin colección').replace(/^Q\d-/, '').toLowerCase();
+    return n.charAt(0).toUpperCase() + n.slice(1);
+};
+const fechaBogota = (/** @type {Date|string} */ d, conHora = false) =>
+    new Date(d).toLocaleString('es-CO', {
+        timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric',
+        ...(conHora ? { hour: '2-digit', minute: '2-digit' } : {}),
+    });
+
+/**
+ * Porcentaje de ingreso redondeado HACIA ABAJO a un decimal.
+ * Así nunca se muestra "100%" mientras quede una sola unidad pendiente
+ * (99,96% con redondeo normal se vería como 100% y escondería el faltante).
+ * @param {number} ingresadas @param {number} preventa @returns {string}
+ */
+function pctIngreso(ingresadas, preventa) {
+    if (!preventa) return 's/d';
+    const pct = Math.floor((1000 * ingresadas) / preventa) / 10;
+    return `${pct.toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`;
+}
+
+/** @param {FilaCheckin[]} filas @returns {string} */
+function armarTextoCheckin(filas) {
+    /** @type {Map<string, FilaCheckin[]>} */
+    const porColeccion = new Map();
+    for (const f of filas) {
+        if (!porColeccion.has(f.coleccion)) porColeccion.set(f.coleccion, []);
+        porColeccion.get(f.coleccion).push(f);
+    }
+    const colecciones = [...porColeccion.entries()]
+        .sort((a, b) => (a[1][0].orden ?? 999) - (b[1][0].orden ?? 999));
+    const posOrigen = (/** @type {string|null} */ o) => {
+        const k = ORDEN_ORIGEN.indexOf(o);
+        return k === -1 ? 99 : k;
+    };
+
+    const ultimaSync = filas.map(f => f.sincronizado_en).filter(Boolean).sort().pop();
+    const horas = ultimaSync ? (Date.now() - new Date(ultimaSync).getTime()) / 36e5 : Infinity;
+
+    const lineas = [`${fechaBogota(new Date())} :`];
+    lineas.push(ultimaSync ? `Datos sincronizados: ${fechaBogota(ultimaSync, true)}` : '⚠️ Sin fecha de sincronización');
+    if (horas > HORAS_DATOS_VIEJOS) {
+        lineas.push(`⚠️ Datos con más de ${HORAS_DATOS_VIEJOS} h. Usa "Releer Excel del servidor" antes de publicar.`);
+    }
+    lineas.push('');
+
+    colecciones.forEach(([coleccion, fs], i) => {
+        fs.sort((a, b) => posOrigen(a.origen) - posOrigen(b.origen));
+        const prev = fs.reduce((s, f) => s + f.preventa, 0);
+        const ing = fs.reduce((s, f) => s + f.ingresadas, 0);
+        lineas.push(`${i + 1}. Colección ${nombreColeccion(coleccion)}:`);
+        lineas.push('Origen | Preventa | Pendientes | % ingreso | Observaciones');
+        fs.forEach(f => lineas.push(
+            `• ${nombreOrigen(f.origen)}: ${fmtNum(f.preventa)} | ${fmtNum(f.pendientes)} | ${pctIngreso(f.ingresadas, f.preventa)} | `
+        ));
+        lineas.push(`% TOTAL DE INGRESO ${pctIngreso(ing, prev)}`);
+        lineas.push('');
+    });
+    return lineas.join('\n').trimEnd();
+}
+
+window.copiarCheckinTability = async function () {
+    const btn = document.getElementById('btnCheckin');
+    const aviso = document.getElementById('avisoSync');
+    btn.disabled = true;
+    aviso.className = 'aviso-sync trabajando';
+    aviso.textContent = 'Armando el check-in…';
+    try {
+        const { data, error } = await supabase.from('v_checkin_tability')
+            .select('coleccion, anio, orden, origen, preventa, ingresadas, pendientes, sincronizado_en')
+            .eq('anio', ANIO_OKR);
+        if (error) throw error;
+        // Fallar cerrado: un check-in vacío es peor que un error visible.
+        if (!data || data.length === 0) throw new Error(`No hay colecciones del año ${ANIO_OKR} en la vista.`);
+
+        // Tolerancia de 1 unidad: la base guarda decimales (p. ej. 21304.000000000000015)
+        // y cada suma se redondea por separado al convertirla a entero.
+        const descuadradas = data.filter(f => Math.abs(f.preventa - (f.ingresadas + f.pendientes)) > 1);
+        if (descuadradas.length) {
+            throw new Error(`Totales que no cuadran en ${descuadradas.map(f => `${f.coleccion}/${f.origen}`).join(', ')}.`);
+        }
+
+        const texto = armarTextoCheckin(data);
+        await navigator.clipboard.writeText(texto);
+
+        const n = new Set(data.map(f => f.coleccion)).size;
+        logCheckin.info('Check-in copiado al portapapeles', { colecciones: n, filas: data.length });
+        aviso.className = 'aviso-sync ok';
+        aviso.textContent = `Check-in copiado (${n} colecciones). Pégalo en Tability y escribe las observaciones.`;
+    } catch (e) {
+        logCheckin.error('No se pudo generar el check-in', e);
+        aviso.className = 'aviso-sync falla';
+        aviso.textContent = e?.name === 'NotAllowedError'
+            ? 'El navegador bloqueó el portapapeles. Haz clic en la página y vuelve a intentarlo.'
+            : `No se pudo generar el check-in: ${e?.message || e}`;
+    } finally {
+        btn.disabled = false;
+        setTimeout(() => { aviso.className = 'aviso-sync'; }, 10000);
+    }
+};
 </script>
 </body>
 </html>
