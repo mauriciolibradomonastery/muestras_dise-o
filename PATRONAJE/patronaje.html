@@ -748,6 +748,14 @@
             marcarCambios();
         }
 
+        // La fila se busca en el momento del evento (no se "recuerda" al crear la celda):
+        // así la celda sigue funcionando si después de guardar se mueve a la fila real.
+        function alEditarCelda(e) {
+            const fila = e.currentTarget.closest('tr');
+            if (!fila) return;
+            fila._modificado = true; marcarCambios(); recalcularFila(fila);
+        }
+
         function crearFilaHTML(idDb = null, datos = []) {
             const tr = document.createElement('tr'); 
             if (idDb) tr.dataset.id = idDb; 
@@ -830,11 +838,11 @@
                 }
                 else if (colName === 'NOMBRE / REFERENCIA:') {
                     td.contentEditable = "true"; td.style.fontWeight = "bold"; td.textContent = valorStr;
-                    td.oninput = () => { tr._modificado = true; marcarCambios(); recalcularFila(tr); };
+                    td.oninput = alEditarCelda;
                 }
-                else { 
-                    td.contentEditable = "true"; td.textContent = valorStr; 
-                    td.oninput = () => { tr._modificado = true; marcarCambios(); recalcularFila(tr); };
+                else {
+                    td.contentEditable = "true"; td.textContent = valorStr;
+                    td.oninput = alEditarCelda;
                 } tr.appendChild(td);
             });
 
@@ -877,30 +885,40 @@
 
         function mismosDatos(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
-        // Redibuja una fila con nuevos valores, conservando filtro y selección
-        function reemplazarFila(trViejo, id, datosVisibles, base) {
-            const nueva = crearFilaHTML(id, [...datosVisibles]);
-            nueva._base = [...base];
-            nueva._hashGuardado = JSON.stringify(base);
-            nueva._modificado = !mismosDatos(window.extraerDatosFila(nueva), base);
-            nueva.style.display = trViejo.style.display;
-            const cbV = trViejo.querySelector('.row-checkbox'), cbN = nueva.querySelector('.row-checkbox');
-            if (cbV && cbN) cbN.checked = cbV.checked;
-            trViejo.replaceWith(nueva);
-            return nueva;
-        }
-
-        // Después de guardar: respeta lo que el usuario escribió MIENTRAS se guardaba
+        // Después de guardar: muestra lo que otras personas cambiaron en la fila SIN reemplazar la fila.
+        // ⚠️ Antes se reemplazaba la fila completa (replaceWith). Si el usuario estaba escribiendo en ella,
+        // la celda con el cursor desaparecía del DOM y lo que tecleaba después se perdía EN SILENCIO
+        // (sin alerta y con el botón en "Todo guardado"). Ahora solo se cambian las celdas que otra
+        // persona modificó, y nunca la celda donde el usuario tiene el cursor.
         function despuesDeGuardar(tr, enviado, guardado) {
             const ahora = window.extraerDatosFila(tr);
+            const base = [...guardado];
+            // Campo que el usuario no tocó durante el guardado → mostrar lo que quedó en la base
             const visible = ahora.map((v, i) => v !== enviado[i] ? v : guardado[i]);
-            if (!mismosDatos(visible, ahora)) {
-                reemplazarFila(tr, tr.dataset.id, visible, guardado);
-            } else {
-                tr._base = [...guardado];
-                tr._hashGuardado = JSON.stringify(guardado);
-                tr._modificado = !mismosDatos(ahora, guardado);
+            const indicesDistintos = visible.map((v, i) => v !== ahora[i] ? i : -1).filter(i => i >= 0 && !COLUMNAS_CALCULADAS.has(i));
+
+            if (indicesDistintos.length > 0) {
+                const plantilla = crearFilaHTML(tr.dataset.id, [...visible]);   // fila temporal, nunca se inserta
+                // Array.from: copia fija. tr.children es una lista "viva": al mover una celda los índices
+                // se corrían y las siguientes celdas quedaban en la columna equivocada.
+                const celdasActuales = Array.from(tr.children), celdasNuevas = Array.from(plantilla.children);
+                indicesDistintos.forEach(i => {
+                    const actual = celdasActuales[i + 1], nueva = celdasNuevas[i + 1];   // td[i+1] = datos[i]
+                    if (!actual || !nueva) return;
+                    if (actual.contains(document.activeElement)) {
+                        // El usuario tiene el cursor en esta celda: no se toca. Se toma lo que ve como base
+                        // para no enviar su valor viejo encima del de la otra persona, salvo que lo edite.
+                        base[i] = ahora[i];
+                        console.warn('[guardar] Otra persona cambió una celda que estás editando; se conserva la tuya. Fila', tr.dataset.id, 'campo', i);
+                        return;
+                    }
+                    actual.replaceWith(nueva);
+                });
+                recalcularFila(tr);   // estado, lead times y colores con los valores nuevos
             }
+            tr._base = base;
+            tr._hashGuardado = JSON.stringify(base);
+            tr._modificado = !mismosDatos(window.extraerDatosFila(tr), base);
         }
 
         function recalcularPendientes() {
