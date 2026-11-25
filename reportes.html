@@ -48,7 +48,6 @@
     </style>
     <!-- Guardián de sesión: cierra al cambiar el día o tras 4 horas sin uso -->
     <script type="module" src="sesion.js"></script>
-    <script src="utilidades.js"></script>
 </head>
 <body>
 
@@ -360,16 +359,8 @@
             await obtenerTrmActual();
             await cargarDatosSupabase();
 
-            // Capa 1: las recargas se agrupan para no descargar la tabla una vez por cada fila modificada.
-            const logReportes = crearLogger('reportes/prendas');
-            const recargarReportes = crearRecargaAgrupada(cargarDatosSupabase, { log: logReportes });
-
-            supabase.channel('cambios-reportes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => recargarReportes('evento Realtime'))
-                .subscribe((estado, err) => {
-                    if (err) logReportes.error('Error en la suscripción Realtime', err);
-                    else logReportes.info(`Realtime: ${estado}`);
-                });
+            // (2026-11-25) Se retiró la suscripción Realtime a 'prendas': nunca funcionó porque 'prendas' no está en la
+            // publicación supabase_realtime, y se decidió no activarla (Diseño ve los cambios al recargar). Ver CLAUDE.md §10, 1.4.
         }
 
         function renderizarGraficaEstados(datos) {

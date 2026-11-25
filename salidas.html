@@ -312,12 +312,8 @@
         const logSalidas = crearLogger('salidas/prendas');
         const recargarTablaSalidas = crearRecargaAgrupada(cargarTablaSalidas, { log: logSalidas });
 
-        client.channel('cambios-prendas')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'prendas' }, () => recargarTablaSalidas('evento Realtime'))
-            .subscribe((estado, err) => {
-                if (err) logSalidas.error('Error en la suscripción Realtime', err);
-                else logSalidas.info(`Realtime: ${estado}`);
-            });
+        // (2026-11-25) Se retiró la suscripción Realtime a 'prendas': nunca funcionó porque 'prendas' no está en la
+        // publicación supabase_realtime, y se decidió no activarla (Diseño ve los cambios al recargar). Ver CLAUDE.md §10, 1.4.
 
         function toggleDropdown() { document.getElementById("dropdownOpciones").classList.toggle("show"); }
         window.onclick = function(event) {

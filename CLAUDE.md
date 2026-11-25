@@ -26,8 +26,8 @@ de cada muestra y genera reportes de gestión.
   formulario.html       Registro de muestras → tabla `prendas`
   dashboard.html, reportes.html, salidas.html, produccion.html, seguimiento_diseno.html
   sesion.js             Guardián de sesión (compartido)
-  utilidades.js         Logger (crearLogger) y crearRecargaAgrupada para Realtime.
-                        Lo usan dashboard, reportes y salidas.
+  utilidades.js         Logger (crearLogger) y crearRecargaAgrupada (agrupa recargas tras editar/importar).
+                        Lo usan dashboard y salidas.
   logo.png, fondo.png, favicon.png
 /PATRONAJE/             Módulo del Departamento Técnico
   index_patronaje.html  Login de patronaje
@@ -59,7 +59,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.actualizar_desde_diseno(p_ids uuid[], p_aplicar bool)` | Botón "🔄 Actualizar desde Diseño": compara (`false`) o copia (`true`) desde `prendas` los campos 3–6 y 8–13. Copia en el servidor; nunca borra con un vacío de Diseño; no toca FOTO, PRECINTO ni DISEÑADOR. `security definer`, solo `authenticated`. Script 11. | execute |
 | `public.guardar_medidas_auditoria(p_auditoria_id bigint, p_medidas jsonb)` | Auditorías: borra e inserta las medidas en **una sola transacción** (o todo o nada). `security invoker`: aplica las políticas RLS de `auditoria_medidas`. La usan `auditorias/auditoria.html` y `revision3.html`. Script 12. | execute |
 | `public.guardar_detalle_auditoria(p_auditoria_id, p_cantidades, p_defectos, p_pruebas, p_solo_pruebas)` | Auditorías: reemplaza cantidades, defectos y pruebas en **una sola transacción**. `null` = no tocar esa parte; `p_solo_pruebas` = reemplazar solo esas pruebas (procesos externos de revision3). Verifica permiso explícito. La usan `auditoria.html`, `revision3.html` y `proceso.html`. Script 13. | execute |
-| Publicación `supabase_realtime` | Desde el script 14 incluye `public.dpto_tecnico` (tiempo real de patronaje). `prendas` **no** está (ver §10, 1.4). | — |
+| Publicación `supabase_realtime` | Desde el script 14 incluye `public.dpto_tecnico` (tiempo real de patronaje). `prendas` **no** está, a propósito (§10, 1.4). | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -243,7 +243,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | ~~1.1~~ | ✅ **Hecho 2026-11-25.** Medidas atómicas (script 12) y "Siguiente"/"Finalizar" no avanzan si algo no se guardó. Una auditoría la llena una sola persona. | — | Confirmar en el uso diario |
 | ~~1.1b~~ | ✅ **Hecho 2026-11-25.** Cantidades, defectos y pruebas atómicos (script 13) en `auditoria.html`, `revision3.html` y `proceso.html` (este último ya no finaliza si las pruebas fallan). No queda ningún `delete()`+`insert()` suelto en auditorías. | — | — |
 | ~~1.2~~ | ✅ **Hecho 2026-11-25.** Tiempo real en patronaje (script 14 + página): cambios, filas nuevas y borradas de otras personas aparecen solos; respeta ediciones locales y la celda con el cursor; cola durante la carga; resincroniza al reconectar o al volver de suspensión; indicador 🟢/🔴. Hasta 5 personas a la vez. | — | — |
-| 1.4 | **El tiempo real de Diseño nunca funcionó:** `dashboard.html`, `reportes.html` y `salidas.html` se suscriben a `prendas`, pero `prendas` no está en la publicación `supabase_realtime` (tenía 0 tablas). Activarlo hace que esas páginas recarguen el inventario completo (con fotos base64) en cada cambio: evaluar junto con 3.1. | Diseño no ve cambios de otros sin recargar. | ¿Se necesita en Diseño? |
+| ~~1.4~~ | ✅ **Decidido 2026-11-25: NO.** Diseño ve los cambios de otros al recargar. Se retiró la suscripción a `prendas` de `dashboard.html`, `reportes.html` y `salidas.html` (nunca funcionó: `prendas` no está en `supabase_realtime`). La presencia (`room-bodega`) y `crearRecargaAgrupada` se conservan; `reportes.html` ya no carga `utilidades.js`. | — | — |
 | ~~1.3~~ | ✅ **Hecho 2026-11-25.** Retirado "📤 Importar Histórico" (botón, input oculto y `procesarExcelImportado`). La librería XLSX se conserva para "📥 Exportar Excel". | — | — |
 
 ### Fase 2 · Higiene (un solo paquete pequeño)
@@ -260,6 +260,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Retirada la suscripción Realtime a `prendas` en Diseño (nunca funcionó; decisión: no se necesita).
 - 2026-11-25 · Librería de Supabase fijada en 2.119.2 en todas las páginas (ya no cambia sola).
 - 2026-11-25 · Tiempo real en patronaje (script 14): la tabla se actualiza sola con lo que guardan los demás.
 - 2026-11-25 · Retirado "📤 Importar Histórico" de patronaje (ya no se usaba; borraba ediciones sin guardar).
