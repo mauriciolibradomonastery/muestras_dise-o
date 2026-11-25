@@ -451,11 +451,16 @@ async function guardar(finalizar) {
     if (items.length) {
         const hayFalla = items.some(function(x) { return x.resultado === 'FAIL'; });
         datos.resultado = items.every(function(x) { return x.resultado; }) ? (hayFalla ? 'rechazado' : 'aprobado') : null;
-        await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
+        // Pruebas en UNA transacción (sql/13). Antes: delete() + insert() sin revisar errores, y la
+        // auditoría se marcaba FINALIZADA aunque las pruebas no se hubieran guardado.
         const filas = items.filter(function(x) { return x.resultado; }).map(function(x) {
-            return { auditoria_id: idAuditoria, prueba: x.descripcion, resultado: x.resultado, observacion: x.observacion || '' };
+            return { prueba: x.descripcion, resultado: x.resultado, observacion: x.observacion || '' };
         });
-        if (filas.length) await supabase.from('auditoria_pruebas').insert(filas);
+        const resPruebas = await supabase.rpc('guardar_detalle_auditoria', { p_auditoria_id: idAuditoria, p_pruebas: filas });
+        if (resPruebas.error) {
+            console.error('[proceso] No se guardaron las pruebas de la auditoría', idAuditoria, resPruebas.error);
+            throw new Error('las pruebas no se guardaron (' + resPruebas.error.message + '). No se cambió nada.');
+        }
     }
     if (finalizar) datos.estado = 'finalizada';
     const { error } = await supabase.from('auditorias').update(datos).eq('id', idAuditoria);

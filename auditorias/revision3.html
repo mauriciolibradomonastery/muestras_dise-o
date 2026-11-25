@@ -584,19 +584,36 @@ window.addEventListener('beforeunload', function(e) {
     if (medidasSinGuardar) { e.preventDefault(); e.returnValue = ''; return ''; }
 });
 
+// ================== GUARDADO SEGURO DE CANTIDADES, DEFECTOS Y PROCESOS ==================
+// guardar_detalle_auditoria (sql/13) reemplaza estas partes en UNA transacción (o todo o nada).
+// Los procesos externos se guardan como pruebas con el prefijo PREFIJO_PROCESO; p_solo_pruebas
+// hace que solo se reemplacen esas y no las demás pruebas de la auditoría (igual que antes).
+const nombresProcesos = function() { return PROCESOS.map(function(p) { return PREFIJO_PROCESO + p; }); };
+function filasProcesos() {
+    return procesos.filter(function(p) { return p.resultado; }).map(function(p) {
+        return { prueba: PREFIJO_PROCESO + p.nombre, resultado: p.resultado, observacion: p.resultado === 'FAIL' ? 'Unidades afectadas: ' + (p.unidades || 0) : '' };
+    });
+}
+function filasCantidades() {
+    const filas = [];
+    cantidades.forEach(function(c) {
+        Object.entries(c.tallas).forEach(function(e) {
+            if (num(e[1]) > 0) filas.push({ color: c.color, talla: e[0], cantidad: num(e[1]) });
+        });
+    });
+    return filas;
+}
+async function guardarDetalle(partes) {
+    const { data, error } = await supabase.rpc('guardar_detalle_auditoria', Object.assign({ p_auditoria_id: idAuditoria }, partes));
+    if (error) { console.error('[detalle] No se guardó', Object.keys(partes).join(', '), 'de la revisión', idAuditoria, error); throw error; }
+    return data;
+}
 // Devuelve true si se guardó (antes el error se tragaba con console.error y nadie se enteraba)
 async function guardarProcesosBD() {
     try {
-        const nombres = PROCESOS.map(function(p) { return PREFIJO_PROCESO + p; });
-        const borrado = await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria).in('prueba', nombres);
-        if (borrado.error) throw borrado.error;
-        const filas = procesos.filter(function(p) { return p.resultado; }).map(function(p) {
-            return { auditoria_id: idAuditoria, prueba: PREFIJO_PROCESO + p.nombre, resultado: p.resultado, observacion: p.resultado === 'FAIL' ? 'Unidades afectadas: ' + (p.unidades || 0) : '' };
-        });
-        if (filas.length) { const ins = await supabase.from('auditoria_pruebas').insert(filas); if (ins.error) throw ins.error; }
+        await guardarDetalle({ p_pruebas: filasProcesos(), p_solo_pruebas: nombresProcesos() });
         return true;
     } catch (e) {
-        console.error('[procesos] No se guardaron los procesos externos', idAuditoria, e);
         return false;
     }
 }
@@ -736,21 +753,14 @@ async function guardarTodo() {
         sugerencia_aql: auditoria.sugerencia_aql
     }).eq('id', idAuditoria), 'datos básicos');
 
-    revisarRespuesta(await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria), 'cantidades (borrado)');
-    const filasCant = [];
-    cantidades.forEach(function(c) {
-        Object.entries(c.tallas).forEach(function(e) {
-            if (num(e[1]) > 0) filasCant.push({ auditoria_id: idAuditoria, color: c.color, talla: e[0], cantidad: num(e[1]) });
-        });
+    // Cantidades, defectos y procesos externos juntos, en una sola transacción (sql/13)
+    const defs = defectosGenerados().map(function(d) {
+        return { severidad: d.severidad, defecto: d.defecto, familia: d.familia || null, color: d.color, talla: d.talla, cantidad: d.cantidad };
     });
-    if (filasCant.length) revisarRespuesta(await supabase.from('auditoria_cantidades').insert(filasCant), 'cantidades');
+    try { await guardarDetalle({ p_cantidades: filasCantidades(), p_defectos: defs, p_pruebas: filasProcesos(), p_solo_pruebas: nombresProcesos() }); }
+    catch (e) { throw new Error('cantidades, defectos y procesos: ' + (e.message || e)); }
 
     if (!(await guardarMedidasBD(true))) throw new Error('medidas: ' + ultimoErrorMedidas);
-    if (!(await guardarProcesosBD())) throw new Error('procesos externos');
-
-    revisarRespuesta(await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria), 'defectos (borrado)');
-    const defs = defectosGenerados();
-    if (defs.length) revisarRespuesta(await supabase.from('auditoria_defectos').insert(defs), 'defectos');
 
     const resEvid = await Promise.all(evidencias.map(function(e) {
         if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);

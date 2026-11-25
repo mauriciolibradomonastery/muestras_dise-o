@@ -1340,16 +1340,35 @@ window.setPrueba = async function(i, res) {
     pintar(); 
 };
 
+// ================== GUARDADO SEGURO DE CANTIDADES, DEFECTOS Y PRUEBAS ==================
+// La función SQL guardar_detalle_auditoria (sql/13) reemplaza estas partes en UNA transacción:
+// o queda todo o nada. Antes eran delete() + insert() por separado: si el insert fallaba,
+// esa parte quedaba vacía. Un parámetro que no se envía (null) no se toca.
+function filasPruebas() {
+    return pruebas.map(function(p) { return { prueba: p.prueba, resultado: p.resultado, observacion: p.observacion }; });
+}
+function filasCantidades() {
+    const filas = [];
+    cantidades.forEach(function(c) {
+        Object.entries(c.tallas).forEach(function([t, cant]) {
+            if (num(cant) > 0) filas.push({ color: c.color, talla: t, cantidad: num(cant) });
+        });
+    });
+    return filas;
+}
+function filasDefectos() {
+    return defectos.map(function(d) {
+        return { severidad: d.severidad, defecto: d.defecto, familia: d.familia || null, color: d.color, talla: d.talla, cantidad: d.cantidad };
+    });
+}
+async function guardarDetalle(partes) {
+    const { data, error } = await supabase.rpc('guardar_detalle_auditoria', Object.assign({ p_auditoria_id: idAuditoria }, partes));
+    if (error) { console.error('[detalle] No se guardó', Object.keys(partes).join(', '), 'de la auditoría', idAuditoria, error); throw error; }
+    return data;
+}
 // Lanza un error si algo falla (antes se tragaba con catch(e){} y nadie se enteraba)
 async function guardarPruebasBD() {
-    const borrado = await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria);
-    if (borrado.error) { console.error('[pruebas] Error borrando:', borrado.error); throw borrado.error; }
-    if (pruebas.length) {
-        const ins = await supabase.from('auditoria_pruebas').insert(pruebas.map(function(p) {
-            return { auditoria_id: idAuditoria, prueba: p.prueba, resultado: p.resultado, observacion: p.observacion };
-        }));
-        if (ins.error) { console.error('[pruebas] Error insertando:', ins.error); throw ins.error; }
-    }
+    await guardarDetalle({ p_pruebas: filasPruebas() });
 }
 
 // Paso 5
@@ -1490,29 +1509,14 @@ async function guardarTodo() {
         sugerencia_aql: auditoria.sugerencia_aql
     }).eq('id', idAuditoria), 'datos básicos');
 
-    // 2. Cantidades
-    revisarRespuesta(await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria), 'cantidades (borrado)');
-    const filasCant = [];
-    cantidades.forEach(function(c) {
-        Object.entries(c.tallas).forEach(function([t, cant]) {
-            if (num(cant) > 0) filasCant.push({ auditoria_id: idAuditoria, color: c.color, talla: t, cantidad: num(cant) });
-        });
-    });
-    if (filasCant.length) revisarRespuesta(await supabase.from('auditoria_cantidades').insert(filasCant), 'cantidades');
+    // 2. Cantidades, defectos y pruebas juntos, en una sola transacción (sql/13)
+    try { await guardarDetalle({ p_cantidades: filasCantidades(), p_defectos: filasDefectos(), p_pruebas: filasPruebas() }); }
+    catch (e) { throw new Error('cantidades, defectos y pruebas: ' + (e.message || e)); }
 
     // 3. Medidas (atómico: sql/12)
     if (!(await guardarMedidasBD(true))) throw new Error('medidas: ' + ultimoErrorMedidas);
 
-    // 4. Defectos y Pruebas
-    revisarRespuesta(await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria), 'defectos (borrado)');
-    if (defectos.length) {
-        revisarRespuesta(await supabase.from('auditoria_defectos').insert(defectos.map(function(d) {
-            return { auditoria_id: idAuditoria, severidad: d.severidad, defecto: d.defecto, familia: d.familia || null, color: d.color, talla: d.talla, cantidad: d.cantidad };
-        })), 'defectos');
-    }
-    await guardarPruebasBD();
-
-    // 5. Evidencias
+    // 4. Evidencias
     const resEvid = await Promise.all(evidencias.map(function(e) {
         if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
     }));
