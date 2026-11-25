@@ -234,7 +234,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | ~~1.1~~ | ✅ **Hecho 2026-11-25.** Medidas atómicas (script 12) y "Siguiente"/"Finalizar" no avanzan si algo no se guardó. Una auditoría la llena una sola persona. | — | Confirmar en el uso diario |
 | ~~1.1b~~ | ✅ **Hecho 2026-11-25.** Cantidades, defectos y pruebas atómicos (script 13) en `auditoria.html`, `revision3.html` y `proceso.html` (este último ya no finaliza si las pruebas fallan). No queda ningún `delete()`+`insert()` suelto en auditorías. | — | — |
 | 1.2 | **Refresco automático de patronaje** con Supabase Realtime (como Diseño con `utilidades.js`): actualizar solo celdas que otro cambió, sin tocar lo que el usuario edita (§5.12). | Pantallas abiertas desde temprano no ven lo que otros guardan ("no guardó"). | — |
-| 1.3 | **Retirar "📤 Importar Histórico"** de patronaje (ya no se usa, confirmado 2026-11-25): recarga toda la tabla y borra ediciones sin guardar. | Pérdida de ediciones al usarlo. | — |
+| ~~1.3~~ | ✅ **Hecho 2026-11-25.** Retirado "📤 Importar Histórico" (botón, input oculto y `procesarExcelImportado`). La librería XLSX se conserva para "📥 Exportar Excel". | — | — |
 
 ### Fase 2 · Higiene (un solo paquete pequeño)
 | # | Tarea |
@@ -250,6 +250,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Retirado "📤 Importar Histórico" de patronaje (ya no se usaba; borraba ediciones sin guardar).
 - 2026-11-25 · Auditorías: cantidades, defectos y pruebas en una sola transacción (script 13); proceso.html no
   finaliza si las pruebas no se guardaron.
 - 2026-11-25 · Auditorías: medidas en una sola transacción (script 12); "Siguiente"/"Finalizar" revisan el error

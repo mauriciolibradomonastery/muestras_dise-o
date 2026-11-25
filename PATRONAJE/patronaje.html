@@ -111,8 +111,6 @@
             <button class="btn btn-save" id="btnGuardarGlobal" onclick="guardarCambiosVisibles()">💾 Guardar Cambios</button>
             <button class="btn" onclick="exportarAExcel()">📥 Exportar Excel</button>
             <a class="btn" href="reportes_patronaje.html" target="_blank" rel="noopener" style="text-decoration:none; background-color:#1f2937; color:white; border:none;" title="Abre los reportes en otra pestaña, sin salir de la tabla">📊 Reportes</a>
-            <button class="btn" onclick="document.getElementById('inputImportarExcel').click()">📤 Importar Histórico</button>
-            <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
             <button class="btn" onclick="actualizarDesdeDiseno()" style="background-color: #0e7490; color:white; border:none;" title="Trae lo que Diseño corrigió en el inventario (referencia, talla, pinta, proveedor...). Usa las filas seleccionadas o, si no hay, las visibles.">🔄 Actualizar desde Diseño</button>
@@ -1103,75 +1101,9 @@
             if (hayCambiosSinGuardar) throw new Error('Quedaron cambios sin guardar');
         };
 
-        window.procesarExcelImportado = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true });
-
-                    if (jsonRows.length <= 1) return alert("El archivo está vacío o solo tiene encabezados.");
-
-                    const rowsData = jsonRows.slice(1);
-                    let registrosInsert = [];
-                    
-                    const columnasFechas = [1, 15, 16, 19, 20, 25]; 
-
-                    function convertirFechaExcel(val) {
-                        if (!val) return "";
-                        let num = Number(val);
-                        if (!isNaN(num) && num > 20000) {
-                            let date = new Date(Math.round((num - 25569) * 86400 * 1000));
-                            date = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-                            return date.toISOString().split('T')[0];
-                        }
-                        if (typeof val === 'string' && val.includes('/')) {
-                            let p = val.split('/');
-                            if(p.length === 3 && p[2].length === 4) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-                        }
-                        if (typeof val === 'string' && val.includes('-')) return val.substring(0,10);
-                        return String(val);
-                    }
-
-                    rowsData.forEach(row => {
-                        let d = new Array(30).fill('');
-                        for (let i = 0; i < 30; i++) {
-                            let val = row[i] !== undefined && row[i] !== null ? row[i] : '';
-                            if (columnasFechas.includes(i)) { d[i] = convertirFechaExcel(val); } else { d[i] = String(val); }
-                        }
-                        
-                        const precinto = d[7] ? d[7].trim() : '';
-                        if (precinto !== '') {
-                            if (d[0].includes("Imagen Cargada")) d[0] = "";
-                            if (d[29].includes("PDF Cargado")) d[29] = "";
-                            registrosInsert.push({ precinto: precinto, datos: d });
-                        }
-                    });
-
-                    if (registrosInsert.length === 0) return alert("No se encontraron filas con PRECINTO válido.");
-                    alert(`⏳ Subiendo ${registrosInsert.length} muestras. Por favor no cierres la página ni presiones F5...`);
-                    
-                    const chunkSize = 200;
-                    for (let i = 0; i < registrosInsert.length; i += chunkSize) {
-                        const chunk = registrosInsert.slice(i, i + chunkSize);
-                        const { error } = await client.from('dpto_tecnico').insert(chunk);
-                        if (error) throw error;
-                    }
-
-                    alert("✅ ¡Carga masiva completada exitosamente!");
-                    event.target.value = ""; 
-                    cargarDatos(); 
-                } catch (error) {
-                    console.error(error); alert("Error al importar: " + error.message);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        };
+        // (2026-11-25) Se retiró "📤 Importar Histórico" (procesarExcelImportado): ya no se usaba,
+        // recargaba toda la tabla borrando ediciones sin guardar e insertaba sin reintento de sesión.
+        // La librería XLSX se conserva porque la usa "📥 Exportar Excel".
 
         window.filtrarTablaCompleta = function() {
             const textoGlobal = document.getElementById('inputBusquedaGlobal').value.toLowerCase();
