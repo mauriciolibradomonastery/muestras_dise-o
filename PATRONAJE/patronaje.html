@@ -76,6 +76,9 @@
         .modal-content { background-color: #ffffff; padding: 30px; border-radius: 12px; width: 500px; color: #1f2937; border: 1px solid #e5e7eb; box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
         #modalVisor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         #imagenAmpliada { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 0 25px rgba(0,0,0,0.8); object-fit: contain; }
+        /* Campos que vienen de Diseño: se ven igual pero no se pueden editar (se corrigen en el inventario) */
+        td.celda-bloqueada { cursor: not-allowed; }
+        td.celda-bloqueada select:disabled { opacity: 1; cursor: not-allowed; }
     </style>
     <script type="module" src="sesion.js" data-login="index_patronaje.html"></script>
 </head>
@@ -113,7 +116,6 @@
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
             <button class="btn" style="background-color: #6b7280; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
-            <button class="btn" style="background-color: #7c3aed; color: white; border: none;" onclick="migrarArchivosAStorage()" title="Mueve fotos y PDFs antiguos (base64) a Supabase Storage">🚚 Migrar archivos</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
                 <span id="selectedCount" style="font-size: 13px; font-weight: 700; color: #ef4444;">0 selec.</span>
@@ -216,53 +218,8 @@
             return valor || '';
         }
 
-        // Migración única: recorre fila por fila y pasa los base64 antiguos a Storage
-        window.migrarArchivosAStorage = async function() {
-            if (!confirm("Esto moverá las fotos y PDFs guardados dentro de la tabla a Supabase Storage.\n\nPuede tardar varios minutos. No cierres la página mientras termina.\n\n¿Continuar?")) return;
-            try {
-                // 1) Solo los IDs (consulta liviana)
-                mostrarCarga("Buscando registros...");
-                let ids = []; let desde = 0; const paso = 1000;
-                while (true) {
-                    const { data, error } = await client.from('dpto_tecnico').select('id').order('id').range(desde, desde + paso - 1);
-                    if (error) throw error;
-                    ids = ids.concat(data.map(r => r.id));
-                    if (data.length < paso) break;
-                    desde += paso;
-                }
-
-                // 2) Fila por fila
-                let migradas = 0, fallidas = 0;
-                for (let n = 0; n < ids.length; n++) {
-                    mostrarCarga(`Migrando archivos: fila ${n + 1} de ${ids.length} (${migradas} migradas)...`);
-                    try {
-                        const { data: fila, error } = await client.from('dpto_tecnico').select('id, datos').eq('id', ids[n]).single();
-                        if (error) throw error;
-                        const datos = Array.isArray(fila.datos) ? [...fila.datos] : null;
-                        if (!datos) continue;
-                        const fotoEsBase64 = typeof datos[0] === 'string' && datos[0].startsWith('data:');
-                        const pdfEsBase64 = typeof datos[29] === 'string' && datos[29].startsWith('data:');
-                        if (!fotoEsBase64 && !pdfEsBase64) continue;
-
-                        if (fotoEsBase64) datos[0] = await asegurarUrl(datos[0], 'fotos');
-                        if (pdfEsBase64) datos[29] = await asegurarUrl(datos[29], 'pdfs');
-
-                        const { error: errUpd } = await client.from('dpto_tecnico').update({ datos }).eq('id', fila.id);
-                        if (errUpd) throw errUpd;
-                        migradas++;
-                    } catch (errFila) {
-                        console.error('Error migrando fila', ids[n], errFila);
-                        fallidas++;
-                    }
-                }
-                ocultarCarga();
-                alert(`✅ Migración terminada.\n\nFilas migradas: ${migradas}\nFilas con error: ${fallidas}` + (fallidas ? "\n\nPuedes volver a ejecutarla: solo procesa lo que falte." : ""));
-                cargarDatos();
-            } catch (err) {
-                console.error(err); ocultarCarga();
-                alert("Error en la migración: " + (err.message || err));
-            }
-        };
+        // (La migración de base64 a Storage terminó el 2026-11: se retiró el botón y la función,
+        //  que reescribía la fila completa con .update({datos}) y violaba el guardado por campo.)
         
         const allCols = [
             'FOTO', 'FECHA DE INGRESO:', 'DISEÑADOR:', 'GÉNERO', 'PROVEEDOR:', 'PAIS', 'COLECCIÓN:', 'PRECINTO',
@@ -274,6 +231,18 @@
 
         // Valores oficiales de GÉNERO (iguales a public.normalizar_genero en Supabase y a formulario.html)
         const GENEROS = ['MEN', 'WOMEN', 'UNISEX', 'KIDS'];
+
+        // ================== CAMPOS QUE VIENEN DE DISEÑO ==================
+        // Regla de negocio (2026-11-25): el precinto es el enlace con el inventario de muestras.
+        //  · El PRECINTO nunca se edita en patronaje (solo entra por "Importar desde Diseño").
+        //  · En filas con precinto MSTMUE..., los campos copiados del inventario no se editan:
+        //    se corrigen en Diseño (formulario.html). Mismos índices que copia agregarAPatronajeMulti.
+        //  · Las filas manuales (SIN PRECINTO) sí se llenan a mano.
+        // La base aplica la misma regla con el trigger trg_dpto_tecnico_bloqueo_diseno.
+        const INDICE_PRECINTO = 7;
+        const CAMPOS_DISENO = new Set([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+        const esPrecintoDeDiseno = p => /^MSTMUE\d+$/i.test(String(p ?? '').trim());
+        const MENSAJE_BLOQUEO = 'Este dato viene del inventario de Diseño. Si está mal, corrígelo en el formulario de Diseño.';
 
         const listaMotivos = [
             "%", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
@@ -659,7 +628,7 @@
                 if (error) { 
                     console.error(error); document.getElementById('loadingOverlay').style.display = 'none';
                     return alert("Hubo un error descargando la información:\n" + (error.message || '') + (error.code ? ` (código ${error.code})` : '') +
-                        "\n\nSi el problema es de tiempo de espera, usa el botón '🚚 Migrar archivos'."); 
+                        "\n\nRevisa tu conexión y recarga la página.");
                 }
 
                 if (!data || data.length === 0) break;
@@ -742,6 +711,7 @@
             const tbody = document.getElementById('tableBody');
             const emptyDatos = new Array(30).fill('');
             emptyDatos[1] = fechaHoyLocal();
+            emptyDatos[INDICE_PRECINTO] = 'SIN PRECINTO';   // las filas manuales no tienen precinto: el precinto real solo entra importando desde Diseño
             
             const newTr = crearFilaHTML(null, emptyDatos);
             newTr._hashGuardado = JSON.stringify(window.extraerDatosFila(newTr));
@@ -766,7 +736,8 @@
             tr._modificado = false; 
             
             while(datos.length < 30) datos.push("");
-            
+            const filaDeDiseno = esPrecintoDeDiseno(datos[INDICE_PRECINTO]);
+
             const tdCheck = document.createElement('td'); tdCheck.className = 'col-checkbox'; 
             tdCheck.innerHTML = `<input type="checkbox" class="row-checkbox" style="cursor:pointer;" onchange="actualizarSeleccion()">`;
             tr.appendChild(tdCheck);
@@ -779,6 +750,15 @@
                 if (colName === 'PINTA:') td.classList.add('col-pinta');
                 if (colName === 'DESCRIPCIÓN TIPO DE PRENDA:') td.classList.add('col-desc');
                 
+                // Bloqueada: el precinto siempre; los campos de Diseño solo en filas con precinto MSTMUE
+                const bloqueada = index === INDICE_PRECINTO || (filaDeDiseno && CAMPOS_DISENO.has(index));
+                if (bloqueada) {
+                    td.classList.add('celda-bloqueada');
+                    td.title = index === INDICE_PRECINTO
+                        ? 'El precinto no se edita aquí: entra solo con "Importar desde Diseño".'
+                        : MENSAJE_BLOQUEO;
+                }
+
                 let valorRaw = datos[index];
                 if (valorRaw === null || valorRaw === undefined) valorRaw = '';
                 const valorStr = String(valorRaw);
@@ -790,8 +770,8 @@
                     td.innerHTML = `
                         <div style="position:relative; width:45px; height:45px; margin:auto;">
                             <img src="${esc(urlSegura(imgSource) || 'logo.png')}" class="img-foto-prenda" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in; border:1px solid #d1d5db; border-radius:4px; background:white;" onclick="abrirModalImagen(this.src, event)">
-                            <button onclick="this.nextElementSibling.click()" style="position:absolute; top:-8px; right:-8px; background:#fff; border:1px solid #d1d5db; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);" title="Cambiar Foto">✏️</button>
-                            <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">
+                            ${bloqueada ? '' : `<button onclick="this.nextElementSibling.click()" style="position:absolute; top:-8px; right:-8px; background:#fff; border:1px solid #d1d5db; border-radius:50%; width:20px; height:20px; font-size:10px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);" title="Cambiar Foto">✏️</button>
+                            <input type="file" accept="image/*" style="display:none;" onchange="cambiarFotoFila(this)">`}
                         </div>`;
                 } 
                 else if (colName === 'PDF AUDITORÍA') {
@@ -818,7 +798,7 @@
                     const opciones = ['', ...GENEROS];
                     // Un valor desconocido se muestra en vez de perderse (regla: no pasar datos por el DOM que los borre)
                     if (valorStr && !opciones.includes(valorStr)) opciones.push(valorStr);
-                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; cursor:pointer; outline: none;" onchange="this.closest('tr')._modificado=true; recalcularFila(this.closest('tr')); marcarCambios();">
+                    td.innerHTML = `<select ${bloqueada ? 'disabled' : ''} style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; cursor:pointer; outline: none;" onchange="this.closest('tr')._modificado=true; recalcularFila(this.closest('tr')); marcarCambios();">
                         ${opciones.map(o => `<option value="${esc(o)}" style="color:black;" ${o === valorStr ? 'selected' : ''}>${esc(o)}</option>`).join('')}
                     </select>`;
                 }
@@ -851,12 +831,12 @@
                     td.contentEditable = "false"; td.classList.add("calc-cell"); td.textContent = valorStr;
                 }
                 else if (colName === 'NOMBRE / REFERENCIA:') {
-                    td.contentEditable = "true"; td.style.fontWeight = "bold"; td.textContent = valorStr;
-                    td.oninput = alEditarCelda;
+                    td.contentEditable = bloqueada ? "false" : "true"; td.style.fontWeight = "bold"; td.textContent = valorStr;
+                    if (!bloqueada) td.oninput = alEditarCelda;
                 }
                 else {
-                    td.contentEditable = "true"; td.textContent = valorStr;
-                    td.oninput = alEditarCelda;
+                    td.contentEditable = bloqueada ? "false" : "true"; td.textContent = valorStr;
+                    if (!bloqueada) td.oninput = alEditarCelda;
                 } tr.appendChild(td);
             });
 

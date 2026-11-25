@@ -55,6 +55,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.festivos` | `fecha date` PK. Festivos de Colombia de lunes a viernes, 2024–2030. | **solo SELECT** |
 | `public.actualizar_campos_dpto(p_id uuid, p_cambios jsonb)` | RPC de guardado por campo (ver §5). `security invoker`, ejecutable solo por `authenticated`. Revisada 2026-11-24: correcta. | execute |
 | `public.normalizar_genero(text)` | Convierte cualquier escritura de género a `MEN`/`WOMEN`/`UNISEX`/`KIDS`. Desconocido → MAYÚSCULAS, no se borra. | — |
+| `trg_dpto_tecnico_bloqueo_diseno` | BEFORE UPDATE: rechaza desde la web cambios al precinto y, en filas `MSTMUE…`, a los campos de Diseño (§6.4). Script 10. | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -154,8 +155,14 @@ Cada una corrige un bug real que causaba pérdida de datos o cifras erróneas.
 3. `agregarAPatronajeMulti` sube la foto a Storage (máx. 4 en paralelo), copia 14 campos al arreglo
    `datos` e inserta en `dpto_tecnico`. Las filas nuevas se pintan arriba **sin recargar toda la tabla**
    (recargar borraría ediciones sin guardar).
-4. ⚠️ La celda PRECINTO también es editable a mano y "Fila Manual" crea filas vacías: **ninguno de los dos
-   busca en el inventario**. Ver §10.
+4. **Bloqueo de campos de Diseño** (decidido 2026-11-25):
+   - El PRECINTO no se edita nunca en patronaje (solo entra importando desde Diseño).
+   - En filas con precinto `MSTMUE…` no se editan los campos copiados del inventario
+     (`CAMPOS_DISENO` = 0, 2–13: foto, diseñador, género, proveedor, país, colección, precinto, referencia,
+     talla, tipo de muestra, pinta, cantidad, descripción). Se corrigen en Diseño.
+   - "Fila Manual" crea la fila con `SIN PRECINTO` (referencias sin precinto) y ahí sí se llena todo a mano.
+   - La base aplica lo mismo con `trg_dpto_tecnico_bloqueo_diseno` (solo para el rol `authenticated`;
+     el SQL Editor puede corregir).
 
 ## 7. reportes_patronaje.html
 
@@ -197,7 +204,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
 - Accesos: GitHub y Supabase deben estar conectados con las cuentas de **Monastery**
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
@@ -205,10 +212,12 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 ## 10. Pendientes (priorizados el 2026-11-25)
 
 🔴 Alta
-1. **PRECINTO editable a mano sin buscar en el inventario** (caso MSTMUE11533 OBSYAN / ABDON). Una fila puede
-   quedar con el precinto de una muestra y los datos de otra. Pendiente decisión de negocio:
-   ¿se puede cambiar el precinto de una fila existente? ¿patronaje puede editar los campos del inventario?
-   ¿para qué se usa "Fila Manual"?
+1. **Revisar 23 filas que no coinciden con el inventario** (consulta al final de
+   `sql/10_bloqueo_campos_diseno.sql`): correcciones de digitación hechas en patronaje (DELGIN→DELGUIN…),
+   referencias distintas (MSTMUE11292 MAVI vs BERTRAND) y precintos que no existen en Diseño
+   (`2 UNIDADES`, `APL327`, `11369`…). Corregir en Diseño o con un administrador.
+   Con el bloqueo, las correcciones de digitación deben hacerse en Diseño; evaluar un botón
+   "Actualizar desde Diseño" para traer al patronaje lo que Diseño corrija después.
 
 🟠 Media
 2. **Auditorías guarda medidas con DELETE + INSERT** (`auditoria_medidas`, ~50 veces por auditoría según logs).
@@ -223,8 +232,6 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
    54 precintos repetidos; solo 5 con referencias distintas (ej. MSTMUE11340, MSTMUE1758, MSTMUE9149,
    MSTMUE9267, MSTMUE9779).
 6. **`@supabase/supabase-js@2` sin versión fija** (también el `+esm` de `sesion.js`): fijar versión exacta.
-7. **Botón "🚚 Migrar archivos"** aún hace `.update({datos})` de la fila completa (viola §5.1). La migración ya
-   terminó: retirar el botón.
 8. 9 prendas sin género en el inventario: completarlas a mano.
 9. Muestras en `dpto_tecnico` con fecha de ingreso en 2025 (oct/dic): probable error de digitación del año.
 10. `formulario.html` sigue guardando la foto en base64 dentro de `prendas.fotoUrl` → mover a Storage y
@@ -235,6 +242,8 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 14. Duda abierta de negocio: en la tabla, LEAD TIME GENERAL se copia de LEAD TIME AUD; confirmar fórmula.
 
 ✅ Resueltos recientemente
+- 2026-11-25 · Precinto y campos de Diseño bloqueados en patronaje (página + trigger, script 10).
+  Retirado el botón "Migrar archivos" (0 fotos/PDF en base64 pendientes).
 - 2026-11-24 · Texto perdido al escribir durante el autoguardado (§5.12).
 - 2026-11-24 · Historial de cambios de `dpto_tecnico` (script 08).
 - 2026-11-25 · Género unificado en `prendas`, `dpto_tecnico` y histórico, con triggers y listas cerradas
