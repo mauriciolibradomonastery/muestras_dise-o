@@ -254,7 +254,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | ~~2.1~~ | ✅ **Hecho 2026-11-25.** `@supabase/supabase-js` fijado en **2.119.2** en los 20 lugares (18 HTML + las 2 copias de `sesion.js`). Antes: 16 con `@2` y 4 sin versión (`index`, `menu`, `formulario`, `reportes`), que habrían saltado solos a una v3. |
 | ~~2.2~~ | ✅ **Hecho 2026-11-25.** `public/` (Firebase, proyecto `inventario-monastery`) reemplazada por 6 redirecciones a las páginas actuales: nadie puede registrar muestras en la base vieja por un marcador antiguo. Queda en el historial de Git (commit 268001b). |
 | 2.2b | **Revisar el proyecto Firebase `inventario-monastery`** en la consola de Firebase: si ya no se usa, cerrar sus reglas de Firestore (o eliminar el proyecto) para que nadie pueda leer/escribir allí. Lo hace Mauricio (no hay acceso desde el código). |
-| 2.3 | Depurar los **54 precintos repetidos** en `prendas` (5 con referencias distintas: MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779). |
+| ~~2.3~~ | ✅ **Decidido 2026-11-25: lo corrige Diseño a mano, NO se toca desde el código ni con SQL.** Diagnóstico entregado en Excel: 54 precintos repetidos (108 registros); 48 vienen de una carga masiva del 16/09/2026 12:00 sin fecha de ingreso (copia anterior con salida registrada), 5 con referencias distintas (MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779) y 1 posible doble registro. Regla: un precinto se reutiliza cuando la muestra sale y vuelve a entrar. |
 
 ### Fase 3 · Rendimiento y seguridad
 | # | Tarea |
@@ -263,6 +263,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Precintos repetidos en `prendas`: diagnóstico entregado; la persona que registra en Diseño los corrige.
 - 2026-11-25 · Carpeta `public/` con la versión vieja de Firebase reemplazada por redirecciones.
 - 2026-11-25 · Retirada la suscripción Realtime a `prendas` en Diseño (nunca funcionó; decisión: no se necesita).
 - 2026-11-25 · Librería de Supabase fijada en 2.119.2 en todas las páginas (ya no cambia sola).
