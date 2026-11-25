@@ -151,8 +151,7 @@ Cada una corrige un bug real que causaba pérdida de datos o cifras erróneas.
 1. `formulario.html` registra la muestra en `prendas` (valida duplicado con `ilike` y pasa a mayúsculas).
 2. En `patronaje.html` → "Importar desde Diseño": se pegan precintos, `buscarPrecintoEnDiseno` los busca
    en `prendas`, avisa cuáles ya están en `dpto_tecnico` y cuáles no existen.
-   ⚠️ Para duplicados "toma el más reciente" usando `p.created_at`, que **no existe** en `prendas`
-   (la columna real es `fechaServidor`): hoy elige uno arbitrario. Ver §10.
+   Si el precinto está repetido en `prendas`, toma el registro más reciente por `fechaServidor`.
 3. `agregarAPatronajeMulti` sube la foto a Storage (máx. 4 en paralelo), copia 14 campos al arreglo
    `datos` e inserta en `dpto_tecnico`. Las filas nuevas se pintan arriba **sin recargar toda la tabla**
    (recargar borraría ediciones sin guardar).
@@ -213,50 +212,50 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
 
-## 10. Pendientes (priorizados el 2026-11-25)
+## 10. Plan de trabajo (organizado el 2026-11-25)
 
-🔴 Alta
-1. **Revisar 23 filas que no coinciden con el inventario** (consulta al final de
-   `sql/10_bloqueo_campos_diseno.sql`): correcciones de digitación hechas en patronaje (DELGIN→DELGUIN…),
-   referencias distintas (MSTMUE11292 MAVI vs BERTRAND) y precintos que no existen en Diseño
-   (`2 UNIDADES`, `APL327`, `11369`…). Corregir en Diseño o con un administrador.
-   Con el bloqueo, las correcciones de digitación deben hacerse en Diseño y traerse con
-   "🔄 Actualizar desde Diseño". Al 2026-11-25 la vista previa global mostraba 81 diferencias en 59 filas
-   y 8 precintos MSTMUE que no existen en Diseño.
+Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, en orden.
 
-🟠 Media
-2. **Auditorías guarda medidas con DELETE + INSERT** (`auditoria_medidas`, ~50 veces por auditoría según logs).
-   Si falla el INSERT tras el DELETE, se pierden las medidas. Pasar a una función SQL atómica. Sin historial.
-3. **La tabla de patronaje no se refresca sola:** quien la abrió temprano no ve lo que otros guardaron
-   (parece "no guardó"). Diseño ya usa Realtime (`utilidades.js`); evaluar lo mismo para patronaje.
-4. **"Importar Excel" recarga la tabla** (`cargarDatos()`) y borra ediciones sin guardar; además inserta sin
-   reintento de sesión.
+### Fase 0 · Operación (lo hace el equipo, sin código)
+| # | Tarea | Tamaño | Quién |
+|---|---|---|---|
+| 0.1 | Revisar con "🔄 Actualizar desde Diseño" las **81 diferencias en 59 muestras** y aplicar las correctas. Casos dudosos (ej. MSTMUE11216 PALICK vs PROTO PRECOTEX) se corrigen primero en Diseño. | 1 sesión | Patronaje + Diseño |
+| 0.2 | **8 precintos MSTMUE que no existen en Diseño**: registrarlos o corregir el número. Filas manuales con precinto raro (`2 UNIDADES`, `APL327`, `11369`) → corregir con un administrador. | 8 + 3 filas | Diseño / admin |
+| 0.3 | **9 prendas sin género** en el inventario: completarlas en el formulario. | 9 filas | Diseño |
+| 0.4 | **2 muestras con ingreso en 2025** (MSTMUE9521 2025-12-15, MSTMUE5383 2025-10-20): corregir el año (FECHA DE INGRESO sí es editable). | 2 filas | Patronaje |
+| 0.5 | **Diciembre:** confirmar en `festivos` los festivos de 2027 (cargados hasta 2030). | 5 min | Mauricio |
+| 0.6 | Decidir la fórmula de **LEAD TIME GENERAL** (hoy copia LEAD TIME AUD). | decisión | Mauricio |
 
-🟡 Baja
-5. **54 precintos repetidos en `prendas`** (5 con referencias distintas: MSTMUE11340, MSTMUE1758,
-   MSTMUE9149, MSTMUE9267, MSTMUE9779). Importación y sincronización ya usan el más reciente
-   (`fechaServidor`); falta depurar los duplicados en Diseño.
-6. **`@supabase/supabase-js@2` sin versión fija** (también el `+esm` de `sesion.js`): fijar versión exacta.
-8. 9 prendas sin género en el inventario: completarlas a mano.
-9. Muestras en `dpto_tecnico` con fecha de ingreso en 2025 (oct/dic): probable error de digitación del año.
-10. `formulario.html` sigue guardando la foto en base64 dentro de `prendas.fotoUrl` → mover a Storage y
-    guardar solo la URL (acelera la búsqueda de precintos).
-11. Bucket de Storage público → privado con `createSignedUrl`.
-12. Retirar la carpeta `public/` (Firebase).
-13. Cada diciembre: confirmar festivos del año siguiente en `festivos` (cargados hasta 2030).
-14. Duda abierta de negocio: en la tabla, LEAD TIME GENERAL se copia de LEAD TIME AUD; confirmar fórmula.
+### Fase 1 · Proteger datos (código, prioridad alta)
+| # | Tarea | Por qué | Decisión pendiente |
+|---|---|---|---|
+| 1.1 | **Auditorías: guardar medidas de forma atómica.** `auditorias/auditoria.html` (≈ línea 1148) y `revision3.html` (≈ 534) hacen `delete()` sin revisar el error y luego `insert()`. Pasar a una función SQL que borre e inserte en una sola transacción + historial. 47 auditorías, 1.802 medidas. | Si el insert falla tras el delete, se pierden las medidas de la auditoría. | ¿Una auditoría la abren una o varias personas a la vez? |
+| 1.2 | **Refresco automático de patronaje** con Supabase Realtime (como Diseño con `utilidades.js`): actualizar solo celdas que otro cambió, sin tocar lo que el usuario edita (§5.12). | Pantallas abiertas desde temprano no ven lo que otros guardan ("no guardó"). | — |
+| 1.3 | **"📤 Importar Histórico"**: hoy recarga toda la tabla (borra ediciones sin guardar) e inserta sin reintento de sesión. | Pérdida de ediciones al usarlo. | ¿Todavía se usa? Si no, retirarlo. |
 
-✅ Resueltos recientemente
+### Fase 2 · Higiene (un solo paquete pequeño)
+| # | Tarea |
+|---|---|
+| 2.1 | Fijar versión exacta de `@supabase/supabase-js` (hoy `@2` en 16 archivos, incluido el `+esm` de `sesion.js`). |
+| 2.2 | Retirar la carpeta `public/` (versiones viejas con Firebase). |
+| 2.3 | Depurar los **54 precintos repetidos** en `prendas` (5 con referencias distintas: MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779). |
+
+### Fase 3 · Rendimiento y seguridad
+| # | Tarea |
+|---|---|
+| 3.1 | `formulario.html` guarda la foto en base64 dentro de `prendas.fotoUrl` (**345 fotos**, tabla de 11 MB): migrar a Storage y guardar solo la URL. |
+| 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
+
+### ✅ Resueltos
 - 2026-11-25 · Botón "🔄 Actualizar desde Diseño" (script 11) y DISEÑADOR liberado del bloqueo.
-- 2026-11-25 · Filtros de catálogo (GÉNERO, ESTADO, RESULTADO, TIPO) comparan por igualdad al elegir un
-  valor completo (filtrar MEN ya no trae WOMEN). Importación usa `fechaServidor` para el más reciente.
+- 2026-11-25 · Filtros de catálogo (GÉNERO, ESTADO, RESULTADO, TIPO) por igualdad: filtrar MEN ya no trae WOMEN.
+  Importación usa `fechaServidor` para el más reciente.
 - 2026-11-25 · Precinto y campos de Diseño bloqueados en patronaje (página + trigger, script 10).
-  Retirado el botón "Migrar archivos" (0 fotos/PDF en base64 pendientes).
-- 2026-11-24 · Texto perdido al escribir durante el autoguardado (§5.12).
+  Retirado el botón "Migrar archivos".
+- 2026-11-25 · Género unificado en `prendas`, `dpto_tecnico` y histórico (script 09). Los filtros
+  "Solo Women/Men" de `reportes.html` ahora incluyen las ~1.760 prendas que estaban como FEMENINO/MASCULINO.
 - 2026-11-24 · Historial de cambios de `dpto_tecnico` (script 08).
-- 2026-11-25 · Género unificado en `prendas`, `dpto_tecnico` y histórico, con triggers y listas cerradas
-  (script 09). Efecto: los filtros "Solo Women/Men" de `reportes.html` ahora incluyen las ~1.760 prendas
-  que estaban como FEMENINO/MASCULINO.
+- 2026-11-24 · Texto perdido al escribir durante el autoguardado (§5.12).
 
 ### Cómo investigar un "lo guardé y desapareció"
 1. Pedir hora, precinto y qué estaba haciendo la persona.
