@@ -262,7 +262,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | # | Tarea |
 |---|---|
 | ~~3.1a~~ | ✅ **Hecho 2026-11-25.** Fotos nuevas a Storage (bucket `inventario-fotos`, script 15) con la función compartida `subirFotoInventario` (`utilidades.js`): la usan `formulario.html` y la edición en `dashboard.html` y `salidas.html`. En `prendas.fotoUrl` queda solo el enlace. Si la subida falla, no se registra/guarda nada (nunca vuelve a base64). |
-| 3.1b | Migrar las **345 fotos en base64** existentes (~9 MB, promedio 26 KB) a `inventario-fotos`, con respaldo previo en `respaldo`. Fotos solo se ven en formulario, dashboard, salidas y patronaje; nadie las exporta. |
+| 3.1b | Migrar las **345 fotos en base64** existentes (~9 MB, promedio 26 KB) a `inventario-fotos`: 1) aplicar `sql/16` (respaldo en `respaldo.fotos_prendas_20261125`); 2) abrir **`migrar_fotos_inventario.html`** (página temporal, raíz) con sesión y pulsar "Migrar": sube cada foto tal cual, verifica que abre, cambia solo `fotoUrl` y solo si sigue en base64; se puede repetir. 3) Verificar con SQL que queden 0 en base64 y **retirar la página**. |
 | 3.1c | Candado en la base: rechazar `fotoUrl` que empiece por `data:` (después de 3.1b). |
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
