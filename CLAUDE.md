@@ -26,8 +26,9 @@ de cada muestra y genera reportes de gestión.
   formulario.html       Registro de muestras → tabla `prendas`
   dashboard.html, reportes.html, salidas.html, produccion.html, seguimiento_diseno.html
   sesion.js             Guardián de sesión (compartido)
-  utilidades.js         Logger (crearLogger) y crearRecargaAgrupada (agrupa recargas tras editar/importar).
-                        Lo usan dashboard y salidas.
+  utilidades.js         Logger (crearLogger), crearRecargaAgrupada (agrupa recargas tras editar/importar)
+                        y subirFotoInventario (comprime y sube la foto a Storage).
+                        Lo usan dashboard, salidas y formulario.
   logo.png, fondo.png, favicon.png
 /PATRONAJE/             Módulo del Departamento Técnico
   index_patronaje.html  Login de patronaje
@@ -62,6 +63,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.guardar_medidas_auditoria(p_auditoria_id bigint, p_medidas jsonb)` | Auditorías: borra e inserta las medidas en **una sola transacción** (o todo o nada). `security invoker`: aplica las políticas RLS de `auditoria_medidas`. La usan `auditorias/auditoria.html` y `revision3.html`. Script 12. | execute |
 | `public.guardar_detalle_auditoria(p_auditoria_id, p_cantidades, p_defectos, p_pruebas, p_solo_pruebas)` | Auditorías: reemplaza cantidades, defectos y pruebas en **una sola transacción**. `null` = no tocar esa parte; `p_solo_pruebas` = reemplazar solo esas pruebas (procesos externos de revision3). Verifica permiso explícito. La usan `auditoria.html`, `revision3.html` y `proceso.html`. Script 13. | execute |
 | Publicación `supabase_realtime` | Desde el script 14 incluye `public.dpto_tecnico` (tiempo real de patronaje). `prendas` **no** está, a propósito (§10, 1.4). | — |
+| Storage bucket `inventario-fotos` | Fotos del inventario de Diseño (desde 3.1a). Público para leer (como los demás; ver 3.2); solo `authenticated` sube; nadie modifica ni borra desde la web. Límite 2 MB, solo imágenes. Script 15. | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -217,7 +219,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25), `15_bucket_inventario_fotos` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
 - **Versión de la librería de Supabase:** fijada en `2.119.2`. Para cambiarla, reemplazar `supabase-js@2.119.2`
   en **todos** los archivos (comprobar con `grep -rn "supabase-js@" --include=*.html --include=*.js .`),
   probar en una rama y publicar todo junto. Nunca volver a `@2` ni a la dirección sin versión.
@@ -259,10 +261,13 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 ### Fase 3 · Rendimiento y seguridad
 | # | Tarea |
 |---|---|
-| 3.1 | `formulario.html` guarda la foto en base64 dentro de `prendas.fotoUrl` (**345 fotos**, tabla de 11 MB): migrar a Storage y guardar solo la URL. |
+| ~~3.1a~~ | ✅ **Hecho 2026-11-25.** Fotos nuevas a Storage (bucket `inventario-fotos`, script 15) con la función compartida `subirFotoInventario` (`utilidades.js`): la usan `formulario.html` y la edición en `dashboard.html` y `salidas.html`. En `prendas.fotoUrl` queda solo el enlace. Si la subida falla, no se registra/guarda nada (nunca vuelve a base64). |
+| 3.1b | Migrar las **345 fotos en base64** existentes (~9 MB, promedio 26 KB) a `inventario-fotos`, con respaldo previo en `respaldo`. Fotos solo se ven en formulario, dashboard, salidas y patronaje; nadie las exporta. |
+| 3.1c | Candado en la base: rechazar `fotoUrl` que empiece por `data:` (después de 3.1b). |
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Fotos nuevas del inventario van a Storage (script 15 + `subirFotoInventario`); ya no entra base64.
 - 2026-11-25 · Precintos repetidos en `prendas`: diagnóstico entregado; la persona que registra en Diseño los corrige.
 - 2026-11-25 · Carpeta `public/` con la versión vieja de Firebase reemplazada por redirecciones.
 - 2026-11-25 · Retirada la suscripción Realtime a `prendas` en Diseño (nunca funcionó; decisión: no se necesita).
