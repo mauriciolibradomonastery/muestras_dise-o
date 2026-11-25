@@ -57,6 +57,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.normalizar_genero(text)` | Convierte cualquier escritura de género a `MEN`/`WOMEN`/`UNISEX`/`KIDS`. Desconocido → MAYÚSCULAS, no se borra. | — |
 | `trg_dpto_tecnico_bloqueo_diseno` | BEFORE UPDATE: rechaza desde la web cambios al precinto y, en filas `MSTMUE…`, a los campos de Diseño (§6.4). Deja pasar la sincronización autorizada (`app.sync_diseno`). Scripts 10 y 11. | — |
 | `public.actualizar_desde_diseno(p_ids uuid[], p_aplicar bool)` | Botón "🔄 Actualizar desde Diseño": compara (`false`) o copia (`true`) desde `prendas` los campos 3–6 y 8–13. Copia en el servidor; nunca borra con un vacío de Diseño; no toca FOTO, PRECINTO ni DISEÑADOR. `security definer`, solo `authenticated`. Script 11. | execute |
+| `public.guardar_medidas_auditoria(p_auditoria_id bigint, p_medidas jsonb)` | Auditorías: borra e inserta las medidas en **una sola transacción** (o todo o nada). `security invoker`: aplica las políticas RLS de `auditoria_medidas`. La usan `auditorias/auditoria.html` y `revision3.html`. Script 12. | execute |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -207,7 +208,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
 - Accesos: GitHub y Supabase deben estar conectados con las cuentas de **Monastery**
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
@@ -229,9 +230,10 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 ### Fase 1 · Proteger datos (código, prioridad alta)
 | # | Tarea | Por qué | Decisión pendiente |
 |---|---|---|---|
-| 1.1 | **Auditorías: guardar medidas de forma atómica.** `auditorias/auditoria.html` (≈ línea 1148) y `revision3.html` (≈ 534) hacen `delete()` sin revisar el error y luego `insert()`. Pasar a una función SQL que borre e inserte en una sola transacción + historial. 47 auditorías, 1.802 medidas. | Si el insert falla tras el delete, se pierden las medidas de la auditoría. | ¿Una auditoría la abren una o varias personas a la vez? |
+| ~~1.1~~ | ✅ **Hecho 2026-11-25.** Medidas atómicas (script 12) y "Siguiente"/"Finalizar" no avanzan si algo no se guardó. Una auditoría la llena una sola persona. | — | Confirmar en el uso diario |
+| 1.1b | **Cantidades, defectos y pruebas** de auditorías siguen con `delete()` + `insert()` por separado. Ya no fallan en silencio ni dejan avanzar, pero si la red cae entre los dos y se cierra la página, esa parte se pierde. Pasar a funciones atómicas como la de medidas. | Pérdida parcial en un corte de red. | — |
 | 1.2 | **Refresco automático de patronaje** con Supabase Realtime (como Diseño con `utilidades.js`): actualizar solo celdas que otro cambió, sin tocar lo que el usuario edita (§5.12). | Pantallas abiertas desde temprano no ven lo que otros guardan ("no guardó"). | — |
-| 1.3 | **"📤 Importar Histórico"**: hoy recarga toda la tabla (borra ediciones sin guardar) e inserta sin reintento de sesión. | Pérdida de ediciones al usarlo. | ¿Todavía se usa? Si no, retirarlo. |
+| 1.3 | **Retirar "📤 Importar Histórico"** de patronaje (ya no se usa, confirmado 2026-11-25): recarga toda la tabla y borra ediciones sin guardar. | Pérdida de ediciones al usarlo. | — |
 
 ### Fase 2 · Higiene (un solo paquete pequeño)
 | # | Tarea |
@@ -247,6 +249,8 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Auditorías: medidas en una sola transacción (script 12); "Siguiente"/"Finalizar" revisan el error
+  de cada parte y no avanzan si algo falla; revision3 guarda color y número de prenda en sus columnas reales.
 - 2026-11-25 · Botón "🔄 Actualizar desde Diseño" (script 11) y DISEÑADOR liberado del bloqueo.
 - 2026-11-25 · Filtros de catálogo (GÉNERO, ESTADO, RESULTADO, TIPO) por igualdad: filtrar MEN ya no trae WOMEN.
   Importación usa `fechaServidor` para el más reciente.
