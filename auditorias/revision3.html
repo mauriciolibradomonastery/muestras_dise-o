@@ -324,7 +324,7 @@ function medidasAPrendas(filas) {
     filas.forEach(function(f) {
         const m = /^(.*) · Prenda (\d+)$/.exec(f.punto_medida || '');
         const n = m ? +m[2] : 0, punto = m ? m[1] : f.punto_medida;
-        const color = (/\[(.*)\]$/.exec(f.observacion || '') || [])[1] || '';
+        const color = f.color || (/\[(.*)\]$/.exec(f.observacion || '') || [])[1] || '';
         mapa[n] = mapa[n] || { n: n, talla: f.talla, color: color, medidas: {} };
         mapa[n].medidas[punto] = { teorica: num(f.medida_teorica), tolerancia: num(f.tolerancia), real: num(f.medida_real), cumple: !!f.cumple };
     });
@@ -529,36 +529,76 @@ window.setProceso = async function(i, res) {
 };
 window.unidadesProceso = async function(i, v) { procesos[i].unidades = Math.max(0, Math.round(num(v))); await guardarProcesosBD(); };
 
-async function guardarMedidasBD() {
-    try {
-        await supabase.from('auditoria_medidas').delete().eq('auditoria_id', idAuditoria);
-        const filas = [];
-        prendas.forEach(function(p) {
-            PUNTOS.forEach(function(pt) {
-                const m = p.medidas[pt]; if (!m) return;
-                filas.push({ auditoria_id: idAuditoria, punto_medida: pt + ' · Prenda ' + p.n, talla: p.talla, medida_teorica: m.teorica, tolerancia: m.tolerancia, medida_real: m.real, cumple: m.cumple });
-            });
+// ================== GUARDADO SEGURO DE MEDIDAS ==================
+// Antes: delete() y luego insert() por separado, sin revisar errores (catch silencioso). Si el
+// insert fallaba, la revisión quedaba SIN medidas. Además el color se intentaba guardar en una
+// columna "observacion" que no existe: ese primer insert siempre fallaba y el color se perdía.
+// Ahora: función SQL guardar_medidas_auditoria (sql/12), todo en una transacción, y el color
+// y el número de prenda van en sus columnas reales (color, prenda).
+let colaMedidas = Promise.resolve();
+let medidasSinGuardar = false;
+let avisoMedidasMostrado = false;
+let ultimoErrorMedidas = '';        // para que "Siguiente" diga exactamente qué falló
+
+function filasMedidasParaGuardar() {
+    const filas = [];
+    prendas.forEach(function(p) {
+        PUNTOS.forEach(function(pt) {
+            const m = p.medidas[pt]; if (!m) return;
+            filas.push({ punto_medida: pt + ' · Prenda ' + p.n, talla: p.talla, medida_teorica: m.teorica, tolerancia: m.tolerancia,
+                medida_real: m.real, cumple: m.cumple, prenda: p.n, color: p.color || null });
         });
-        if (filas.length) {
-            // El color se guarda en "observacion" si la columna existe; si no, se guarda sin color
-            const conColor = filas.map(function(f) {
-                const p = prendas.find(function(x) { return f.punto_medida.endsWith(' · Prenda ' + x.n); });
-                return Object.assign({}, f, { observacion: '[' + (p ? p.color : '') + ']' });
-            });
-            const res = await supabase.from('auditoria_medidas').insert(conColor);
-            if (res.error) await supabase.from('auditoria_medidas').insert(filas);
-        }
-    } catch (e) { console.error(e); }
+    });
+    return filas;
 }
+
+// silencioso = true cuando lo llama guardarTodo, que muestra un solo aviso con todo el detalle
+async function guardarMedidasAhora(silencioso) {
+    medidasSinGuardar = true;
+    try {
+        const { error } = await supabase.rpc('guardar_medidas_auditoria', { p_auditoria_id: idAuditoria, p_medidas: filasMedidasParaGuardar() });
+        if (error) throw error;
+        medidasSinGuardar = false;
+        avisoMedidasMostrado = false;
+        return true;
+    } catch (e) {
+        console.error('[medidas] No se guardaron las medidas de la revisión', idAuditoria, e);
+        ultimoErrorMedidas = e.message || String(e);
+        if (!silencioso && !avisoMedidasMostrado) {
+            avisoMedidasMostrado = true;
+            alert('❌ NO se guardaron las medidas: ' + (e.message || e) +
+                '\n\nSiguen en pantalla y en la base no se borró nada. Revisa tu conexión; se volverá a intentar con el siguiente cambio. No cierres la página.');
+        }
+        return false;
+    }
+}
+
+async function guardarMedidasBD(silencioso) {
+    const ejecutar = function() { return guardarMedidasAhora(silencioso === true); };
+    const turno = colaMedidas.then(ejecutar, ejecutar);
+    colaMedidas = turno.catch(function() {});
+    return turno;
+}
+
+window.addEventListener('beforeunload', function(e) {
+    if (medidasSinGuardar) { e.preventDefault(); e.returnValue = ''; return ''; }
+});
+
+// Devuelve true si se guardó (antes el error se tragaba con console.error y nadie se enteraba)
 async function guardarProcesosBD() {
     try {
         const nombres = PROCESOS.map(function(p) { return PREFIJO_PROCESO + p; });
-        await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria).in('prueba', nombres);
+        const borrado = await supabase.from('auditoria_pruebas').delete().eq('auditoria_id', idAuditoria).in('prueba', nombres);
+        if (borrado.error) throw borrado.error;
         const filas = procesos.filter(function(p) { return p.resultado; }).map(function(p) {
             return { auditoria_id: idAuditoria, prueba: PREFIJO_PROCESO + p.nombre, resultado: p.resultado, observacion: p.resultado === 'FAIL' ? 'Unidades afectadas: ' + (p.unidades || 0) : '' };
         });
-        if (filas.length) await supabase.from('auditoria_pruebas').insert(filas);
-    } catch (e) { console.error(e); }
+        if (filas.length) { const ins = await supabase.from('auditoria_pruebas').insert(filas); if (ins.error) throw ins.error; }
+        return true;
+    } catch (e) {
+        console.error('[procesos] No se guardaron los procesos externos', idAuditoria, e);
+        return false;
+    }
 }
 
 // ================= PASO 3: RESULTADO =================
@@ -672,7 +712,14 @@ function defectosGenerados() {
     return filas;
 }
 
+function revisarRespuesta(res, parte) {
+    if (res && res.error) throw new Error(parte + ': ' + (res.error.message || res.error));
+    return res;
+}
+
+// Devuelve true si TODO quedó guardado. Antes no revisaba errores y "Finalizar" avanzaba igual.
 async function guardarTodo() {
+  try {
     leerPaso1();
     if ($('eObservaciones')) auditoria.observaciones = $('eObservaciones').value;
     auditoria.cantidad_produccion = totalLote();
@@ -682,39 +729,49 @@ async function guardarTodo() {
         ' unidades revisadas · ' + fmt(h.total) + ' unidades con hallazgos (' + h.prendasMal.length + ' por medidas' +
         h.porProceso.map(function(p) { return ', ' + num(p.unidades) + ' por ' + p.nombre.toLowerCase(); }).join('') + ')';
 
-    await supabase.from('auditorias').update({
+    revisarRespuesta(await supabase.from('auditorias').update({
         referencia: auditoria.referencia, sku: auditoria.sku, sublinea: auditoria.sublinea,
         numero_factura: auditoria.numero_factura, cantidad_produccion: auditoria.cantidad_produccion,
         cantidad_auditada: auditoria.cantidad_auditada, observaciones: auditoria.observaciones,
         sugerencia_aql: auditoria.sugerencia_aql
-    }).eq('id', idAuditoria);
+    }).eq('id', idAuditoria), 'datos básicos');
 
-    await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria);
+    revisarRespuesta(await supabase.from('auditoria_cantidades').delete().eq('auditoria_id', idAuditoria), 'cantidades (borrado)');
     const filasCant = [];
     cantidades.forEach(function(c) {
         Object.entries(c.tallas).forEach(function(e) {
             if (num(e[1]) > 0) filasCant.push({ auditoria_id: idAuditoria, color: c.color, talla: e[0], cantidad: num(e[1]) });
         });
     });
-    if (filasCant.length) await supabase.from('auditoria_cantidades').insert(filasCant);
+    if (filasCant.length) revisarRespuesta(await supabase.from('auditoria_cantidades').insert(filasCant), 'cantidades');
 
-    await guardarMedidasBD();
-    await guardarProcesosBD();
+    if (!(await guardarMedidasBD(true))) throw new Error('medidas: ' + ultimoErrorMedidas);
+    if (!(await guardarProcesosBD())) throw new Error('procesos externos');
 
-    await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria);
+    revisarRespuesta(await supabase.from('auditoria_defectos').delete().eq('auditoria_id', idAuditoria), 'defectos (borrado)');
     const defs = defectosGenerados();
-    if (defs.length) await supabase.from('auditoria_defectos').insert(defs);
+    if (defs.length) revisarRespuesta(await supabase.from('auditoria_defectos').insert(defs), 'defectos');
 
-    await Promise.all(evidencias.map(function(e) {
+    const resEvid = await Promise.all(evidencias.map(function(e) {
         if (e.id) return supabase.from('auditoria_evidencias').update({ observacion: e.observacion }).eq('id', e.id);
     }));
+    resEvid.forEach(function(r) { revisarRespuesta(r, 'evidencias'); });
+    return true;
+  } catch (e) {
+    console.error('[guardar] La revisión no quedó guardada completa:', idAuditoria, e);
+    alert('❌ NO se guardó la revisión completa.\n\nFalló: ' + (e.message || e) +
+        '\n\nTus datos siguen en pantalla. Revisa tu conexión y vuelve a presionar el botón. No cierres la página.');
+    return false;
+  }
 }
 
-$('btnAtras').addEventListener('click', async function() { await guardarTodo(); paso--; pintar(); });
+$('btnAtras').addEventListener('click', async function() { if (!(await guardarTodo())) return; paso--; pintar(); });
 $('btnSiguiente').addEventListener('click', async function() {
     const btn = $('btnSiguiente');
+    const textoBoton = btn.textContent;
     btn.disabled = true; btn.textContent = 'Guardando...';
-    await guardarTodo();
+    // Si algo no se guardó, NO se avanza ni se finaliza
+    if (!(await guardarTodo())) { btn.disabled = false; btn.textContent = textoBoton; return; }
     if (paso === TOTAL_PASOS) {
         const pendientes = procesos.filter(function(p) { return !p.resultado; });
         if (pendientes.length) {
@@ -725,7 +782,13 @@ $('btnSiguiente').addEventListener('click', async function() {
             btn.disabled = false; btn.textContent = 'Finalizar revisión';
             return alert('Elige si la revisión fue Aprobada o Rechazada.');
         }
-        await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
+        const fin = await supabase.from('auditorias').update({ estado: 'finalizada', resultado: auditoria.resultado }).eq('id', idAuditoria);
+        if (fin.error) {
+            console.error('[guardar] No se pudo finalizar la revisión', idAuditoria, fin.error);
+            alert('❌ La revisión NO quedó finalizada: ' + fin.error.message + '\n\nVuelve a presionar "Finalizar revisión".');
+            btn.disabled = false; btn.textContent = textoBoton;
+            return;
+        }
         location.href = 'agenda.html';
         return;
     }
