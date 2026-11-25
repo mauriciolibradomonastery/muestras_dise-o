@@ -36,7 +36,9 @@ de cada muestra y genera reportes de gestión.
   sesion.js             Copia del guardián de sesión (mantener igual a la de la raíz)
 /auditorias/            Módulo de auditorías (agenda, auditoria, medidas). Revisado solo por logs (§10).
 /sql/                   Scripts SQL aplicados (desde el 08). Los anteriores no están en el repo.
-/public/                ⚠️ Versiones VIEJAS conectadas a Firebase. No usar. Pendiente de retirar.
+/public/                Solo redirecciones (index, menu, formulario, dashboard, reportes, salidas → ../X.html).
+                        Antes: versión VIEJA conectada a Firebase (retirada 2026-11-25, paso 2.2).
+                        ⚠️ No confundir con la carpeta "public" del escritorio del usuario = raíz del repo.
 ```
 
 Nota: `PATRONAJE/fondo.png` no existe (404 inofensivo; el fondo está en la raíz).
@@ -250,7 +252,8 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | # | Tarea |
 |---|---|
 | ~~2.1~~ | ✅ **Hecho 2026-11-25.** `@supabase/supabase-js` fijado en **2.119.2** en los 20 lugares (18 HTML + las 2 copias de `sesion.js`). Antes: 16 con `@2` y 4 sin versión (`index`, `menu`, `formulario`, `reportes`), que habrían saltado solos a una v3. |
-| 2.2 | Retirar la carpeta `public/` (versiones viejas con Firebase). |
+| ~~2.2~~ | ✅ **Hecho 2026-11-25.** `public/` (Firebase, proyecto `inventario-monastery`) reemplazada por 6 redirecciones a las páginas actuales: nadie puede registrar muestras en la base vieja por un marcador antiguo. Queda en el historial de Git (commit 268001b). |
+| 2.2b | **Revisar el proyecto Firebase `inventario-monastery`** en la consola de Firebase: si ya no se usa, cerrar sus reglas de Firestore (o eliminar el proyecto) para que nadie pueda leer/escribir allí. Lo hace Mauricio (no hay acceso desde el código). |
 | 2.3 | Depurar los **54 precintos repetidos** en `prendas` (5 con referencias distintas: MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779). |
 
 ### Fase 3 · Rendimiento y seguridad
@@ -260,6 +263,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Carpeta `public/` con la versión vieja de Firebase reemplazada por redirecciones.
 - 2026-11-25 · Retirada la suscripción Realtime a `prendas` en Diseño (nunca funcionó; decisión: no se necesita).
 - 2026-11-25 · Librería de Supabase fijada en 2.119.2 en todas las páginas (ya no cambia sola).
 - 2026-11-25 · Tiempo real en patronaje (script 14): la tabla se actualiza sola con lo que guardan los demás.
