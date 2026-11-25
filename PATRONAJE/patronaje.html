@@ -272,6 +272,9 @@
             'LEAD TIME ENTREGA', 'LEAD TIME GENERAL', 'TIPO', 'PDF AUDITORÍA'
         ];
 
+        // Valores oficiales de GÉNERO (iguales a public.normalizar_genero en Supabase y a formulario.html)
+        const GENEROS = ['MEN', 'WOMEN', 'UNISEX', 'KIDS'];
+
         const listaMotivos = [
             "%", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
             "CAMBIO EN DISEÑO", "CASES", "COLOR", "CONFECCION", "CREMALLERA", "CREMALLERA ONDULADA", "CUELLO ONDULADO",
@@ -808,7 +811,18 @@
                 else if (colName === 'ESTADO') {
                     td.contentEditable = "false"; td.classList.add('estado-cell');
                 }
-                else if (colName === 'RESULTADO') { 
+                else if (colName === 'GÉNERO') {
+                    // Lista cerrada: los mismos 4 valores que guarda la base (trigger trg_dpto_tecnico_genero).
+                    // Antes era texto libre y aparecían Women / WOMEN / FEMENINO para lo mismo.
+                    td.contentEditable = "false";
+                    const opciones = ['', ...GENEROS];
+                    // Un valor desconocido se muestra en vez de perderse (regla: no pasar datos por el DOM que los borre)
+                    if (valorStr && !opciones.includes(valorStr)) opciones.push(valorStr);
+                    td.innerHTML = `<select style="width:100%; border:none; background:transparent; font-size:13px; color:inherit; cursor:pointer; outline: none;" onchange="this.closest('tr')._modificado=true; recalcularFila(this.closest('tr')); marcarCambios();">
+                        ${opciones.map(o => `<option value="${esc(o)}" style="color:black;" ${o === valorStr ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+                    </select>`;
+                }
+                else if (colName === 'RESULTADO') {
                     td.contentEditable = "false";
                     const opciones = ['', 'Cumple', 'No Cumple'];
                     // Si la BD trae otro valor (CANCELADO, OBSEQUIO, CUMPLE...), se muestra en vez de perderse
