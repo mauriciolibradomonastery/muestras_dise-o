@@ -55,7 +55,8 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.festivos` | `fecha date` PK. Festivos de Colombia de lunes a viernes, 2024–2030. | **solo SELECT** |
 | `public.actualizar_campos_dpto(p_id uuid, p_cambios jsonb)` | RPC de guardado por campo (ver §5). `security invoker`, ejecutable solo por `authenticated`. Revisada 2026-11-24: correcta. | execute |
 | `public.normalizar_genero(text)` | Convierte cualquier escritura de género a `MEN`/`WOMEN`/`UNISEX`/`KIDS`. Desconocido → MAYÚSCULAS, no se borra. | — |
-| `trg_dpto_tecnico_bloqueo_diseno` | BEFORE UPDATE: rechaza desde la web cambios al precinto y, en filas `MSTMUE…`, a los campos de Diseño (§6.4). Script 10. | — |
+| `trg_dpto_tecnico_bloqueo_diseno` | BEFORE UPDATE: rechaza desde la web cambios al precinto y, en filas `MSTMUE…`, a los campos de Diseño (§6.4). Deja pasar la sincronización autorizada (`app.sync_diseno`). Scripts 10 y 11. | — |
+| `public.actualizar_desde_diseno(p_ids uuid[], p_aplicar bool)` | Botón "🔄 Actualizar desde Diseño": compara (`false`) o copia (`true`) desde `prendas` los campos 3–6 y 8–13. Copia en el servidor; nunca borra con un vacío de Diseño; no toca FOTO, PRECINTO ni DISEÑADOR. `security definer`, solo `authenticated`. Script 11. | execute |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -158,8 +159,11 @@ Cada una corrige un bug real que causaba pérdida de datos o cifras erróneas.
 4. **Bloqueo de campos de Diseño** (decidido 2026-11-25):
    - El PRECINTO no se edita nunca en patronaje (solo entra importando desde Diseño).
    - En filas con precinto `MSTMUE…` no se editan los campos copiados del inventario
-     (`CAMPOS_DISENO` = 0, 2–13: foto, diseñador, género, proveedor, país, colección, precinto, referencia,
-     talla, tipo de muestra, pinta, cantidad, descripción). Se corrigen en Diseño.
+     (`CAMPOS_DISENO` = 0, 3–13: foto, género, proveedor, país, colección, precinto, referencia,
+     talla, tipo de muestra, pinta, cantidad, descripción). Se corrigen en Diseño y se traen con
+     **"🔄 Actualizar desde Diseño"** (vista previa → confirmar).
+   - **DISEÑADOR (2) es libre:** en Diseño `registradoPor` es quien *registró* la muestra, no quien la
+     diseñó. La importación lo pre-llena como sugerencia; ni el bloqueo ni la sincronización lo tocan.
    - "Fila Manual" crea la fila con `SIN PRECINTO` (referencias sin precinto) y ahí sí se llena todo a mano.
    - La base aplica lo mismo con `trg_dpto_tecnico_bloqueo_diseno` (solo para el rol `authenticated`;
      el SQL Editor puede corregir).
@@ -204,7 +208,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
 - Accesos: GitHub y Supabase deben estar conectados con las cuentas de **Monastery**
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
@@ -216,8 +220,9 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
    `sql/10_bloqueo_campos_diseno.sql`): correcciones de digitación hechas en patronaje (DELGIN→DELGUIN…),
    referencias distintas (MSTMUE11292 MAVI vs BERTRAND) y precintos que no existen en Diseño
    (`2 UNIDADES`, `APL327`, `11369`…). Corregir en Diseño o con un administrador.
-   Con el bloqueo, las correcciones de digitación deben hacerse en Diseño; evaluar un botón
-   "Actualizar desde Diseño" para traer al patronaje lo que Diseño corrija después.
+   Con el bloqueo, las correcciones de digitación deben hacerse en Diseño y traerse con
+   "🔄 Actualizar desde Diseño". Al 2026-11-25 la vista previa global mostraba 81 diferencias en 59 filas
+   y 8 precintos MSTMUE que no existen en Diseño.
 
 🟠 Media
 2. **Auditorías guarda medidas con DELETE + INSERT** (`auditoria_medidas`, ~50 veces por auditoría según logs).
@@ -228,9 +233,9 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
    reintento de sesión.
 
 🟡 Baja
-5. **Duplicados en `prendas`:** el "más reciente" usa `created_at` inexistente → usar `fechaServidor`.
-   54 precintos repetidos; solo 5 con referencias distintas (ej. MSTMUE11340, MSTMUE1758, MSTMUE9149,
-   MSTMUE9267, MSTMUE9779).
+5. **54 precintos repetidos en `prendas`** (5 con referencias distintas: MSTMUE11340, MSTMUE1758,
+   MSTMUE9149, MSTMUE9267, MSTMUE9779). Importación y sincronización ya usan el más reciente
+   (`fechaServidor`); falta depurar los duplicados en Diseño.
 6. **`@supabase/supabase-js@2` sin versión fija** (también el `+esm` de `sesion.js`): fijar versión exacta.
 8. 9 prendas sin género en el inventario: completarlas a mano.
 9. Muestras en `dpto_tecnico` con fecha de ingreso en 2025 (oct/dic): probable error de digitación del año.
@@ -242,6 +247,9 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 14. Duda abierta de negocio: en la tabla, LEAD TIME GENERAL se copia de LEAD TIME AUD; confirmar fórmula.
 
 ✅ Resueltos recientemente
+- 2026-11-25 · Botón "🔄 Actualizar desde Diseño" (script 11) y DISEÑADOR liberado del bloqueo.
+- 2026-11-25 · Filtros de catálogo (GÉNERO, ESTADO, RESULTADO, TIPO) comparan por igualdad al elegir un
+  valor completo (filtrar MEN ya no trae WOMEN). Importación usa `fechaServidor` para el más reciente.
 - 2026-11-25 · Precinto y campos de Diseño bloqueados en patronaje (página + trigger, script 10).
   Retirado el botón "Migrar archivos" (0 fotos/PDF en base64 pendientes).
 - 2026-11-24 · Texto perdido al escribir durante el autoguardado (§5.12).

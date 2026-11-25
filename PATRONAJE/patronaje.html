@@ -115,6 +115,7 @@
             <input type="file" id="inputImportarExcel" accept=".xlsx, .xls" style="display:none;" onchange="procesarExcelImportado(event)">
 
             <button class="btn" onclick="abrirBuscadorDiseno()" style="background-color: #2563eb; color:white; border:none;">➕ Importar desde Diseño</button>
+            <button class="btn" onclick="actualizarDesdeDiseno()" style="background-color: #0e7490; color:white; border:none;" title="Trae lo que Diseño corrigió en el inventario (referencia, talla, pinta, proveedor...). Usa las filas seleccionadas o, si no hay, las visibles.">🔄 Actualizar desde Diseño</button>
             <button class="btn" style="background-color: #6b7280; color: white; border: none;" onclick="agregarFilaVacia()">➕ Fila Manual</button>
             
             <div id="bulkActions" style="display: none; align-items: center; gap: 8px; margin-left: 15px; border-left: 2px solid #d1d5db; padding-left: 15px;">
@@ -151,6 +152,18 @@
             <div id="resultadoBusqueda" style="margin-top: 15px; display:none; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px dashed #d1d5db; max-height: 250px; overflow-y: auto;"></div>
             <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
                 <button class="btn" onclick="cerrarModal('modal-agregar')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-sincronizar" class="modal">
+        <div class="modal-content" style="width: min(900px, 94vw);">
+            <h3 style="color: #0e7490; margin-top: 0; font-size: 20px;">🔄 Actualizar desde Diseño</h3>
+            <div id="resumenSincronizar" style="font-size: 13px; color: #374151; margin-bottom: 10px;"></div>
+            <div id="detalleSincronizar" style="max-height: 55vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px;"></div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button class="btn" onclick="cerrarModal('modal-sincronizar')">Cancelar</button>
+                <button class="btn" id="btnAplicarSincronizar" style="background-color: #0e7490; color: white; border: none; font-weight: bold;" onclick="aplicarDesdeDiseno(event)">✅ Aplicar cambios</button>
             </div>
         </div>
     </div>
@@ -240,9 +253,14 @@
         //  · Las filas manuales (SIN PRECINTO) sí se llenan a mano.
         // La base aplica la misma regla con el trigger trg_dpto_tecnico_bloqueo_diseno.
         const INDICE_PRECINTO = 7;
-        const CAMPOS_DISENO = new Set([0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+        // Sin 2 DISEÑADOR: en Diseño "registradoPor" es quien registró, no el diseñador (decidido 2026-11-25).
+        // La importación lo pre-llena como sugerencia y el patronista lo corrige si hace falta.
+        const CAMPOS_DISENO = new Set([0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
         const esPrecintoDeDiseno = p => /^MSTMUE\d+$/i.test(String(p ?? '').trim());
-        const MENSAJE_BLOQUEO = 'Este dato viene del inventario de Diseño. Si está mal, corrígelo en el formulario de Diseño.';
+        // Filtros por columna que comparan por igualdad cuando se elige un valor completo de la lista
+        // (índices de celda = datos[i] + 1): GÉNERO, ESTADO, RESULTADO, TIPO
+        const COLUMNAS_FILTRO_EXACTO = new Set([4, 15, 22, 29]);
+        const MENSAJE_BLOQUEO ='Este dato viene del inventario de Diseño. Si está mal, corrígelo en el formulario de Diseño.';
 
         const listaMotivos = [
             "%", "ARTES", "ASIMETRIA", "ASPECTO", "BORDADO", "CALIDAD", "CAMBIO DE SILUETA",
@@ -1162,7 +1180,15 @@
                 let searchVal = valLower.replace(/\//g, '-'); let parts = searchVal.split('-');
                 if (parts.length === 2 && parts[0].length <= 2 && parts[1].length === 4) { searchVal = `${parts[1]}-${parts[0].padStart(2, '0')}`; } 
                 else if (parts.length === 3 && parts[0].length <= 2 && parts[2].length === 4) { searchVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; }
-                return { index: parseInt(inp.getAttribute('data-colindex')), val: searchVal, raw: valRaw };
+                const index = parseInt(inp.getAttribute('data-colindex'));
+                // Columnas de catálogo: si lo escrito es un valor COMPLETO de la lista, se compara por igualdad.
+                // Con "contiene", filtrar MEN también traía WOMEN (wo-MEN).
+                let exacto = false;
+                if (COLUMNAS_FILTRO_EXACTO.has(index)) {
+                    const lista = document.getElementById(`datalist_${index}`);
+                    exacto = !!lista && Array.from(lista.options).some(o => o.value.toLowerCase() === valLower);
+                }
+                return { index, val: exacto ? valLower : searchVal, raw: valRaw, exacto };
             }).filter(inp => inp.val !== "");
 
             const filas = document.getElementById('tableBody').querySelectorAll('tr');
@@ -1174,7 +1200,9 @@
                 else if (inputsColumnas.length > 0) {
                     for (let inp of inputsColumnas) {
                         let celdaTexto = fila._datosLower[inp.index] || "";
-                        if (inp.raw.startsWith('"') && inp.raw.endsWith('"')) {
+                        if (inp.exacto) {
+                            if (celdaTexto !== inp.val) { mostrar = false; break; }
+                        } else if (inp.raw.startsWith('"') && inp.raw.endsWith('"')) {
                             let exactTerm = inp.val.slice(1, -1).trim(); 
                             if (exactTerm !== celdaTexto) { mostrar = false; break; }
                         } else if (!celdaTexto.includes(inp.val)) { mostrar = false; break; }
@@ -1271,7 +1299,8 @@
                 (prendasDiseno || []).forEach(p => {
                     const clave = String(p.precinto || '').toUpperCase();
                     const actual = mapPrendas.get(clave);
-                    if (!actual || String(p.created_at || '') > String(actual.created_at || '')) mapPrendas.set(clave, p);
+                    // "fechaServidor" es la fecha de registro en prendas (no existe created_at: antes elegía uno al azar)
+                    if (!actual || String(p.fechaServidor || '') > String(actual.fechaServidor || '')) mapPrendas.set(clave, p);
                 });
 
                 const noEncontrados = precintos.filter(p => !mapPrendas.has(p));
@@ -1384,6 +1413,128 @@
                 console.error('[importar] Error al agregar a Patronaje:', err);
                 alert("❌ Error al agregar a Patronaje: " + (err.message || err));
                 btn.textContent = textoBoton; btn.disabled = false;
+            }
+        };
+
+        // ================== ACTUALIZAR DESDE DISEÑO ==================
+        // La copia la hace el servidor (función actualizar_desde_diseno, script 11) leyendo el inventario:
+        // la página solo envía QUÉ filas revisar, nunca los valores. Primero muestra una vista previa
+        // y solo aplica si el usuario confirma. Nunca borra un dato con un vacío de Diseño ni toca
+        // PRECINTO, FOTO o DISEÑADOR.
+        let idsParaSincronizar = [];
+        const filaEsDeDiseno = tr => !!tr.dataset.id && esPrecintoDeDiseno(tr.children[INDICE_PRECINTO + 1]?.textContent);
+
+        async function guardarPendientesAntesDeSincronizar() {
+            if (!hayCambiosSinGuardar) return true;
+            await window.guardarCambiosVisibles();
+            if (hayCambiosSinGuardar) {
+                alert("Primero hay que guardar tus cambios pendientes y no se pudo.\n\nPresiona \"Guardar Cambios\", revisa el aviso y vuelve a intentar.");
+                return false;
+            }
+            return true;
+        }
+
+        window.actualizarDesdeDiseno = async function() {
+            if (guardandoAhora) return alert("Espera a que termine el guardado en curso y vuelve a intentar.");
+            const filas = Array.from(document.getElementById('tableBody').querySelectorAll('tr'));
+            const visibles = filas.filter(tr => tr.style.display !== 'none' && filaEsDeDiseno(tr));
+            let objetivo = visibles.filter(tr => tr.querySelector('.row-checkbox')?.checked);
+            if (objetivo.length === 0) {
+                if (visibles.length === 0) return alert("No hay muestras con precinto MSTMUE en la vista actual.");
+                if (!confirm(`No seleccionaste filas.\n\n¿Comparar con Diseño las ${visibles.length} muestras visibles?`)) return;
+                objetivo = visibles;
+            }
+            if (objetivo.length > 1000) return alert("Máximo 1000 muestras por vez. Usa los filtros para reducir la lista.");
+            if (!(await guardarPendientesAntesDeSincronizar())) return;
+
+            mostrarCarga(`Comparando ${objetivo.length} muestras con Diseño...`);
+            try {
+                const ids = objetivo.map(tr => tr.dataset.id);
+                const { data, error } = await conReintentoSesion(() => client.rpc('actualizar_desde_diseno', { p_ids: ids, p_aplicar: false }));
+                if (error) throw error;
+                ocultarCarga();
+                mostrarVistaPreviaDiseno(data || [], ids.length);
+            } catch (err) {
+                ocultarCarga();
+                console.error('[diseno] Error comparando con Diseño:', err);
+                alert("❌ No se pudo comparar con Diseño: " + (err.message || err) + "\n\nNo se cambió nada.");
+            }
+        };
+
+        function mostrarVistaPreviaDiseno(filasRpc, totalRevisadas) {
+            const cambios = filasRpc.filter(c => c.indice !== null);
+            const sinInventario = [...new Set(filasRpc.filter(c => c.indice === null).map(c => c.precinto))];
+            idsParaSincronizar = [...new Set(cambios.map(c => c.fila_id))];
+
+            if (cambios.length === 0 && sinInventario.length === 0) {
+                return alert(`✅ Las ${totalRevisadas} muestras revisadas coinciden con Diseño. No hay nada que actualizar.`);
+            }
+
+            const resumen = document.getElementById('resumenSincronizar');
+            resumen.innerHTML = `Revisadas: <b>${totalRevisadas}</b> · Con cambios: <b>${idsParaSincronizar.length}</b> muestra(s), <b>${cambios.length}</b> campo(s).`
+                + (sinInventario.length ? `<div style="color:#b45309; margin-top:6px;">⚠️ No existen en el inventario de Diseño (no se tocan): ${esc(sinInventario.join(', '))}</div>` : '')
+                + `<div style="color:#6b7280; margin-top:6px;">Solo se copian valores que Diseño tiene llenos; nunca se borra un dato de patronaje.</div>`;
+
+            const filasHtml = cambios.map(c => `<tr>
+                    <td style="padding:6px 8px; font-weight:bold; color:#2563eb;">${esc(c.precinto)}</td>
+                    <td style="padding:6px 8px;">${esc(c.campo)}</td>
+                    <td style="padding:6px 8px; color:#b91c1c; text-decoration: line-through;">${esc(c.valor_actual) || '<i>(vacío)</i>'}</td>
+                    <td style="padding:6px 8px; color:#047857; font-weight:bold;">${esc(c.valor_diseno)}</td>
+                </tr>`).join('');
+            document.getElementById('detalleSincronizar').innerHTML = cambios.length ? `<table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead><tr style="background:#f3f4f6; text-align:left; position:sticky; top:0;">
+                        <th style="padding:6px 8px;">Precinto</th><th style="padding:6px 8px;">Campo</th>
+                        <th style="padding:6px 8px;">Hoy en patronaje</th><th style="padding:6px 8px;">En Diseño (quedará)</th>
+                    </tr></thead><tbody>${filasHtml}</tbody></table>` : '';
+
+            const btn = document.getElementById('btnAplicarSincronizar');
+            btn.style.display = idsParaSincronizar.length ? '' : 'none';
+            btn.disabled = false;
+            btn.textContent = `✅ Aplicar ${cambios.length} cambio(s) en ${idsParaSincronizar.length} muestra(s)`;
+            document.getElementById('modal-sincronizar').style.display = 'flex';
+        }
+
+        window.aplicarDesdeDiseno = async function(e) {
+            const btn = e.target;
+            if (idsParaSincronizar.length === 0) return;
+            btn.disabled = true; btn.textContent = "⏳ Aplicando...";
+            try {
+                if (!(await guardarPendientesAntesDeSincronizar())) { btn.disabled = false; btn.textContent = "✅ Aplicar cambios"; return; }
+                const { data, error } = await conReintentoSesion(() => client.rpc('actualizar_desde_diseno', { p_ids: idsParaSincronizar, p_aplicar: true }));
+                if (error) throw error;
+                const aplicados = (data || []).filter(c => c.indice !== null).length;
+
+                // Trae las filas actualizadas y las muestra SIN recargar la tabla (no se pierden ediciones)
+                const lotes = [];
+                for (let i = 0; i < idsParaSincronizar.length; i += 100) lotes.push(idsParaSincronizar.slice(i, i + 100));
+                const resultados = await enLotes(lotes, 3, async lote => {
+                    const { data: filasBd, error: errSel } = await conReintentoSesion(() => client.from('dpto_tecnico').select('id, datos').in('id', lote));
+                    if (errSel) throw errSel;
+                    return filasBd || [];
+                });
+                const fallidos = resultados.filter(r => r.status === 'rejected');
+                resultados.filter(r => r.status === 'fulfilled').flatMap(r => r.value).forEach(fila => {
+                    const tr = document.querySelector(`#tableBody tr[data-id="${CSS.escape(fila.id)}"]`);
+                    if (!tr) return;
+                    const final = normalizarDatos(fila.id, fila.datos);
+                    // Lo que el usuario no cambió toma el valor nuevo; lo que esté editando se respeta
+                    despuesDeGuardar(tr, tr._base || final, final);
+                    recalcularFila(tr);
+                });
+
+                window.actualizarDatalists(); window.ejecutarFiltro(); recalcularPendientes();
+                cerrarModal('modal-sincronizar');
+                idsParaSincronizar = [];
+                if (fallidos.length) {
+                    console.warn('[diseno] Se actualizó la base pero no se pudo refrescar parte de la pantalla:', fallidos.map(f => f.reason));
+                    alert(`✅ Se aplicaron ${aplicados} cambio(s) en la base.\n\n⚠️ Parte de la pantalla no se pudo refrescar: recarga la página para verlos.`);
+                } else {
+                    alert(`✅ Se aplicaron ${aplicados} cambio(s) desde Diseño.`);
+                }
+            } catch (err) {
+                console.error('[diseno] Error aplicando cambios desde Diseño:', err);
+                alert("❌ No se aplicaron los cambios: " + (err.message || err) + "\n\nNo se cambió nada. Vuelve a intentar.");
+                btn.disabled = false; btn.textContent = "✅ Aplicar cambios";
             }
         };
 
