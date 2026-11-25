@@ -59,6 +59,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.actualizar_desde_diseno(p_ids uuid[], p_aplicar bool)` | Botón "🔄 Actualizar desde Diseño": compara (`false`) o copia (`true`) desde `prendas` los campos 3–6 y 8–13. Copia en el servidor; nunca borra con un vacío de Diseño; no toca FOTO, PRECINTO ni DISEÑADOR. `security definer`, solo `authenticated`. Script 11. | execute |
 | `public.guardar_medidas_auditoria(p_auditoria_id bigint, p_medidas jsonb)` | Auditorías: borra e inserta las medidas en **una sola transacción** (o todo o nada). `security invoker`: aplica las políticas RLS de `auditoria_medidas`. La usan `auditorias/auditoria.html` y `revision3.html`. Script 12. | execute |
 | `public.guardar_detalle_auditoria(p_auditoria_id, p_cantidades, p_defectos, p_pruebas, p_solo_pruebas)` | Auditorías: reemplaza cantidades, defectos y pruebas en **una sola transacción**. `null` = no tocar esa parte; `p_solo_pruebas` = reemplazar solo esas pruebas (procesos externos de revision3). Verifica permiso explícito. La usan `auditoria.html`, `revision3.html` y `proceso.html`. Script 13. | execute |
+| Publicación `supabase_realtime` | Desde el script 14 incluye `public.dpto_tecnico` (tiempo real de patronaje). `prendas` **no** está (ver §10, 1.4). | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`. No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -144,6 +145,11 @@ Cada una corrige un bug real que causaba pérdida de datos o cifras erróneas.
     - Copiar colecciones vivas con `Array.from(tr.children)` antes de mover celdas (si no, los índices se corren).
     - Los manejadores de celda buscan su fila al momento del evento (`alEditarCelda` → `e.currentTarget.closest('tr')`),
       nunca guardan una referencia a la fila de cuando se crearon.
+14. **Tiempo real en patronaje:** todo cambio remoto se aplica con `aplicarFilaRemota` →
+    `despuesDeGuardar(tr, tr._base, remoto)` (nunca reemplazar la fila ni pisar ediciones locales). Los eventos
+    que llegan antes de que la tabla termine de dibujarse van a `colaTiempoReal` (se aplican en
+    `marcarTablaLista`). Antes de pintar una fila insertada, revisar `filaPorId(id)`: el aviso en tiempo real
+    puede llegar antes que la respuesta del insert.
 13. **Los valores de catálogo se normalizan en la base, no solo en la página.** Un trigger es la única puerta
     que cubre todos los caminos de entrada (formulario, importación, celda editable, Excel). Las páginas
     además muestran listas cerradas con los mismos valores. Ejemplo: género (§3, §4).
@@ -209,7 +215,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
 - Accesos: GitHub y Supabase deben estar conectados con las cuentas de **Monastery**
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
@@ -233,7 +239,8 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 |---|---|---|---|
 | ~~1.1~~ | ✅ **Hecho 2026-11-25.** Medidas atómicas (script 12) y "Siguiente"/"Finalizar" no avanzan si algo no se guardó. Una auditoría la llena una sola persona. | — | Confirmar en el uso diario |
 | ~~1.1b~~ | ✅ **Hecho 2026-11-25.** Cantidades, defectos y pruebas atómicos (script 13) en `auditoria.html`, `revision3.html` y `proceso.html` (este último ya no finaliza si las pruebas fallan). No queda ningún `delete()`+`insert()` suelto en auditorías. | — | — |
-| 1.2 | **Refresco automático de patronaje** con Supabase Realtime (como Diseño con `utilidades.js`): actualizar solo celdas que otro cambió, sin tocar lo que el usuario edita (§5.12). | Pantallas abiertas desde temprano no ven lo que otros guardan ("no guardó"). | — |
+| ~~1.2~~ | ✅ **Hecho 2026-11-25.** Tiempo real en patronaje (script 14 + página): cambios, filas nuevas y borradas de otras personas aparecen solos; respeta ediciones locales y la celda con el cursor; cola durante la carga; resincroniza al reconectar o al volver de suspensión; indicador 🟢/🔴. Hasta 5 personas a la vez. | — | — |
+| 1.4 | **El tiempo real de Diseño nunca funcionó:** `dashboard.html`, `reportes.html` y `salidas.html` se suscriben a `prendas`, pero `prendas` no está en la publicación `supabase_realtime` (tenía 0 tablas). Activarlo hace que esas páginas recarguen el inventario completo (con fotos base64) en cada cambio: evaluar junto con 3.1. | Diseño no ve cambios de otros sin recargar. | ¿Se necesita en Diseño? |
 | ~~1.3~~ | ✅ **Hecho 2026-11-25.** Retirado "📤 Importar Histórico" (botón, input oculto y `procesarExcelImportado`). La librería XLSX se conserva para "📥 Exportar Excel". | — | — |
 
 ### Fase 2 · Higiene (un solo paquete pequeño)
@@ -250,6 +257,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Tiempo real en patronaje (script 14): la tabla se actualiza sola con lo que guardan los demás.
 - 2026-11-25 · Retirado "📤 Importar Histórico" de patronaje (ya no se usaba; borraba ediciones sin guardar).
 - 2026-11-25 · Auditorías: cantidades, defectos y pruebas en una sola transacción (script 13); proceso.html no
   finaliza si las pruebas no se guardaron.
