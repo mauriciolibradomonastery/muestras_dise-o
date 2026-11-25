@@ -277,3 +277,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 - Antes de un cambio de datos, ofrecer una consulta de diagnóstico de solo lectura.
 - Código con manejo de errores, logging con prefijo y comentarios que expliquen el porqué.
 - Publicar en `main` solo con autorización explícita del usuario.
+- **Cada vez que se modifique un `.html`, entregarle al usuario el archivo completo** (con su carpeta),
+  idéntico a lo publicado en GitHub: él guarda en su escritorio la última versión de cada archivo.
+- Ir **un paso a la vez**: no empezar el siguiente paso del plan hasta que el usuario confirme que el
+  anterior quedó funcionando.
