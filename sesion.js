@@ -20,7 +20,7 @@
 
 const SUPABASE_URL = 'https://emljzsxypeqecevffmwr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W';
-const URL_LIBRERIA = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const URL_LIBRERIA = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm';
 
 const HORAS_INACTIVIDAD = 4;      // ← tiempo sin usar la página antes de cerrar
 const LOG = '[sesion]';

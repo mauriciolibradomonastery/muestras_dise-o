@@ -216,6 +216,9 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
   `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+- **Versión de la librería de Supabase:** fijada en `2.119.2`. Para cambiarla, reemplazar `supabase-js@2.119.2`
+  en **todos** los archivos (comprobar con `grep -rn "supabase-js@" --include=*.html --include=*.js .`),
+  probar en una rama y publicar todo junto. Nunca volver a `@2` ni a la dirección sin versión.
 - Accesos: GitHub y Supabase deben estar conectados con las cuentas de **Monastery**
   (`mauriciolibradomonastery`). Si la pantalla de autorización muestra "Alfillabs", el navegador tiene
   abierta otra cuenta: usar ventana de incógnito.
@@ -246,7 +249,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 ### Fase 2 · Higiene (un solo paquete pequeño)
 | # | Tarea |
 |---|---|
-| 2.1 | Fijar versión exacta de `@supabase/supabase-js` (hoy `@2` en 16 archivos, incluido el `+esm` de `sesion.js`). |
+| ~~2.1~~ | ✅ **Hecho 2026-11-25.** `@supabase/supabase-js` fijado en **2.119.2** en los 20 lugares (18 HTML + las 2 copias de `sesion.js`). Antes: 16 con `@2` y 4 sin versión (`index`, `menu`, `formulario`, `reportes`), que habrían saltado solos a una v3. |
 | 2.2 | Retirar la carpeta `public/` (versiones viejas con Firebase). |
 | 2.3 | Depurar los **54 precintos repetidos** en `prendas` (5 con referencias distintas: MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779). |
 
@@ -257,6 +260,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-25 · Librería de Supabase fijada en 2.119.2 en todas las páginas (ya no cambia sola).
 - 2026-11-25 · Tiempo real en patronaje (script 14): la tabla se actualiza sola con lo que guardan los demás.
 - 2026-11-25 · Retirado "📤 Importar Histórico" de patronaje (ya no se usaba; borraba ediciones sin guardar).
 - 2026-11-25 · Auditorías: cantidades, defectos y pruebas en una sola transacción (script 13); proceso.html no

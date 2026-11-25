@@ -236,7 +236,7 @@
 </div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm';
 const supabase = createClient('https://emljzsxypeqecevffmwr.supabase.co', 'sb_publishable_Y4Cv4QiSPSio1hO4eWvl4A_iTigJS0W', { auth: { storage: window.localStorage } });
 const $ = function(id) { return document.getElementById(id); };
 const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]); }); };
