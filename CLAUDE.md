@@ -145,14 +145,14 @@ Cada una corrige un bug real que causaba pérdida de datos o cifras erróneas.
     - Copiar colecciones vivas con `Array.from(tr.children)` antes de mover celdas (si no, los índices se corren).
     - Los manejadores de celda buscan su fila al momento del evento (`alEditarCelda` → `e.currentTarget.closest('tr')`),
       nunca guardan una referencia a la fila de cuando se crearon.
+13. **Los valores de catálogo se normalizan en la base, no solo en la página.** Un trigger es la única puerta
+    que cubre todos los caminos de entrada (formulario, importación, celda editable, Excel). Las páginas
+    además muestran listas cerradas con los mismos valores. Ejemplo: género (§3, §4).
 14. **Tiempo real en patronaje:** todo cambio remoto se aplica con `aplicarFilaRemota` →
     `despuesDeGuardar(tr, tr._base, remoto)` (nunca reemplazar la fila ni pisar ediciones locales). Los eventos
     que llegan antes de que la tabla termine de dibujarse van a `colaTiempoReal` (se aplican en
     `marcarTablaLista`). Antes de pintar una fila insertada, revisar `filaPorId(id)`: el aviso en tiempo real
     puede llegar antes que la respuesta del insert.
-13. **Los valores de catálogo se normalizan en la base, no solo en la página.** Un trigger es la única puerta
-    que cubre todos los caminos de entrada (formulario, importación, celda editable, Excel). Las páginas
-    además muestran listas cerradas con los mismos valores. Ejemplo: género (§3, §4).
 
 ## 6. Flujo de un precinto
 
