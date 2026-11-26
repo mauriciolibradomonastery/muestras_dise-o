@@ -256,7 +256,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 |---|---|
 | ~~2.1~~ | ✅ **Hecho 2026-11-25.** `@supabase/supabase-js` fijado en **2.119.2** en los 20 lugares (18 HTML + las 2 copias de `sesion.js`). Antes: 16 con `@2` y 4 sin versión (`index`, `menu`, `formulario`, `reportes`), que habrían saltado solos a una v3. |
 | ~~2.2~~ | ✅ **Hecho 2026-11-25.** `public/` (Firebase, proyecto `inventario-monastery`) reemplazada por 6 redirecciones a las páginas actuales: nadie puede registrar muestras en la base vieja por un marcador antiguo. Queda en el historial de Git (commit 268001b). |
-| 2.2b | **Revisar el proyecto Firebase `inventario-monastery`** en la consola de Firebase: si ya no se usa, cerrar sus reglas de Firestore (o eliminar el proyecto) para que nadie pueda leer/escribir allí. Lo hace Mauricio (no hay acceso desde el código). |
+| ~~2.2b~~ | ✅ **Hecho 2026-11-26.** Mauricio eliminó el proyecto Firebase `inventario-monastery`. Ya no existe ninguna base vieja donde se pueda leer o escribir. |
 | ~~2.3~~ | ✅ **Decidido 2026-11-25: lo corrige Diseño a mano, NO se toca desde el código ni con SQL.** Diagnóstico entregado en Excel: 54 precintos repetidos (108 registros); 48 vienen de una carga masiva del 16/09/2026 12:00 sin fecha de ingreso (copia anterior con salida registrada), 5 con referencias distintas (MSTMUE11340, MSTMUE1758, MSTMUE9149, MSTMUE9267, MSTMUE9779) y 1 posible doble registro. Regla: un precinto se reutiliza cuando la muestra sale y vuelve a entrar. |
 
 ### Fase 3 · Rendimiento y seguridad
@@ -268,6 +268,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | 3.2 | ⏸ **Decidido 2026-11-26: NO por ahora.** Pasar los 5 buckets (`dpto-tecnico`, `inventario-fotos`, `auditorias-evidencias`, `fotos-referencias`, `wips-archivos`) a privados con `createSignedUrl` exige cambiar casi todas las páginas y convertir los enlaces ya guardados. Riesgo práctico bajo: el contenido no es sensible, los enlaces no se comparten fuera, nadie sin sesión puede listar archivos (políticas de `storage.objects` solo para `authenticated`) y los nombres llevan marca de tiempo + código aleatorio. **Retomar** si se guardan documentos sensibles (costos, contratos, datos personales) o si se comparten enlaces con terceros. |
 
 ### ✅ Resueltos
+- 2026-11-26 · Proyecto Firebase `inventario-monastery` eliminado (la versión vieja ya no tiene base de datos).
 - 2026-11-26 · Candado en la base contra fotos en base64 en el inventario (script 17).
 - 2026-11-25 · Las 345 fotos viejas del inventario migradas a Storage: el inventario ya no descarga ~9 MB de fotos al cargar.
 - 2026-11-25 · Fotos nuevas del inventario van a Storage (script 15 + `subirFotoInventario`); ya no entra base64.
