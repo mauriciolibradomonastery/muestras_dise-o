@@ -64,6 +64,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `public.guardar_detalle_auditoria(p_auditoria_id, p_cantidades, p_defectos, p_pruebas, p_solo_pruebas)` | Auditorías: reemplaza cantidades, defectos y pruebas en **una sola transacción**. `null` = no tocar esa parte; `p_solo_pruebas` = reemplazar solo esas pruebas (procesos externos de revision3). Verifica permiso explícito. La usan `auditoria.html`, `revision3.html` y `proceso.html`. Script 13. | execute |
 | Publicación `supabase_realtime` | Desde el script 14 incluye `public.dpto_tecnico` (tiempo real de patronaje). `prendas` **no** está, a propósito (§10, 1.4). | — |
 | Storage bucket `inventario-fotos` | Fotos del inventario de Diseño (desde 3.1a). Público para leer (como los demás; ver 3.2); solo `authenticated` sube; nadie modifica ni borra desde la web. Límite 2 MB, solo imágenes. Script 15. | — |
+| `trg_prendas_sin_base64` | BEFORE INSERT/UPDATE OF `fotoUrl` en `prendas`: rechaza fotos en base64 (`data:`). Aplica a todos, también al SQL Editor. Script 17. | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`, `fotos_prendas_20261125` (las 345 fotos base64 antes de migrarlas; ver vuelta atrás en `sql/16`). No expuesto por la API. | — |
 | Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
@@ -219,7 +220,7 @@ Si el histórico no carga, muestra un aviso rojo (cifras incompletas).
 - Scripts ya aplicados (en orden): `01_respaldo_y_diagnostico`, `02_guardado_por_campo`,
   `04_prueba_guardado`, `05_tabla_historico`, `06_carga_historico_2026_01_a_07`, renombrado de 4 proveedores,
   borrado de 6 duplicados histórico↔sistema, `07_festivos`, `08_historial_cambios_dpto` (2026-11-24),
-  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25), `15_bucket_inventario_fotos` (2026-11-25), `16_respaldo_fotos_prendas` + migración de fotos (2026-11-25). (`03_seguridad_rls` no fue necesario.)
+  `09_unificar_genero` (2026-11-25), `10_bloqueo_campos_diseno` (2026-11-25), `11_actualizar_desde_diseno` (2026-11-25), `12_guardar_medidas_auditoria` (2026-11-25), `13_guardar_detalle_auditoria` (2026-11-25), `14_tiempo_real_dpto_tecnico` (2026-11-25), `15_bucket_inventario_fotos` (2026-11-25), `16_respaldo_fotos_prendas` + migración de fotos (2026-11-25), `17_candado_fotos_base64` (2026-11-26). (`03_seguridad_rls` no fue necesario.)
 - **Versión de la librería de Supabase:** fijada en `2.119.2`. Para cambiarla, reemplazar `supabase-js@2.119.2`
   en **todos** los archivos (comprobar con `grep -rn "supabase-js@" --include=*.html --include=*.js .`),
   probar en una rama y publicar todo junto. Nunca volver a `@2` ni a la dirección sin versión.
@@ -263,10 +264,11 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 |---|---|
 | ~~3.1a~~ | ✅ **Hecho 2026-11-25.** Fotos nuevas a Storage (bucket `inventario-fotos`, script 15) con la función compartida `subirFotoInventario` (`utilidades.js`): la usan `formulario.html` y la edición en `dashboard.html` y `salidas.html`. En `prendas.fotoUrl` queda solo el enlace. Si la subida falla, no se registra/guarda nada (nunca vuelve a base64). |
 | ~~3.1b~~ | ✅ **Hecho 2026-11-25.** Las **345 fotos** en base64 migradas a `inventario-fotos` (respaldo previo con `sql/16`; página temporal `migrar_fotos_inventario.html`, ya retirada, queda en el historial de Git). Verificado: 0 base64, 345 archivos JPEG con el mismo tamaño en bytes que el original. La columna `fotoUrl` pasó de ~9 MB a 41 kB. |
-| 3.1c | Candado en la base: rechazar `fotoUrl` que empiece por `data:` (después de 3.1b). |
+| ~~3.1c~~ | ✅ **Hecho 2026-11-26.** Trigger `trg_prendas_sin_base64` (script 17): rechaza cualquier `fotoUrl` que empiece por `data:` con un mensaje claro ("Recarga la página con Ctrl+Shift+R"). No toca registros existentes. Para usar la vuelta atrás de `sql/16`, desactivarlo primero. |
 | 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
 
 ### ✅ Resueltos
+- 2026-11-26 · Candado en la base contra fotos en base64 en el inventario (script 17).
 - 2026-11-25 · Las 345 fotos viejas del inventario migradas a Storage: el inventario ya no descarga ~9 MB de fotos al cargar.
 - 2026-11-25 · Fotos nuevas del inventario van a Storage (script 15 + `subirFotoInventario`); ya no entra base64.
 - 2026-11-25 · Precintos repetidos en `prendas`: diagnóstico entregado; la persona que registra en Diseño los corrige.
