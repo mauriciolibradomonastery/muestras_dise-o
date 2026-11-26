@@ -67,7 +67,7 @@ RLS está **activo** en todas las tablas. Solo el rol `authenticated` tiene acce
 | `trg_prendas_sin_base64` | BEFORE INSERT/UPDATE OF `fotoUrl` en `prendas`: rechaza fotos en base64 (`data:`). Aplica a todos, también al SQL Editor. Script 17. | — |
 | Triggers de género | `trg_prendas_genero` (prendas.genero) y `trg_dpto_tecnico_genero` (dpto_tecnico.datos[3]), BEFORE INSERT/UPDATE. | — |
 | esquema `respaldo` | Copias de seguridad: `dpto_tecnico_20261023`, `prendas_20261023`, `genero_prendas_20261125`, `genero_dpto_tecnico_20261125`, `genero_historico_20261125`, `fotos_prendas_20261125` (las 345 fotos base64 antes de migrarlas; ver vuelta atrás en `sql/16`). No expuesto por la API. | — |
-| Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público — pendiente pasar a privado). | — |
+| Storage bucket `dpto-tecnico` | Fotos y PDFs de auditoría (`getPublicUrl`, bucket público; pasar a privado quedó en pausa, ver §10, 3.2). | — |
 
 ### Mapa del arreglo `dpto_tecnico.datos` (índices 0–29)
 
@@ -265,7 +265,7 @@ Cifras tomadas de la base el 2026-11-25. Ir fase por fase; dentro de cada fase, 
 | ~~3.1a~~ | ✅ **Hecho 2026-11-25.** Fotos nuevas a Storage (bucket `inventario-fotos`, script 15) con la función compartida `subirFotoInventario` (`utilidades.js`): la usan `formulario.html` y la edición en `dashboard.html` y `salidas.html`. En `prendas.fotoUrl` queda solo el enlace. Si la subida falla, no se registra/guarda nada (nunca vuelve a base64). |
 | ~~3.1b~~ | ✅ **Hecho 2026-11-25.** Las **345 fotos** en base64 migradas a `inventario-fotos` (respaldo previo con `sql/16`; página temporal `migrar_fotos_inventario.html`, ya retirada, queda en el historial de Git). Verificado: 0 base64, 345 archivos JPEG con el mismo tamaño en bytes que el original. La columna `fotoUrl` pasó de ~9 MB a 41 kB. |
 | ~~3.1c~~ | ✅ **Hecho 2026-11-26.** Trigger `trg_prendas_sin_base64` (script 17): rechaza cualquier `fotoUrl` que empiece por `data:` con un mensaje claro ("Recarga la página con Ctrl+Shift+R"). No toca registros existentes. Para usar la vuelta atrás de `sql/16`, desactivarlo primero. |
-| 3.2 | Bucket `dpto-tecnico` público → privado con `createSignedUrl`. |
+| 3.2 | ⏸ **Decidido 2026-11-26: NO por ahora.** Pasar los 5 buckets (`dpto-tecnico`, `inventario-fotos`, `auditorias-evidencias`, `fotos-referencias`, `wips-archivos`) a privados con `createSignedUrl` exige cambiar casi todas las páginas y convertir los enlaces ya guardados. Riesgo práctico bajo: el contenido no es sensible, los enlaces no se comparten fuera, nadie sin sesión puede listar archivos (políticas de `storage.objects` solo para `authenticated`) y los nombres llevan marca de tiempo + código aleatorio. **Retomar** si se guardan documentos sensibles (costos, contratos, datos personales) o si se comparten enlaces con terceros. |
 
 ### ✅ Resueltos
 - 2026-11-26 · Candado en la base contra fotos en base64 en el inventario (script 17).
