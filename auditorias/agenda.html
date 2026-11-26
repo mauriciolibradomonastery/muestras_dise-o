@@ -510,16 +510,23 @@ const esc = function(t) { return String(t == null ? '' : t).replace(/[<>"&]/g, f
 const fechaCorta = function(f) { if (!f) return ''; const d = new Date(f + 'T00:00:00'); return d.getDate() + ' ' + MESES[d.getMonth()].slice(0, 3); };
 
 // ---------- Eliminar una auditoría con todo lo suyo ----------
+// (2026-11-26) Primero se elimina la AUDITORÍA: la base borra sola, en la misma operación, sus
+// cantidades, defectos, medidas, pruebas y evidencias (llaves con ON DELETE CASCADE).
+// Antes se borraba primero el contenido y al final la auditoría: desde que el equipo puede editar
+// cualquier auditoría (sql/18), alguien sin permiso para eliminarla la habría dejado VACÍA.
+// Ahora, si no hay permiso, no se borra nada. Los archivos de Storage se quitan solo si se eliminó.
 async function eliminarAuditoria(id) {
-    const tablas = ['auditoria_cantidades', 'auditoria_defectos', 'auditoria_medidas', 'auditoria_pruebas', 'auditoria_evidencias'];
-    await Promise.all(tablas.map(function(t) { return supabase.from(t).delete().eq('auditoria_id', id); }));
-    try {
-        const { data: archivos } = await supabase.storage.from('auditorias-evidencias').list(String(id));
-        if (archivos && archivos.length) await supabase.storage.from('auditorias-evidencias').remove(archivos.map(function(a) { return id + '/' + a.name; }));
-    } catch (e) { console.warn(e); }
     const { data, error } = await supabase.from('auditorias').delete().eq('id', id).select('id');
     if (error) throw error;
     if (!data || !data.length) throw new Error('La base de datos no permitió eliminarla. Revisa que el paso 1 (permiso para eliminar) se haya ejecutado.');
+    try {
+        const { data: archivos, error: errLista } = await supabase.storage.from('auditorias-evidencias').list(String(id));
+        if (errLista) throw errLista;
+        if (archivos && archivos.length) {
+            const { error: errQuitar } = await supabase.storage.from('auditorias-evidencias').remove(archivos.map(function(a) { return id + '/' + a.name; }));
+            if (errQuitar) throw errQuitar;
+        }
+    } catch (e) { console.warn('[agenda] La auditoría se eliminó, pero no se pudieron quitar sus fotos de evidencia:', id, e); }
 }
 let esquemaAuditoras = {};
 let lunes = inicioSemana(new Date());
